@@ -93,6 +93,8 @@ async function loadInitialData() {
 
     // Load articles for each project
     const projekte = state.getAllProjekte();
+    console.log(`📊 Found ${projekte.length} projects to load articles for`);
+    
     for (const projekt of projekte) {
       await api.loadArticles(projekt.id);
     }
@@ -102,9 +104,17 @@ async function loadInitialData() {
     // Update charts with loaded data
     charts.updateAllCharts();
 
-    // Render UI
-    renderProjectOverview();
-    updateProjectStats();
+    // CRITICAL: Render UI after loading data
+    // Import and call the render functions from projekte module
+    if (window.renderProjektOverview) {
+      console.log('🎨 Rendering project overview...');
+      window.renderProjektOverview();
+    }
+    
+    if (window.updateProjektStats) {
+      console.log('📈 Updating project stats...');
+      window.updateProjektStats();
+    }
 
   } catch (error) {
     console.error('❌ Failed to load initial data:', error);
@@ -152,7 +162,7 @@ function restoreUIState() {
 
   if (targetButton) targetButton.classList.add('active');
   if (targetContent) targetContent.classList.add('active');
-  }
+}
 
 /**
  * Save current navigation state
@@ -489,22 +499,6 @@ function getTabDisplayName(tabName) {
     'admin': 'Admin'
   };
   return names[tabName] || tabName;
-}
-
-/**
- * Render project overview (placeholder - will be in projekte.js)
- */
-function renderProjectOverview() {
-  // This will be handled by projekte.js module
-  console.log('📊 Project overview render requested');
-}
-
-/**
- * Update project stats (placeholder - will be in projekte.js)
- */
-function updateProjectStats() {
-  // This will be handled by projekte.js module
-  console.log('📈 Project stats update requested');
 }
 
 // ==========================================
