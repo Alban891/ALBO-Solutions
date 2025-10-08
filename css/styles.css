@@ -2262,6 +2262,289 @@ body {
 }
 
 /* ========================================== */
+/* PROJECT VIEW STYLES - Karten & Kompakt */
+/* DIESE STYLES AM ENDE DER styles.css EINFUEGEN */
+/* ========================================== */
+
+/* KARTEN VIEW Card Grid */
+
+.projekt-karten-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.projekt-card {
+  background: var(--background, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.projekt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary, #3b82f6);
+}
+
+.projekt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.projekt-card-checkbox {
+  margin-right: 12px;
+}
+
+.projekt-card-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.projekt-card-icon {
+  font-size: 32px;
+  flex: 1;
+  text-align: center;
+}
+
+.projekt-card-status {
+  margin-left: auto;
+}
+
+.projekt-card-body {
+  padding: 20px;
+}
+
+.projekt-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text, #111827);
+  margin: 0 0 16px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.projekt-card-title:hover {
+  color: var(--primary, #3b82f6);
+}
+
+.projekt-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.projekt-card-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.info-label {
+  color: var(--text-light, #6b7280);
+  font-weight: 500;
+}
+
+.info-value {
+  color: var(--text, #111827);
+  font-weight: 500;
+  text-align: right;
+}
+
+.projekt-card-footer {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  background: var(--background-alt, #f9fafb);
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.projekt-card-footer .btn {
+  flex: 1;
+}
+
+/* KOMPAKT VIEW Compact List */
+
+.projekt-kompakt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.projekt-kompakt-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--background, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.projekt-kompakt-item:hover {
+  background: var(--background-alt, #f9fafb);
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kompakt-checkbox {
+  flex-shrink: 0;
+}
+
+.kompakt-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.kompakt-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.kompakt-main {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.kompakt-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text, #111827);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.kompakt-main:hover .kompakt-title {
+  color: var(--primary, #3b82f6);
+}
+
+.kompakt-meta {
+  font-size: 13px;
+  color: var(--text-light, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kompakt-status {
+  flex-shrink: 0;
+}
+
+.kompakt-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.kompakt-actions .btn-icon {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+/* Button Size Variants */
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+/* STATUS BADGES - Enhanced for all views */
+
+.status-badge.status-konzept {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* RESPONSIVE ADJUSTMENTS */
+
+@media (max-width: 768px) {
+  .projekt-karten-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .projekt-card-body {
+    padding: 16px;
+  }
+
+  .projekt-card-footer {
+    flex-direction: column;
+  }
+
+  .projekt-kompakt-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .kompakt-meta {
+    font-size: 12px;
+  }
+
+  .kompakt-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* LOADING STATES */
+
+.projekt-karten-grid.loading,
+.projekt-kompakt-list.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* EMPTY STATE */
+
+.projekt-karten-grid:empty::after,
+.projekt-kompakt-list:empty::after {
+  content: 'Keine Projekte gefunden';
+  display: block;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-light, #6b7280);
+  font-size: 16px;
+}
+
+/* PRINT STYLES for Project Views */
+
+@media print {
+  .projekt-card-checkbox,
+  .projekt-card-footer,
+  .kompakt-checkbox,
+  .kompakt-actions {
+    display: none;
+  }
+
+  .projekt-karten-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .projekt-card,
+  .projekt-kompakt-item {
+    break-inside: avoid;
+  }
+}
+
+/* ========================================== */
 /* PRINT STYLES */
 /* ========================================== */
 
