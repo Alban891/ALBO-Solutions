@@ -1588,19 +1588,18 @@ body {
 }
 
 .ki-sidebar-header {
-  background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+  background: linear-gradient(135deg, #2d4a9e 0%, #1e3a7f 100%);
   color: white;
-  padding: 16px 20px;
+  padding: 20px;
   flex-shrink: 0;
-  height: 154px;  /* Exakt gleiche Höhe wie Dashboard Header + Navigation */
+  min-height: 110px;
   display: flex;
-  align-items: flex-start;
-  padding-top: 24px;  /* Vertikale Ausrichtung */
+  align-items: center;
 }
 
 .ki-header-content {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-start;
   width: 100%;
 }
@@ -1609,18 +1608,33 @@ body {
   flex: 1;
 }
 
+.ki-sidebar-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+  color: white;
+}
+
+.ki-sidebar-header p {
+  font-size: 11px;
+  margin: 0;
+  opacity: 0.95;
+  line-height: 1.5;
+  color: white;
+}
+
 .ki-indicator {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   background: #10b981;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 4px;
-  position: relative;
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-green 2s ease-in-out infinite;
 }
 
-@keyframes pulse-dot {
+@keyframes pulse-green {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   }
