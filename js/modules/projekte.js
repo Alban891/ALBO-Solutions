@@ -96,7 +96,7 @@ function renderListeView(projekte) {
                   <span style="font-size: 16px;">📁</span>
                   <div>
                     <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
-                         onclick="openProjektArtikel('${projekt.id}')">
+                         onclick="openProjektDetail('${projekt.id}')">
                       ${helpers.escapeHtml(projekt.name)}
                     </div>
                   </div>
@@ -117,7 +117,7 @@ function renderListeView(projekte) {
               </td>
               <td>
                 <div class="action-buttons">
-                  <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
+                  <button class="btn-icon" onclick="openProjektDetail('${projekt.id}')" title="Öffnen">
                     👁️
                   </button>
                   <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
@@ -180,7 +180,7 @@ function renderProjektCard(projekt) {
         </div>
       </div>
       
-      <div class="projekt-card-body" onclick="openProjektArtikel('${projekt.id}')">
+      <div class="projekt-card-body" onclick="openProjektDetail('${projekt.id}')">
         <h3 class="projekt-card-title">${helpers.escapeHtml(projekt.name)}</h3>
         
         <div class="projekt-card-info">
@@ -204,7 +204,7 @@ function renderProjektCard(projekt) {
       </div>
       
       <div class="projekt-card-footer">
-        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektArtikel('${projekt.id}')">
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektDetail('${projekt.id}')">
           👁️ Öffnen
         </button>
         <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProjekt('${projekt.id}')">
@@ -254,7 +254,7 @@ function renderProjektKompakt(projekt) {
       
       <div class="kompakt-icon">📁</div>
       
-      <div class="kompakt-main" onclick="openProjektArtikel('${projekt.id}')">
+      <div class="kompakt-main" onclick="openProjektDetail('${projekt.id}')">
         <div class="kompakt-title">${helpers.escapeHtml(projekt.name)}</div>
         <div class="kompakt-meta">
           ${helpers.escapeHtml(projekt.division || '-')} • 
@@ -270,7 +270,7 @@ function renderProjektKompakt(projekt) {
       </div>
       
       <div class="kompakt-actions">
-        <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
+        <button class="btn-icon" onclick="openProjektDetail('${projekt.id}')" title="Öffnen">
           👁️
         </button>
         <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
