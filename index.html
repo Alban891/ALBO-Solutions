@@ -235,18 +235,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- AI Feed -->
-            <div class="ai-feed-container">
-                <div class="ai-feed-header">
-                    <h3>🤖 KI-Insights</h3>
-                    <button class="btn-icon">🔄</button>
-                </div>
-                <div id="ai-feed" class="ai-feed">
-                    <!-- AI messages will be inserted here -->
-                </div>
-            </div>
-
         </div>
 
         <!-- ========================================== -->
@@ -312,7 +300,8 @@
                     </div>
                     
                     <div class="filter-group">
-                        <select id="projekt-filter-status" onchange="filterProjekte()">
+                        <label for="projekt-filter-status" class="sr-only">Status Filter</label>
+                        <select id="projekt-filter-status" onchange="filterProjekte()" aria-label="Status Filter">
                             <option value="alle">Alle Status</option>
                             <option value="aktiv">Aktiv</option>
                             <option value="planung">Planung</option>
@@ -948,48 +937,56 @@
 
     </main>
 
-    <!-- ========================================== -->
-    <!-- KI CONTROLLER SIDEBAR -->
-    <!-- ========================================== -->
-    <div id="ki-sidebar" class="ki-sidebar">
-        <div class="ki-sidebar-header">
-            <div class="ki-header-content">
-                <span class="ki-indicator"></span>
-                <div>
-                    <h3>KI-Controller aktiv</h3>
-                    <p>Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="ki-sidebar-body">
-            <!-- Business Case Status -->
-            <div class="ki-section">
-                <div class="ki-section-title">Business Case Status:</div>
-                <div class="ki-status-badge ki-positive">✓ Positiv</div>
-            </div>
-            
-            <div class="ki-section">
-                <div class="ki-metric-row">
-                    <span class="ki-metric-label">Risiko-Level:</span>
-                    <span class="ki-metric-value ki-warning">Medium (68%)</span>
-                </div>
-                <div class="ki-metric-row">
-                    <span class="ki-metric-label">Konfidenz-Score:</span>
-                    <span class="ki-metric-value">78%</span>
-                </div>
-                <div class="ki-metric-row">
-                    <span class="ki-metric-label">vs. Industrie-Benchmark:</span>
-                    <span class="ki-metric-value ki-positive">+12% besser</span>
-                </div>
-            </div>
-            
-            <!-- AI Feed -->
-            <div class="ki-feed" id="ki-feed">
-                <!-- Nachrichten werden hier dynamisch eingefügt -->
+<!-- ========================================== -->
+<!-- KI CONTROLLER SIDEBAR -->
+<!-- ========================================== -->
+<div class="ki-sidebar">
+    <!-- Header -->
+    <div class="ki-sidebar-header">
+        <div class="ki-header-content">
+            <span class="ki-indicator"></span>
+            <div>
+                <h3>KI-Controller aktiv</h3>
+                <p>Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</p>
             </div>
         </div>
     </div>
+
+    <!-- Body -->
+    <div class="ki-sidebar-body">
+        <!-- Business Case Status -->
+        <div class="ki-section">
+            <div class="ki-section-title">Business Case Status:</div>
+            <span class="ki-status-badge ki-positive">
+                ✓ Positiv
+            </span>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="ki-section">
+            <div class="ki-metric-row">
+                <span class="ki-metric-label">Risiko-Level:</span>
+                <span class="ki-metric-value ki-warning">Medium (68%)</span>
+            </div>
+            <div class="ki-metric-row">
+                <span class="ki-metric-label">Konfidenz-Score:</span>
+                <span class="ki-metric-value">78%</span>
+            </div>
+            <div class="ki-metric-row">
+                <span class="ki-metric-label">vs. Industrie-Benchmark:</span>
+                <span class="ki-metric-value ki-positive">+12% besser</span>
+            </div>
+        </div>
+
+        <!-- AI Feed -->
+        <div class="ki-section" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="ki-section-title">🤖 KI-Insights Feed</div>
+            <div class="ki-feed" id="ki-feed">
+                <!-- AI messages werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- ========================================== -->
     <!-- SCRIPTS -->
