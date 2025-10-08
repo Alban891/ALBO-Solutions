@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFO Dashboard - Business Case Analysis</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- HEADER -->
+    <!-- ========================================== -->
+    <header class="dashboard-header">
+        <div class="header-left">
+            <h1>💼 CFO Dashboard</h1>
+            <span class="header-subtitle">Business Case Analysis & Management</span>
+        </div>
+        <div class="header-right">
+            <button class="btn-settings" title="Einstellungen">⚙️</button>
+            <button class="btn-user" title="Profil">👤</button>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- MAIN NAVIGATION -->
+    <!-- ========================================== -->
+    <nav class="main-navigation">
+        <button class="tab-btn active" onclick="switchTab('dashboard')">
+            📊 Dashboard
+        </button>
+        <button class="tab-btn" onclick="switchTab('assumptions')">
+            📋 Assumptions
+        </button>
+        <button class="tab-btn" onclick="switchTab('insights')">
+            💡 Insights
+        </button>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- MAIN CONTENT -->
+    <!-- ========================================== -->
+    <main class="dashboard-main">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DASHBOARD -->
+        <!-- ========================================== -->
+        <div id="tab-dashboard" class="tab-content active">
+            
+            <!-- Slider Controls -->
+            <div class="control-panel">
+                <h2>🎛️ Business Case Simulator</h2>
+                <p class="control-description">Passen Sie die Annahmen an und sehen Sie die Auswirkungen in Echtzeit</p>
+
+                <div class="sliders-grid">
+                    <!-- Market Volume Slider -->
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <label>📈 Marktvolumen</label>
+                            <span id="market-value" class="slider-value">100%</span>
+                        </div>
+                        <input type="range" id="market-slider" 
+                               min="50" max="150" value="100" step="5"
+                               oninput="adjustAssumption('market', this.value)"
+                               class="slider">
+                        <div class="slider-labels">
+                            <span>50%</span>
+                            <span>100%</span>
+                            <span>150%</span>
+                        </div>
+                    </div>
+
+                    <!-- Price Premium Slider -->
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <label>💰 Preis-Premium</label>
+                            <span id="price-value" class="slider-value">+0%</span>
+                        </div>
+                        <input type="range" id="price-slider" 
+                               min="80" max="120" value="100" step="5"
+                               oninput="adjustAssumption('price', this.value)"
+                               class="slider">
+                        <div class="slider-labels">
+                            <span>-20%</span>
+                            <span>±0%</span>
+                            <span>+20%</span>
+                        </div>
+                    </div>
+
+                    <!-- CAPEX Risk Slider -->
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <label>⚠️ CAPEX-Risiko</label>
+                            <span id="capex-value" class="slider-value">Plan</span>
+                        </div>
+                        <input type="range" id="capex-slider" 
+                               min="80" max="120" value="100" step="5"
+                               oninput="adjustAssumption('capex', this.value)"
+                               class="slider">
+                        <div class="slider-labels">
+                            <span>-20%</span>
+                            <span>Plan</span>
+                            <span>+20%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon">💰</div>
+                    <div class="metric-content">
+                        <div class="metric-label">NPV</div>
+                        <div class="metric-value">44.7 M€</div>
+                        <div class="metric-change positive">+12.3% vs Plan</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">📅</div>
+                    <div class="metric-content">
+                        <div class="metric-label">Payback</div>
+                        <div class="metric-value">3.4 Jahre</div>
+                        <div class="metric-change positive">Excellent</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-content">
+                        <div class="metric-label">Gesamt-Umsatz</div>
+                        <div class="metric-value">174.0 M€</div>
+                        <div class="metric-change neutral">2024-2030</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon">💎</div>
+                    <div class="metric-content">
+                        <div class="metric-label">DB2-Marge</div>
+                        <div class="metric-value">34%</div>
+                        <div class="metric-change positive">Über Benchmark</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <!-- Umsatz Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📈 Umsatzentwicklung</h3>
+                        <span class="chart-subtitle">Jährliche Erlöse in k€</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="umsatz-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Absatz Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📦 Absatzentwicklung</h3>
+                        <span class="chart-subtitle">Verkaufte Einheiten (Tsd.)</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="absatz-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- DB2 Chart -->
+                <div class="chart-card chart-wide">
+                    <div class="chart-header">
+                        <h3>💰 DB2 & Marge</h3>
+                        <span class="chart-subtitle">Deckungsbeitrag II und Margenverlauf</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="db2-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Projektkosten Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>🔧 Projektkosten</h3>
+                        <span class="chart-subtitle">Entwicklungs- und Betriebskosten</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="projektkosten-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- DB3 Jahr Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>💎 DB3 Jahreswerte</h3>
+                        <span class="chart-subtitle">Deckungsbeitrag III pro Jahr</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="db3-jahr-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- DB3 Kumuliert Chart -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>📈 DB3 Kumuliert</h3>
+                        <span class="chart-subtitle">Kumulierter Deckungsbeitrag</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="db3-kumuliert-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Feed -->
+            <div class="ai-feed-container">
+                <div class="ai-feed-header">
+                    <h3>🤖 KI-Insights</h3>
+                    <button class="btn-icon">🔄</button>
+                </div>
+                <div id="ai-feed" class="ai-feed">
+                    <!-- AI messages will be inserted here -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: ASSUMPTIONS -->
+        <!-- ========================================== -->
+        <div id="tab-assumptions" class="tab-content">
+            
+            <!-- ========================================== -->
+            <!-- PROJEKT OVERVIEW -->
+            <!-- ========================================== -->
+            <div id="projekt-overview">
+                
+                <!-- Header -->
+                <div class="section-header">
+                    <div>
+                        <h2>📁 Projekte</h2>
+                        <p>Verwalten Sie Ihre Business Case Projekte</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openCreateProjektModal()">
+                        ➕ Neues Projekt
+                    </button>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Gesamt</div>
+                            <div class="stat-value" id="stat-total-projects">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Aktiv</div>
+                            <div class="stat-value" id="stat-active-projects">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-warning">
+                        <div class="stat-icon">⏸️</div>
+                        <div class="stat-content">
+                            <div class="stat-label">On Hold</div>
+                            <div class="stat-value" id="stat-onhold-projects">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-info">
+                        <div class="stat-icon">🏁</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Abgeschlossen</div>
+                            <div class="stat-value" id="stat-completed-projects">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search -->
+                <div class="table-controls">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="projekt-search" 
+                               placeholder="Projekte durchsuchen..." 
+                               oninput="filterProjekte()">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select id="projekt-filter-status" onchange="filterProjekte()">
+                            <option value="alle">Alle Status</option>
+                            <option value="aktiv">Aktiv</option>
+                            <option value="planung">Planung</option>
+                            <option value="on-hold">On Hold</option>
+                            <option value="abgeschlossen">Abgeschlossen</option>
+                        </select>
+
+                        <select id="projekt-sort" onchange="sortProjekte()">
+                            <option value="name">Nach Name</option>
+                            <option value="start">Nach Startdatum</option>
+                            <option value="status">Nach Status</option>
+                            <option value="owner">Nach Owner</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Projects Table -->
+                <div class="table-container">
+                    <!-- Loading Indicator -->
+                    <div id="projekt-loading-indicator" class="loading-indicator">
+                        <div class="spinner"></div>
+                        <p>Projekte werden geladen...</p>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="select-all-projects" 
+                                           onchange="toggleAllProjects(this)">
+                                </th>
+                                <th>Projektname</th>
+                                <th>Business Unit</th>
+                                <th>Status</th>
+                                <th>Owner</th>
+                                <th width="80">Artikel</th>
+                                <th>Laufzeit</th>
+                                <th width="120">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projekt-list-tbody">
+                            <!-- Projects will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div id="bulk-actions-bar" class="bulk-actions-bar">
+                    <div class="bulk-actions-info">
+                        <span id="bulk-count">0</span> Projekte ausgewählt
+                    </div>
+                    <div class="bulk-actions-buttons">
+                        <select id="bulk-status-change">
+                            <option value="">Status ändern...</option>
+                            <option value="Planung">→ Planung</option>
+                            <option value="Aktiv">→ Aktiv</option>
+                            <option value="On Hold">→ On Hold</option>
+                            <option value="Abgeschlossen">→ Abgeschlossen</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="bulkStatusChange()">
+                            Anwenden
+                        </button>
+                        <button class="btn btn-danger" onclick="bulkDeleteProjekte()">
+                            🗑️ Löschen
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ARTIKEL OVERVIEW (Hidden by default) -->
+            <!-- ========================================== -->
+            <div id="artikel-overview" style="display: none;">
+                
+                <!-- Breadcrumb -->
+                <div class="breadcrumb">
+                    <button class="breadcrumb-link" onclick="backToProjektOverview()">
+                        📁 Projekte
+                    </button>
+                    <span class="breadcrumb-separator">›</span>
+                    <span id="current-projekt-name" class="breadcrumb-current">Projekt</span>
+                </div>
+
+                <!-- Header -->
+                <div class="section-header">
+                    <div>
+                        <h2>📦 Artikel</h2>
+                        <p>Produktartikel und Services des Projekts</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="createNewArtikel()">
+                        ➕ Neuer Artikel
+                    </button>
+                </div>
+
+                <!-- Articles Table -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="select-all-artikel" 
+                                           onchange="toggleAllArtikel(this)">
+                                </th>
+                                <th>Artikelname</th>
+                                <th>Kategorie</th>
+                                <th>Release</th>
+                                <th>Umsatz</th>
+                                <th>DB2 %</th>
+                                <th>Status</th>
+                                <th width="150">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="artikel-list-tbody">
+                            <!-- Articles will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div id="artikel-bulk-actions-bar" class="bulk-actions-bar">
+                    <div class="bulk-actions-info">
+                        <span id="artikel-bulk-count">0</span> Artikel ausgewählt
+                    </div>
+                    <div class="bulk-actions-buttons">
+                        <button class="btn btn-danger" onclick="bulkDeleteArtikel()">
+                            🗑️ Löschen
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ARTIKEL DETAIL VIEW (Hidden by default) -->
+            <!-- ========================================== -->
+            <div id="artikel-detail-view" style="display: none;">
+                
+                <!-- Breadcrumb -->
+                <div class="breadcrumb">
+                    <button class="breadcrumb-link" onclick="backToProjektOverview()">
+                        📁 Projekte
+                    </button>
+                    <span class="breadcrumb-separator">›</span>
+                    <button class="breadcrumb-link" onclick="closeArtikelDetail()">
+                        📦 Artikel
+                    </button>
+                    <span class="breadcrumb-separator">›</span>
+                    <span class="breadcrumb-current">Artikel bearbeiten</span>
+                </div>
+
+                <!-- Header -->
+                <div class="section-header">
+                    <h2>✏️ Artikel bearbeiten</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="closeArtikelDetail()">
+                            Abbrechen
+                        </button>
+                        <button class="btn btn-primary" onclick="saveArtikelChanges()">
+                            💾 Speichern
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detail Tabs -->
+                <div class="detail-tabs">
+                    <button class="detail-tab active" onclick="switchDetailTab('artikel')">
+                        📋 Artikeldetails
+                    </button>
+                    <button class="detail-tab" onclick="switchDetailTab('wirtschaft')">
+                        💰 Wirtschaftlichkeit
+                    </button>
+                    <button class="detail-tab" onclick="switchDetailTab('kosten')">
+                        🔧 Projektkosten
+                    </button>
+                </div>
+
+                <!-- Tab: Artikeldetails -->
+                <div id="detail-tab-artikel" class="detail-tab-content active">
+                    
+                    <div class="form-grid">
+                        <!-- Basic Info -->
+                        <div class="form-section">
+                            <h3>📝 Basis-Informationen</h3>
+                            
+                            <div class="form-group">
+                                <label>Artikelname *</label>
+                                <input type="text" id="artikel-name" 
+                                       placeholder="z.B. Smart Sensor X1" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Typ *</label>
+                                    <select id="artikel-typ">
+                                        <option value="Hardware">Hardware</option>
+                                        <option value="Software">Software</option>
+                                        <option value="Service">Service</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Kategorie</label>
+                                    <input type="text" id="kategorie" 
+                                           placeholder="z.B. IoT Sensor">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Beschreibung</label>
+                                <textarea id="artikel-beschreibung" rows="3" 
+                                          placeholder="Kurze Produktbeschreibung..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Market Info -->
+                        <div class="form-section">
+                            <h3>🎯 Markt & Strategie</h3>
+
+                            <div class="form-group">
+                                <label>Geschäftsmodell</label>
+                                <select id="geschaeftsmodell">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="einmalverkauf">Einmalverkauf</option>
+                                    <option value="subscription">Subscription</option>
+                                    <option value="freemium">Freemium</option>
+                                    <option value="lizenz">Lizenzmodell</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Zielmarkt</label>
+                                <input type="text" id="zielmarkt" 
+                                       placeholder="z.B. DACH Region, B2B">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Strategie</label>
+                                <select id="strategie">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="innovator">Innovator/First Mover</option>
+                                    <option value="fast-follower">Fast Follower</option>
+                                    <option value="cost-leader">Cost Leader</option>
+                                    <option value="niche">Nische/Spezialist</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Investment-Typ</label>
+                                <select id="investment-typ">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="growth">Growth</option>
+                                    <option value="efficiency">Efficiency</option>
+                                    <option value="innovation">Innovation</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="form-section form-section-full">
+                            <h3>📅 Timeline & Release</h3>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Release-Datum (Monat)</label>
+                                    <input type="month" id="release-datum">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Annahmen & Risiken</label>
+                                    <textarea id="annahmen" rows="2" 
+                                              placeholder="Wichtige Annahmen zum Artikel..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Tab: Wirtschaftlichkeit -->
+                <div id="detail-tab-wirtschaft" class="detail-tab-content">
+                    
+                    <div class="wirtschaft-container">
+                        
+                        <!-- Start Values -->
+                        <div class="form-section">
+                            <h3>🎯 Start-Werte (Jahr 1)</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Start-Menge (Stück)</label>
+                                    <input type="text" id="start-menge" 
+                                           placeholder="1.000" 
+                                           onblur="helpers.formatNumberInput(this); updateErsteZeile()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Start-Preis (€/Stück)</label>
+                                    <input type="text" id="start-preis" 
+                                           placeholder="100,00" 
+                                           onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Start-HK (€/Stück)</label>
+                                    <input type="text" id="start-hk" 
+                                           placeholder="60,00" 
+                                           onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Time Horizon -->
+                        <div class="form-section">
+                            <h3>📆 Planungshorizont</h3>
+                            
+                            <div class="zeitraum-selector">
+                                <button class="zeitraum-btn" onclick="setzeZeithorizont(3)" data-jahre="3">
+                                    3 Jahre
+                                </button>
+                                <button class="zeitraum-btn active" onclick="setzeZeithorizont(5)" data-jahre="5">
+                                    5 Jahre
+                                </button>
+                                <button class="zeitraum-btn" onclick="setzeZeithorizont(7)" data-jahre="7">
+                                    7 Jahre
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Development Models -->
+                        <div class="modelle-container">
+                            
+                            <!-- Mengen-Modell -->
+                            <div class="modell-section">
+                                <h3>📊 Mengen-Entwicklung</h3>
+                                
+                                <div class="modell-options">
+                                    <label class="modell-option">
+                                        <input type="radio" name="mengen-modell" value="konservativ">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📉</div>
+                                            <div class="modell-name">Konservativ</div>
+                                            <div class="modell-desc">Linear +15% p.a.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="mengen-modell" value="realistisch" checked>
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📊</div>
+                                            <div class="modell-name">Realistisch</div>
+                                            <div class="modell-desc">S-Kurve</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="mengen-modell" value="optimistisch">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📈</div>
+                                            <div class="modell-name">Optimistisch</div>
+                                            <div class="modell-desc">Hockey-Stick</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="mengen-modell" value="manuell">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">✏️</div>
+                                            <div class="modell-name">Manuell</div>
+                                            <div class="modell-desc">Eigene Werte</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Preis-Modell -->
+                            <div class="modell-section">
+                                <h3>💰 Preis-Entwicklung</h3>
+                                
+                                <div class="modell-options">
+                                    <label class="modell-option">
+                                        <input type="radio" name="preis-modell" value="konstant" checked>
+                                        <div class="modell-card">
+                                            <div class="modell-icon">➡️</div>
+                                            <div class="modell-name">Konstant</div>
+                                            <div class="modell-desc">Gleichbleibend</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="preis-modell" value="inflation">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📈</div>
+                                            <div class="modell-name">Inflation</div>
+                                            <div class="modell-desc">+2% p.a.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="preis-modell" value="premium">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">💎</div>
+                                            <div class="modell-name">Premium</div>
+                                            <div class="modell-desc">+5% p.a.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="preis-modell" value="skimming">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📉</div>
+                                            <div class="modell-name">Skimming</div>
+                                            <div class="modell-desc">-3% p.a.</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Kosten-Modell -->
+                            <div class="modell-section">
+                                <h3>🔧 Kosten-Entwicklung</h3>
+                                
+                                <div class="modell-options">
+                                    <label class="modell-option">
+                                        <input type="radio" name="kosten-modell" value="konstant">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">➡️</div>
+                                            <div class="modell-name">Konstant</div>
+                                            <div class="modell-desc">Gleichbleibend</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="kosten-modell" value="lernkurve" checked>
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📚</div>
+                                            <div class="modell-name">Lernkurve</div>
+                                            <div class="modell-desc">-5% bei 2x Menge</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="kosten-modell" value="inflation">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">📈</div>
+                                            <div class="modell-name">Inflation</div>
+                                            <div class="modell-desc">+3% p.a.</div>
+                                        </div>
+                                    </label>
+
+                                    <label class="modell-option">
+                                        <input type="radio" name="kosten-modell" value="skaleneffekte">
+                                        <div class="modell-card">
+                                            <div class="modell-icon">⚙️</div>
+                                            <div class="modell-name">Skaleneffekte</div>
+                                            <div class="modell-desc">Stufenweise</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Year Data Table -->
+                        <div class="form-section form-section-full">
+                            <div class="section-header">
+                                <h3>📊 Jahres-Planung</h3>
+                                <button class="btn btn-secondary" onclick="berechneModelle()">
+                                    🔄 Neu berechnen
+                                </button>
+                            </div>
+
+                            <div class="table-container">
+                                <table class="data-table jahr-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th class="jahr-col jahr-1">
+                                                <span class="jahr-header-1">2025</span>
+                                            </th>
+                                            <th class="jahr-col jahr-2">
+                                                <span class="jahr-header-2">2026</span>
+                                            </th>
+                                            <th class="jahr-col jahr-3">
+                                                <span class="jahr-header-3">2027</span>
+                                            </th>
+                                            <th class="jahr-col jahr-4">
+                                                <span class="jahr-header-4">2028</span>
+                                            </th>
+                                            <th class="jahr-col jahr-5">
+                                                <span class="jahr-header-5">2029</span>
+                                            </th>
+                                            <th class="jahr-col jahr-6">
+                                                <span class="jahr-header-6">2030</span>
+                                            </th>
+                                            <th class="jahr-col jahr-7">
+                                                <span class="jahr-header-7">2031</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Menge (Stück)</td>
+                                            <td class="jahr-col jahr-1">
+                                                <input type="text" id="menge-jahr-1" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-2">
+                                                <input type="text" id="menge-jahr-2" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-3">
+                                                <input type="text" id="menge-jahr-3" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-4">
+                                                <input type="text" id="menge-jahr-4" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-5">
+                                                <input type="text" id="menge-jahr-5" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-6">
+                                                <input type="text" id="menge-jahr-6" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-7">
+                                                <input type="text" id="menge-jahr-7" class="jahr-input">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Preis (€/Stück)</td>
+                                            <td class="jahr-col jahr-1">
+                                                <input type="text" id="preis-jahr-1" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-2">
+                                                <input type="text" id="preis-jahr-2" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-3">
+                                                <input type="text" id="preis-jahr-3" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-4">
+                                                <input type="text" id="preis-jahr-4" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-5">
+                                                <input type="text" id="preis-jahr-5" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-6">
+                                                <input type="text" id="preis-jahr-6" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-7">
+                                                <input type="text" id="preis-jahr-7" class="jahr-input">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>HK (€/Stück)</td>
+                                            <td class="jahr-col jahr-1">
+                                                <input type="text" id="hk-jahr-1" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-2">
+                                                <input type="text" id="hk-jahr-2" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-3">
+                                                <input type="text" id="hk-jahr-3" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-4">
+                                                <input type="text" id="hk-jahr-4" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-5">
+                                                <input type="text" id="hk-jahr-5" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-6">
+                                                <input type="text" id="hk-jahr-6" class="jahr-input">
+                                            </td>
+                                            <td class="jahr-col jahr-7">
+                                                <input type="text" id="hk-jahr-7" class="jahr-input">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Tab: Projektkosten -->
+                <div id="detail-tab-kosten" class="detail-tab-content">
+                    
+                    <div class="section-header">
+                        <h3>🔧 Projektkosten</h3>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="generateKostenEmpfehlungen()">
+                                🤖 KI-Empfehlungen
+                            </button>
+                            <button class="btn btn-primary" onclick="addKostenBlock()">
+                                ➕ Kostenblock
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cost Blocks Container -->
+                    <div id="kosten-bloecke-container" class="kosten-bloecke">
+                        <!-- Cost blocks will be added here dynamically -->
+                    </div>
+
+                    <!-- Total -->
+                    <div class="kosten-total">
+                        <div class="kosten-total-label">Gesamte Projektkosten:</div>
+                        <div class="kosten-total-value" id="total-projektkosten">0€</div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: INSIGHTS -->
+        <!-- ========================================== -->
+        <div id="tab-insights" class="tab-content">
+            
+            <div class="insights-container">
+                <h2>💡 Business Insights</h2>
+                <p>Detaillierte Analysen und Empfehlungen (Coming Soon)</p>
+                
+                <div class="insights-placeholder">
+                    <div class="placeholder-icon">🚧</div>
+                    <h3>In Entwicklung</h3>
+                    <p>Hier werden bald erweiterte Analysen, Benchmarks und KI-gestützte Empfehlungen verfügbar sein.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- SCRIPTS -->
+    <!-- ========================================== -->
+    
+    <!-- Load Modules (ES6) -->
+    <script type="module">
+        // Import all modules
+        import './js/main.js';
+        import * as helpers from './js/helpers.js';
+        import { renderProjektOverview, updateProjektStats } from './js/modules/projekte.js';
+        import { renderArtikelListByProjekt } from './js/modules/artikel.js';
+        
+        // Make helpers globally available for inline handlers
+        window.helpers = helpers;
+        window.renderProjektOverview = renderProjektOverview;
+        window.updateProjektStats = updateProjektStats;
+        window.renderArtikelListByProjekt = renderArtikelListByProjekt;
+    </script>
+
+</body>
+</html>
