@@ -1717,8 +1717,10 @@ body {
 .ki-feed {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
+  overflow-y: auto;
+  max-height: none;
 }
 
 .ki-message {
