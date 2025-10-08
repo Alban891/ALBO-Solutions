@@ -217,15 +217,30 @@ export async function updateProject(projektId, updates) {
   try {
     const dbId = projektId.replace('projekt-db-', '');
 
+    // Helper: Convert month format (YYYY-MM) to full date (YYYY-MM-01)
+    const formatDateForDB = (monthString) => {
+      if (!monthString) return null;
+      
+      // If already full date format (YYYY-MM-DD), return as-is
+      if (monthString.includes('-') && monthString.split('-').length === 3) {
+        return monthString;
+      }
+      
+      // Convert month format (YYYY-MM) to first day of month (YYYY-MM-01)
+      return monthString + '-01';
+    };
+
     const dataToUpdate = {
       project_name: updates.name,
       description: updates.beschreibung,
       business_unit: updates.division,
       project_status: updates.status,
       project_owner: updates.owner,
-      start_date: updates.startDatum,
-      end_date: updates.endDatum
+      start_date: formatDateForDB(updates.startDatum),
+      end_date: formatDateForDB(updates.endDatum)
     };
+
+    console.log('💾 Updating project in database:', dataToUpdate);
 
     const { error } = await client
       .from('ALBO_Projects')
