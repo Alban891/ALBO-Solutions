@@ -13,7 +13,7 @@ export const supabaseConfig = {
 export const appConfig = {
   appName: 'ALBO Solutions',
   version: '1.0.0',
-  environment: import.meta.env.MODE || 'production'
+  environment: 'production'
 };
 
 // Main Configuration Object
