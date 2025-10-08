@@ -1244,36 +1244,6 @@
         window.updateProjektStats = updateProjektStats;
         window.renderArtikelListByProjekt = renderArtikelListByProjekt;
 
-        // NEW: Project view switching function (Liste/Karten/Kompakt)
-        window.switchProjectView = function(viewType) {
-            console.log('🔄 Switching project view to:', viewType);
-
-            // Update button states
-            document.querySelectorAll('.view-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            const activeBtn = document.querySelector(`.view-btn[data-view="${viewType}"]`);
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-            }
-
-            // For now, all views show the same table
-            // In future: implement card and compact layouts
-            const tableContainer = document.querySelector('#projekt-overview .table-container');
-            
-            if (viewType === 'karten') {
-                // TODO: Implement card view
-                console.log('⚠️ Karten-Ansicht: Coming soon');
-            } else if (viewType === 'kompakt') {
-                // TODO: Implement compact view
-                console.log('⚠️ Kompakt-Ansicht: Coming soon');
-            } else {
-                // Liste view (default)
-                console.log('✅ Listen-Ansicht aktiv');
-            }
-        };
-
         // NEW: Projekt-Tab switching function
         window.switchProjektTab = function(tabName) {
             console.log('📑 Switching projekt tab:', tabName);
