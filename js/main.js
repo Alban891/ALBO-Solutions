@@ -121,7 +121,19 @@ async function loadInitialData() {
  * Restore UI state from saved state
  */
 function restoreUIState() {
-  const targetTab = state.currentTab || 'dashboard';
+  // Map old tab names to new names
+  const tabMapping = {
+    'dashboard': 'cockpit',
+    'assumptions': 'projekte',
+    'insights': 'performance'
+  };
+  
+  let targetTab = state.currentTab || 'cockpit';
+  
+  // Convert old tab name to new name
+  if (tabMapping[targetTab]) {
+    targetTab = tabMapping[targetTab];
+  }
   
   console.log('🔄 Restoring UI to tab:', targetTab);
 
@@ -140,17 +152,7 @@ function restoreUIState() {
 
   if (targetButton) targetButton.classList.add('active');
   if (targetContent) targetContent.classList.add('active');
-
-  // Handle projekt/artikel detail views
-  if (state.currentProjekt) {
-    // Show artikel overview for this projekt
-    const projektOverview = document.getElementById('projekt-overview');
-    const artikelOverview = document.getElementById('artikel-overview');
-    
-    if (projektOverview) projektOverview.style.display = 'none';
-    if (artikelOverview) artikelOverview.style.display = 'block';
   }
-}
 
 /**
  * Save current navigation state
@@ -200,7 +202,7 @@ window.switchTab = function(tabName) {
   if (targetContent) targetContent.classList.add('active');
 
   // Reset views when switching tabs
-  if (tabName === 'assumptions') {
+  if (tabName === 'projekte') {
     const projektOverview = document.getElementById('projekt-overview');
     const artikelOverview = document.getElementById('artikel-overview');
     
@@ -481,9 +483,10 @@ function startAIInsightsTimer() {
  */
 function getTabDisplayName(tabName) {
   const names = {
-    'dashboard': 'Dashboard',
-    'assumptions': 'Assumptions',
-    'insights': 'Insights'
+    'cockpit': 'Cockpit',
+    'projekte': 'Projekte',
+    'performance': 'Performance',
+    'admin': 'Admin'
   };
   return names[tabName] || tabName;
 }
