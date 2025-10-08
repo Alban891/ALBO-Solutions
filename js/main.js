@@ -378,7 +378,7 @@ function setupEventListeners() {
 // ==========================================
 
 /**
- * Initialize AI Controller (simplified version)
+ * Initialize AI Controller
  */
 function initializeAI() {
   window.cfoDashboard.aiController = {
@@ -391,41 +391,58 @@ function initializeAI() {
         timestamp: message.timestamp || new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
       });
 
-      // Render to UI (if AI feed exists)
-      const feedContainer = document.getElementById('ai-feed');
-      if (feedContainer) {
-        this.renderMessages();
-      }
+      this.renderMessages();
 
-      // Keep only last 20 messages
       if (this.messages.length > 20) {
         this.messages.shift();
       }
     },
 
     renderMessages: function() {
-      const feedContainer = document.getElementById('ai-feed');
+      const feedContainer = document.getElementById('ki-feed');
       if (!feedContainer) return;
 
-      feedContainer.innerHTML = this.messages.reverse().map(msg => `
-        <div class="ai-message ai-${msg.level || 'info'}">
-          <div class="ai-message-header">
-            <span class="ai-message-title">${msg.title || 'AI Insight'}</span>
-            <span class="ai-message-time">${msg.timestamp}</span>
-          </div>
-          <div class="ai-message-text">${msg.text}</div>
-          ${msg.recommendation ? `<div class="ai-message-recommendation">💡 ${msg.recommendation}</div>` : ''}
-        </div>
-      `).join('');
+      const messagesHtml = this.messages.slice().reverse().map(msg => {
+        const icon = this.getIcon(msg.level);
+        const title = msg.title || 'KI Insight';
+        const text = msg.text || '';
+        const time = msg.timestamp || '';
+        const level = msg.level || 'info';
+        
+        let html = '<div class="ki-message ki-' + level + '">';
+        html += '<div class="ki-message-header">';
+        html += '<span class="ki-message-title">' + icon + ' ' + title + '</span>';
+        html += '<span class="ki-message-time">' + time + '</span>';
+        html += '</div>';
+        html += '<div class="ki-message-text">' + text + '</div>';
+        
+        if (msg.recommendation) {
+          html += '<div class="ki-message-recommendation">💡 ' + msg.recommendation + '</div>';
+        }
+        
+        html += '</div>';
+        return html;
+      }).join('');
 
-      this.messages.reverse(); // Restore order
+      feedContainer.innerHTML = messagesHtml;
+    },
+
+    getIcon: function(level) {
+      const icons = {
+        'success': '✅',
+        'insight': '📊',
+        'risk': '⚠️',
+        'warning': '⚠️',
+        'info': 'ℹ️'
+      };
+      return icons[level] || 'ℹ️';
     }
   };
 
   // Initial welcome message
   window.cfoDashboard.aiController.addAIMessage({
     level: 'success',
-    title: '🚀 KI-Controller aktiviert',
+    title: 'KI-Controller aktiviert',
     text: 'System bereit. Business Case geladen.',
     timestamp: 'System-Start'
   });
@@ -438,10 +455,10 @@ function initializeAI() {
  */
 function startAIInsightsTimer() {
   const insights = [
-    { title: '📊 Markt-Insight', text: 'DB2-Marge liegt über Benchmark.', level: 'success' },
-    { title: '⚠️ Risiko-Hinweis', text: 'CAPEX-Auslastung bei 89%.', level: 'warning' },
-    { title: '💡 Optimierung', text: 'Mengenmodell für Artikel X prüfen.', level: 'info' },
-    { title: '✅ Performance', text: 'Projekt Y hat Payback erreicht.', level: 'success' }
+    { title: 'Markt-Insight', text: 'DB2-Marge liegt über Benchmark.', level: 'insight' },
+    { title: 'Risiko-Hinweis', text: 'CAPEX-Auslastung bei 89%.', level: 'risk' },
+    { title: 'Optimierung', text: 'Mengenmodell für Artikel X prüfen.', level: 'info' },
+    { title: 'Performance', text: 'Projekt Y hat Payback erreicht.', level: 'success' }
   ];
 
   setInterval(() => {
