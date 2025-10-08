@@ -3,21 +3,21 @@
  * All constants, benchmarks, rules, and settings
  */
 
-// Supabase Configuration with Environment Variables
-export const supabaseConfig = {
-  url: 'https://oibmbhkmqkjumtteysvi.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pYm1iaGttcWtqdW10dGV5c3ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODIyNzMsImV4cCI6MjA3NTE1ODI3M30.ePL5g9d1xcZH3ClX4fA9txuu9l8UmHnaBiBF8nRnL2A'
-};
-
-// Application Configuration
-export const appConfig = {
-  appName: 'ALBO Solutions',
-  version: '1.0.0',
-  environment: 'production'
-};
-
 // Main Configuration Object
-export const CONFIG = {
+const CONFIG = {
+  // Supabase Configuration
+  supabase: {
+    url: 'https://oibmbhkmqkjumtteysvi.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pYm1iaGttcWtqdW10dGV5c3ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODIyNzMsImV4cCI6MjA3NTE1ODI3M30.ePL5g9d1xcZH3ClX4fA9txuu9l8UmHnaBiBF8nRnL2A'
+  },
+
+  // Application Info
+  app: {
+    name: 'ALBO Solutions',
+    version: '1.0.0',
+    environment: 'production'
+  },
+
   // Dashboard Benchmarks
   benchmarks: {
     db2Margin: {
@@ -139,4 +139,5 @@ export const CONFIG = {
   }
 };
 
+// Export default
 export default CONFIG;
