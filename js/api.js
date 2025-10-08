@@ -152,15 +152,30 @@ export async function saveProject(projektData) {
     // Validate data
     state.validateProjektData(projektData);
 
+    // Helper: Convert month format (YYYY-MM) to full date (YYYY-MM-01)
+    const formatDateForDB = (monthString) => {
+      if (!monthString) return null;
+      
+      // If already full date format (YYYY-MM-DD), return as-is
+      if (monthString.includes('-') && monthString.split('-').length === 3) {
+        return monthString;
+      }
+      
+      // Convert month format (YYYY-MM) to first day of month (YYYY-MM-01)
+      return monthString + '-01';
+    };
+
     const dataToSave = {
       project_name: projektData.name,
       description: projektData.beschreibung || '',
       business_unit: projektData.division,
       project_status: projektData.status,
       project_owner: projektData.owner,
-      start_date: projektData.startDatum,
-      end_date: projektData.endDatum
+      start_date: formatDateForDB(projektData.startDatum),
+      end_date: formatDateForDB(projektData.endDatum)
     };
+
+    console.log('💾 Saving to database:', dataToSave);
 
     const { data, error } = await client
       .from('ALBO_Projects')
