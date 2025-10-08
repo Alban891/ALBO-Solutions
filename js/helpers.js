@@ -5,6 +5,30 @@
  */
 
 // ==========================================
+// SECURITY & HTML ESCAPING
+// ==========================================
+
+/**
+ * Escape HTML special characters to prevent XSS attacks
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string
+ */
+export function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  
+  const text = String(str);
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// ==========================================
 // NUMBER FORMATTING
 // ==========================================
 
@@ -521,6 +545,7 @@ export function deepClone(obj) {
 
 // Export all as default object
 export default {
+  escapeHtml,
   formatThousands,
   formatDecimal,
   formatRevenue,
