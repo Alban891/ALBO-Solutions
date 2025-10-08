@@ -250,46 +250,45 @@
                 <!-- ========================================== -->
                 <div id="projekt-overview">
                     
-                    <!-- Header -->
-                    <div class="section-header">
-                        <div>
-                            <h2>💼 Projekte</h2>
-                            <p>Verwalten Sie Ihre Business Case Projekte</p>
+                    <!-- Portfolio Overview Header (Horvath Style) -->
+                    <div class="portfolio-overview-header">
+                        <div class="portfolio-label">PORTFOLIO OVERVIEW</div>
+                        <div class="portfolio-stats">
+                            <div class="portfolio-stat">
+                                <span class="portfolio-stat-value" id="stat-total-projects">0</span>
+                                <span class="portfolio-stat-label">PROJEKTE</span>
+                            </div>
+                            <div class="portfolio-stat portfolio-stat-success">
+                                <span class="portfolio-stat-value" id="stat-active-projects">0</span>
+                                <span class="portfolio-stat-label">AKTIV</span>
+                            </div>
+                            <div class="portfolio-stat portfolio-stat-warning">
+                                <span class="portfolio-stat-value" id="stat-onhold-projects">0</span>
+                                <span class="portfolio-stat-label">ON HOLD</span>
+                            </div>
+                            <div class="portfolio-stat portfolio-stat-neutral">
+                                <span class="portfolio-stat-value" id="stat-completed-projects">0</span>
+                                <span class="portfolio-stat-label">ABGESCHLOSSEN</span>
+                            </div>
                         </div>
-                        <button class="btn btn-primary" onclick="openCreateProjektModal()">
-                            ➕ Neues Projekt
-                        </button>
                     </div>
 
-                    <!-- Statistics -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon">📊</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Gesamt</div>
-                                <div class="stat-value" id="stat-total-projects">0</div>
-                            </div>
+                    <!-- Section Header with View Switcher -->
+                    <div class="section-header-with-views">
+                        <div class="section-title">
+                            <span class="section-icon">📁</span>
+                            <h2>Projekt Portfolio</h2>
                         </div>
-                        <div class="stat-card stat-success">
-                            <div class="stat-icon">✅</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Aktiv</div>
-                                <div class="stat-value" id="stat-active-projects">0</div>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-warning">
-                            <div class="stat-icon">⏸️</div>
-                            <div class="stat-content">
-                                <div class="stat-label">On Hold</div>
-                                <div class="stat-value" id="stat-onhold-projects">0</div>
-                            </div>
-                        </div>
-                        <div class="stat-card stat-info">
-                            <div class="stat-icon">🏁</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Abgeschlossen</div>
-                                <div class="stat-value" id="stat-completed-projects">0</div>
-                            </div>
+                        <div class="view-switcher">
+                            <button class="view-btn active" data-view="liste" onclick="switchProjectView('liste')">
+                                <span class="view-icon">☰</span> Liste
+                            </button>
+                            <button class="view-btn" data-view="karten" onclick="switchProjectView('karten')">
+                                <span class="view-icon">▦</span> Karten
+                            </button>
+                            <button class="view-btn" data-view="kompakt" onclick="switchProjectView('kompakt')">
+                                <span class="view-icon">≡</span> Kompakt
+                            </button>
                         </div>
                     </div>
 
@@ -313,10 +312,10 @@
                             </select>
 
                             <select id="projekt-sort" onchange="sortProjekte()">
-                                <option value="name">Nach Name</option>
-                                <option value="start">Nach Startdatum</option>
-                                <option value="status">Nach Status</option>
-                                <option value="owner">Nach Owner</option>
+                                <option value="name">Sortieren: Name</option>
+                                <option value="start">Sortieren: Startdatum</option>
+                                <option value="status">Sortieren: Status</option>
+                                <option value="owner">Sortieren: Owner</option>
                             </select>
                         </div>
                     </div>
@@ -336,19 +335,26 @@
                                         <input type="checkbox" id="select-all-projects" 
                                                onchange="toggleAllProjects(this)">
                                     </th>
-                                    <th>Projektname</th>
-                                    <th>Business Unit</th>
-                                    <th>Status</th>
-                                    <th>Owner</th>
-                                    <th width="80">Artikel</th>
-                                    <th>Laufzeit</th>
-                                    <th width="120">Aktionen</th>
+                                    <th>PROJEKT</th>
+                                    <th>DIVISION</th>
+                                    <th>OWNER</th>
+                                    <th width="100">START</th>
+                                    <th width="100">END</th>
+                                    <th width="100">STATUS</th>
+                                    <th width="120">AKTIONEN</th>
                                 </tr>
                             </thead>
                             <tbody id="projekt-list-tbody">
                                 <!-- Projects will be rendered here by projekte.js -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Centered Create Button -->
+                    <div class="centered-action">
+                        <button class="btn btn-primary btn-large" onclick="openCreateProjektModal()">
+                            ➕ Neues Projekt anlegen
+                        </button>
                     </div>
 
                     <!-- Bulk Actions Bar -->
@@ -1235,6 +1241,36 @@
         window.renderProjektOverview = renderProjektOverview;
         window.updateProjektStats = updateProjektStats;
         window.renderArtikelListByProjekt = renderArtikelListByProjekt;
+
+        // NEW: Project view switching function (Liste/Karten/Kompakt)
+        window.switchProjectView = function(viewType) {
+            console.log('🔄 Switching project view to:', viewType);
+
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const activeBtn = document.querySelector(`.view-btn[data-view="${viewType}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            // For now, all views show the same table
+            // In future: implement card and compact layouts
+            const tableContainer = document.querySelector('#projekt-overview .table-container');
+            
+            if (viewType === 'karten') {
+                // TODO: Implement card view
+                console.log('⚠️ Karten-Ansicht: Coming soon');
+            } else if (viewType === 'kompakt') {
+                // TODO: Implement compact view
+                console.log('⚠️ Kompakt-Ansicht: Coming soon');
+            } else {
+                // Liste view (default)
+                console.log('✅ Listen-Ansicht aktiv');
+            }
+        };
 
         // NEW: Projekt-Tab switching function
         window.switchProjektTab = function(tabName) {
