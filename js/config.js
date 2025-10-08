@@ -5,8 +5,8 @@
 
 // Supabase Configuration with Environment Variables
 export const supabaseConfig = {
-  url: import.meta.env.VITE_SUPABASE_URL || 'https://oibmbhkmqkjumtteysvi.supabase.co',
-  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-fallback-key'
+  url: 'https://oibmbhkmqkjumtteysvi.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9pYm1iaGttcWtqdW10dGV5c3ZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODIyNzMsImV4cCI6MjA3NTE1ODI3M30.ePL5g9d1xcZH3ClX4fA9txuu9l8UmHnaBiBF8nRnL2A'
 };
 
 // Application Configuration
