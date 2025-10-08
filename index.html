@@ -938,52 +938,48 @@
     </main>
 
 <!-- ========================================== -->
-<!-- KI CONTROLLER SIDEBAR -->
+<!-- AI SIDEBAR -->
 <!-- ========================================== -->
-<div class="ki-sidebar">
-    <!-- Header -->
-    <div class="ki-sidebar-header">
-        <div class="ki-header-content">
-            <span class="ki-indicator"></span>
+<div class="sidebar">
+    <!-- AI Header -->
+    <div class="ai-header">
+        <div class="ai-status">
+            <div class="ai-status-indicator"></div>
             <div>
-                <h3>KI-Controller aktiv</h3>
-                <p>Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</p>
+                <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">KI-Controller aktiv</div>
+                <div style="font-size: 11px; opacity: 0.9;">Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</div>
             </div>
         </div>
     </div>
 
-    <!-- Body -->
-    <div class="ki-sidebar-body">
-        <!-- Business Case Status -->
-        <div class="ki-section">
-            <div class="ki-section-title">Business Case Status:</div>
-            <span class="ki-status-badge ki-positive">
+    <!-- AI Metrics Panel -->
+    <div class="ai-metrics-panel">
+        <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
+            <div style="font-size: 11px; font-weight: 600; color: var(--gray); margin-bottom: 8px;">Business Case Status:</div>
+            <div style="display: inline-block; padding: 4px 12px; background: #d1fae5; color: #065f46; border-radius: 6px; font-size: 12px; font-weight: 600;">
                 ✓ Positiv
-            </span>
-        </div>
-
-        <!-- Key Metrics -->
-        <div class="ki-section">
-            <div class="ki-metric-row">
-                <span class="ki-metric-label">Risiko-Level:</span>
-                <span class="ki-metric-value ki-warning">Medium (68%)</span>
-            </div>
-            <div class="ki-metric-row">
-                <span class="ki-metric-label">Konfidenz-Score:</span>
-                <span class="ki-metric-value">78%</span>
-            </div>
-            <div class="ki-metric-row">
-                <span class="ki-metric-label">vs. Industrie-Benchmark:</span>
-                <span class="ki-metric-value ki-positive">+12% besser</span>
             </div>
         </div>
 
-        <!-- AI Feed -->
-        <div class="ki-section" style="flex: 1; display: flex; flex-direction: column;">
-            <div class="ki-section-title">🤖 KI-Insights Feed</div>
-            <div class="ki-feed" id="ki-feed">
-                <!-- AI messages werden hier dynamisch eingefügt -->
-            </div>
+        <div class="ai-metric-row">
+            <span class="ai-metric-label">Risiko-Level:</span>
+            <span class="ai-metric-value warning">Medium (68%)</span>
+        </div>
+        <div class="ai-metric-row">
+            <span class="ai-metric-label">Konfidenz-Score:</span>
+            <span class="ai-metric-value">78%</span>
+        </div>
+        <div class="ai-metric-row">
+            <span class="ai-metric-label">vs. Industrie-Benchmark:</span>
+            <span class="ai-metric-value good">+12% besser</span>
+        </div>
+    </div>
+
+    <!-- AI Feed -->
+    <div class="ai-feed">
+        <div class="ai-feed-title">🤖 KI-Insights Feed</div>
+        <div id="ki-feed">
+            <!-- Messages werden hier eingefügt -->
         </div>
     </div>
 </div>
