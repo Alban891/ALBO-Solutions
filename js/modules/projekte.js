@@ -2,6 +2,7 @@
  * CFO Dashboard - Projekte Module
  * Complete project lifecycle: Create, Read, Update, Delete, Render
  * Enterprise-grade with filtering, sorting, and bulk operations
+ * NOW WITH: Liste, Karten, and Kompakt views
  */
 
 import { state } from '../state.js';
@@ -10,37 +11,56 @@ import * as api from '../api.js';
 import { renderArtikelListByProjekt } from './artikel.js';
 
 // ==========================================
-// PROJECT RENDERING
+// VIEW STATE
+// ==========================================
+
+let currentView = 'liste'; // 'liste', 'karten', 'kompakt'
+
+// ==========================================
+// PROJECT RENDERING - MAIN DISPATCHER
 // ==========================================
 
 /**
- * Render project overview table
+ * Render project overview based on current view
  */
 export function renderProjektOverview() {
-  console.log('📊 Rendering project overview');
-
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
+  console.log('📊 Rendering project overview - View:', currentView);
 
   const projekte = state.getAllProjekte();
 
   if (projekte.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
-          <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
-          <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
-            Noch keine Projekte vorhanden
-          </div>
-          <div style="font-size: 14px;">
-            Erstelle dein erstes Projekt
-          </div>
-        </td>
-      </tr>
-    `;
+    renderEmptyState();
     updateProjektStats();
     return;
   }
+
+  // Dispatch to appropriate renderer
+  switch(currentView) {
+    case 'karten':
+      renderKartenView(projekte);
+      break;
+    case 'kompakt':
+      renderKompaktView(projekte);
+      break;
+    case 'liste':
+    default:
+      renderListeView(projekte);
+      break;
+  }
+
+  updateProjektStats();
+}
+
+// ==========================================
+// LISTE VIEW (Original Table)
+// ==========================================
+
+/**
+ * Render liste view (table)
+ */
+function renderListeView(projekte) {
+  const tbody = document.getElementById('projekt-list-tbody');
+  if (!tbody) return;
 
   tbody.innerHTML = projekte.map(projekt => {
     const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
@@ -88,9 +108,221 @@ export function renderProjektOverview() {
       </tr>
     `;
   }).join('');
-
-  updateProjektStats();
 }
+
+// ==========================================
+// KARTEN VIEW (Card Grid)
+// ==========================================
+
+/**
+ * Render karten view (cards)
+ */
+function renderKartenView(projekte) {
+  const tbody = document.getElementById('projekt-list-tbody');
+  if (!tbody) return;
+
+  // Replace table with card grid
+  const container = tbody.closest('.table-container');
+  if (!container) return;
+
+  const cardsHTML = `
+    <div class="projekt-karten-grid">
+      ${projekte.map(projekt => renderProjektCard(projekt)).join('')}
+    </div>
+  `;
+
+  container.innerHTML = cardsHTML;
+}
+
+/**
+ * Render single project card
+ */
+function renderProjektCard(projekt) {
+  const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
+  const artikelCount = projekt.artikel?.length || 0;
+
+  return `
+    <div class="projekt-card" data-projekt-id="${projekt.id}">
+      <div class="projekt-card-header">
+        <div class="projekt-card-checkbox">
+          <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
+                 onchange="updateBulkActions()">
+        </div>
+        <div class="projekt-card-icon">📁</div>
+        <div class="projekt-card-status">
+          <span class="status-badge status-${statusClass}">
+            ${helpers.escapeHtml(projekt.status || 'aktiv')}
+          </span>
+        </div>
+      </div>
+      
+      <div class="projekt-card-body" onclick="openProjektArtikel('${projekt.id}')">
+        <h3 class="projekt-card-title">${helpers.escapeHtml(projekt.name)}</h3>
+        
+        <div class="projekt-card-info">
+          <div class="projekt-card-info-item">
+            <span class="info-label">Division:</span>
+            <span class="info-value">${helpers.escapeHtml(projekt.division || '-')}</span>
+          </div>
+          <div class="projekt-card-info-item">
+            <span class="info-label">Owner:</span>
+            <span class="info-value">${helpers.escapeHtml(projekt.owner || '-')}</span>
+          </div>
+          <div class="projekt-card-info-item">
+            <span class="info-label">Zeitraum:</span>
+            <span class="info-value">${projekt.startDatum || '-'} bis ${projekt.endDatum || '-'}</span>
+          </div>
+          <div class="projekt-card-info-item">
+            <span class="info-label">Artikel:</span>
+            <span class="info-value">${artikelCount} Artikel</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="projekt-card-footer">
+        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektArtikel('${projekt.id}')">
+          👁️ Öffnen
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProjekt('${projekt.id}')">
+          🗑️ Löschen
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// KOMPAKT VIEW (Compact List)
+// ==========================================
+
+/**
+ * Render kompakt view (compact list)
+ */
+function renderKompaktView(projekte) {
+  const tbody = document.getElementById('projekt-list-tbody');
+  if (!tbody) return;
+
+  // Replace table with compact list
+  const container = tbody.closest('.table-container');
+  if (!container) return;
+
+  const kompaktHTML = `
+    <div class="projekt-kompakt-list">
+      ${projekte.map(projekt => renderProjektKompakt(projekt)).join('')}
+    </div>
+  `;
+
+  container.innerHTML = kompaktHTML;
+}
+
+/**
+ * Render single compact project item
+ */
+function renderProjektKompakt(projekt) {
+  const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
+  const artikelCount = projekt.artikel?.length || 0;
+
+  return `
+    <div class="projekt-kompakt-item" data-projekt-id="${projekt.id}">
+      <div class="kompakt-checkbox">
+        <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
+               onchange="updateBulkActions()">
+      </div>
+      
+      <div class="kompakt-icon">📁</div>
+      
+      <div class="kompakt-main" onclick="openProjektArtikel('${projekt.id}')">
+        <div class="kompakt-title">${helpers.escapeHtml(projekt.name)}</div>
+        <div class="kompakt-meta">
+          ${helpers.escapeHtml(projekt.division || '-')} • 
+          ${helpers.escapeHtml(projekt.owner || '-')} • 
+          ${artikelCount} Artikel
+        </div>
+      </div>
+      
+      <div class="kompakt-status">
+        <span class="status-badge status-${statusClass}">
+          ${helpers.escapeHtml(projekt.status || 'aktiv')}
+        </span>
+      </div>
+      
+      <div class="kompakt-actions">
+        <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
+          👁️
+        </button>
+        <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
+          🗑️
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ==========================================
+// EMPTY STATE
+// ==========================================
+
+/**
+ * Render empty state
+ */
+function renderEmptyState() {
+  const tbody = document.getElementById('projekt-list-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
+        <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
+          Noch keine Projekte vorhanden
+        </div>
+        <div style="font-size: 14px;">
+          Erstelle dein erstes Projekt
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+// ==========================================
+// VIEW SWITCHING
+// ==========================================
+
+/**
+ * Switch project view (called from index.html)
+ */
+window.switchProjectView = function(viewType) {
+  console.log('🔄 Switching project view to:', viewType);
+
+  currentView = viewType;
+
+  // Update button states
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  const activeBtn = document.querySelector(`.view-btn[data-view="${viewType}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+  }
+
+  // Re-render with new view
+  renderProjektOverview();
+
+  // AI Feedback
+  if (window.cfoDashboard.aiController) {
+    window.cfoDashboard.aiController.addAIMessage({
+      level: 'info',
+      title: '👁️ Ansicht gewechselt',
+      text: `${viewType.charAt(0).toUpperCase() + viewType.slice(1)}-Ansicht aktiviert.`,
+      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+    });
+  }
+};
+
+// ==========================================
+// PROJECT STATISTICS
+// ==========================================
 
 /**
  * Update project statistics
@@ -630,7 +862,7 @@ window.filterProjekte = function() {
   const searchTerm = helpers.getInputValue('projekt-search').toLowerCase();
   const statusFilter = helpers.getInputValue('projekt-filter-status');
 
-  const rows = document.querySelectorAll('.projekt-row');
+  const rows = document.querySelectorAll('.projekt-row, .projekt-card, .projekt-kompakt-item');
 
   rows.forEach(row => {
     const projektId = row.dataset.projektId;
@@ -664,44 +896,39 @@ window.filterProjekte = function() {
  */
 window.sortProjekte = function() {
   const sortBy = helpers.getInputValue('projekt-sort');
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
-
-  const rows = Array.from(tbody.querySelectorAll('.projekt-row'));
-
-  rows.sort((a, b) => {
-    const projektA = state.getProjekt(a.dataset.projektId);
-    const projektB = state.getProjekt(b.dataset.projektId);
-
-    if (!projektA || !projektB) return 0;
-
+  
+  // Get all projekte and sort
+  const projekte = state.getAllProjekte();
+  
+  projekte.sort((a, b) => {
     switch(sortBy) {
       case 'name':
-        return (projektA.name || '').localeCompare(projektB.name || '');
+        return (a.name || '').localeCompare(b.name || '');
       case 'start':
-        return new Date(projektA.startDatum || '2099-12-31') - new Date(projektB.startDatum || '2099-12-31');
+        return new Date(a.startDatum || '2099-12-31') - new Date(b.startDatum || '2099-12-31');
       case 'status':
-        return (projektA.status || '').localeCompare(projektB.status || '');
+        return (a.status || '').localeCompare(b.status || '');
       case 'owner':
-        return (projektA.owner || '').localeCompare(projektB.owner || '');
+        return (a.owner || '').localeCompare(b.owner || '');
       default:
         return 0;
     }
   });
 
-  rows.forEach(row => tbody.appendChild(row));
+  // Re-render with sorted data
+  renderProjektOverview();
 };
 
 /**
  * Update filtered stats
  */
 function updateFilteredStats() {
-  const visibleRows = document.querySelectorAll('.projekt-row:not([style*="display: none"])');
+  const visibleItems = document.querySelectorAll('.projekt-row:not([style*="display: none"]), .projekt-card:not([style*="display: none"]), .projekt-kompakt-item:not([style*="display: none"])');
 
   let aktiv = 0, onHold = 0, abgeschlossen = 0;
 
-  visibleRows.forEach(row => {
-    const projekt = state.getProjekt(row.dataset.projektId);
+  visibleItems.forEach(item => {
+    const projekt = state.getProjekt(item.dataset.projektId);
     if (!projekt) return;
 
     const status = projekt.status?.toLowerCase() || '';
@@ -710,7 +937,7 @@ function updateFilteredStats() {
     else if (status === 'abgeschlossen') abgeschlossen++;
   });
 
-  const total = visibleRows.length;
+  const total = visibleItems.length;
 
   // Update stats
   helpers.setInputValue('stat-total-projects', total);
@@ -772,7 +999,8 @@ window.bulkStatusChange = async function() {
 
   // Reset checkboxes
   checkedBoxes.forEach(cb => cb.checked = false);
-  document.getElementById('select-all-projects').checked = false;
+  const selectAll = document.getElementById('select-all-projects');
+  if (selectAll) selectAll.checked = false;
 
   // Re-render
   renderProjektOverview();
@@ -806,7 +1034,8 @@ window.bulkDeleteProjekte = function() {
   api.deleteMultipleProjects(projektIds).then(deletedCount => {
     // Reset checkboxes
     checkedBoxes.forEach(cb => cb.checked = false);
-    document.getElementById('select-all-projects').checked = false;
+    const selectAll = document.getElementById('select-all-projects');
+    if (selectAll) selectAll.checked = false;
 
     // Re-render
     renderProjektOverview();
