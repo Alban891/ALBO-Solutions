@@ -321,33 +321,35 @@
                     </div>
 
                     <!-- Projects Table -->
-                    <div class="table-container">
-                        <!-- Loading Indicator -->
-                        <div id="projekt-loading-indicator" class="loading-indicator">
-                            <div class="spinner"></div>
-                            <p>Projekte werden geladen...</p>
-                        </div>
+                    <div id="projekt-list-container">
+                        <div class="table-container">
+                            <!-- Loading Indicator -->
+                            <div id="projekt-loading-indicator" class="loading-indicator">
+                                <div class="spinner"></div>
+                                <p>Projekte werden geladen...</p>
+                            </div>
 
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th width="40">
-                                        <input type="checkbox" id="select-all-projects" 
-                                               onchange="toggleAllProjects(this)">
-                                    </th>
-                                    <th>PROJEKT</th>
-                                    <th>DIVISION</th>
-                                    <th>OWNER</th>
-                                    <th width="100">START</th>
-                                    <th width="100">END</th>
-                                    <th width="100">STATUS</th>
-                                    <th width="120">AKTIONEN</th>
-                                </tr>
-                            </thead>
-                            <tbody id="projekt-list-tbody">
-                                <!-- Projects will be rendered here by projekte.js -->
-                            </tbody>
-                        </table>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="select-all-projects" 
+                                                    onchange="toggleAllProjects(this)">
+                                        </th>
+                                        <th>PROJEKT</th>
+                                        <th>DIVISION</th>
+                                        <th>OWNER</th>
+                                        <th width="100">START</th>
+                                        <th width="100">END</th>
+                                        <th width="100">STATUS</th>
+                                        <th width="120">AKTIONEN</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="projekt-list-tbody">
+                                    <!-- Projects will be rendered here by projekte.js -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Centered Create Button -->
