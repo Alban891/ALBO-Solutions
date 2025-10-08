@@ -2268,6 +2268,10 @@ body {
 
 /* KARTEN VIEW Card Grid */
 
+#projekt-list-container {
+  width: 100%;
+}
+
 .projekt-karten-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
