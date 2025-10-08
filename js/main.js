@@ -493,8 +493,7 @@ function updateProjectStats() {
 
 export {
   initializeApplication,
-  saveNavigationState,
-  showErrorNotification
+  showErrorNotification,
 };
 
 // ==========================================
