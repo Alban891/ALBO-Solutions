@@ -27,8 +27,8 @@ export function renderProjektOverview() {
   if (projekte.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 40px; color: var(--gray);">
-          <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+        <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+          <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
           <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
             Noch keine Projekte vorhanden
           </div>
@@ -43,7 +43,6 @@ export function renderProjektOverview() {
   }
 
   tbody.innerHTML = projekte.map(projekt => {
-    const artikelCount = projekt.artikel?.length || 0;
     const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
 
     return `
@@ -53,33 +52,33 @@ export function renderProjektOverview() {
                  onchange="updateBulkActions()">
         </td>
         <td>
-          <div style="font-weight: 500; color: var(--text); cursor: pointer;" 
-               onclick="openProjektArtikel('${projekt.id}')">
-            ${helpers.escapeHtml(projekt.name)}
-          </div>
-          <div style="font-size: 12px; color: var(--gray); margin-top: 4px;">
-            ${helpers.escapeHtml(projekt.beschreibung || '-')}
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">📁</span>
+            <div>
+              <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
+                   onclick="openProjektArtikel('${projekt.id}')">
+                ${helpers.escapeHtml(projekt.name)}
+              </div>
+            </div>
           </div>
         </td>
-        <td>${helpers.escapeHtml(projekt.division || '-')}</td>
+        <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.division || '-')}</td>
+        <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.owner || '-')}</td>
+        <td style="color: var(--text-secondary); font-size: 12px;">
+          ${projekt.startDatum ? projekt.startDatum : '-'}
+        </td>
+        <td style="color: var(--text-secondary); font-size: 12px;">
+          ${projekt.endDatum ? projekt.endDatum : '-'}
+        </td>
         <td>
           <span class="status-badge status-${statusClass}">
             ${helpers.escapeHtml(projekt.status || 'aktiv')}
           </span>
         </td>
-        <td>${helpers.escapeHtml(projekt.owner || '-')}</td>
-        <td>${artikelCount}</td>
-        <td>
-          ${helpers.formatDateSafe(projekt.startDatum)} - 
-          ${helpers.formatDateSafe(projekt.endDatum)}
-        </td>
         <td>
           <div class="action-buttons">
-            <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Artikel anzeigen">
-              📦
-            </button>
-            <button class="btn-icon" onclick="editProjekt('${projekt.id}')" title="Bearbeiten">
-              ✏️
+            <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
+              👁️
             </button>
             <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
               🗑️
@@ -297,10 +296,12 @@ window.closeCreateProjektModal = function() {
  * Create new projekt
  */
 window.createProjekt = async function() {
-  console.log('💾 Creating projekt...');
+  console.log('🚀 CREATE PROJEKT CALLED');
 
   try {
-    // Collect form data
+    // Step 1: Collect form data
+    console.log('📝 Step 1: Collecting form data...');
+    
     const projektData = {
       name: helpers.getInputValue('new-projekt-name'),
       beschreibung: helpers.getInputValue('new-projekt-beschreibung'),
@@ -311,23 +312,48 @@ window.createProjekt = async function() {
       endDatum: helpers.getInputValue('new-projekt-end')
     };
 
-    // Validate
+    console.log('📊 Collected data:', projektData);
+
+    // Step 2: Validate
+    console.log('✔️ Step 2: Validating...');
+    
     if (!projektData.name || projektData.name.trim() === '') {
+      console.error('❌ Validation failed: Name is empty');
       alert('Bitte Projektname eingeben!');
       return;
     }
 
-    // Save to database
+    console.log('✅ Validation passed');
+
+    // Step 3: Check Supabase
+    console.log('🔌 Step 3: Checking Supabase connection...');
+    
+    if (!window.supabaseClient) {
+      console.error('❌ Supabase not initialized!');
+      alert('Datenbankverbindung nicht verfügbar. Bitte Seite neu laden.');
+      return;
+    }
+
+    console.log('✅ Supabase is ready');
+
+    // Step 4: Save to database
+    console.log('💾 Step 4: Saving to database...');
+    
     const saved = await api.saveProject(projektData);
 
+    console.log('💾 Save result:', saved);
+
     if (saved) {
-      console.log('✅ Projekt created');
+      console.log('✅ PROJECT SUCCESSFULLY CREATED!');
 
       // Close modal
       closeCreateProjektModal();
 
       // Re-render list
       renderProjektOverview();
+
+      // Show success message
+      alert(`✅ Projekt "${projektData.name}" erfolgreich erstellt!`);
 
       // AI Feedback
       if (window.cfoDashboard.aiController) {
@@ -338,11 +364,18 @@ window.createProjekt = async function() {
           timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
         });
       }
+    } else {
+      console.error('❌ Save returned null/false');
+      alert('❌ Fehler beim Speichern. Bitte Console prüfen (F12).');
     }
 
   } catch (error) {
-    console.error('❌ Create failed:', error);
-    alert('Fehler beim Erstellen: ' + error.message);
+    console.error('❌ CREATE FAILED WITH ERROR:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack
+    });
+    alert('❌ Fehler beim Erstellen:\n\n' + error.message + '\n\nBitte Console prüfen (F12).');
   }
 };
 
