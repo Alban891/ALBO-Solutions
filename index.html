@@ -19,14 +19,30 @@
     <!-- ========================================== -->
     <header class="dashboard-header">
         <div class="header-left">
-            <h1>💼 CFO Dashboard</h1>
-            <span class="header-subtitle">Business Case Analysis & Management</span>
+            <h1>ALBO Solutions - Business Case Management</h1>
+            <span class="header-subtitle">KI-gestützte Echtzeit-Analyse mit intelligenten Handlungsempfehlungen</span>
         </div>
-        <div class="header-right">
-            <button class="btn-settings" title="Einstellungen">⚙️</button>
-            <button class="btn-user" title="Profil">👤</button>
+        <!-- RECHTS: KPIs -->
+        <div class="header-stats">
+            <div class="stat">
+                <div class="stat-value" id="npv-value">+44,7M€</div>
+                <div class="stat-label">NPV (9 JAHRE)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="payback-value">3,4J</div>
+                <div class="stat-label">PAYBACK</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="revenue-value">117,8M€</div>
+                <div class="stat-label">TOTAL REVENUE</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="margin-value">34%</div>
+                <div class="stat-label">Ø DB2-MARGE</div>
+            </div>
         </div>
-    </header>
+    </div>
+</header>
 
     <!-- ========================================== -->
     <!-- MAIN NAVIGATION -->
@@ -933,6 +949,49 @@
     </main>
 
     <!-- ========================================== -->
+    <!-- KI CONTROLLER SIDEBAR -->
+    <!-- ========================================== -->
+    <div id="ki-sidebar" class="ki-sidebar">
+        <div class="ki-sidebar-header">
+            <div class="ki-header-content">
+                <span class="ki-indicator"></span>
+                <div>
+                    <h3>KI-Controller aktiv</h3>
+                    <p>Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ki-sidebar-body">
+            <!-- Business Case Status -->
+            <div class="ki-section">
+                <div class="ki-section-title">Business Case Status:</div>
+                <div class="ki-status-badge ki-positive">✓ Positiv</div>
+            </div>
+            
+            <div class="ki-section">
+                <div class="ki-metric-row">
+                    <span class="ki-metric-label">Risiko-Level:</span>
+                    <span class="ki-metric-value ki-warning">Medium (68%)</span>
+                </div>
+                <div class="ki-metric-row">
+                    <span class="ki-metric-label">Konfidenz-Score:</span>
+                    <span class="ki-metric-value">78%</span>
+                </div>
+                <div class="ki-metric-row">
+                    <span class="ki-metric-label">vs. Industrie-Benchmark:</span>
+                    <span class="ki-metric-value ki-positive">+12% besser</span>
+                </div>
+            </div>
+            
+            <!-- AI Feed -->
+            <div class="ki-feed" id="ki-feed">
+                <!-- Nachrichten werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- SCRIPTS -->
     <!-- ========================================== -->
     
@@ -951,5 +1010,5 @@
         window.renderArtikelListByProjekt = renderArtikelListByProjekt;
     </script>
 
-</body>
+    </body>
 </html>
