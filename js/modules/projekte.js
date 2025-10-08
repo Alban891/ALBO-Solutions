@@ -59,55 +59,80 @@ export function renderProjektOverview() {
  * Render liste view (table)
  */
 function renderListeView(projekte) {
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
+  const container = document.getElementById('projekt-list-container');
+  if (!container) {
+    console.error('projekt-list-container not found');
+    return;
+  }
 
-  tbody.innerHTML = projekte.map(projekt => {
-    const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
+  const tableHTML = `
+    <table class="data-table" id="projekt-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" id="select-all-projects" onchange="toggleAllProjects(this)">
+          </th>
+          <th>PROJEKT</th>
+          <th>DIVISION</th>
+          <th>OWNER</th>
+          <th>START</th>
+          <th>END</th>
+          <th>STATUS</th>
+          <th style="width: 100px;">AKTIONEN</th>
+        </tr>
+      </thead>
+      <tbody id="projekt-list-tbody">
+        ${projekte.map(projekt => {
+          const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
 
-    return `
-      <tr class="projekt-row" data-projekt-id="${projekt.id}">
-        <td>
-          <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
-                 onchange="updateBulkActions()">
-        </td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">📁</span>
-            <div>
-              <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
-                   onclick="openProjektArtikel('${projekt.id}')">
-                ${helpers.escapeHtml(projekt.name)}
-              </div>
-            </div>
-          </div>
-        </td>
-        <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.division || '-')}</td>
-        <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.owner || '-')}</td>
-        <td style="color: var(--text-secondary); font-size: 12px;">
-          ${projekt.startDatum ? projekt.startDatum : '-'}
-        </td>
-        <td style="color: var(--text-secondary); font-size: 12px;">
-          ${projekt.endDatum ? projekt.endDatum : '-'}
-        </td>
-        <td>
-          <span class="status-badge status-${statusClass}">
-            ${helpers.escapeHtml(projekt.status || 'aktiv')}
-          </span>
-        </td>
-        <td>
-          <div class="action-buttons">
-            <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
-              👁️
-            </button>
-            <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
-              🗑️
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+          return `
+            <tr class="projekt-row" data-projekt-id="${projekt.id}">
+              <td>
+                <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
+                       onchange="updateBulkActions()">
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">📁</span>
+                  <div>
+                    <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
+                         onclick="openProjektArtikel('${projekt.id}')">
+                      ${helpers.escapeHtml(projekt.name)}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.division || '-')}</td>
+              <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.owner || '-')}</td>
+              <td style="color: var(--text-secondary); font-size: 12px;">
+                ${projekt.startDatum ? projekt.startDatum : '-'}
+              </td>
+              <td style="color: var(--text-secondary); font-size: 12px;">
+                ${projekt.endDatum ? projekt.endDatum : '-'}
+              </td>
+              <td>
+                <span class="status-badge status-${statusClass}">
+                  ${helpers.escapeHtml(projekt.status || 'aktiv')}
+                </span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn-icon" onclick="openProjektArtikel('${projekt.id}')" title="Öffnen">
+                    👁️
+                  </button>
+                  <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
+                    🗑️
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  container.innerHTML = tableHTML;
 }
 
 // ==========================================
@@ -118,12 +143,11 @@ function renderListeView(projekte) {
  * Render karten view (cards)
  */
 function renderKartenView(projekte) {
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
-
-  // Replace table with card grid
-  const container = tbody.closest('.table-container');
-  if (!container) return;
+  const container = document.getElementById('projekt-list-container');
+  if (!container) {
+    console.error('projekt-list-container not found');
+    return;
+  }
 
   const cardsHTML = `
     <div class="projekt-karten-grid">
@@ -199,12 +223,11 @@ function renderProjektCard(projekt) {
  * Render kompakt view (compact list)
  */
 function renderKompaktView(projekte) {
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
-
-  // Replace table with compact list
-  const container = tbody.closest('.table-container');
-  if (!container) return;
+  const container = document.getElementById('projekt-list-container');
+  if (!container) {
+    console.error('projekt-list-container not found');
+    return;
+  }
 
   const kompaktHTML = `
     <div class="projekt-kompakt-list">
@@ -266,21 +289,39 @@ function renderProjektKompakt(projekt) {
  * Render empty state
  */
 function renderEmptyState() {
-  const tbody = document.getElementById('projekt-list-tbody');
-  if (!tbody) return;
+  const container = document.getElementById('projekt-list-container');
+  if (!container) return;
 
-  tbody.innerHTML = `
-    <tr>
-      <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
-        <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
-        <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
-          Noch keine Projekte vorhanden
-        </div>
-        <div style="font-size: 14px;">
-          Erstelle dein erstes Projekt
-        </div>
-      </td>
-    </tr>
+  container.innerHTML = `
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;"></th>
+            <th>PROJEKT</th>
+            <th>DIVISION</th>
+            <th>OWNER</th>
+            <th>START</th>
+            <th>END</th>
+            <th>STATUS</th>
+            <th style="width: 100px;">AKTIONEN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
+              <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
+              <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
+                Noch keine Projekte vorhanden
+              </div>
+              <div style="font-size: 14px;">
+                Erstelle dein erstes Projekt
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
