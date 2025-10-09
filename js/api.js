@@ -462,6 +462,7 @@ export async function updateArticle(artikelId, updates) {
   try {
     const dbId = artikelId.replace('artikel-db-', '');
 
+    // FIX: Konvertiere release_datum zu vollständigem Datum
     const dataToUpdate = {
       name: updates.name,
       typ: updates.typ,
@@ -471,7 +472,9 @@ export async function updateArticle(artikelId, updates) {
       strategie: updates.strategie,
       investment_typ: updates.investment_typ,
       beschreibung: updates.beschreibung,
-      release_datum: updates.release_datum,
+      release_datum: updates.release_datum ? 
+        (updates.release_datum.length === 7 ? updates.release_datum + '-01' : updates.release_datum) : 
+        null,
       annahmen: updates.annahmen,
       volumes: updates.volumes,
       prices: updates.prices,
