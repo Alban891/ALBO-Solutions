@@ -299,7 +299,6 @@ async function restoreDeepNavigation() {
   }
   
   console.log('✅ COMPLETE navigation state restored');
-}
 
     // NEU - Module global verfügbar machen (HIER nach Zeile 82)
     window.projekte = projekte;
