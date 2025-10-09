@@ -24,7 +24,7 @@ export function renderProjektWirtschaftlichkeit() {
             <!-- Header -->
             <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 16px;">📊 Projekt-Wirtschaftlichkeit: ${projekt?.name || 'Projekt'}</h3>
+                    <h3 style="margin: 0; font-size: 16px;">📊 Projekt: ${projekt?.name || 'Projekt'}</h3>
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <span style="font-size: 12px; color: var(--gray);">
                             ${artikelListe?.length || 0} Artikel aggregiert
