@@ -824,345 +824,412 @@
                     <!-- ========================================== -->
                     <!-- ARTIKEL TAB: WIRTSCHAFTLICHKEIT -->
                     <!-- ========================================== -->
-                    <div id="artikel-tab-wirtschaft" class="artikel-tab-content">
-                        
-                        <div class="wirtschaft-container">
-                            
-                            <!-- Start Values -->
-                            <div class="form-section">
-                                <h3>🎯 Start-Werte (Jahr 1)</h3>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Start-Menge (Stück)</label>
-                                        <input type="text" id="start-menge" 
-                                               placeholder="1.000" 
-                                               onblur="helpers.formatNumberInput(this); updateErsteZeile()">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Start-Preis (€/Stück)</label>
-                                        <input type="text" id="start-preis" 
-                                               placeholder="100,00" 
-                                               onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Start-HK (€/Stück)</label>
-                                        <input type="text" id="start-hk" 
-                                               placeholder="60,00" 
-                                               onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Time Horizon -->
-                            <div class="form-section">
-                                <h3>📆 Planungshorizont</h3>
-                                
-                                <div class="zeitraum-selector">
-                                    <button class="zeitraum-btn" onclick="setzeZeithorizont(3)" data-jahre="3">
-                                        3 Jahre
-                                    </button>
-                                    <button class="zeitraum-btn active" onclick="setzeZeithorizont(5)" data-jahre="5">
-                                        5 Jahre
-                                    </button>
-                                    <button class="zeitraum-btn" onclick="setzeZeithorizont(7)" data-jahre="7">
-                                        7 Jahre
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Development Models -->
-                            <div class="modelle-container">
-                                
-                                <!-- Mengen-Modell -->
-                                <div class="modell-section">
-                                    <h3>📊 Mengen-Entwicklung</h3>
-                                    
-                                    <div class="modell-options">
-                                        <label class="modell-option">
-                                            <input type="radio" name="mengen-modell" value="konservativ">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📉</div>
-                                                <div class="modell-name">Konservativ</div>
-                                                <div class="modell-desc">Linear +15% p.a.</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="mengen-modell" value="realistisch" checked>
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📊</div>
-                                                <div class="modell-name">Realistisch</div>
-                                                <div class="modell-desc">S-Kurve</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="mengen-modell" value="optimistisch">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📈</div>
-                                                <div class="modell-name">Optimistisch</div>
-                                                <div class="modell-desc">Hockey-Stick</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="mengen-modell" value="manuell">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">✏️</div>
-                                                <div class="modell-name">Manuell</div>
-                                                <div class="modell-desc">Eigene Werte</div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Preis-Modell -->
-                                <div class="modell-section">
-                                    <h3>💰 Preis-Entwicklung</h3>
-                                    
-                                    <div class="modell-options">
-                                        <label class="modell-option">
-                                            <input type="radio" name="preis-modell" value="konstant" checked>
-                                            <div class="modell-card">
-                                                <div class="modell-icon">➡️</div>
-                                                <div class="modell-name">Konstant</div>
-                                                <div class="modell-desc">Gleichbleibend</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="preis-modell" value="inflation">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📈</div>
-                                                <div class="modell-name">Inflation</div>
-                                                <div class="modell-desc">+2% p.a.</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="preis-modell" value="premium">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">💎</div>
-                                                <div class="modell-name">Premium</div>
-                                                <div class="modell-desc">+5% p.a.</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="preis-modell" value="skimming">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📉</div>
-                                                <div class="modell-name">Skimming</div>
-                                                <div class="modell-desc">-3% p.a.</div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Kosten-Modell -->
-                                <div class="modell-section">
-                                    <h3>🔧 Kosten-Entwicklung</h3>
-                                    
-                                    <div class="modell-options">
-                                        <label class="modell-option">
-                                            <input type="radio" name="kosten-modell" value="konstant">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">➡️</div>
-                                                <div class="modell-name">Konstant</div>
-                                                <div class="modell-desc">Gleichbleibend</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="kosten-modell" value="lernkurve" checked>
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📚</div>
-                                                <div class="modell-name">Lernkurve</div>
-                                                <div class="modell-desc">-5% bei 2x Menge</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="kosten-modell" value="inflation">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">📈</div>
-                                                <div class="modell-name">Inflation</div>
-                                                <div class="modell-desc">+3% p.a.</div>
-                                            </div>
-                                        </label>
-
-                                        <label class="modell-option">
-                                            <input type="radio" name="kosten-modell" value="skaleneffekte">
-                                            <div class="modell-card">
-                                                <div class="modell-icon">⚙️</div>
-                                                <div class="modell-name">Skaleneffekte</div>
-                                                <div class="modell-desc">Stufenweise</div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Year Data Table -->
-                            <div class="form-section form-section-full">
-                                <div class="section-header">
-                                    <h3>📊 Jahres-Planung</h3>
-                                    <button class="btn btn-secondary" onclick="berechneModelle()">
-                                        🔄 Neu berechnen
-                                    </button>
-                                </div>
-
-                                <div class="table-container">
-                                    <table class="data-table jahr-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Parameter</th>
-                                                <th class="jahr-col jahr-1">
-                                                    <span class="jahr-header-1">2025</span>
-                                                </th>
-                                                <th class="jahr-col jahr-2">
-                                                    <span class="jahr-header-2">2026</span>
-                                                </th>
-                                                <th class="jahr-col jahr-3">
-                                                    <span class="jahr-header-3">2027</span>
-                                                </th>
-                                                <th class="jahr-col jahr-4">
-                                                    <span class="jahr-header-4">2028</span>
-                                                </th>
-                                                <th class="jahr-col jahr-5">
-                                                    <span class="jahr-header-5">2029</span>
-                                                </th>
-                                                <th class="jahr-col jahr-6">
-                                                    <span class="jahr-header-6">2030</span>
-                                                </th>
-                                                <th class="jahr-col jahr-7">
-                                                    <span class="jahr-header-7">2031</span>
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>Menge (Stück)</td>
-                                                <td class="jahr-col jahr-1">
-                                                    <input type="text" id="menge-jahr-1" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-2">
-                                                    <input type="text" id="menge-jahr-2" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-3">
-                                                    <input type="text" id="menge-jahr-3" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-4">
-                                                    <input type="text" id="menge-jahr-4" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-5">
-                                                    <input type="text" id="menge-jahr-5" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-6">
-                                                    <input type="text" id="menge-jahr-6" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-7">
-                                                    <input type="text" id="menge-jahr-7" class="jahr-input">
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>Preis (€/Stück)</td>
-                                                <td class="jahr-col jahr-1">
-                                                    <input type="text" id="preis-jahr-1" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-2">
-                                                    <input type="text" id="preis-jahr-2" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-3">
-                                                    <input type="text" id="preis-jahr-3" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-4">
-                                                    <input type="text" id="preis-jahr-4" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-5">
-                                                    <input type="text" id="preis-jahr-5" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-6">
-                                                    <input type="text" id="preis-jahr-6" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-7">
-                                                    <input type="text" id="preis-jahr-7" class="jahr-input">
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>HK (€/Stück)</td>
-                                                <td class="jahr-col jahr-1">
-                                                    <input type="text" id="hk-jahr-1" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-2">
-                                                    <input type="text" id="hk-jahr-2" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-3">
-                                                    <input type="text" id="hk-jahr-3" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-4">
-                                                    <input type="text" id="hk-jahr-4" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-5">
-                                                    <input type="text" id="hk-jahr-5" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-6">
-                                                    <input type="text" id="hk-jahr-6" class="jahr-input">
-                                                </td>
-                                                <td class="jahr-col jahr-7">
-                                                    <input type="text" id="hk-jahr-7" class="jahr-input">
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- PROJEKT INFO BOX (READ-ONLY) -->
-                            <div class="form-section form-section-full" style="margin-top: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 12px; padding: 24px; color: white;">
-                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
-                                    <div style="font-size: 48px;">💼</div>
-                                    <div>
-                                        <h3 style="margin: 0; color: white;">Projekt-Zuordnung</h3>
-                                        <p style="margin: 4px 0 0 0; opacity: 0.9;">Dieser Artikel gehört zu einem Projekt mit gemeinsamen Kosten</p>
-                                    </div>
-                                </div>
-                                
-                                <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                                        <div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Projektname</div>
-                                            <div style="font-size: 16px; font-weight: 600;" id="artikel-projekt-name">Projekt XY</div>
-                                        </div>
-                                        <div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Gesamte Projektkosten</div>
-                                            <div style="font-size: 16px; font-weight: 600;" id="artikel-projekt-kosten">0€</div>
-                                        </div>
-                                        <div>
-                                            <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">Weitere Artikel</div>
-                                            <div style="font-size: 16px; font-weight: 600;" id="artikel-projekt-artikel-count">2 weitere</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <button class="btn btn-secondary" onclick="navigateToProjektKosten()" style="background: white; color: #667eea; border: none; font-weight: 600;">
-                                    → Projektkosten bearbeiten
-                                </button>
-                            </div>
-
+                    <div id="artikel-detail-view" style="display: none;">
+    
+                        <!-- Breadcrumb -->
+                        <div class="breadcrumb">
+                            <button class="breadcrumb-link" onclick="backToProjektOverview()">
+                                💼 Projekte
+                            </button>
+                            <span class="breadcrumb-separator">›</span>
+                            <span id="artikel-breadcrumb-projekt" class="breadcrumb-current">Projekt</span>
+                            <span class="breadcrumb-separator">›</span>
+                            <button class="breadcrumb-link" onclick="closeArtikelDetail()">
+                                📦 Artikel
+                            </button>
+                            <span class="breadcrumb-separator">›</span>
+                            <span id="artikel-breadcrumb-name" class="breadcrumb-current">Artikel bearbeiten</span>
                         </div>
 
+                        <!-- Header mit Navigation -->
+                        <div class="section-header" style="margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <button class="btn btn-secondary" onclick="closeArtikelDetail()" 
+                                        style="display: flex; align-items: center; gap: 8px;">
+                                    ← Zurück zur Artikel-Übersicht
+                                </button>
+
+                                <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                                    <button class="btn btn-secondary btn-sm" onclick="navigateToPreviousArtikel()" 
+                                            id="prev-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
+                                        ◀ Vorheriger
+                                    </button>
+    
+                                    <div style="padding: 8px 16px; background: var(--bg-secondary); border-radius: 6px; font-size: 14px; font-weight: 500;">
+                                        Artikel <span id="artikel-position">1</span> von <span id="artikel-total">3</span>
+                                    </div>
+    
+                                    <button class="btn btn-secondary btn-sm" onclick="navigateToNextArtikel()" 
+                                            id="next-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
+                                        Nächster ▶
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                                <h2 id="artikel-detail-title" style="margin: 0; flex: 1;">✏️ Artikel bearbeiten</h2>
+                                <button class="btn btn-secondary" onclick="closeArtikelDetail()">
+                                    Abbrechen
+                                </button>
+                                <button class="btn btn-primary" onclick="saveArtikelChanges()">
+                                    💾 Speichern
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- ========================================== -->
+                        <!-- ALLE INHALTE AUF EINER SEITE -->
+                        <!-- ========================================== -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+        
+                        <!-- LINKE SPALTE: Basis-Informationen -->
+                        <div class="form-section">
+                            <h3>📝 Basis-Informationen</h3>
+                            
+                            <div class="form-group">
+                                <label>Artikelname *</label>
+                                <input type="text" id="artikel-name" 
+                                    placeholder="z.B. Smart Sensor X1" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Typ *</label>
+                                    <select id="artikel-typ">
+                                        <option value="Hardware">Hardware</option>
+                                        <option value="Software">Software</option>
+                                        <option value="Service">Service</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Kategorie</label>
+                                    <input type="text" id="kategorie" 
+                                        placeholder="z.B. IoT Sensor">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Beschreibung</label>
+                                <textarea id="artikel-beschreibung" rows="3" 
+                                        placeholder="Kurze Produktbeschreibung..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- RECHTE SPALTE: Markt & Strategie -->
+                        <div class="form-section">
+                            <h3>🎯 Markt & Strategie</h3>
+
+                            <div class="form-group">
+                                <label>Geschäftsmodell</label>
+                                <select id="geschaeftsmodell">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="einmalverkauf">Einmalverkauf</option>
+                                    <option value="subscription">Subscription</option>
+                                    <option value="freemium">Freemium</option>
+                                    <option value="lizenz">Lizenzmodell</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Zielmarkt</label>
+                                <input type="text" id="zielmarkt" 
+                                    placeholder="z.B. DACH Region, B2B">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Strategie</label>
+                                <select id="strategie">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="innovator">Innovator/First Mover</option>
+                                    <option value="fast-follower">Fast Follower</option>
+                                    <option value="cost-leader">Cost Leader</option>
+                                    <option value="niche">Nische/Spezialist</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Investment-Typ</label>
+                                <select id="investment-typ">
+                                    <option value="">Bitte wählen...</option>
+                                    <option value="growth">Growth</option>
+                                    <option value="efficiency">Efficiency</option>
+                                    <option value="innovation">Innovation</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <!-- Ende artikel-tab-wirtschaft -->
+
+                    <!-- Timeline & Release -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>📅 Timeline & Release</h3>
+
+                        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 24px;">
+                            <div class="form-group">
+                                <label>Release-Datum (Monat)</label>
+                                <input type="month" id="release-datum">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Annahmen & Risiken</label>
+                                <textarea id="annahmen" rows="2" 
+                                        placeholder="Wichtige Annahmen zum Artikel..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- WIRTSCHAFTLICHKEIT -->
+                    <!-- ========================================== -->
+                    
+                    <!-- Start Values -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>🎯 Start-Werte (Jahr 1)</h3>
+        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                            <div class="form-group">
+                                <label>Start-Menge (Stück)</label>
+                                <input type="text" id="start-menge" 
+                                    placeholder="1.000" 
+                                    onblur="helpers.formatNumberInput(this); updateErsteZeile()">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Start-Preis (€/Stück)</label>
+                                <input type="text" id="start-preis" 
+                                    placeholder="100,00" 
+                                    onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Start-HK (€/Stück)</label>
+                                <input type="text" id="start-hk" 
+                                    placeholder="60,00" 
+                                    onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time Horizon -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>📆 Planungshorizont</h3>
+                        
+                        <div class="zeitraum-selector">
+                            <button class="zeitraum-btn" onclick="setzeZeithorizont(3)" data-jahre="3">
+                                3 Jahre
+                            </button>
+                            <button class="zeitraum-btn active" onclick="setzeZeithorizont(5)" data-jahre="5">
+                                5 Jahre
+                            </button>
+                            <button class="zeitraum-btn" onclick="setzeZeithorizont(7)" data-jahre="7">
+                                7 Jahre
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Development Models -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px;">
+                        
+                        <!-- Mengen-Modell -->
+                        <div class="form-section">
+                            <h3 style="font-size: 14px; margin-bottom: 12px;">📊 Mengen-Entwicklung</h3>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="mengen-modell" value="konservativ">
+                                    <span>📉 Konservativ (+15% p.a.)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="mengen-modell" value="realistisch" checked>
+                                    <span>📊 Realistisch (S-Kurve)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="mengen-modell" value="optimistisch">
+                                    <span>📈 Optimistisch (Hockey-Stick)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="mengen-modell" value="manuell">
+                                    <span>✏️ Manuell</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Preis-Modell -->
+                        <div class="form-section">
+                            <h3 style="font-size: 14px; margin-bottom: 12px;">💰 Preis-Entwicklung</h3>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="preis-modell" value="konstant" checked>
+                                    <span>➡️ Konstant (0%)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="preis-modell" value="inflation">
+                                    <span>📈 Inflation (+2% p.a.)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="preis-modell" value="premium">
+                                    <span>💎 Premium (+5% p.a.)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="preis-modell" value="skimming">
+                                    <span>📉 Skimming (-3% p.a.)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Kosten-Modell -->
+                        <div class="form-section">
+                            <h3 style="font-size: 14px; margin-bottom: 12px;">🔧 Kosten-Entwicklung</h3>
+                            
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="kosten-modell" value="konstant">
+                                    <span>➡️ Konstant (0%)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="kosten-modell" value="lernkurve" checked>
+                                    <span>📚 Lernkurve (-5% bei 2x)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="kosten-modell" value="inflation">
+                                    <span>📈 Inflation (+3% p.a.)</span>
+                                </label>
+
+                                <label class="modell-option-compact">
+                                    <input type="radio" name="kosten-modell" value="skaleneffekte">
+                                    <span>⚙️ Skaleneffekte (Stufen)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Year Data Table -->
+                    <div class="form-section">
+                        <div class="section-header" style="margin-bottom: 16px;">
+                            <h3 style="margin: 0;">📊 Jahres-Planung</h3>
+                            <button class="btn btn-secondary" onclick="berechneModelle()">
+                                🔄 Neu berechnen
+                            </button>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table jahr-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th class="jahr-col jahr-1">
+                                            <span class="jahr-header-1">2025</span>
+                                        </th>
+                                        <th class="jahr-col jahr-2">
+                                            <span class="jahr-header-2">2026</span>
+                                        </th>
+                                        <th class="jahr-col jahr-3">
+                                            <span class="jahr-header-3">2027</span>
+                                        </th>
+                                        <th class="jahr-col jahr-4">
+                                            <span class="jahr-header-4">2028</span>
+                                        </th>
+                                        <th class="jahr-col jahr-5">
+                                            <span class="jahr-header-5">2029</span>
+                                        </th>
+                                        <th class="jahr-col jahr-6">
+                                            <span class="jahr-header-6">2030</span>
+                                        </th>
+                                        <th class="jahr-col jahr-7">
+                                            <span class="jahr-header-7">2031</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Menge (Stück)</td>
+                                        <td class="jahr-col jahr-1">
+                                            <input type="text" id="menge-jahr-1" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-2">
+                                            <input type="text" id="menge-jahr-2" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-3">
+                                            <input type="text" id="menge-jahr-3" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-4">
+                                            <input type="text" id="menge-jahr-4" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-5">
+                                            <input type="text" id="menge-jahr-5" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-6">
+                                            <input type="text" id="menge-jahr-6" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-7">
+                                            <input type="text" id="menge-jahr-7" class="jahr-input">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Preis (€/Stück)</td>
+                                        <td class="jahr-col jahr-1">
+                                            <input type="text" id="preis-jahr-1" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-2">
+                                            <input type="text" id="preis-jahr-2" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-3">
+                                            <input type="text" id="preis-jahr-3" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-4">
+                                            <input type="text" id="preis-jahr-4" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-5">
+                                            <input type="text" id="preis-jahr-5" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-6">
+                                            <input type="text" id="preis-jahr-6" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-7">
+                                            <input type="text" id="preis-jahr-7" class="jahr-input">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>HK (€/Stück)</td>
+                                        <td class="jahr-col jahr-1">
+                                            <input type="text" id="hk-jahr-1" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-2">
+                                            <input type="text" id="hk-jahr-2" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-3">
+                                            <input type="text" id="hk-jahr-3" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-4">
+                                            <input type="text" id="hk-jahr-4" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-5">
+                                            <input type="text" id="hk-jahr-5" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-6">
+                                            <input type="text" id="hk-jahr-6" class="jahr-input">
+                                        </td>
+                                        <td class="jahr-col jahr-7">
+                                            <input type="text" id="hk-jahr-7" class="jahr-input">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                 </div>
-                <!-- Ende artikel-detail-view -->
-
-            </div>
-            <!-- Ende tab-projekte -->
 
             <!-- ========================================== -->
             <!-- TAB 3: PERFORMANCE -->
