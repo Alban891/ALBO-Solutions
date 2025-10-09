@@ -952,61 +952,67 @@
 
     // NEW: Projekt-Tab switching function
     window.switchProjektTab = function(tabName) {
-        console.log('📑 Switching projekt tab:', tabName);
+    console.log('📑 Switching projekt tab:', tabName);
 
-        // Update tab buttons
-        document.querySelectorAll('.detail-tab').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Update tab contents
-        document.querySelectorAll('.projekt-tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
+    // Update tab buttons
+    document.querySelectorAll('.detail-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Update tab contents
+    document.querySelectorAll('.projekt-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
 
-        // Activate target tab
-        const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
-        const targetContent = document.getElementById(`projekt-tab-${tabName}`);
+    // Activate target tab
+    const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
+    const targetContent = document.getElementById(`projekt-tab-${tabName}`);
 
-        if (targetButton) targetButton.classList.add('active');
-        if (targetContent) targetContent.classList.add('active');
+    if (targetButton) targetButton.classList.add('active');
+    if (targetContent) targetContent.classList.add('active');
 
-        // Special handling for artikel tab
-        if (tabName === 'artikel') {
-            // Render artikel list for this projekt
-            const projektId = window.cfoDashboard.currentProjekt;
-            if (projektId) {
-                const tbody = document.getElementById('projekt-artikel-list-tbody');
-                if (tbody) {
-                    // Use artikel.js function to render
-                    renderArtikelListByProjekt();
-                    // Copy to projekt tab tbody
-                    const sourceBody = document.getElementById('artikel-list-tbody');
-                    if (sourceBody) {
-                        tbody.innerHTML = sourceBody.innerHTML;
-                    }
+    // ✓ CRITICAL: Save navigation state
+    window.state.currentProjektTab = tabName;
+    window.state.projektViewMode = 'detail';
+    window.state.saveState();
+    console.log('💾 Saved projekt tab to state:', tabName);
+
+    // Special handling for different tabs
+    if (tabName === 'artikel') {
+        // Render artikel list for this projekt
+        const projektId = window.cfoDashboard.currentProjekt;
+        if (projektId) {
+            const tbody = document.getElementById('projekt-artikel-list-tbody');
+            if (tbody) {
+                renderArtikelListByProjekt();
+                const sourceBody = document.getElementById('artikel-list-tbody');
+                if (sourceBody) {
+                    tbody.innerHTML = sourceBody.innerHTML;
                 }
             }
         }
-        else if (tabName === 'projektkosten') {
-            // Import und render Projektkosten
-            import('./js/modules/projektkosten.js').then(module => {
-                module.renderProjektkosten();
-            });
-        }
-        else if (tabName === 'wirtschaftlichkeit') {
-            // Import und render Wirtschaftlichkeit
-            import('./js/modules/wirtschaftlichkeit.js').then(module => {
-                module.renderProjektWirtschaftlichkeit();
-            });
-        }
-        else if (tabName === 'dashboard') {
-            // Import und render Dashboard
-            import('./js/modules/dashboard.js').then(module => {
-                module.renderProjektDashboard();
-            });
-        }
-    };
+        
+        // ✓ Set artikel view mode to list
+        window.state.artikelViewMode = 'list';
+        window.state.currentArtikel = null;
+        window.state.saveState();
+    }
+    else if (tabName === 'projektkosten') {
+        import('./js/modules/projektkosten.js').then(module => {
+            module.renderProjektkosten();
+        });
+    }
+    else if (tabName === 'wirtschaftlichkeit') {
+        import('./js/modules/wirtschaftlichkeit.js').then(module => {
+            module.renderProjektWirtschaftlichkeit();
+        });
+    }
+    else if (tabName === 'dashboard') {
+        import('./js/modules/dashboard.js').then(module => {
+            module.renderProjektDashboard();
+        });
+    }
+};
     
     // Füge diese Funktion nach der switchProjektTab Funktion ein (ca. Zeile 1230)
     window.switchArtikelTab = function(tabName) {
@@ -1078,34 +1084,44 @@
 
     // NEW: Open projekt detail view
     window.openProjektDetail = function(projektId) {
-        const projekt = window.cfoDashboard.projektData[projektId] || state.getProjekt(projektId);
-        if (!projekt) {
-            console.error('Projekt not found:', projektId);
-            return;
-        }
+    const projekt = window.cfoDashboard.projektData[projektId] || state.getProjekt(projektId);
+    if (!projekt) {
+        console.error('Projekt not found:', projektId);
+        return;
+    }
 
-        console.log('📂 Opening projekt detail:', projekt.name);
+    console.log('📂 Opening projekt detail:', projekt.name);
 
-        // Set current projekt
-        window.cfoDashboard.currentProjekt = projektId;
+    // Set current projekt
+    window.cfoDashboard.currentProjekt = projektId;
+    
+    // ✓ CRITICAL: Save complete navigation state
+    window.state.currentProjekt = projektId;
+    window.state.projektViewMode = 'detail';
+    window.state.currentProjektTab = 'uebersicht'; // Default tab
+    window.state.currentArtikel = null;  // Clear artikel selection
+    window.state.artikelViewMode = 'list';
+    window.state.saveState();
+    
+    console.log('💾 Saved projekt detail state');
 
-        // Hide projekt overview
-        const projektOverview = document.getElementById('projekt-overview');
-        if (projektOverview) projektOverview.style.display = 'none';
+    // Hide projekt overview
+    const projektOverview = document.getElementById('projekt-overview');
+    if (projektOverview) projektOverview.style.display = 'none';
 
-        // Show projekt detail
-        const projektDetail = document.getElementById('projekt-detail-view');
-        if (projektDetail) projektDetail.style.display = 'block';
+    // Show projekt detail
+    const projektDetail = document.getElementById('projekt-detail-view');
+    if (projektDetail) projektDetail.style.display = 'block';
 
-        // Update breadcrumb & title
-        const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
-        const title = document.getElementById('projekt-detail-title');
-        if (breadcrumb) breadcrumb.textContent = projekt.name;
-        if (title) title.textContent = projekt.name;
+    // Update breadcrumb & title
+    const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
+    const title = document.getElementById('projekt-detail-title');
+    if (breadcrumb) breadcrumb.textContent = projekt.name;
+    if (title) title.textContent = projekt.name;
 
-        // Switch to first tab
-        switchProjektTab('uebersicht');
-    };
+    // Switch to first tab
+    switchProjektTab('uebersicht');
+};
 
     console.log('✅ All modules and navigation functions loaded');
 
