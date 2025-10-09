@@ -473,70 +473,147 @@ window.closeArtikelDetail = function() {
 /**
  * Create new artikel
  */
-window.createNewArtikel = async function() {
-  const projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) {
-    alert('Bitte zuerst ein Projekt auswählen!');
-    return;
-  }
-
-  const artikelName = prompt('Artikelname:');
-  if (!artikelName || artikelName.trim() === '') return;
-
-  console.log('➕ Creating new artikel:', artikelName);
-
-  try {
-    const newArtikel = {
-      name: artikelName,
-      projektId: projektId,
-      typ: 'Hardware',
-      kategorie: '',
-      geschaeftsmodell: '',
-      zielmarkt: '',
-      strategie: '',
-      investment_typ: '',
-      beschreibung: '',
-      release_datum: helpers.getCurrentDate().substring(0, 7), // YYYY-MM
-      annahmen: '',
-      start_menge: 100,
-      start_preis: 1000,
-      start_hk: 600,
-      mengen_modell: 'realistisch',
-      preis_modell: 'konstant',
-      kosten_modell: 'lernkurve',
-      zeitraum: 5,
-      volumes: {},
-      prices: {},
-      hk: 600
-    };
-
-    // Save to database
-    const saved = await api.saveArticle(newArtikel);
-
-    if (saved) {
-      console.log('✅ Artikel created');
-
-      // Re-render list
-      renderArtikelListByProjekt();
-
-      // Update charts
-      charts.updateAllCharts();
-
-      // AI Feedback
-      if (window.cfoDashboard.aiController) {
-        window.cfoDashboard.aiController.addAIMessage({
-          level: 'success',
-          title: '✅ Artikel erstellt',
-          text: `"${artikelName}" wurde erfolgreich angelegt.`,
-          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-        });
-      }
+window.createNewArtikel = function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    if (!projektId) {
+        alert('Bitte zuerst ein Projekt auswählen!');
+        return;
     }
 
-  } catch (error) {
-    console.error('❌ Create failed:', error);
-    alert('Fehler beim Erstellen: ' + error.message);
-  }
+    const modalHTML = `
+        <div id="artikel-quick-create-modal" class="modal" style="display: flex; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+            <div class="modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                    <h2 style="margin: 0; color: #3b82f6; font-size: 18px;">➕ Neuen Artikel anlegen - Quick Create</h2>
+                </div>
+                
+                <div class="modal-body" style="padding: 20px;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Bezeichnung *</label>
+                        <input type="text" id="quick-artikel-name" 
+                               placeholder="z.B. Smart Sensor System" 
+                               style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
+                                      border-radius: 4px; font-size: 14px;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Effekt-Typ *</label>
+                        <select id="quick-artikel-typ" 
+                                style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
+                                       border-radius: 4px; font-size: 14px; background: white;">
+                            <option value="Neu-Produkt">Neu-Produkt</option>
+                            <option value="Cross-Selling">Cross-Selling</option>
+                            <option value="Kannibalisierung">Kannibalisierung</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Release-Datum *</label>
+                        <input type="month" id="quick-artikel-release" 
+                               value="${new Date().toISOString().substring(0,7)}"
+                               style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
+                                      border-radius: 4px; font-size: 14px;">
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button onclick="closeArtikelQuickCreate()" 
+                            style="padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
+                                   border-radius: 6px; cursor: pointer;">
+                        Abbrechen
+                    </button>
+                    <button onclick="saveQuickArtikel()" 
+                            style="padding: 10px 20px; background: #3b82f6; color: white; 
+                                   border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        🚀 Artikel anlegen
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Focus auf Name-Feld
+    setTimeout(() => {
+        document.getElementById('quick-artikel-name')?.focus();
+    }, 100);
+};
+
+window.saveQuickArtikel = async function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const artikelName = document.getElementById('quick-artikel-name')?.value;
+    const effektTyp = document.getElementById('quick-artikel-typ')?.value;
+    const releaseDatum = document.getElementById('quick-artikel-release')?.value;
+    
+    if (!artikelName || artikelName.trim() === '') {
+        alert('Bitte Artikelname eingeben!');
+        return;
+    }
+    
+    console.log('💾 Creating artikel:', artikelName, effektTyp, releaseDatum);
+    
+    try {
+        const newArtikel = {
+            name: artikelName,
+            projektId: projektId,  // Wichtig: projektId (wie im Original)
+            typ: effektTyp === 'Neu-Produkt' ? 'Hardware' : 'Service',
+            kategorie: effektTyp,
+            geschaeftsmodell: '',
+            zielmarkt: '',
+            strategie: '',
+            investment_typ: '',
+            beschreibung: '',
+            release_datum: releaseDatum,
+            annahmen: '',
+            start_menge: 100,
+            start_preis: 1000,
+            start_hk: 600,
+            mengen_modell: 'realistisch',
+            preis_modell: 'konstant',
+            kosten_modell: 'lernkurve',
+            zeitraum: 5,
+            volumes: {},
+            prices: {},
+            hk: 600
+        };
+
+        // Save to database
+        const saved = await api.saveArticle(newArtikel);
+
+        if (saved) {
+            console.log('✅ Artikel created');
+            
+            // Close modal
+            closeArtikelQuickCreate();
+            
+            // Re-render list
+            renderArtikelListByProjekt();
+            
+            // Update charts if available
+            if (window.charts?.updateAllCharts) {
+                charts.updateAllCharts();
+            }
+            
+            // AI Feedback
+            if (window.cfoDashboard.aiController) {
+                window.cfoDashboard.aiController.addAIMessage({
+                    level: 'success',
+                    title: '✅ Artikel erstellt',
+                    text: `"${artikelName}" wurde erfolgreich angelegt.`,
+                    timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+                });
+            }
+        }
+    } catch (error) {
+        console.error('❌ Create failed:', error);
+        alert('Fehler beim Erstellen: ' + error.message);
+    }
+};
+
+window.closeArtikelQuickCreate = function() {
+    const modal = document.getElementById('artikel-quick-create-modal');
+    if (modal) modal.remove();
 };
 
 // ==========================================
