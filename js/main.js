@@ -9,6 +9,9 @@ import { state } from './state.js';
 import * as helpers from './helpers.js';
 import * as api from './api.js';
 import * as charts from './charts.js';
+import * as projekte from './modules/projekte.js';
+import * as artikel from './modules/artikel.js';
+import * as projektkosten from './modules/projektkosten.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -78,6 +81,13 @@ async function initializeApplication() {
     showErrorNotification('Anwendung konnte nicht gestartet werden. Bitte Seite neu laden.');
   }
 }
+
+    // NEU - Module global verfügbar machen (HIER nach Zeile 82)
+    window.projekte = projekte;
+    window.artikel = artikel; 
+    window.projektkosten = projektkosten;
+    window.renderProjektOverview = projekte.renderProjektOverview;
+    window.updateProjektStats = projekte.updateProjektStats;
 
 /**
  * Load initial data from database
