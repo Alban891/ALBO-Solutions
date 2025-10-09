@@ -120,12 +120,19 @@ window.openArtikelDetail = function(artikelId) {
   window.cfoDashboard.currentArtikel = artikelId;
   state.currentArtikel = artikelId;
 
-  // Show detail view
-  const detailView = document.getElementById('artikel-detail-view');
-  const listView = document.getElementById('artikel-overview');
+  // ⚠️ CRITICAL: Hide ALL views except artikel-detail
+  const projektOverview = document.getElementById('projekt-overview');
+  const projektDetail = document.getElementById('projekt-detail-view');
+  const artikelOverview = document.getElementById('artikel-overview');
+  const artikelDetail = document.getElementById('artikel-detail-view');
 
-  if (detailView) detailView.style.display = 'block';
-  if (listView) listView.style.display = 'none';
+  // Hide everything
+  if (projektOverview) projektOverview.style.display = 'none';
+  if (projektDetail) projektDetail.style.display = 'none';
+  if (artikelOverview) artikelOverview.style.display = 'none';
+
+  // Show ONLY artikel detail
+  if (artikelDetail) artikelDetail.style.display = 'block';
 
   // Load artikel data into form
   loadArtikelIntoForm(artikel);
@@ -360,11 +367,21 @@ function collectArtikelFormData() {
  * Close artikel detail view
  */
 window.closeArtikelDetail = function() {
-  const detailView = document.getElementById('artikel-detail-view');
-  const listView = document.getElementById('artikel-overview');
+  console.log('🔙 Closing artikel detail');
 
-  if (detailView) detailView.style.display = 'none';
-  if (listView) listView.style.display = 'block';
+  const artikelDetail = document.getElementById('artikel-detail-view');
+  const projektDetail = document.getElementById('projekt-detail-view');
+
+  // Hide artikel detail
+  if (artikelDetail) artikelDetail.style.display = 'none';
+
+  // Show projekt detail
+  if (projektDetail) projektDetail.style.display = 'block';
+
+  // Switch to artikel tab
+  if (window.switchProjektTab) {
+    window.switchProjektTab('artikel');
+  }
 
   // Clear current artikel
   window.cfoDashboard.currentArtikel = null;
