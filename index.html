@@ -1386,18 +1386,18 @@
 /**
  * Navigate to previous artikel
  */
-window.navigateToPreviousArtikel = function() {
+window.navigateToNextArtikel = function() {
     const currentProjekt = window.cfoDashboard.currentProjekt;
-    const projekt = state.getProjekt(currentProjekt);
+    const artikelListe = state.getArtikelByProjekt(currentProjekt);
     
-    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
+    if (!artikelListe || artikelListe.length === 0) return;
     
     const currentArtikelId = window.cfoDashboard.currentArtikel;
-    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
+    const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
     
-    if (currentIndex > 0) {
-        const previousArtikel = projekt.artikel[currentIndex - 1];
-        openArtikelDetail(previousArtikel.id);
+    if (currentIndex < artikelListe.length - 1) {
+        const nextArtikel = artikelListe[currentIndex + 1];
+        openArtikelDetail(nextArtikel.id);
     }
 };
 
@@ -1424,18 +1424,25 @@ window.navigateToNextArtikel = function() {
  */
 window.updateArtikelNavigation = function() {
     const currentProjekt = window.cfoDashboard.currentProjekt;
-    const projekt = state.getProjekt(currentProjekt);
-    
-    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
-    
     const currentArtikelId = window.cfoDashboard.currentArtikel;
-    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
+    
+    if (!currentProjekt || !currentArtikelId) return;
+    
+    const projekt = state.getProjekt(currentProjekt);
+    const artikelListe = state.getArtikelByProjekt(currentProjekt);
+    
+    if (!projekt || !artikelListe || artikelListe.length === 0) return;
+    
+    const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
+    const artikel = artikelListe[currentIndex];
+    
+    if (!artikel) return;
     
     // Update position display
     const positionEl = document.getElementById('artikel-position');
     const totalEl = document.getElementById('artikel-total');
     if (positionEl) positionEl.textContent = currentIndex + 1;
-    if (totalEl) totalEl.textContent = projekt.artikel.length;
+    if (totalEl) totalEl.textContent = artikelListe.length;
     
     // Update buttons
     const prevBtn = document.getElementById('prev-artikel-btn');
@@ -1447,12 +1454,11 @@ window.updateArtikelNavigation = function() {
     }
     
     if (nextBtn) {
-        nextBtn.disabled = currentIndex === projekt.artikel.length - 1;
-        nextBtn.style.opacity = currentIndex === projekt.artikel.length - 1 ? '0.5' : '1';
+        nextBtn.disabled = currentIndex === artikelListe.length - 1;
+        nextBtn.style.opacity = currentIndex === artikelListe.length - 1 ? '0.5' : '1';
     }
     
     // Update breadcrumb
-    const artikel = projekt.artikel[currentIndex];
     const projektNameEl = document.getElementById('artikel-breadcrumb-projekt');
     const artikelNameEl = document.getElementById('artikel-breadcrumb-name');
     
@@ -1462,6 +1468,8 @@ window.updateArtikelNavigation = function() {
     // Update title
     const titleEl = document.getElementById('artikel-detail-title');
     if (titleEl) titleEl.textContent = `✏️ ${artikel.name || 'Artikel bearbeiten'}`;
+    
+    console.log('✅ Navigation updated:', artikel.name, `(${currentIndex + 1}/${artikelListe.length})`);
 };
         
     </script>
