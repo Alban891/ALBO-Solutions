@@ -2778,3 +2778,89 @@ body {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ==========================================
+   ENTERPRISE COMPACT - Beratungshaus Style
+   ========================================== */
+
+/* Kompaktere Section-Headers */
+#artikel-detail-view .form-section h3 {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 16px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 3px solid var(--primary) !important;
+}
+
+/* Kompaktere Input-Felder */
+#artikel-detail-view input[type="text"],
+#artikel-detail-view input[type="month"],
+#artikel-detail-view select,
+#artikel-detail-view textarea {
+    font-size: 13px !important;
+    padding: 8px 12px !important;
+    border-radius: 2px !important;
+    background: var(--gray-50);
+}
+
+/* Kompaktere Labels */
+#artikel-detail-view .form-group label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-600) !important;
+    margin-bottom: 4px !important;
+}
+
+/* Weniger Spacing */
+#artikel-detail-view .form-section {
+    padding: 16px !important;
+    margin-bottom: 16px !important;
+    border-radius: 4px !important;
+}
+
+#artikel-detail-view > div[style*="grid"] {
+    gap: 16px !important;
+}
+
+/* Kompaktere Modell-Options */
+#artikel-detail-view .modell-option-compact {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+    border-radius: 2px !important;
+}
+
+/* Kleinere Zeitraum-Buttons */
+.zeitraum-btn {
+    padding: 8px 20px !important;
+    font-size: 13px !important;
+    border-radius: 2px !important;
+}
+
+/* Kompaktere Jahr-Tabelle */
+.jahr-table input.jahr-input {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+    border-radius: 2px !important;
+}
+
+/* Breadcrumb kleiner */
+#artikel-detail-view .breadcrumb {
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px !important;
+}
+
+/* Form-Groups enger */
+#artikel-detail-view .form-group {
+    margin-bottom: 12px !important;
+}
+
+/* Textarea kleiner */
+#artikel-detail-view textarea {
+    min-height: 60px !important;
+}
