@@ -556,7 +556,7 @@ window.saveQuickArtikel = async function() {
     try {
         const newArtikel = {
             name: artikelName,
-            projektId: projektId,  // Wichtig: projektId (wie im Original)
+            projekt_Id: projektId,
             typ: '',
             kategorie: effektTyp,
             geschaeftsmodell: '',
