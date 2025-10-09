@@ -831,28 +831,29 @@
                         </div>
                     </div>
                     
-                    <!-- Finanz-Parameter (Vereinfachte Version) -->
+                    <!-- Wirtschaftlichkeits-Parameter -->
                     <div class="form-section" style="margin-bottom: 24px;">
                         <h3>💰 Wirtschaftlichkeits-Parameter</h3>
                         
-                        <!-- Startwerte -->
-                        <div class="form-row">
+                        <!-- Startwerte Grid -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
                             <div class="form-group">
                                 <label>Startmenge (Jahr 1)</label>
-                                <input type="text" id="start-menge" placeholder="z.B. 100">
+                                <input type="text" id="start-menge" placeholder="0">
                             </div>
                             <div class="form-group">
                                 <label>Startpreis (€/Stück)</label>
-                                <input type="text" id="start-preis" placeholder="z.B. 1000">
-                            </div>
-                            <div class="form-group">
-                                <label>Herstellkosten (€/Stück)</label>
-                                <input type="text" id="start-hk" placeholder="z.B. 600">
+                                <input type="text" id="start-preis" placeholder="0,00">
                             </div>
                         </div>
-
-                        <!-- Entwicklungsmodelle -->
-                        <div class="form-row">
+                        
+                        <div class="form-group" style="margin-bottom: 24px;">
+                            <label>Herstellkosten (€/Stück)</label>
+                            <input type="text" id="start-hk" placeholder="0,00">
+                        </div>
+                        
+                        <!-- Modelle Grid -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
                             <div class="form-group">
                                 <label>Mengenmodell</label>
                                 <select id="mengen-modell">
@@ -866,32 +867,191 @@
                                 <select id="preis-modell">
                                     <option value="konstant">Konstant</option>
                                     <option value="inflation">Inflation (+2% p.a.)</option>
+                                    <option value="premium">Premium (+5% p.a.)</option>
                                     <option value="skimming">Skimming (-3% p.a.)</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>Kostenmodell</label>
-                                <select id="kosten-modell">
-                                    <option value="lernkurve">Lernkurve (-5% bei 2x)</option>
-                                    <option value="konstant">Konstant</option>
-                                    <option value="inflation">Inflation (+3% p.a.)</option>
-                                </select>
-                            </div>
                         </div>
-
-                        <!-- Zeitraum -->
+                        
+                        <div class="form-group" style="margin-bottom: 24px;">
+                            <label>Kostenmodell</label>
+                            <select id="kosten-modell" style="width: 50%;">
+                                <option value="lernkurve">Lernkurve (-5% bei 2x)</option>
+                                <option value="konstant">Konstant (0% p.a.)</option>
+                                <option value="inflation">Inflation (+3% p.a.)</option>
+                                <option value="skaleneffekte">Skaleneffekte (Stufen)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Planungshorizont -->
                         <div class="form-group">
                             <label>Planungshorizont</label>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-secondary" onclick="setzeZeitraum(3)">3 Jahre</button>
-                                <button class="btn btn-primary" onclick="setzeZeitraum(5)">5 Jahre</button>
-                                <button class="btn btn-secondary" onclick="setzeZeitraum(7)">7 Jahre</button>
+                                <button type="button" class="zeitraum-btn" onclick="setzeZeitraum(3)"
+                                        style="padding: 10px 24px; background: white; border: 1px solid #e5e7eb; 
+                                            border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    3 Jahre
+                                </button>
+                                <button type="button" class="zeitraum-btn active" onclick="setzeZeitraum(5)"
+                                        style="padding: 10px 24px; background: #3b82f6; color: white; 
+                                            border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; 
+                                            font-weight: 600;">
+                                    5 Jahre
+                                </button>
+                                <button type="button" class="zeitraum-btn" onclick="setzeZeitraum(7)"
+                                        style="padding: 10px 24px; background: white; border: 1px solid #e5e7eb; 
+                                            border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    7 Jahre
+                                </button>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Startwerte Info-Box (wie im Screenshot) -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>📊 Startwerte (Jahr 1)</h3>
+                        
+                        <div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; 
+                                    margin-bottom: 16px; border-radius: 4px; font-size: 13px;">
+                            <strong>💡 Tipp:</strong> Tragen Sie hier ihre Annahmen für das erste Jahr ein. 
+                            Diese Werte dienen als Basis für die automatischen Entwicklungsmodelle.
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                            <div style="text-align: center;">
+                                <label style="font-size: 10px; color: #6b7280; text-transform: uppercase; 
+                                            display: block; margin-bottom: 8px;">
+                                    MENGE (Stück)
+                                </label>
+                                <div style="padding: 12px; background: white; border: 1px solid #e5e7eb; 
+                                            border-radius: 6px; font-size: 20px; font-weight: 600;">
+                                    20
+                                </div>
+                            </div>
+                            <div style="text-align: center;">
+                                <label style="font-size: 10px; color: #6b7280; text-transform: uppercase; 
+                                            display: block; margin-bottom: 8px;">
+                                    PREIS (€/Stück)
+                                </label>
+                                <div style="padding: 12px; background: white; border: 1px solid #e5e7eb; 
+                                            border-radius: 6px; font-size: 20px; font-weight: 600;">
+                                    10,00
+                                </div>
+                            </div>
+                            <div style="text-align: center;">
+                                <label style="font-size: 10px; color: #6b7280; text-transform: uppercase; 
+                                            display: block; margin-bottom: 8px;">
+                                    HK (€/Stück)
+                                </label>
+                                <div style="padding: 12px; background: white; border: 1px solid #e5e7eb; 
+                                            border-radius: 6px; font-size: 20px; font-weight: 600;">
+                                    5,00
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                </div>
+                    <!-- Entwicklungsmodelle (Radio Buttons wie im Screenshot) -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>📈 Entwicklungsmodelle</h3>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                            <!-- Mengenentwicklung -->
+                            <div>
+                                <h4 style="font-size: 12px; font-weight: 600; text-transform: uppercase; 
+                                        color: #6b7280; margin-bottom: 12px;">
+                                    Mengenentwicklung
+                                </h4>
+                                <div style="space-y: 8px;">
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="menge-modell" value="konservativ" style="margin-right: 8px;">
+                                        <span>Konservativ (+15% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="menge-modell" value="realistisch" checked style="margin-right: 8px;">
+                                        <span style="font-weight: 600;">Realistisch (S-Kurve)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="menge-modell" value="optimistisch" style="margin-right: 8px;">
+                                        <span>Optimistisch (Hockey-Stick)</span>
+                                    </label>
+                                    
+                                    <details style="margin-top: 12px;">
+                                        <summary style="cursor: pointer; color: #3b82f6; font-size: 12px;">
+                                            ▶ Erweiterte Modelle
+                                        </summary>
+                                        <div style="padding: 8px 0 0 20px;">
+                                            <label style="display: flex; align-items: center; margin-bottom: 6px; cursor: pointer; font-size: 12px;">
+                                                <input type="radio" name="menge-modell" value="manuell" style="margin-right: 8px;">
+                                                <span>Manuell</span>
+                                            </label>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                            
+                            <!-- Preisentwicklung -->
+                            <div>
+                                <h4 style="font-size: 12px; font-weight: 600; text-transform: uppercase; 
+                                        color: #6b7280; margin-bottom: 12px;">
+                                    Preisentwicklung
+                                </h4>
+                                <div>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="preis-modell" value="konstant" checked style="margin-right: 8px;">
+                                        <span style="font-weight: 600;">Konstant (0% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="preis-modell" value="inflation" style="margin-right: 8px;">
+                                        <span>Inflation (+2% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="preis-modell" value="premium" style="margin-right: 8px;">
+                                        <span>Premium (+5% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="preis-modell" value="skimming" style="margin-right: 8px;">
+                                        <span>Skimming (-3% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="preis-modell" value="manuell" style="margin-right: 8px;">
+                                        <span>Manuell</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Kostenentwicklung -->
+                            <div>
+                                <h4 style="font-size: 12px; font-weight: 600; text-transform: uppercase; 
+                                        color: #6b7280; margin-bottom: 12px;">
+                                    Kostenentwicklung
+                                </h4>
+                                <div>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="kosten-modell" value="konstant" style="margin-right: 8px;">
+                                        <span>Konstant (0% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="kosten-modell" value="lernkurve" checked style="margin-right: 8px;">
+                                        <span style="font-weight: 600;">Lernkurve (-5% bei 2x)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="kosten-modell" value="inflation" style="margin-right: 8px;">
+                                        <span>Inflation (+3% p.a.)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="kosten-modell" value="skaleneffekte" style="margin-right: 8px;">
+                                        <span>Skaleneffekte (Stufen)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+                                        <input type="radio" name="kosten-modell" value="manuell" style="margin-right: 8px;">
+                                        <span>Manuell</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                   
                 <!-- Ende artikel-detail-view -->
 
             </div>
