@@ -660,17 +660,42 @@
                             💼 Projekte
                         </button>
                         <span class="breadcrumb-separator">›</span>
+                        <span id="artikel-breadcrumb-projekt" class="breadcrumb-current">Projekt</span>
+                        <span class="breadcrumb-separator">›</span>
                         <button class="breadcrumb-link" onclick="closeArtikelDetail()">
                             📦 Artikel
                         </button>
                         <span class="breadcrumb-separator">›</span>
-                        <span class="breadcrumb-current">Artikel bearbeiten</span>
+                        <span id="artikel-breadcrumb-name" class="breadcrumb-current">Artikel bearbeiten</span>
                     </div>
 
-                    <!-- Header -->
-                    <div class="section-header">
-                        <h2>✏️ Artikel bearbeiten</h2>
-                        <div class="header-actions">
+                    <!-- Header mit Navigation -->
+                    <div class="section-header" style="margin-bottom: 24px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <button class="btn btn-secondary" onclick="closeArtikelDetail()" 
+                                    style="display: flex; align-items: center; gap: 8px;">
+                                ← Zurück zur Artikel-Übersicht
+                            </button>
+        
+                            <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                                <button class="btn btn-secondary btn-sm" onclick="navigateToPreviousArtikel()" 
+                                        id="prev-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
+                                    ◀ Vorheriger
+                                </button>
+            
+                                <div style="padding: 8px 16px; background: var(--bg-secondary); border-radius: 6px; font-size: 14px; font-weight: 500;">
+                                    Artikel <span id="artikel-position">1</span> von <span id="artikel-total">3</span>
+                                </div>
+            
+                                <button class="btn btn-secondary btn-sm" onclick="navigateToNextArtikel()" 
+                                        id="next-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
+                                    Nächster ▶
+                                </button>
+                            </div>
+                        </div>
+    
+                        <div style="display: flex; gap: 12px; margin-top: 16px;">
+                            <h2 id="artikel-detail-title" style="margin: 0; flex: 1;">✏️ Artikel bearbeiten</h2>
                             <button class="btn btn-secondary" onclick="closeArtikelDetail()">
                                 Abbrechen
                             </button>
@@ -1353,6 +1378,92 @@
         };
 
         console.log('✅ All modules and navigation functions loaded');
+    
+// ==========================================
+// ARTIKEL NAVIGATION (Vorheriger/Nächster)
+// ==========================================
+
+/**
+ * Navigate to previous artikel
+ */
+window.navigateToPreviousArtikel = function() {
+    const currentProjekt = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(currentProjekt);
+    
+    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
+    
+    const currentArtikelId = window.cfoDashboard.currentArtikel;
+    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
+    
+    if (currentIndex > 0) {
+        const previousArtikel = projekt.artikel[currentIndex - 1];
+        openArtikelDetail(previousArtikel.id);
+    }
+};
+
+/**
+ * Navigate to next artikel
+ */
+window.navigateToNextArtikel = function() {
+    const currentProjekt = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(currentProjekt);
+    
+    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
+    
+    const currentArtikelId = window.cfoDashboard.currentArtikel;
+    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
+    
+    if (currentIndex < projekt.artikel.length - 1) {
+        const nextArtikel = projekt.artikel[currentIndex + 1];
+        openArtikelDetail(nextArtikel.id);
+    }
+};
+
+/**
+ * Update navigation buttons state
+ */
+window.updateArtikelNavigation = function() {
+    const currentProjekt = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(currentProjekt);
+    
+    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
+    
+    const currentArtikelId = window.cfoDashboard.currentArtikel;
+    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
+    
+    // Update position display
+    const positionEl = document.getElementById('artikel-position');
+    const totalEl = document.getElementById('artikel-total');
+    if (positionEl) positionEl.textContent = currentIndex + 1;
+    if (totalEl) totalEl.textContent = projekt.artikel.length;
+    
+    // Update buttons
+    const prevBtn = document.getElementById('prev-artikel-btn');
+    const nextBtn = document.getElementById('next-artikel-btn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentIndex === 0;
+        prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
+    }
+    
+    if (nextBtn) {
+        nextBtn.disabled = currentIndex === projekt.artikel.length - 1;
+        nextBtn.style.opacity = currentIndex === projekt.artikel.length - 1 ? '0.5' : '1';
+    }
+    
+    // Update breadcrumb
+    const artikel = projekt.artikel[currentIndex];
+    const projektNameEl = document.getElementById('artikel-breadcrumb-projekt');
+    const artikelNameEl = document.getElementById('artikel-breadcrumb-name');
+    
+    if (projektNameEl) projektNameEl.textContent = projekt.name;
+    if (artikelNameEl) artikelNameEl.textContent = artikel.name || 'Artikel bearbeiten';
+    
+    // Update title
+    const titleEl = document.getElementById('artikel-detail-title');
+    if (titleEl) titleEl.textContent = `✏️ ${artikel.name || 'Artikel bearbeiten'}`;
+};
+        
     </script>
 
 </body>
