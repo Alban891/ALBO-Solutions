@@ -446,7 +446,7 @@
                                     </div>
                                     <div>
                                         <div style="font-size: 12px; color: var(--gray);">Owner</div>
-                                        <div style="font-size: 16px; font-weight: 500; margin-top: 4px;">Max Mustermann</div>
+                                        <div style="font-size: 16px; font-weight: 500; margin-top: 4px;" id="projekt-detail-owner">-</div>
                                     </div>
                                     <div>
                                         <div style="font-size: 12px; color: var(--gray);">Laufzeit</div>
@@ -1100,6 +1100,27 @@
         const title = document.getElementById('projekt-detail-title');
         if (breadcrumb) breadcrumb.textContent = projekt.name;
         if (title) title.textContent = projekt.name;
+
+        // Update breadcrumb & title
+        const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
+        const title = document.getElementById('projekt-detail-title');
+        if (breadcrumb) breadcrumb.textContent = projekt.name;
+        if (title) title.textContent = projekt.name;
+
+        // NEU: Lade Projekt-Daten in Übersicht
+        const ownerEl = document.getElementById('projekt-detail-owner');
+        const statusEl = document.getElementById('projekt-detail-status');
+        const divisionEl = document.getElementById('projekt-detail-division');
+        const zeitraumEl = document.getElementById('projekt-detail-zeitraum');
+
+        if (ownerEl) ownerEl.textContent = projekt.owner || '-';
+        if (statusEl) statusEl.textContent = projekt.status || 'Aktiv';
+        if (divisionEl) divisionEl.textContent = projekt.division || '-';
+        if (zeitraumEl) {
+            const start = projekt.startDatum || '-';
+            const end = projekt.endDatum || '-';
+            zeitraumEl.textContent = `${start} - ${end}`;
+        }
 
         // Switch to first tab
         switchProjektTab('uebersicht');
