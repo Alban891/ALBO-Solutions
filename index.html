@@ -676,24 +676,24 @@
                                     style="display: flex; align-items: center; gap: 8px;">
                                 ← Zurück zur Artikel-Übersicht
                             </button>
-        
+
                             <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
                                 <button class="btn btn-secondary btn-sm" onclick="navigateToPreviousArtikel()" 
                                         id="prev-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
                                     ◀ Vorheriger
                                 </button>
-            
+                    
                                 <div style="padding: 8px 16px; background: var(--bg-secondary); border-radius: 6px; font-size: 14px; font-weight: 500;">
                                     Artikel <span id="artikel-position">1</span> von <span id="artikel-total">3</span>
                                 </div>
-            
+                    
                                 <button class="btn btn-secondary btn-sm" onclick="navigateToNextArtikel()" 
                                         id="next-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
                                     Nächster ▶
                                 </button>
                             </div>
                         </div>
-    
+
                         <div style="display: flex; gap: 12px; margin-top: 16px;">
                             <h2 id="artikel-detail-title" style="margin: 0; flex: 1;">✏️ Artikel bearbeiten</h2>
                             <button class="btn btn-secondary" onclick="closeArtikelDetail()">
@@ -705,183 +705,13 @@
                         </div>
                     </div>
 
-                    <!-- Detail Tabs (ONLY 2 TABS - NO PROJEKTKOSTEN!) -->
-                    <div class="detail-tabs">
-                        <button class="detail-tab active" onclick="switchArtikelTab('artikel')">
-                            📦 Artikeldetails
-                        </button>
-                        <button class="detail-tab" onclick="switchArtikelTab('wirtschaft')">
-                            💰 Wirtschaftlichkeit
-                        </button>
-                    </div>
-
                     <!-- ========================================== -->
-                    <!-- ARTIKEL TAB: ARTIKELDETAILS -->
+                    <!-- ALLE INHALTE AUF EINER SEITE (KEINE TABS!) -->
                     <!-- ========================================== -->
-                    <div id="artikel-tab-artikel" class="artikel-tab-content active">
+                    
+                    <!-- Basis-Informationen & Markt -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
                         
-                        <div class="form-grid">
-                            <!-- Basic Info -->
-                            <div class="form-section">
-                                <h3>📝 Basis-Informationen</h3>
-                                
-                                <div class="form-group">
-                                    <label>Artikelname *</label>
-                                    <input type="text" id="artikel-name" 
-                                           placeholder="z.B. Smart Sensor X1" required>
-                                </div>
-
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Typ *</label>
-                                        <select id="artikel-typ">
-                                            <option value="Hardware">Hardware</option>
-                                            <option value="Software">Software</option>
-                                            <option value="Service">Service</option>
-                                            <option value="Hybrid">Hybrid</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Kategorie</label>
-                                        <input type="text" id="kategorie" 
-                                               placeholder="z.B. IoT Sensor">
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Beschreibung</label>
-                                    <textarea id="artikel-beschreibung" rows="3" 
-                                              placeholder="Kurze Produktbeschreibung..."></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Market Info -->
-                            <div class="form-section">
-                                <h3>🎯 Markt & Strategie</h3>
-
-                                <div class="form-group">
-                                    <label>Geschäftsmodell</label>
-                                    <select id="geschaeftsmodell">
-                                        <option value="">Bitte wählen...</option>
-                                        <option value="einmalverkauf">Einmalverkauf</option>
-                                        <option value="subscription">Subscription</option>
-                                        <option value="freemium">Freemium</option>
-                                        <option value="lizenz">Lizenzmodell</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Zielmarkt</label>
-                                    <input type="text" id="zielmarkt" 
-                                           placeholder="z.B. DACH Region, B2B">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Strategie</label>
-                                    <select id="strategie">
-                                        <option value="">Bitte wählen...</option>
-                                        <option value="innovator">Innovator/First Mover</option>
-                                        <option value="fast-follower">Fast Follower</option>
-                                        <option value="cost-leader">Cost Leader</option>
-                                        <option value="niche">Nische/Spezialist</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Investment-Typ</label>
-                                    <select id="investment-typ">
-                                        <option value="">Bitte wählen...</option>
-                                        <option value="growth">Growth</option>
-                                        <option value="efficiency">Efficiency</option>
-                                        <option value="innovation">Innovation</option>
-                                        <option value="maintenance">Maintenance</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Timeline -->
-                            <div class="form-section form-section-full">
-                                <h3>📅 Timeline & Release</h3>
-
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label>Release-Datum (Monat)</label>
-                                        <input type="month" id="release-datum">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label>Annahmen & Risiken</label>
-                                        <textarea id="annahmen" rows="2" 
-                                                  placeholder="Wichtige Annahmen zum Artikel..."></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- ARTIKEL TAB: WIRTSCHAFTLICHKEIT -->
-                    <!-- ========================================== -->
-                    <div id="artikel-detail-view" style="display: none;">
-    
-                        <!-- Breadcrumb -->
-                        <div class="breadcrumb">
-                            <button class="breadcrumb-link" onclick="backToProjektOverview()">
-                                💼 Projekte
-                            </button>
-                            <span class="breadcrumb-separator">›</span>
-                            <span id="artikel-breadcrumb-projekt" class="breadcrumb-current">Projekt</span>
-                            <span class="breadcrumb-separator">›</span>
-                            <button class="breadcrumb-link" onclick="closeArtikelDetail()">
-                                📦 Artikel
-                            </button>
-                            <span class="breadcrumb-separator">›</span>
-                            <span id="artikel-breadcrumb-name" class="breadcrumb-current">Artikel bearbeiten</span>
-                        </div>
-
-                        <!-- Header mit Navigation -->
-                        <div class="section-header" style="margin-bottom: 24px;">
-                            <div style="display: flex; align-items: center; gap: 16px;">
-                                <button class="btn btn-secondary" onclick="closeArtikelDetail()" 
-                                        style="display: flex; align-items: center; gap: 8px;">
-                                    ← Zurück zur Artikel-Übersicht
-                                </button>
-
-                                <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
-                                    <button class="btn btn-secondary btn-sm" onclick="navigateToPreviousArtikel()" 
-                                            id="prev-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
-                                        ◀ Vorheriger
-                                    </button>
-    
-                                    <div style="padding: 8px 16px; background: var(--bg-secondary); border-radius: 6px; font-size: 14px; font-weight: 500;">
-                                        Artikel <span id="artikel-position">1</span> von <span id="artikel-total">3</span>
-                                    </div>
-    
-                                    <button class="btn btn-secondary btn-sm" onclick="navigateToNextArtikel()" 
-                                            id="next-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
-                                        Nächster ▶
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div style="display: flex; gap: 12px; margin-top: 16px;">
-                                <h2 id="artikel-detail-title" style="margin: 0; flex: 1;">✏️ Artikel bearbeiten</h2>
-                                <button class="btn btn-secondary" onclick="closeArtikelDetail()">
-                                    Abbrechen
-                                </button>
-                                <button class="btn btn-primary" onclick="saveArtikelChanges()">
-                                    💾 Speichern
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- ========================================== -->
-                        <!-- ALLE INHALTE AUF EINER SEITE -->
-                        <!-- ========================================== -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-        
                         <!-- LINKE SPALTE: Basis-Informationen -->
                         <div class="form-section">
                             <h3>📝 Basis-Informationen</h3>
@@ -987,27 +817,27 @@
                     <!-- Start Values -->
                     <div class="form-section" style="margin-bottom: 24px;">
                         <h3>🎯 Start-Werte (Jahr 1)</h3>
-        
+                        
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
                             <div class="form-group">
                                 <label>Start-Menge (Stück)</label>
                                 <input type="text" id="start-menge" 
                                     placeholder="1.000" 
-                                    onblur="helpers.formatNumberInput(this); updateErsteZeile()">
+                                    onblur="helpers.formatNumberInput(this)">
                             </div>
 
                             <div class="form-group">
                                 <label>Start-Preis (€/Stück)</label>
                                 <input type="text" id="start-preis" 
                                     placeholder="100,00" 
-                                    onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                                    onblur="helpers.formatDecimalInput(this)">
                             </div>
 
                             <div class="form-group">
                                 <label>Start-HK (€/Stück)</label>
                                 <input type="text" id="start-hk" 
                                     placeholder="60,00" 
-                                    onblur="helpers.formatDecimalInput(this); updateErsteZeile()">
+                                    onblur="helpers.formatDecimalInput(this)">
                             </div>
                         </div>
                     </div>
@@ -1230,6 +1060,7 @@
                     </div>
 
                 </div>
+                <!-- Ende artikel-detail-view -->
 
             <!-- ========================================== -->
             <!-- TAB 3: PERFORMANCE -->
