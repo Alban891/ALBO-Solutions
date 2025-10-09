@@ -395,8 +395,8 @@ export async function saveArticle(artikelData) {
     // Validate data
     state.validateArtikelData(artikelData);
 
-    const cleanProjektId = artikelData.projektId.replace('projekt-db-', '');
-
+    const cleanProjektId = (artikelData.projekt_id || artikelData.projektId || '').replace('projekt-db-', '');
+    
     const dataToSave = {
       project_id: cleanProjektId,
       name: artikelData.name,
