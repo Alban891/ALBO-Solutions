@@ -127,6 +127,163 @@ function applyRestoredTab() {
   }
 }
 
+/**
+ * Restore COMPLETE deep navigation state
+ * Handles ALL navigation levels: Projekte → Projekt-Detail → Artikel-Detail
+ * Called AFTER data is loaded
+ */
+async function restoreDeepNavigation() {
+  console.log('🔍 Restoring COMPLETE navigation state...');
+  console.log('📊 Current state:', {
+    tab: state.currentTab,
+    projekt: state.currentProjekt,
+    projektTab: state.currentProjektTab,
+    projektViewMode: state.projektViewMode,
+    artikel: state.currentArtikel,
+    artikelViewMode: state.artikelViewMode
+  });
+  
+  const currentTab = state.currentTab;
+  
+  // ==========================================
+  // LEVEL 1: Check Main Tab
+  // ==========================================
+  if (currentTab !== 'projekte') {
+    console.log('ℹ️ Not on projekte tab, skipping deep navigation');
+    return;
+  }
+  
+  // ==========================================
+  // LEVEL 2: Projekt Navigation
+  // ==========================================
+  const currentProjekt = state.currentProjekt;
+  const projektViewMode = state.projektViewMode;
+  
+  // Case 2a: User was on Projekt-Übersicht
+  if (!currentProjekt || projektViewMode === 'overview') {
+    console.log('📋 Restoring projekt overview...');
+    
+    // Show projekt overview
+    const projektOverview = document.getElementById('projekt-overview');
+    const projektDetail = document.getElementById('projekt-detail-view');
+    const artikelDetail = document.getElementById('artikel-detail-view');
+    
+    if (projektOverview) projektOverview.style.display = 'block';
+    if (projektDetail) projektDetail.style.display = 'none';
+    if (artikelDetail) artikelDetail.style.display = 'none';
+    
+    // Render projekt list
+    if (window.renderProjektOverview) {
+      window.renderProjektOverview();
+    }
+    if (window.updateProjektStats) {
+      window.updateProjektStats();
+    }
+    
+    // Restore list view mode (liste/karten/kompakt)
+    if (state.projektListView && window.switchProjectView) {
+      window.switchProjectView(state.projektListView);
+    }
+    
+    console.log('✅ Projekt overview restored');
+    return;
+  }
+  
+  // Case 2b: User was in Projekt-Detail
+  const projekt = state.getProjekt(currentProjekt);
+  if (!projekt) {
+    console.warn('⚠️ Projekt not found:', currentProjekt);
+    // Reset state and show overview
+    state.currentProjekt = null;
+    state.projektViewMode = 'overview';
+    state.currentProjektTab = null;
+    state.saveState();
+    
+    if (window.renderProjektOverview) {
+      window.renderProjektOverview();
+    }
+    return;
+  }
+  
+  console.log('📂 Restoring projekt detail:', projekt.name);
+  
+  // Set current projekt globally
+  window.cfoDashboard.currentProjekt = currentProjekt;
+  
+  // ==========================================
+  // LEVEL 3: Show Projekt-Detail View
+  // ==========================================
+  const projektOverview = document.getElementById('projekt-overview');
+  const projektDetail = document.getElementById('projekt-detail-view');
+  const artikelOverview = document.getElementById('artikel-overview');
+  const artikelDetail = document.getElementById('artikel-detail-view');
+  
+  if (projektOverview) projektOverview.style.display = 'none';
+  if (projektDetail) projektDetail.style.display = 'block';
+  if (artikelOverview) artikelOverview.style.display = 'none';
+  if (artikelDetail) artikelDetail.style.display = 'none';
+  
+  // Update breadcrumb & title
+  const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
+  const title = document.getElementById('projekt-detail-title');
+  if (breadcrumb) breadcrumb.textContent = projekt.name;
+  if (title) title.textContent = projekt.name;
+  
+  // ==========================================
+  // LEVEL 4: Restore Projekt-Detail Tab
+  // ==========================================
+  const currentProjektTab = state.currentProjektTab || 'uebersicht';
+  console.log('📑 Restoring projekt tab:', currentProjektTab);
+  
+  // Wait for DOM to be ready
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Switch to the saved projekt tab
+  if (window.switchProjektTab) {
+    window.switchProjektTab(currentProjektTab);
+  }
+  
+  // ==========================================
+  // LEVEL 5: Restore Artikel-Detail (if applicable)
+  // ==========================================
+  const currentArtikel = state.currentArtikel;
+  const artikelViewMode = state.artikelViewMode;
+  
+  if (currentArtikel && artikelViewMode === 'detail') {
+    console.log('📦 Restoring artikel detail:', currentArtikel);
+    
+    // Check if artikel exists
+    const artikel = state.getArtikel(currentArtikel);
+    if (!artikel) {
+      console.warn('⚠️ Artikel not found:', currentArtikel);
+      state.currentArtikel = null;
+      state.artikelViewMode = 'list';
+      state.saveState();
+      return;
+    }
+    
+    // Wait for artikel list to potentially render
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Open artikel detail
+    if (window.openArtikelDetail) {
+      window.openArtikelDetail(currentArtikel);
+      
+      // Restore scroll position
+      if (state.artikelDetailScroll > 0) {
+        setTimeout(() => {
+          const artikelDetailView = document.getElementById('artikel-detail-view');
+          if (artikelDetailView) {
+            artikelDetailView.scrollTop = state.artikelDetailScroll;
+          }
+        }, 300);
+      }
+    }
+  }
+  
+  console.log('✅ COMPLETE navigation state restored');
+}
+
     // NEU - Module global verfügbar machen (HIER nach Zeile 82)
     window.projekte = projekte;
     window.artikel = artikel; 
