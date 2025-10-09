@@ -134,45 +134,34 @@ function applyRestoredTab() {
  */
 async function restoreDeepNavigation() {
   console.log('🔍 Restoring COMPLETE navigation state...');
-  console.log('📊 Current state:', {
+  console.log('📊 State to restore:', {
     tab: state.currentTab,
     projekt: state.currentProjekt,
     projektTab: state.currentProjektTab,
-    projektViewMode: state.projektViewMode,
-    artikel: state.currentArtikel,
-    artikelViewMode: state.artikelViewMode
+    projektViewMode: state.projektViewMode
   });
   
   const currentTab = state.currentTab;
   
-  // ==========================================
-  // LEVEL 1: Check Main Tab
-  // ==========================================
+  // Check if we're on projekte tab
   if (currentTab !== 'projekte') {
     console.log('ℹ️ Not on projekte tab, skipping deep navigation');
     return;
   }
   
-  // ==========================================
-  // LEVEL 2: Projekt Navigation
-  // ==========================================
   const currentProjekt = state.currentProjekt;
   const projektViewMode = state.projektViewMode;
   
-  // Case 2a: User was on Projekt-Übersicht
+  // Check if user was in projekt overview or detail
   if (!currentProjekt || projektViewMode === 'overview') {
-    console.log('📋 Restoring projekt overview...');
+    console.log('📋 User was in projekt overview');
     
-    // Show projekt overview
     const projektOverview = document.getElementById('projekt-overview');
     const projektDetail = document.getElementById('projekt-detail-view');
-    const artikelDetail = document.getElementById('artikel-detail-view');
     
     if (projektOverview) projektOverview.style.display = 'block';
     if (projektDetail) projektDetail.style.display = 'none';
-    if (artikelDetail) artikelDetail.style.display = 'none';
     
-    // Render projekt list
     if (window.renderProjektOverview) {
       window.renderProjektOverview();
     }
@@ -180,20 +169,14 @@ async function restoreDeepNavigation() {
       window.updateProjektStats();
     }
     
-    // Restore list view mode (liste/karten/kompakt)
-    if (state.projektListView && window.switchProjectView) {
-      window.switchProjectView(state.projektListView);
-    }
-    
     console.log('✅ Projekt overview restored');
     return;
   }
   
-  // Case 2b: User was in Projekt-Detail
+  // User was in projekt detail
   const projekt = state.getProjekt(currentProjekt);
   if (!projekt) {
     console.warn('⚠️ Projekt not found:', currentProjekt);
-    // Reset state and show overview
     state.currentProjekt = null;
     state.projektViewMode = 'overview';
     state.currentProjektTab = null;
@@ -206,6 +189,40 @@ async function restoreDeepNavigation() {
   }
   
   console.log('📂 Restoring projekt detail:', projekt.name);
+  
+  // Set current projekt globally
+  window.cfoDashboard.currentProjekt = currentProjekt;
+  
+  // Show projekt detail view
+  const projektOverview = document.getElementById('projekt-overview');
+  const projektDetail = document.getElementById('projekt-detail-view');
+  
+  if (projektOverview) projektOverview.style.display = 'none';
+  if (projektDetail) projektDetail.style.display = 'block';
+  
+  // Update breadcrumb & title
+  const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
+  const title = document.getElementById('projekt-detail-title');
+  if (breadcrumb) breadcrumb.textContent = projekt.name;
+  if (title) title.textContent = projekt.name;
+  
+  // Restore the specific tab
+  const currentProjektTab = state.currentProjektTab || 'uebersicht';
+  console.log('📑 Restoring projekt tab:', currentProjektTab);
+  
+  // Wait for DOM
+  await new Promise(resolve => setTimeout(resolve, 150));
+  
+  // Switch to the saved tab
+  if (window.switchProjektTab) {
+    console.log('🔄 Calling switchProjektTab with:', currentProjektTab);
+    window.switchProjektTab(currentProjektTab);
+  } else {
+    console.error('❌ switchProjektTab function not available!');
+  }
+  
+  console.log('✅ COMPLETE navigation state restored');
+}
   
   // Set current projekt globally
   window.cfoDashboard.currentProjekt = currentProjekt;
@@ -293,6 +310,7 @@ async function restoreDeepNavigation() {
 
 /**
  * Load initial data from database
+ * FIXED: Restore deep navigation after data load
  */
 async function loadInitialData() {
   try {
@@ -316,21 +334,34 @@ async function loadInitialData() {
     // Update charts with loaded data
     charts.updateAllCharts();
 
-    // CRITICAL: Render UI ONLY if we're on the projekte tab
+    // ==========================================
+    // CRITICAL: Restore deep navigation state
+    // ==========================================
     const currentTab = state.currentTab || 'cockpit';
     
     if (currentTab === 'projekte') {
-      console.log('🎨 Rendering project overview (we are on projekte tab)...');
-      
-      if (window.renderProjektOverview) {
-        window.renderProjektOverview();
-      }
-      
-      if (window.updateProjektStats) {
-        window.updateProjektStats();
+      // Check if we need to restore deep navigation (user was in a projekt)
+      if (state.currentProjekt) {
+        console.log('🔄 User was in projekt detail - calling restoreDeepNavigation...');
+        console.log('   → Projekt:', state.currentProjekt);
+        console.log('   → Tab:', state.currentProjektTab);
+        
+        // ✓✓✓ Restore the exact state ✓✓✓
+        await restoreDeepNavigation();
+        
+      } else {
+        console.log('📋 User was in projekt overview - rendering overview...');
+        
+        // User was on overview - just render the list
+        if (window.renderProjektOverview) {
+          window.renderProjektOverview();
+        }
+        if (window.updateProjektStats) {
+          window.updateProjektStats();
+        }
       }
     } else {
-      console.log(`ℹ️ Skipping projekt render (current tab: ${currentTab})`);
+      console.log(`ℹ️ Not on projekte tab (current: ${currentTab}) - skipping projekt render`);
     }
 
   } catch (error) {
