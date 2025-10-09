@@ -1,6 +1,7 @@
 /**
  * CFO Dashboard - State Management
  * Centralized state with localStorage persistence
+ * COMPLETE VERSION with all navigation state variables
  */
 
 class DashboardState {
@@ -46,6 +47,13 @@ class DashboardState {
       npv: 44.7,
       db2Margin: 34
     };
+    
+    console.log('✅ DashboardState initialized with navigation variables:', {
+      currentProjektTab: this.currentProjektTab,
+      projektViewMode: this.projektViewMode,
+      artikelViewMode: this.artikelViewMode,
+      projektListView: this.projektListView
+    });
   }
 
   // ==========================================
@@ -307,4 +315,4 @@ export const state = new DashboardState();
 // Expose for debugging
 window.dashboardState = state;
 
-console.log('📦 State module loaded');
+console.log('📦 State module loaded with complete navigation support');
