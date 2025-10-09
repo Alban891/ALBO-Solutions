@@ -198,8 +198,7 @@ function loadArtikelIntoForm(artikel) {
   helpers.setInputValue('strategie', artikel.strategie);
   helpers.setInputValue('investment-typ', artikel.investment_typ);
   helpers.setInputValue('artikel-beschreibung', artikel.beschreibung);
-  helpers.setInputValue('release-datum', artikel.release_datum);
-  helpers.setInputValue('annahmen', artikel.annahmen);
+  helpers.setInputValue('release-datum', artikel.release_datum ? artikel.release_datum.substring(0, 7) : '');
 
   // Start values
   helpers.setInputValue('start-menge', helpers.formatThousands(artikel.start_menge || 0));
