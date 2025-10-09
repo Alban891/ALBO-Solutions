@@ -2571,3 +2571,37 @@ body {
     break-inside: avoid;
   }
 }
+
+/* ========================================== */
+/* COMPACT MODEL OPTIONS (Artikel-Detail) */
+/* ========================================== */
+
+
+/* Compact Model Options */
+.modell-option-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modell-option-compact:hover {
+    background: var(--bg-hover);
+}
+
+.modell-option-compact input[type="radio"] {
+    margin: 0;
+}
+
+.modell-option-compact input[type="radio"]:checked + span {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.modell-option-compact span {
+    font-size: 13px;
+}
