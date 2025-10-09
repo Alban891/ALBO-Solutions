@@ -43,10 +43,16 @@ async function initializeApplication() {
   console.log('🚀 CFO Dashboard initializing...');
   
   try {
-    // Step 1: Restore previous state
+    // Step 1: Restore previous state FIRST (before any UI changes)
     const stateRestored = state.restoreState();
     if (stateRestored) {
       console.log('✅ Previous state restored');
+      // CRITICAL: Apply restored tab IMMEDIATELY
+      applyRestoredTab();
+    } else {
+      console.log('ℹ️ No previous state - using default (cockpit)');
+      // Ensure cockpit is active by default
+      state.currentTab = 'cockpit';
     }
 
     // Step 2: Initialize Charts
@@ -68,10 +74,7 @@ async function initializeApplication() {
     // Step 6: Setup event listeners
     setupEventListeners();
 
-    // Step 7: Restore UI state
-    restoreUIState();
-
-    // Step 8: Start AI insights timer
+    // Step 7: Start AI insights timer
     startAIInsightsTimer();
 
     console.log('✅ CFO Dashboard ready!');
@@ -79,6 +82,48 @@ async function initializeApplication() {
   } catch (error) {
     console.error('❌ Application initialization failed:', error);
     showErrorNotification('Anwendung konnte nicht gestartet werden. Bitte Seite neu laden.');
+  }
+}
+
+/**
+ * Apply restored tab state immediately (before any rendering)
+ * This prevents visual "jumping" between tabs
+ */
+function applyRestoredTab() {
+  const targetTab = state.currentTab || 'cockpit';
+  
+  console.log('🔄 Applying restored tab:', targetTab);
+
+  // Map old tab names to new names
+  const tabMapping = {
+    'dashboard': 'cockpit',
+    'assumptions': 'projekte',
+    'insights': 'performance'
+  };
+  
+  const mappedTab = tabMapping[targetTab] || targetTab;
+
+  // Update UI synchronously (NO animations, instant switch)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+
+  // Activate target tab
+  const targetButton = document.querySelector(`[onclick="switchTab('${mappedTab}')"]`);
+  const targetContent = document.getElementById(`tab-${mappedTab}`);
+
+  if (targetButton) {
+    targetButton.classList.add('active');
+    console.log('✅ Tab button activated:', mappedTab);
+  }
+  
+  if (targetContent) {
+    targetContent.classList.add('active');
+    console.log('✅ Tab content activated:', mappedTab);
   }
 }
 
@@ -114,16 +159,21 @@ async function loadInitialData() {
     // Update charts with loaded data
     charts.updateAllCharts();
 
-    // CRITICAL: Render UI after loading data
-    // Import and call the render functions from projekte module
-    if (window.renderProjektOverview) {
-      console.log('🎨 Rendering project overview...');
-      window.renderProjektOverview();
-    }
+    // CRITICAL: Render UI ONLY if we're on the projekte tab
+    const currentTab = state.currentTab || 'cockpit';
     
-    if (window.updateProjektStats) {
-      console.log('📈 Updating project stats...');
-      window.updateProjektStats();
+    if (currentTab === 'projekte') {
+      console.log('🎨 Rendering project overview (we are on projekte tab)...');
+      
+      if (window.renderProjektOverview) {
+        window.renderProjektOverview();
+      }
+      
+      if (window.updateProjektStats) {
+        window.updateProjektStats();
+      }
+    } else {
+      console.log(`ℹ️ Skipping projekt render (current tab: ${currentTab})`);
     }
 
   } catch (error) {
@@ -136,43 +186,6 @@ async function loadInitialData() {
 // ==========================================
 // UI STATE MANAGEMENT
 // ==========================================
-
-/**
- * Restore UI state from saved state
- */
-function restoreUIState() {
-  // Map old tab names to new names
-  const tabMapping = {
-    'dashboard': 'cockpit',
-    'assumptions': 'projekte',
-    'insights': 'performance'
-  };
-  
-  let targetTab = state.currentTab || 'cockpit';
-  
-  // Convert old tab name to new name
-  if (tabMapping[targetTab]) {
-    targetTab = tabMapping[targetTab];
-  }
-  
-  console.log('🔄 Restoring UI to tab:', targetTab);
-
-  // Set active tab
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-
-  // Activate target tab
-  const targetButton = document.querySelector(`[onclick="switchTab('${targetTab}')"]`);
-  const targetContent = document.getElementById(`tab-${targetTab}`);
-
-  if (targetButton) targetButton.classList.add('active');
-  if (targetContent) targetContent.classList.add('active');
-}
 
 /**
  * Save current navigation state
@@ -204,6 +217,13 @@ function getCurrentActiveTab() {
  * Switch main tab
  */
 window.switchTab = function(tabName) {
+  // Check if already on this tab
+  const currentTab = state.currentTab;
+  if (currentTab === tabName) {
+    console.log('ℹ️ Already on tab:', tabName);
+    return; // ✓ EXIT EARLY - no need to switch
+  }
+
   console.log('📑 Switching to tab:', tabName);
 
   // Update UI
@@ -231,6 +251,14 @@ window.switchTab = function(tabName) {
     
     window.cfoDashboard.currentProjekt = null;
     window.cfoDashboard.currentArtikel = null;
+    
+    // ✓ Render projekt overview (only if switching TO projekte)
+    if (window.renderProjektOverview) {
+      window.renderProjektOverview();
+    }
+    if (window.updateProjektStats) {
+      window.updateProjektStats();
+    }
   }
 
   // Save state
