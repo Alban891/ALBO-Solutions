@@ -113,6 +113,8 @@ export function renderArtikelListByProjekt() {
   `;
 }).join('');
 
+}
+
 // ==========================================
 // ARTIKEL DETAIL VIEW
 // ==========================================
