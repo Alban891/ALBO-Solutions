@@ -1220,8 +1220,14 @@
                 }
             }
         }
+        else if (tabName === 'projektkosten') {
+            // Import und render Projektkosten
+            import('./js/modules/projektkosten.js').then(module => {
+                module.renderProjektkosten();
+            });
+        }
     };
-
+    
     // NEW: Artikel-Tab switching function (replaces switchDetailTab)
     window.switchArtikelTab = function(tabName) {
         console.log('📑 Switching artikel tab:', tabName);
