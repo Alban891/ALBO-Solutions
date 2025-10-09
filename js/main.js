@@ -55,26 +55,33 @@ async function initializeApplication() {
       state.currentTab = 'cockpit';
     }
 
-    // Step 2: Initialize Charts
+    // Step 2: Make modules globally available
+    window.projekte = projekte;
+    window.artikel = artikel;
+    window.projektkosten = projektkosten;
+    window.renderProjektOverview = projekte.renderProjektOverview;
+    window.updateProjektStats = projekte.updateProjektStats;
+
+    // Step 3: Initialize Charts
     await charts.initializeCharts();
 
-    // Step 3: Initialize AI Controller
+    // Step 4: Initialize AI Controller
     initializeAI();
 
-    // Step 4: Initialize Supabase
+    // Step 5: Initialize Supabase
     const supabaseReady = await api.initializeSupabase();
     
     if (supabaseReady) {
-      // Step 5: Load data from database
+      // Step 6: Load data from database
       await loadInitialData();
     } else {
       console.warn('⚠️ Running in offline mode');
     }
 
-    // Step 6: Setup event listeners
+    // Step 7: Setup event listeners
     setupEventListeners();
 
-    // Step 7: Start AI insights timer
+    // Step 8: Start AI insights timer
     startAIInsightsTimer();
 
     console.log('✅ CFO Dashboard ready!');
@@ -138,7 +145,9 @@ async function restoreDeepNavigation() {
     tab: state.currentTab,
     projekt: state.currentProjekt,
     projektTab: state.currentProjektTab,
-    projektViewMode: state.projektViewMode
+    projektViewMode: state.projektViewMode,
+    artikel: state.currentArtikel,
+    artikelViewMode: state.artikelViewMode
   });
   
   const currentTab = state.currentTab;
@@ -152,7 +161,9 @@ async function restoreDeepNavigation() {
   const currentProjekt = state.currentProjekt;
   const projektViewMode = state.projektViewMode;
   
-  // Check if user was in projekt overview or detail
+  // ==========================================
+  // LEVEL 1: Check if user was in projekt overview
+  // ==========================================
   if (!currentProjekt || projektViewMode === 'overview') {
     console.log('📋 User was in projekt overview');
     
@@ -173,7 +184,9 @@ async function restoreDeepNavigation() {
     return;
   }
   
-  // User was in projekt detail
+  // ==========================================
+  // LEVEL 2: User was in projekt detail
+  // ==========================================
   const projekt = state.getProjekt(currentProjekt);
   if (!projekt) {
     console.warn('⚠️ Projekt not found:', currentProjekt);
@@ -189,40 +202,6 @@ async function restoreDeepNavigation() {
   }
   
   console.log('📂 Restoring projekt detail:', projekt.name);
-  
-  // Set current projekt globally
-  window.cfoDashboard.currentProjekt = currentProjekt;
-  
-  // Show projekt detail view
-  const projektOverview = document.getElementById('projekt-overview');
-  const projektDetail = document.getElementById('projekt-detail-view');
-  
-  if (projektOverview) projektOverview.style.display = 'none';
-  if (projektDetail) projektDetail.style.display = 'block';
-  
-  // Update breadcrumb & title
-  const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
-  const title = document.getElementById('projekt-detail-title');
-  if (breadcrumb) breadcrumb.textContent = projekt.name;
-  if (title) title.textContent = projekt.name;
-  
-  // Restore the specific tab
-  const currentProjektTab = state.currentProjektTab || 'uebersicht';
-  console.log('📑 Restoring projekt tab:', currentProjektTab);
-  
-  // Wait for DOM
-  await new Promise(resolve => setTimeout(resolve, 150));
-  
-  // Switch to the saved tab
-  if (window.switchProjektTab) {
-    console.log('🔄 Calling switchProjektTab with:', currentProjektTab);
-    window.switchProjektTab(currentProjektTab);
-  } else {
-    console.error('❌ switchProjektTab function not available!');
-  }
-  
-  console.log('✅ COMPLETE navigation state restored');
-}
   
   // Set current projekt globally
   window.cfoDashboard.currentProjekt = currentProjekt;
@@ -258,6 +237,8 @@ async function restoreDeepNavigation() {
   // Switch to the saved projekt tab
   if (window.switchProjektTab) {
     window.switchProjektTab(currentProjektTab);
+  } else {
+    console.error('❌ switchProjektTab function not available!');
   }
   
   // ==========================================
@@ -266,7 +247,7 @@ async function restoreDeepNavigation() {
   const currentArtikel = state.currentArtikel;
   const artikelViewMode = state.artikelViewMode;
   
-  if (currentArtikel && artikelViewMode === 'detail') {
+  if (currentArtikel && artikelViewMode === 'detail' && currentProjektTab === 'artikel') {
     console.log('📦 Restoring artikel detail:', currentArtikel);
     
     // Check if artikel exists
@@ -299,13 +280,7 @@ async function restoreDeepNavigation() {
   }
   
   console.log('✅ COMPLETE navigation state restored');
-
-    // NEU - Module global verfügbar machen (HIER nach Zeile 82)
-    window.projekte = projekte;
-    window.artikel = artikel; 
-    window.projektkosten = projektkosten;
-    window.renderProjektOverview = projekte.renderProjektOverview;
-    window.updateProjektStats = projekte.updateProjektStats;
+}
 
 /**
  * Load initial data from database
@@ -389,11 +364,11 @@ export function saveNavigationState() {
  */
 function getCurrentActiveTab() {
   const activeTab = document.querySelector('.tab-btn.active');
-  if (!activeTab) return 'dashboard';
+  if (!activeTab) return 'cockpit';
   
   const onclick = activeTab.getAttribute('onclick');
   const match = onclick?.match(/switchTab\('(.+?)'\)/);
-  return match ? match[1] : 'dashboard';
+  return match ? match[1] : 'cockpit';
 }
 
 // ==========================================
@@ -605,6 +580,15 @@ function setupEventListeners() {
         window.saveArtikelChanges?.();
       }
     }
+    
+    // ESC - Close detail views
+    if (e.key === 'Escape') {
+      if (window.cfoDashboard.currentArtikel) {
+        window.closeArtikelDetail?.();
+      } else if (window.cfoDashboard.currentProjekt) {
+        window.closeProjektDetail?.();
+      }
+    }
   });
 
   console.log('✅ Event listeners registered');
@@ -699,14 +683,14 @@ function startAIInsightsTimer() {
   ];
 
   setInterval(() => {
-    if (window.cfoDashboard.aiController) {
+    if (window.cfoDashboard.aiController && Math.random() > 0.7) {
       const randomInsight = insights[Math.floor(Math.random() * insights.length)];
       window.cfoDashboard.aiController.addAIMessage({
         ...randomInsight,
         timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
       });
     }
-  }, 60000); // Every 60 seconds
+  }, 60000); // Every 60 seconds with 30% chance
 }
 
 // ==========================================
@@ -720,10 +704,34 @@ function getTabDisplayName(tabName) {
   const names = {
     'cockpit': 'Cockpit',
     'projekte': 'Projekte',
+    'artikel': 'Artikel',
     'performance': 'Performance',
     'admin': 'Admin'
   };
   return names[tabName] || tabName;
+}
+
+/**
+ * Format currency
+ */
+export function formatCurrency(value) {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+/**
+ * Format percentage
+ */
+export function formatPercentage(value) {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(value / 100);
 }
 
 // ==========================================
@@ -753,7 +761,9 @@ window.cfoDashboardMain = {
   api,
   charts,
   saveNavigationState,
-  showErrorNotification
+  showErrorNotification,
+  formatCurrency,
+  formatPercentage
 };
 
 console.log('📦 Main module loaded');
