@@ -556,7 +556,8 @@ window.saveQuickArtikel = async function() {
     try {
         const newArtikel = {
           name: artikelName,
-          projekt_id: projektId,  // mit Unterstrich
+          projektId: projektId,  // für Kompatibilität
+          projekt_id: projektId,  // für die API
           artikeltyp: effektTyp,  // WICHTIG: Füge dieses Feld hinzu!
           typ: '',  // Leer für spätere Auswahl
           kategorie: effektTyp,
