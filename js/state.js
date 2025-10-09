@@ -1,10 +1,9 @@
 /**
  * CFO Dashboard - State Management
- * Central state container with strict data isolation
- * Enterprise-grade with multi-tenant support
+ * Centralized state with localStorage persistence
  */
 
-export class DashboardState {
+class DashboardState {
   constructor() {
     // ==========================================
     // COMPLETE NAVIGATION STATE
@@ -26,7 +25,7 @@ export class DashboardState {
     this.currentArtikel = null;           // Which artikel is open?
     this.artikelViewMode = 'list';        // 'list' | 'detail'
     
-    // Level 5: Artikel-Detail (currently editing)
+    // Level 5: Artikel-Detail
     this.artikelDetailScroll = 0;         // Scroll position in artikel detail
     
     // Legacy (for compatibility)
@@ -37,35 +36,15 @@ export class DashboardState {
     this.artikelData = {};
     this.personalDetails = {};
 
-    // Dashboard Live Values
+    // Current Dashboard Values
     this.currentValues = {
       marketVolume: 100,
       pricePremium: 100,
       capexRisk: 100,
-      npv: 44.7,
-      payback: 3.4,
       revenue: 174.0,
+      payback: 3.4,
+      npv: 44.7,
       db2Margin: 34
-    };
-
-    // Chart Instances (managed separately for performance)
-    this.chartInstances = {};
-
-    // Loading States (prevent flicker)
-    this.isLoading = {
-      projekte: false,
-      artikel: false,
-      charts: false
-    };
-
-    // Error States (enterprise error handling)
-    this.errors = {};
-
-    // User Context (for multi-tenant)
-    this.userContext = {
-      companyId: null,
-      userId: null,
-      permissions: []
     };
   }
 
@@ -73,345 +52,259 @@ export class DashboardState {
   // PROJEKT MANAGEMENT
   // ==========================================
 
-  /**
-   * Get projekt by ID with null-safety
-   */
-  getProjekt(projektId) {
-    if (!projektId) {
-      console.warn('getProjekt: No projektId provided');
-      return null;
-    }
-    return this.projektData[projektId] || null;
-  }
-
-  /**
-   * Set projekt data with validation
-   */
-  setProjekt(projektId, data) {
-    if (!projektId) {
-      throw new Error('setProjekt: projektId is required');
-    }
-    
-    // Validate required fields
-    if (!data.name) {
-      throw new Error('setProjekt: projekt name is required');
-    }
-
-    // Ensure artikel array exists
-    if (!data.artikel) {
-      data.artikel = [];
-    }
-
-    this.projektData[projektId] = {
-      ...data,
-      id: projektId,
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  /**
-   * Get all projekte as array
-   */
   getAllProjekte() {
     return Object.values(this.projektData);
   }
 
-  /**
-   * Delete projekt with cascade (remove linked artikel)
-   */
-  deleteProjekt(projektId) {
-    const projekt = this.getProjekt(projektId);
-    if (!projekt) return false;
+  getProjekt(projektId) {
+    return this.projektData[projektId];
+  }
 
-    // Delete all linked artikel
-    if (projekt.artikel && projekt.artikel.length > 0) {
-      projekt.artikel.forEach(artikelId => {
-        delete this.artikelData[artikelId];
-      });
+  addProjekt(projekt) {
+    const id = projekt.id || `projekt-${Date.now()}`;
+    this.projektData[id] = {
+      ...projekt,
+      id,
+      created_at: projekt.created_at || new Date().toISOString()
+    };
+    this.saveState();
+    return id;
+  }
+
+  updateProjekt(projektId, updates) {
+    if (this.projektData[projektId]) {
+      this.projektData[projektId] = {
+        ...this.projektData[projektId],
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      this.saveState();
+      return true;
     }
+    return false;
+  }
 
-    // Delete projekt
-    delete this.projektData[projektId];
-    return true;
+  deleteProjekt(projektId) {
+    if (this.projektData[projektId]) {
+      delete this.projektData[projektId];
+      
+      // Also delete associated articles
+      Object.keys(this.artikelData).forEach(artikelId => {
+        if (this.artikelData[artikelId].projekt_id === projektId) {
+          delete this.artikelData[artikelId];
+        }
+      });
+      
+      this.saveState();
+      return true;
+    }
+    return false;
   }
 
   // ==========================================
   // ARTIKEL MANAGEMENT
   // ==========================================
 
-  /**
-   * Get artikel by ID with null-safety
-   */
+  getAllArtikel() {
+    return Object.values(this.artikelData);
+  }
+
   getArtikel(artikelId) {
-    if (!artikelId) {
-      console.warn('getArtikel: No artikelId provided');
-      return null;
-    }
-    return this.artikelData[artikelId] || null;
+    return this.artikelData[artikelId];
   }
 
-  /**
-   * Set artikel data with validation
-   */
-  setArtikel(artikelId, data) {
-    if (!artikelId) {
-      throw new Error('setArtikel: artikelId is required');
-    }
-
-    // Validate required fields
-    if (!data.name) {
-      throw new Error('setArtikel: artikel name is required');
-    }
-    if (!data.projektId) {
-      throw new Error('setArtikel: projektId is required');
-    }
-
-    // Ensure data structures exist
-    if (!data.volumes) data.volumes = {};
-    if (!data.prices) data.prices = {};
-
-    this.artikelData[artikelId] = {
-      ...data,
-      id: artikelId,
-      updatedAt: new Date().toISOString()
-    };
-
-    // Link to projekt if not already linked
-    const projekt = this.getProjekt(data.projektId);
-    if (projekt && !projekt.artikel.includes(artikelId)) {
-      projekt.artikel.push(artikelId);
-    }
-  }
-
-  /**
-   * Get all artikel for a projekt
-   */
   getArtikelByProjekt(projektId) {
-    const projekt = this.getProjekt(projektId);
-    if (!projekt) return [];
-
-    return projekt.artikel
-      .map(id => this.getArtikel(id))
-      .filter(artikel => artikel !== null);
+    return Object.values(this.artikelData).filter(
+      artikel => artikel.projekt_id === projektId
+    );
   }
 
-  /**
-   * Delete artikel with cleanup
-   */
-  deleteArtikel(artikelId) {
-    const artikel = this.getArtikel(artikelId);
-    if (!artikel) return false;
-
-    // Remove from projekt
-    const projekt = this.getProjekt(artikel.projektId);
-    if (projekt) {
-      projekt.artikel = projekt.artikel.filter(id => id !== artikelId);
-    }
-
-    // Delete artikel
-    delete this.artikelData[artikelId];
-    return true;
-  }
-
-  // ==========================================
-  // STATE PERSISTENCE
-  // ==========================================
-
-  /**
-   * Save state to localStorage (encrypted in production)
-   */
-  /**
- * Save COMPLETE navigation state to localStorage
- * This ensures user stays on exact page after refresh
- */
-saveState() {
-  try {
-    const stateToSave = {
-      // Level 1: Main Tab
-      currentView: this.currentView,
-      currentTab: this.currentTab,
-      
-      // Level 2: Projekt Navigation
-      currentProjekt: this.currentProjekt,
-      projektViewMode: this.projektViewMode,
-      projektListView: this.projektListView,
-      
-      // Level 3: Projekt-Detail Tabs
-      currentProjektTab: this.currentProjektTab,
-      
-      // Level 4: Artikel Navigation
-      currentArtikel: this.currentArtikel,
-      artikelViewMode: this.artikelViewMode,
-      
-      // Level 5: Artikel-Detail
-      artikelDetailScroll: this.artikelDetailScroll,
-      
-      // Legacy
-      currentDetailTab: this.currentDetailTab,
-      
-      // Dashboard Values
-      currentValues: this.currentValues,
-      
-      timestamp: new Date().toISOString()
+  addArtikel(artikel) {
+    const id = artikel.id || `artikel-${Date.now()}`;
+    this.artikelData[id] = {
+      ...artikel,
+      id,
+      created_at: artikel.created_at || new Date().toISOString()
     };
+    this.saveState();
+    return id;
+  }
 
-    localStorage.setItem('cfo-dashboard-state', JSON.stringify(stateToSave));
-    console.log('💾 State saved:', stateToSave);
-    return true;
-  } catch (error) {
-    console.error('Failed to save state:', error);
+  updateArtikel(artikelId, updates) {
+    if (this.artikelData[artikelId]) {
+      this.artikelData[artikelId] = {
+        ...this.artikelData[artikelId],
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      this.saveState();
+      return true;
+    }
     return false;
   }
-}
+
+  deleteArtikel(artikelId) {
+    if (this.artikelData[artikelId]) {
+      delete this.artikelData[artikelId];
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+
+  // ==========================================
+  // BULK OPERATIONS
+  // ==========================================
+
+  setProjekte(projekte) {
+    projekte.forEach(projekt => {
+      this.projektData[projekt.id] = projekt;
+    });
+    this.saveState();
+  }
+
+  setArtikel(artikel) {
+    artikel.forEach(art => {
+      this.artikelData[art.id] = art;
+    });
+    this.saveState();
+  }
+
+  // ==========================================
+  // PERSISTENCE
+  // ==========================================
 
   /**
-   * Restore state from localStorage
+   * Save COMPLETE navigation state to localStorage
+   * This ensures user stays on exact page after refresh
    */
-  /**
- * Restore COMPLETE navigation state from localStorage
- * This ensures user returns to exact page after refresh
- */
-restoreState() {
-  try {
-    const savedState = localStorage.getItem('cfo-dashboard-state');
-    if (!savedState) {
-      console.log('ℹ️ No saved state found - using defaults');
+  saveState() {
+    try {
+      const stateToSave = {
+        // Level 1: Main Tab
+        currentView: this.currentView,
+        currentTab: this.currentTab,
+        
+        // Level 2: Projekt Navigation
+        currentProjekt: this.currentProjekt,
+        projektViewMode: this.projektViewMode,
+        projektListView: this.projektListView,
+        
+        // Level 3: Projekt-Detail Tabs
+        currentProjektTab: this.currentProjektTab,
+        
+        // Level 4: Artikel Navigation
+        currentArtikel: this.currentArtikel,
+        artikelViewMode: this.artikelViewMode,
+        
+        // Level 5: Artikel-Detail
+        artikelDetailScroll: this.artikelDetailScroll,
+        
+        // Legacy
+        currentDetailTab: this.currentDetailTab,
+        
+        // Dashboard Values
+        currentValues: this.currentValues,
+        
+        timestamp: new Date().toISOString()
+      };
+
+      localStorage.setItem('cfo-dashboard-state', JSON.stringify(stateToSave));
+      
+      // ✓ DEBUG OUTPUT
+      console.log('💾 State saved to localStorage:', stateToSave);
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to save state:', error);
       return false;
     }
-
-    const state = JSON.parse(savedState);
-    
-    // Level 1: Main Tab
-    this.currentView = state.currentView || 'dashboard';
-    this.currentTab = state.currentTab || 'cockpit';
-    
-    // Level 2: Projekt Navigation
-    this.currentProjekt = state.currentProjekt || null;
-    this.projektViewMode = state.projektViewMode || 'overview';
-    this.projektListView = state.projektListView || 'liste';
-    
-    // Level 3: Projekt-Detail Tabs
-    this.currentProjektTab = state.currentProjektTab || null;
-    
-    // Level 4: Artikel Navigation
-    this.currentArtikel = state.currentArtikel || null;
-    this.artikelViewMode = state.artikelViewMode || 'list';
-    
-    // Level 5: Artikel-Detail
-    this.artikelDetailScroll = state.artikelDetailScroll || 0;
-    
-    // Legacy
-    this.currentDetailTab = state.currentDetailTab || 'artikel';
-    
-    // Dashboard Values
-    if (state.currentValues) {
-      this.currentValues = { ...this.currentValues, ...state.currentValues };
-    }
-
-    console.log('✅ State restored:', {
-      tab: this.currentTab,
-      projekt: this.currentProjekt,
-      projektTab: this.currentProjektTab,
-      artikel: this.currentArtikel,
-      viewMode: this.projektViewMode
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to restore state:', error);
-    return false;
   }
-}
 
   /**
-   * Clear all state (logout)
+   * Restore COMPLETE navigation state from localStorage
+   * This ensures user returns to exact page after refresh
    */
+  restoreState() {
+    try {
+      const savedState = localStorage.getItem('cfo-dashboard-state');
+      if (!savedState) {
+        console.log('ℹ️ No saved state found - using defaults');
+        return false;
+      }
+
+      const state = JSON.parse(savedState);
+      
+      // Level 1: Main Tab
+      this.currentView = state.currentView || 'dashboard';
+      this.currentTab = state.currentTab || 'cockpit';
+      
+      // Level 2: Projekt Navigation
+      this.currentProjekt = state.currentProjekt || null;
+      this.projektViewMode = state.projektViewMode || 'overview';
+      this.projektListView = state.projektListView || 'liste';
+      
+      // Level 3: Projekt-Detail Tabs
+      this.currentProjektTab = state.currentProjektTab || null;
+      
+      // Level 4: Artikel Navigation
+      this.currentArtikel = state.currentArtikel || null;
+      this.artikelViewMode = state.artikelViewMode || 'list';
+      
+      // Level 5: Artikel-Detail
+      this.artikelDetailScroll = state.artikelDetailScroll || 0;
+      
+      // Legacy
+      this.currentDetailTab = state.currentDetailTab || 'artikel';
+      
+      // Dashboard Values
+      if (state.currentValues) {
+        this.currentValues = { ...this.currentValues, ...state.currentValues };
+      }
+
+      console.log('✅ State restored:', {
+        tab: this.currentTab,
+        projekt: this.currentProjekt,
+        projektTab: this.currentProjektTab,
+        artikel: this.currentArtikel,
+        viewMode: this.projektViewMode
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to restore state:', error);
+      return false;
+    }
+  }
+
   clearState() {
-    this.projektData = {};
-    this.artikelData = {};
-    this.personalDetails = {};
-    this.currentProjekt = null;
-    this.currentArtikel = null;
-    this.errors = {};
-    
     localStorage.removeItem('cfo-dashboard-state');
   }
 
   // ==========================================
-  // LOADING & ERROR STATES
+  // STATISTICS
   // ==========================================
 
-  /**
-   * Set loading state
-   */
-  setLoading(key, value) {
-    if (this.isLoading.hasOwnProperty(key)) {
-      this.isLoading[key] = value;
-    }
-  }
+  getStatistics() {
+    const projekte = this.getAllProjekte();
+    const artikel = this.getAllArtikel();
 
-  /**
-   * Set error state
-   */
-  setError(key, error) {
-    this.errors[key] = {
-      message: error.message || error,
-      timestamp: new Date().toISOString()
+    return {
+      totalProjekte: projekte.length,
+      totalArtikel: artikel.length,
+      artikelByProjekt: projekte.map(p => ({
+        projektId: p.id,
+        projektName: p.name,
+        artikelCount: this.getArtikelByProjekt(p.id).length
+      }))
     };
-  }
-
-  /**
-   * Clear error
-   */
-  clearError(key) {
-    delete this.errors[key];
-  }
-
-  /**
-   * Get all errors
-   */
-  getErrors() {
-    return Object.entries(this.errors).map(([key, error]) => ({
-      key,
-      ...error
-    }));
-  }
-
-  // ==========================================
-  // VALIDATION HELPERS
-  // ==========================================
-
-  /**
-   * Validate projekt data structure
-   */
-  validateProjektData(data) {
-    const required = ['name', 'division', 'status', 'owner'];
-    const missing = required.filter(field => !data[field]);
-    
-    if (missing.length > 0) {
-      throw new Error(`Missing required fields: ${missing.join(', ')}`);
-    }
-    
-    return true;
-  }
-
-  /**
-   * Validate artikel data structure
-   */
-  validateArtikelData(data) {
-    const required = ['name', 'projektId', 'typ'];
-    const missing = required.filter(field => !data[field]);
-    
-    if (missing.length > 0) {
-      throw new Error(`Missing required fields: ${missing.join(', ')}`);
-    }
-    
-    return true;
   }
 }
 
 // Create singleton instance
 export const state = new DashboardState();
 
-// Export default
-export default state;
+// Expose for debugging
+window.dashboardState = state;
+
+console.log('📦 State module loaded');
