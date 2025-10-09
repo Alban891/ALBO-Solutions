@@ -400,6 +400,38 @@ export function toggleElement(id, show) {
   }
 }
 
+/**
+ * Toggle custom input field for select dropdowns with "custom" option
+ * @param {HTMLSelectElement} selectElement - The select element
+ * @param {string} customInputId - ID of the custom input field
+ */
+export function toggleCustomInput(selectElement, customInputId) {
+  const customInput = document.getElementById(customInputId);
+  if (!customInput) return;
+  
+  if (selectElement.value === 'custom') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+}
+
+/**
+ * Get value from select with custom option support
+ * @param {string} selectId - ID of the select element
+ * @param {string} customInputId - ID of the custom input field
+ * @returns {string} The selected or custom value
+ */
+export function getSelectOrCustomValue(selectId, customInputId) {
+  const selectValue = getInputValue(selectId);
+  if (selectValue === 'custom') {
+    return getInputValue(customInputId);
+  }
+  return selectValue;
+}
+
 // ==========================================
 // CALCULATION HELPERS
 // ==========================================
@@ -572,5 +604,7 @@ export default {
   averageArray,
   maxArray,
   debounce,
-  deepClone
+  deepClone,
+  toggleCustomInput,
+  getSelectOrCustomValue
 };
