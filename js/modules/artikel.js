@@ -54,51 +54,64 @@ export function renderArtikelListByProjekt() {
   }
 
   tbody.innerHTML = artikel.map(art => {
-    const revenue = calculateArtikelRevenue(art.id);
-    const db2 = calculateArtikelDB2(art.id);
-    
-    return `
-      <tr class="artikel-row" data-artikel-id="${art.id}">
-        <td>
-          <input type="checkbox" class="artikel-checkbox" value="${art.id}" 
-                 onchange="updateArtikelBulkActions()">
-        </td>
-        <td>
-          <div style="font-weight: 500; color: var(--text);">${helpers.escapeHtml(art.name)}</div>
-          <div style="font-size: 12px; color: var(--gray); margin-top: 4px;">
-            ${helpers.escapeHtml(art.typ || '-')}
-          </div>
-        </td>
-        <td>${helpers.escapeHtml(art.kategorie || '-')}</td>
-        <td>${helpers.formatDateSafe(art.release_datum)}</td>
-        <td style="text-align: right; font-weight: 500;">
-          ${helpers.formatRevenue(revenue)}
-        </td>
-        <td style="text-align: right;">
-          ${helpers.formatPercentage(db2)}
-        </td>
-        <td>
-          <span class="status-badge status-${(art.status || 'aktiv').toLowerCase()}">
-            ${helpers.escapeHtml(art.status || 'aktiv')}
-          </span>
-        </td>
-        <td>
-          <div class="action-buttons">
-            <button class="btn-icon" onclick="openArtikelDetail('${art.id}')" title="Details">
-              📝
-            </button>
-            <button class="btn-icon" onclick="duplicateArtikel('${art.id}')" title="Duplizieren">
-              📋
-            </button>
-            <button class="btn-icon btn-danger" onclick="deleteArtikel('${art.id}')" title="Löschen">
-              🗑️
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
+  const revenue = calculateArtikelRevenue(art.id);
+  const db2 = calculateArtikelDB2(art.id);
+  
+  // Formatiere das Update-Datum
+  const updatedAt = art.updatedAt ? new Date(art.updatedAt).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : '-';
+  
+  return `
+    <tr class="artikel-row" data-artikel-id="${art.id}">
+      <td>
+        <input type="checkbox" class="artikel-checkbox" value="${art.id}" 
+               onchange="updateArtikelBulkActions()">
+      </td>
+      <td>
+        <div style="font-weight: 500; color: var(--text);">${helpers.escapeHtml(art.name)}</div>
+        <div style="font-size: 12px; color: var(--gray); margin-top: 4px;">
+          ${helpers.escapeHtml(art.typ || '-')}
+        </div>
+      </td>
+      <td>${helpers.escapeHtml(art.kategorie || '-')}</td>
+      <td>${helpers.formatDateSafe(art.release_datum)}</td>
+      <td style="text-align: right; font-weight: 500;">
+        ${helpers.formatRevenue(revenue)}
+      </td>
+      <td style="text-align: right;">
+        ${helpers.formatPercentage(db2)}
+      </td>
+      <td>
+        <div style="font-size: 11px; color: var(--text-light);">
+          ${updatedAt}
+        </div>
+      </td>
+      <td>
+        <span class="status-badge status-${(art.status || 'aktiv').toLowerCase()}">
+          ${helpers.escapeHtml(art.status || 'aktiv')}
+        </span>
+      </td>
+      <td>
+        <div class="action-buttons">
+          <button class="btn-icon" onclick="openArtikelDetail('${art.id}')" title="Details">
+            📝
+          </button>
+          <button class="btn-icon" onclick="duplicateArtikel('${art.id}')" title="Duplizieren">
+            📋
+          </button>
+          <button class="btn-icon btn-danger" onclick="deleteArtikel('${art.id}')" title="Löschen">
+            🗑️
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}).join('');
 
 // ==========================================
 // ARTIKEL DETAIL VIEW
@@ -152,6 +165,22 @@ window.openArtikelDetail = function(artikelId) {
  * Load artikel data into detail form
  */
 function loadArtikelIntoForm(artikel) {
+  // Zeige "Zuletzt gespeichert" Info wenn vorhanden
+  if (artikel.updatedAt) {
+    const updateInfo = document.getElementById('artikel-update-info');
+    if (updateInfo) {
+      const dateStr = new Date(artikel.updatedAt).toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      updateInfo.innerHTML = `<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ${dateStr}`;
+      updateInfo.style.display = 'block';
+    }
+  }
+
   // Basic Info
   helpers.setInputValue('artikel-name', artikel.name);
   helpers.setInputValue('artikel-typ', artikel.typ);
