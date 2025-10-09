@@ -841,7 +841,11 @@
                         </button>
                     </div>
 
+                </div>
                 <!-- Ende artikel-detail-view -->
+
+            </div>
+            <!-- Ende tab-projekte -->
 
             <!-- ========================================== -->
             <!-- TAB 3: PERFORMANCE -->
@@ -952,134 +956,90 @@
 
     // NEW: Projekt-Tab switching function
     window.switchProjektTab = function(tabName) {
-    console.log('📑 Switching projekt tab:', tabName);
-
-    // Update tab buttons
-    document.querySelectorAll('.detail-tab').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Update tab contents
-    document.querySelectorAll('.projekt-tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    // Activate target tab
-    const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
-    const targetContent = document.getElementById(`projekt-tab-${tabName}`);
-
-    if (targetButton) targetButton.classList.add('active');
-    if (targetContent) targetContent.classList.add('active');
-
-    // ✓✓✓ CRITICAL: Save navigation state ✓✓✓
-    if (window.state) {
-        window.state.currentProjektTab = tabName;
-        window.state.projektViewMode = 'detail';
-        window.state.saveState();
-        console.log('💾 Saved projekt tab to state:', tabName);
-    } else {
-        console.error('❌ window.state not available!');
-    }
-
-    // Special handling for different tabs
-    if (tabName === 'artikel') {
-        // Render artikel list for this projekt
-        const projektId = window.cfoDashboard.currentProjekt;
-        if (projektId) {
-            const tbody = document.getElementById('projekt-artikel-list-tbody');
-            if (tbody && window.renderArtikelListByProjekt) {
-                window.renderArtikelListByProjekt();
-                const sourceBody = document.getElementById('artikel-list-tbody');
-                if (sourceBody) {
-                    tbody.innerHTML = sourceBody.innerHTML;
-                }
-            }
-        }
-        
-        // Set artikel view mode to list
-        if (window.state) {
-            window.state.artikelViewMode = 'list';
-            window.state.currentArtikel = null;
-            window.state.saveState();
-        }
-    }
-    else if (tabName === 'projektkosten') {
-        // Import und render Projektkosten
-        import('./js/modules/projektkosten.js').then(module => {
-            if (module.renderProjektkosten) {
-                module.renderProjektkosten();
-            }
-        }).catch(err => {
-            console.error('Failed to load projektkosten module:', err);
-        });
-    }
-    else if (tabName === 'wirtschaftlichkeit') {
-        // Import und render Wirtschaftlichkeit
-        import('./js/modules/wirtschaftlichkeit.js').then(module => {
-            if (module.renderProjektWirtschaftlichkeit) {
-                module.renderProjektWirtschaftlichkeit();
-            }
-        }).catch(err => {
-            console.error('Failed to load wirtschaftlichkeit module:', err);
-        });
-    }
-    else if (tabName === 'dashboard') {
-        // Import und render Dashboard
-        import('./js/modules/dashboard.js').then(module => {
-            if (module.renderProjektDashboard) {
-                module.renderProjektDashboard();
-            }
-        }).catch(err => {
-            console.error('Failed to load dashboard module:', err);
-        });
-    }
-};
-    
-    // Füge diese Funktion nach der switchProjektTab Funktion ein (ca. Zeile 1230)
-    window.switchArtikelTab = function(tabName) {
-        console.log('📑 Switching artikel tab:', tabName);
+        console.log('📑 Switching projekt tab:', tabName);
 
         // Update tab buttons
-        document.querySelectorAll('#artikel-detail-view .detail-tab').forEach(btn => {
+        document.querySelectorAll('.detail-tab').forEach(btn => {
             btn.classList.remove('active');
         });
         
-        // Update tab contents  
-        document.querySelectorAll('.artikel-tab-content').forEach(content => {
+        // Update tab contents
+        document.querySelectorAll('.projekt-tab-content').forEach(content => {
             content.classList.remove('active');
         });
 
         // Activate target tab
-        const targetButton = document.querySelector(`#artikel-detail-view [onclick="switchArtikelTab('${tabName}')"]`);
-        const targetContent = document.getElementById(`artikel-tab-${tabName}`);
+        const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
+        const targetContent = document.getElementById(`projekt-tab-${tabName}`);
 
         if (targetButton) targetButton.classList.add('active');
         if (targetContent) targetContent.classList.add('active');
 
-        // Special handling for wirtschaftlichkeit tab
-        if (tabName === 'wirtschaftlichkeit') {
+        // ✓✓✓ CRITICAL: Save navigation state ✓✓✓
+        if (window.state) {
+            window.state.currentProjektTab = tabName;
+            window.state.projektViewMode = 'detail';
+            window.state.saveState();
+            console.log('💾 Saved projekt tab to state:', tabName);
+        } else {
+            console.error('❌ window.state not available!');
+        }
+
+        // Special handling for different tabs
+        if (tabName === 'artikel') {
+            // Render artikel list for this projekt
+            const projektId = window.cfoDashboard.currentProjekt;
+            if (projektId) {
+                const tbody = document.getElementById('projekt-artikel-list-tbody');
+                if (tbody && window.renderArtikelListByProjekt) {
+                    window.renderArtikelListByProjekt();
+                    const sourceBody = document.getElementById('artikel-list-tbody');
+                    if (sourceBody) {
+                        tbody.innerHTML = sourceBody.innerHTML;
+                    }
+                }
+            }
+            
+            // Set artikel view mode to list
+            if (window.state) {
+                window.state.artikelViewMode = 'list';
+                window.state.currentArtikel = null;
+                window.state.saveState();
+            }
+        }
+        else if (tabName === 'projektkosten') {
+            // Import und render Projektkosten
+            import('./js/modules/projektkosten.js').then(module => {
+                if (module.renderProjektkosten) {
+                    module.renderProjektkosten();
+                }
+            }).catch(err => {
+                console.error('Failed to load projektkosten module:', err);
+            });
+        }
+        else if (tabName === 'wirtschaftlichkeit') {
+            // Import und render Wirtschaftlichkeit
             import('./js/modules/wirtschaftlichkeit.js').then(module => {
-                module.renderWirtschaftlichkeit();
+                if (module.renderProjektWirtschaftlichkeit) {
+                    module.renderProjektWirtschaftlichkeit();
+                }
+            }).catch(err => {
+                console.error('Failed to load wirtschaftlichkeit module:', err);
+            });
+        }
+        else if (tabName === 'dashboard') {
+            // Import und render Dashboard
+            import('./js/modules/dashboard.js').then(module => {
+                if (module.renderProjektDashboard) {
+                    module.renderProjektDashboard();
+                }
+            }).catch(err => {
+                console.error('Failed to load dashboard module:', err);
             });
         }
     };
 
-    // NEW: Navigate to projekt kosten from artikel
-    window.navigateToProjektKosten = function() {
-        const projektId = window.cfoDashboard.currentProjekt;
-        if (!projektId) return;
-
-        // Close artikel detail
-        closeArtikelDetail();
-
-        // Open projekt detail
-        openProjektDetail(projektId);
-
-        // Switch to kosten tab
-        switchProjektTab('kosten');
-    };
-
-    // NEW: Navigate to projekt wirtschaftlichkeit from artikel
+    // Navigate to projekt wirtschaftlichkeit from artikel
     window.navigateToProjektWirtschaftlichkeit = function() {
         const projektId = window.cfoDashboard.currentProjekt;
         if (!projektId) return;
@@ -1103,49 +1063,47 @@
         window.switchProjektTab('wirtschaftlichkeit');
     };
 
-    // NEW: Open projekt detail view
+    // Open projekt detail view
     window.openProjektDetail = function(projektId) {
-    const projekt = window.cfoDashboard.projektData[projektId] || state.getProjekt(projektId);
-    if (!projekt) {
-        console.error('Projekt not found:', projektId);
-        return;
-    }
+        const projekt = window.cfoDashboard.projektData[projektId] || state.getProjekt(projektId);
+        if (!projekt) {
+            console.error('Projekt not found:', projektId);
+            return;
+        }
 
-    console.log('📂 Opening projekt detail:', projekt.name);
+        console.log('📂 Opening projekt detail:', projekt.name);
 
-    // Set current projekt
-    window.cfoDashboard.currentProjekt = projektId;
-    
-    // ✓✓✓ CRITICAL: Save complete navigation state ✓✓✓
-    if (window.state) {
-        window.state.currentProjekt = projektId;
-        window.state.projektViewMode = 'detail';
-        window.state.currentProjektTab = 'uebersicht'; // Default tab
-        window.state.currentArtikel = null;  // Clear artikel selection
-        window.state.artikelViewMode = 'list';
-        window.state.saveState();
-        console.log('💾 Saved projekt detail state');
-    }
+        // Set current projekt
+        window.cfoDashboard.currentProjekt = projektId;
+        
+        // ✓✓✓ CRITICAL: Save complete navigation state ✓✓✓
+        if (window.state) {
+            window.state.currentProjekt = projektId;
+            window.state.projektViewMode = 'detail';
+            window.state.currentProjektTab = 'uebersicht'; // Default tab
+            window.state.currentArtikel = null;  // Clear artikel selection
+            window.state.artikelViewMode = 'list';
+            window.state.saveState();
+            console.log('💾 Saved projekt detail state');
+        }
 
-    // Hide projekt overview
-    const projektOverview = document.getElementById('projekt-overview');
-    if (projektOverview) projektOverview.style.display = 'none';
+        // Hide projekt overview
+        const projektOverview = document.getElementById('projekt-overview');
+        if (projektOverview) projektOverview.style.display = 'none';
 
-    // Show projekt detail
-    const projektDetail = document.getElementById('projekt-detail-view');
-    if (projektDetail) projektDetail.style.display = 'block';
+        // Show projekt detail
+        const projektDetail = document.getElementById('projekt-detail-view');
+        if (projektDetail) projektDetail.style.display = 'block';
 
-    // Update breadcrumb & title
-    const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
-    const title = document.getElementById('projekt-detail-title');
-    if (breadcrumb) breadcrumb.textContent = projekt.name;
-    if (title) title.textContent = projekt.name;
+        // Update breadcrumb & title
+        const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
+        const title = document.getElementById('projekt-detail-title');
+        if (breadcrumb) breadcrumb.textContent = projekt.name;
+        if (title) title.textContent = projekt.name;
 
-    // Switch to first tab
-    switchProjektTab('uebersicht');
-};
-
-    console.log('✅ All modules and navigation functions loaded');
+        // Switch to first tab
+        switchProjektTab('uebersicht');
+    };
 
     // ==========================================
     // ARTIKEL NAVIGATION (Vorheriger/Nächster)
@@ -1165,7 +1123,9 @@
         
         if (currentIndex > 0) {
             const previousArtikel = artikelListe[currentIndex - 1];
-            openArtikelDetail(previousArtikel.id);
+            if (window.openArtikelDetail) {
+                window.openArtikelDetail(previousArtikel.id);
+            }
         }
     };
 
@@ -1183,7 +1143,9 @@
         
         if (currentIndex < artikelListe.length - 1) {
             const nextArtikel = artikelListe[currentIndex + 1];
-            openArtikelDetail(nextArtikel.id);
+            if (window.openArtikelDetail) {
+                window.openArtikelDetail(nextArtikel.id);
+            }
         }
     };
 
@@ -1261,101 +1223,10 @@
             console.log('✅ Title updated to:', artikel.name);
         }
     };
-    
-// ==========================================
-// ARTIKEL NAVIGATION (Vorheriger/Nächster)
-// ==========================================
 
-/**
- * Navigate to previous artikel
- */
-window.navigateToNextArtikel = function() {
-    const currentProjekt = window.cfoDashboard.currentProjekt;
-    const artikelListe = state.getArtikelByProjekt(currentProjekt);
-    
-    if (!artikelListe || artikelListe.length === 0) return;
-    
-    const currentArtikelId = window.cfoDashboard.currentArtikel;
-    const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
-    
-    if (currentIndex < artikelListe.length - 1) {
-        const nextArtikel = artikelListe[currentIndex + 1];
-        openArtikelDetail(nextArtikel.id);
-    }
-};
-
-/**
- * Navigate to next artikel
- */
-window.navigateToNextArtikel = function() {
-    const currentProjekt = window.cfoDashboard.currentProjekt;
-    const projekt = state.getProjekt(currentProjekt);
-    
-    if (!projekt || !projekt.artikel || projekt.artikel.length === 0) return;
-    
-    const currentArtikelId = window.cfoDashboard.currentArtikel;
-    const currentIndex = projekt.artikel.findIndex(a => a.id === currentArtikelId);
-    
-    if (currentIndex < projekt.artikel.length - 1) {
-        const nextArtikel = projekt.artikel[currentIndex + 1];
-        openArtikelDetail(nextArtikel.id);
-    }
-};
-
-/**
- * Update navigation buttons state
- */
-window.updateArtikelNavigation = function() {
-    const currentProjekt = window.cfoDashboard.currentProjekt;
-    const currentArtikelId = window.cfoDashboard.currentArtikel;
-    
-    if (!currentProjekt || !currentArtikelId) return;
-    
-    const projekt = state.getProjekt(currentProjekt);
-    const artikelListe = state.getArtikelByProjekt(currentProjekt);
-    
-    if (!projekt || !artikelListe || artikelListe.length === 0) return;
-    
-    const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
-    const artikel = artikelListe[currentIndex];
-    
-    if (!artikel) return;
-    
-    // Update position display
-    const positionEl = document.getElementById('artikel-position');
-    const totalEl = document.getElementById('artikel-total');
-    if (positionEl) positionEl.textContent = currentIndex + 1;
-    if (totalEl) totalEl.textContent = artikelListe.length;
-    
-    // Update buttons
-    const prevBtn = document.getElementById('prev-artikel-btn');
-    const nextBtn = document.getElementById('next-artikel-btn');
-    
-    if (prevBtn) {
-        prevBtn.disabled = currentIndex === 0;
-        prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
-    }
-    
-    if (nextBtn) {
-        nextBtn.disabled = currentIndex === artikelListe.length - 1;
-        nextBtn.style.opacity = currentIndex === artikelListe.length - 1 ? '0.5' : '1';
-    }
-    
-    // Update breadcrumb
-    const projektNameEl = document.getElementById('artikel-breadcrumb-projekt');
-    const artikelNameEl = document.getElementById('artikel-breadcrumb-name');
-    
-    if (projektNameEl) projektNameEl.textContent = projekt.name;
-    if (artikelNameEl) artikelNameEl.textContent = artikel.name || 'Artikel bearbeiten';
-    
-    // Update title
-    const titleEl = document.getElementById('artikel-detail-title');
-    if (titleEl) titleEl.textContent = `✏️ ${artikel.name || 'Artikel bearbeiten'}`;
-    
-    console.log('✅ Navigation updated:', artikel.name, `(${currentIndex + 1}/${artikelListe.length})`);
-};
+    console.log('✅ All modules and navigation functions loaded');
         
-</script>
+    </script>
 
 </body>
 </html>
