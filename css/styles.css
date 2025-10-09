@@ -2794,7 +2794,7 @@ body {
     border-bottom: 3px solid var(--primary) !important;
 }
 
-/* Kompaktere Input-Felder */
+/* Input-Felder - WEIß mit KONTRAST */
 #artikel-detail-view input[type="text"],
 #artikel-detail-view input[type="month"],
 #artikel-detail-view select,
@@ -2802,7 +2802,17 @@ body {
     font-size: 13px !important;
     padding: 8px 12px !important;
     border-radius: 2px !important;
-    background: var(--gray-50);
+    background: white !important;  /* WEIß statt grau */
+    border: 1.5px solid var(--gray-400) !important;  /* Stärkerer Border */
+    transition: all 0.15s ease;
+}
+
+#artikel-detail-view input:focus,
+#artikel-detail-view select:focus,
+#artikel-detail-view textarea:focus {
+    border-color: var(--primary) !important;
+    background: white !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }
 
 /* Kompaktere Labels */
@@ -2815,36 +2825,61 @@ body {
     margin-bottom: 4px !important;
 }
 
-/* Weniger Spacing */
+/* Sections mit leichtem Hintergrund */
 #artikel-detail-view .form-section {
     padding: 16px !important;
     margin-bottom: 16px !important;
     border-radius: 4px !important;
+    background: #f8f9fa !important;  /* Leichter grauer Hintergrund */
+    border: 1px solid var(--gray-200) !important;
 }
 
+/* Grid Gap */
 #artikel-detail-view > div[style*="grid"] {
     gap: 16px !important;
 }
 
-/* Kompaktere Modell-Options */
+/* Modell-Options mit Kontrast */
 #artikel-detail-view .modell-option-compact {
     padding: 6px 10px !important;
     font-size: 12px !important;
     border-radius: 2px !important;
+    background: white !important;
+    border: 1px solid var(--gray-300) !important;
 }
 
-/* Kleinere Zeitraum-Buttons */
+#artikel-detail-view .modell-option-compact:hover {
+    background: var(--gray-50) !important;
+    border-color: var(--primary) !important;
+}
+
+/* Zeitraum-Buttons */
 .zeitraum-btn {
     padding: 8px 20px !important;
     font-size: 13px !important;
     border-radius: 2px !important;
+    background: white !important;
+    border: 1.5px solid var(--gray-300) !important;
 }
 
-/* Kompaktere Jahr-Tabelle */
+.zeitraum-btn.active {
+    background: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+}
+
+/* Jahr-Tabelle Inputs */
 .jahr-table input.jahr-input {
     font-size: 12px !important;
     padding: 6px 8px !important;
     border-radius: 2px !important;
+    background: white !important;
+    border: 1px solid var(--gray-300) !important;
+}
+
+.jahr-table input.jahr-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
 }
 
 /* Breadcrumb kleiner */
@@ -2863,4 +2898,5 @@ body {
 /* Textarea kleiner */
 #artikel-detail-view textarea {
     min-height: 60px !important;
+    background: white !important;
 }
