@@ -565,6 +565,13 @@
                     </div>
 
                     <!-- ========================================== -->
+                    <!-- PROJEKT TAB: WIRTSCHAFTLICHKEIT -->
+                    <!-- ========================================== -->
+                    <div id="projekt-tab-wirtschaftlichkeit" class="projekt-tab-content">
+                        <!-- Wird von wirtschaftlichkeit.js gefüllt -->
+                    </div>
+
+                    <!-- ========================================== -->
                     <!-- PROJEKT TAB: BUSINESS CASE -->
                     <!-- ========================================== -->
                     <div id="projekt-tab-business-case" class="projekt-tab-content">
@@ -681,22 +688,6 @@
                     ">
                         <!-- Wird dynamisch gefüllt -->
                     </div>
-
-                    <!-- TAB-NAVIGATION FÜR ARTIKEL -->
-                    <div class="detail-tabs">
-                        <button class="detail-tab active" onclick="switchArtikelTab('artikel')">
-                            📦 Artikel
-                        </button>
-                        <button class="detail-tab" onclick="switchArtikelTab('projekte')">
-                            💰 Projekte
-                        </button>
-                        <button class="detail-tab" onclick="switchArtikelTab('wirtschaftlichkeit')">
-                            📈 Wirtschaftlichkeit
-                        </button>
-                    </div>
-
-                    <!-- TAB CONTENT: ARTIKEL -->
-                    <div id="artikel-tab-artikel" class="artikel-tab-content active">
 
                     <!-- Header mit Navigation -->
                     <div class="section-header" style="margin-bottom: 24px;">
@@ -838,15 +829,18 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- ========================================== -->
-                    <!-- WIRTSCHAFTLICHKEIT -->
-                    <!-- ========================================== -->
                     
-                    <div id="artikel-tab-wirtschaftlichkeit" class="artikel-tab-content">
-                        <!-- Wird von wirtschaftlichkeit.js gefüllt -->
+                    <!-- Link zu Wirtschaftlichkeit auf Projekt-Ebene -->
+                    <div class="form-section" style="margin-bottom: 24px;">
+                        <h3>📈 Wirtschaftlichkeit</h3>
+                        <p style="color: var(--gray);">
+                            Die Wirtschaftlichkeitsberechnung erfolgt auf Projekt-Ebene für alle Artikel gemeinsam.
+                        </p>
+                        <button class="btn btn-primary" onclick="navigateToProjektWirtschaftlichkeit()">
+                            → Zur Projekt-Wirtschaftlichkeit
+                        </button>
                     </div>
-                    
+
                 <!-- Ende artikel-detail-view -->
 
             <!-- ========================================== -->
@@ -1000,6 +994,12 @@
                 module.renderProjektkosten();
             });
         }
+        else if (tabName === 'wirtschaftlichkeit') {
+            // Import und render Wirtschaftlichkeit
+            import('./js/modules/wirtschaftlichkeit.js').then(module => {
+                module.renderProjektWirtschaftlichkeit();
+            });
+        }
     };
     
     // Füge diese Funktion nach der switchProjektTab Funktion ein (ca. Zeile 1230)
@@ -1031,28 +1031,6 @@
         }
     };
 
-    // NEW: Artikel-Tab switching function (replaces switchDetailTab)
-    window.switchArtikelTab = function(tabName) {
-        console.log('📑 Switching artikel tab:', tabName);
-
-        // Update tab buttons
-        document.querySelectorAll('#artikel-detail-view .detail-tab').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Update tab contents
-        document.querySelectorAll('.artikel-tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-
-        // Activate target tab
-        const targetButton = document.querySelector(`#artikel-detail-view [onclick="switchArtikelTab('${tabName}')"]`);
-        const targetContent = document.getElementById(`artikel-tab-${tabName}`);
-
-        if (targetButton) targetButton.classList.add('active');
-        if (targetContent) targetContent.classList.add('active');
-    };
-
     // NEW: Navigate to projekt kosten from artikel
     window.navigateToProjektKosten = function() {
         const projektId = window.cfoDashboard.currentProjekt;
@@ -1066,6 +1044,30 @@
 
         // Switch to kosten tab
         switchProjektTab('kosten');
+    };
+
+    // NEW: Navigate to projekt wirtschaftlichkeit from artikel
+    window.navigateToProjektWirtschaftlichkeit = function() {
+        const projektId = window.cfoDashboard.currentProjekt;
+        if (!projektId) return;
+
+        // Close artikel detail if open
+        const artikelDetail = document.getElementById('artikel-detail-view');
+        if (artikelDetail) artikelDetail.style.display = 'none';
+
+        // Hide other views
+        const projektOverview = document.getElementById('projekt-overview');
+        const artikelOverview = document.getElementById('artikel-overview');
+        
+        if (projektOverview) projektOverview.style.display = 'none';
+        if (artikelOverview) artikelOverview.style.display = 'none';
+
+        // Show projekt detail
+        const projektDetail = document.getElementById('projekt-detail-view');
+        if (projektDetail) projektDetail.style.display = 'block';
+
+        // Switch to wirtschaftlichkeit tab
+        window.switchProjektTab('wirtschaftlichkeit');
     };
 
     // NEW: Open projekt detail view
