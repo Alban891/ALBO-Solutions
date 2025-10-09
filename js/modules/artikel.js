@@ -376,6 +376,9 @@ function collectArtikelFormData() {
   data.start_menge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge')) || 0;
   data.start_preis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis')) || 0;
   data.start_hk = helpers.parseFormattedNumber(helpers.getInputValue('start-hk')) || 0;
+  data.mengen_modell = helpers.getInputValue('mengen-modell');
+  data.preis_modell = helpers.getInputValue('preis-modell');
+  data.kosten_modell = helpers.getInputValue('kosten-modell');
 
   // Models
   const mengenModell = document.querySelector('input[name="mengen-modell"]:checked');
