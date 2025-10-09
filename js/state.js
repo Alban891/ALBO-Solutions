@@ -139,9 +139,6 @@ class DashboardState {
     if (!artikelData.projektId) {
       throw new Error('Projekt-ID ist erforderlich');
     }
-    if (!artikelData.typ) {
-      throw new Error('Artikeltyp ist erforderlich');
-    }
     return true;
   }
 
