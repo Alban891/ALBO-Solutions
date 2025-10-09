@@ -130,6 +130,11 @@ window.openArtikelDetail = function(artikelId) {
   // Load artikel data into form
   loadArtikelIntoForm(artikel);
 
+  // Update navigation (breadcrumb, buttons, position)
+  if (window.updateArtikelNavigation) {
+    window.updateArtikelNavigation();
+  }
+
   // Save navigation state
   if (window.saveNavigationState) {
     window.saveNavigationState();
