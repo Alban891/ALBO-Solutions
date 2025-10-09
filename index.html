@@ -1116,15 +1116,16 @@
     // Set current projekt
     window.cfoDashboard.currentProjekt = projektId;
     
-    // ✓ CRITICAL: Save complete navigation state
-    window.state.currentProjekt = projektId;
-    window.state.projektViewMode = 'detail';
-    window.state.currentProjektTab = 'uebersicht'; // Default tab
-    window.state.currentArtikel = null;  // Clear artikel selection
-    window.state.artikelViewMode = 'list';
-    window.state.saveState();
-    
-    console.log('💾 Saved projekt detail state');
+    // ✓✓✓ CRITICAL: Save complete navigation state ✓✓✓
+    if (window.state) {
+        window.state.currentProjekt = projektId;
+        window.state.projektViewMode = 'detail';
+        window.state.currentProjektTab = 'uebersicht'; // Default tab
+        window.state.currentArtikel = null;  // Clear artikel selection
+        window.state.artikelViewMode = 'list';
+        window.state.saveState();
+        console.log('💾 Saved projekt detail state');
+    }
 
     // Hide projekt overview
     const projektOverview = document.getElementById('projekt-overview');
