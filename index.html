@@ -1000,6 +1000,12 @@
                 module.renderProjektWirtschaftlichkeit();
             });
         }
+        else if (tabName === 'dashboard') {
+            // Import und render Dashboard
+            import('./js/modules/dashboard.js').then(module => {
+                module.renderProjektDashboard();
+            });
+        }
     };
     
     // Füge diese Funktion nach der switchProjektTab Funktion ein (ca. Zeile 1230)
