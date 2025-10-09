@@ -133,7 +133,13 @@ window.openArtikelDetail = function(artikelId) {
 
   // Set current artikel
   window.cfoDashboard.currentArtikel = artikelId;
+  
+  // ✓ CRITICAL: Save complete navigation state
   state.currentArtikel = artikelId;
+  state.artikelViewMode = 'detail';
+  state.saveState();
+  
+  console.log('💾 Saved artikel detail state');
 
   // ⚠️ CRITICAL: Hide ALL views except artikel-detail
   const projektOverview = document.getElementById('projekt-overview');
@@ -437,14 +443,19 @@ window.closeArtikelDetail = function() {
   // Show projekt detail
   if (projektDetail) projektDetail.style.display = 'block';
 
+  // ✓ CRITICAL: Update navigation state
+  window.cfoDashboard.currentArtikel = null;
+  state.currentArtikel = null;
+  state.artikelViewMode = 'list';
+  state.artikelDetailScroll = 0;
+  state.saveState();
+  
+  console.log('💾 Cleared artikel from state');
+
   // Switch to artikel tab
   if (window.switchProjektTab) {
     window.switchProjektTab('artikel');
   }
-
-  // Clear current artikel
-  window.cfoDashboard.currentArtikel = null;
-  state.currentArtikel = null;
 
   // Re-render list
   renderArtikelListByProjekt();
