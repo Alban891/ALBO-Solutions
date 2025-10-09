@@ -407,7 +407,9 @@ export async function saveArticle(artikelData) {
       strategie: artikelData.strategie,
       investment_typ: artikelData.investment_typ,
       beschreibung: artikelData.beschreibung,
-      release_datum: artikelData.release_datum,
+      release_datum: artikelData.release_datum ?
+        (artikelData.release_datum.length === 7 ? artikelData.release_datum + '-01' : artikelData.release_datum) :
+        null,
       annahmen: artikelData.annahmen,
       volumes: artikelData.volumes || {},
       prices: artikelData.prices || {},
