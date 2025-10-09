@@ -971,11 +971,15 @@
     if (targetButton) targetButton.classList.add('active');
     if (targetContent) targetContent.classList.add('active');
 
-    // ✓ CRITICAL: Save navigation state
-    window.state.currentProjektTab = tabName;
-    window.state.projektViewMode = 'detail';
-    window.state.saveState();
-    console.log('💾 Saved projekt tab to state:', tabName);
+    // ✓✓✓ CRITICAL: Save navigation state ✓✓✓
+    if (window.state) {
+        window.state.currentProjektTab = tabName;
+        window.state.projektViewMode = 'detail';
+        window.state.saveState();
+        console.log('💾 Saved projekt tab to state:', tabName);
+    } else {
+        console.error('❌ window.state not available!');
+    }
 
     // Special handling for different tabs
     if (tabName === 'artikel') {
@@ -983,8 +987,8 @@
         const projektId = window.cfoDashboard.currentProjekt;
         if (projektId) {
             const tbody = document.getElementById('projekt-artikel-list-tbody');
-            if (tbody) {
-                renderArtikelListByProjekt();
+            if (tbody && window.renderArtikelListByProjekt) {
+                window.renderArtikelListByProjekt();
                 const sourceBody = document.getElementById('artikel-list-tbody');
                 if (sourceBody) {
                     tbody.innerHTML = sourceBody.innerHTML;
@@ -992,24 +996,41 @@
             }
         }
         
-        // ✓ Set artikel view mode to list
-        window.state.artikelViewMode = 'list';
-        window.state.currentArtikel = null;
-        window.state.saveState();
+        // Set artikel view mode to list
+        if (window.state) {
+            window.state.artikelViewMode = 'list';
+            window.state.currentArtikel = null;
+            window.state.saveState();
+        }
     }
     else if (tabName === 'projektkosten') {
+        // Import und render Projektkosten
         import('./js/modules/projektkosten.js').then(module => {
-            module.renderProjektkosten();
+            if (module.renderProjektkosten) {
+                module.renderProjektkosten();
+            }
+        }).catch(err => {
+            console.error('Failed to load projektkosten module:', err);
         });
     }
     else if (tabName === 'wirtschaftlichkeit') {
+        // Import und render Wirtschaftlichkeit
         import('./js/modules/wirtschaftlichkeit.js').then(module => {
-            module.renderProjektWirtschaftlichkeit();
+            if (module.renderProjektWirtschaftlichkeit) {
+                module.renderProjektWirtschaftlichkeit();
+            }
+        }).catch(err => {
+            console.error('Failed to load wirtschaftlichkeit module:', err);
         });
     }
     else if (tabName === 'dashboard') {
+        // Import und render Dashboard
         import('./js/modules/dashboard.js').then(module => {
-            module.renderProjektDashboard();
+            if (module.renderProjektDashboard) {
+                module.renderProjektDashboard();
+            }
+        }).catch(err => {
+            console.error('Failed to load dashboard module:', err);
         });
     }
 };
