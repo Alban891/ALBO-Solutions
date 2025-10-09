@@ -332,10 +332,14 @@ function renderEmptyState() {
 /**
  * Switch project view (called from index.html)
  */
-window.switchProjectView = function(viewType) {
+wwindow.switchProjectView = function(viewType) {
   console.log('🔄 Switching project view to:', viewType);
 
   currentView = viewType;
+  
+  // ✓ CRITICAL: Save list view preference
+  state.projektListView = viewType;
+  state.saveState();
 
   // Update button states
   document.querySelectorAll('.view-btn').forEach(btn => {
@@ -444,25 +448,40 @@ window.openProjektArtikel = async function(projektId) {
  * Go back to projekt overview
  */
 window.backToProjektOverview = function() {
-  console.log('🔙 Back to projekt overview');
+    console.log('🔙 Back to projekt overview');
 
-  const projektOverview = document.getElementById('projekt-overview');
-  const artikelOverview = document.getElementById('artikel-overview');
+    const projektOverview = document.getElementById('projekt-overview');
+    const projektDetail = document.getElementById('projekt-detail-view');
+    const artikelOverview = document.getElementById('artikel-overview');
+    const artikelDetail = document.getElementById('artikel-detail-view');
 
-  if (projektOverview) projektOverview.style.display = 'block';
-  if (artikelOverview) artikelOverview.style.display = 'none';
+    // Show only projekt overview
+    if (projektOverview) projektOverview.style.display = 'block';
+    if (projektDetail) projektDetail.style.display = 'none';
+    if (artikelOverview) artikelOverview.style.display = 'none';
+    if (artikelDetail) artikelDetail.style.display = 'none';
 
-  // Clear current projekt
-  window.cfoDashboard.currentProjekt = null;
-  state.currentProjekt = null;
+    // ✓ CRITICAL: Clear ALL deep navigation state
+    window.cfoDashboard.currentProjekt = null;
+    window.cfoDashboard.currentArtikel = null;
+    
+    window.state.currentProjekt = null;
+    window.state.projektViewMode = 'overview';
+    window.state.currentProjektTab = null;
+    window.state.currentArtikel = null;
+    window.state.artikelViewMode = 'list';
+    window.state.artikelDetailScroll = 0;
+    window.state.saveState();
+    
+    console.log('💾 Cleared all navigation state - back to overview');
 
-  // Re-render projekt list
-  renderProjektOverview();
-
-  // Save state
-  if (window.saveNavigationState) {
-    window.saveNavigationState();
-  }
+    // Re-render projekt list
+    if (window.renderProjektOverview) {
+        window.renderProjektOverview();
+    }
+    if (window.updateProjektStats) {
+        window.updateProjektStats();
+    }
 };
 
 // ==========================================
