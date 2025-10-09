@@ -514,17 +514,24 @@ window.openCreateProjektModal = function() {
                       placeholder="Kurze Projektbeschreibung..."></textarea>
           </div>
           
-          <div class="form-row">
-            <div class="form-group">
-              <label>Business Unit *</label>
-              <select id="new-projekt-division">
-                <option value="Entwicklung">Entwicklung</option>
-                <option value="Produktion">Produktion</option>
-                <option value="Vertrieb">Vertrieb</option>
-                <option value="Service">Service</option>
-                <option value="Innovation">Innovation</option>
-              </select>
-            </div>
+          <div class="form-group">
+          <label>Division *</label>
+          <select id="new-projekt-division" onchange="window.checkCustomDivision(this)">
+            <option value="Entwicklung">Entwicklung</option>
+            <option value="Produktion">Produktion</option>
+            <option value="Vertrieb">Vertrieb</option>
+            <option value="Service">Service</option>
+            <option value="Innovation">Innovation</option>
+            <option value="consulting">Consulting</option>
+            <option value="automation">Automation</option>
+            <option value="digitalization">Digitalization</option>
+            <option value="custom">➕ Andere (manuell eingeben)...</option>
+          </select>
+          <input type="text" id="new-projekt-division-custom" 
+                placeholder="Division eingeben..." 
+                style="display: none; margin-top: 8px; width: 100%; padding: 8px; 
+                        border: 1px solid var(--border); border-radius: 4px;">
+        </div>
             
             <div class="form-group">
               <label>Status</label>
@@ -597,7 +604,7 @@ window.createProjekt = async function() {
     const projektData = {
       name: helpers.getInputValue('new-projekt-name'),
       beschreibung: helpers.getInputValue('new-projekt-beschreibung'),
-      division: helpers.getInputValue('new-projekt-division'),
+      division: helpers.getInputValue('new-projekt-division', 'new-projekt-division-custom'),
       status: helpers.getInputValue('new-projekt-status'),
       owner: helpers.getInputValue('new-projekt-owner'),
       startDatum: helpers.getInputValue('new-projekt-start'),
