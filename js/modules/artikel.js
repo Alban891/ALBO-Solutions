@@ -556,8 +556,8 @@ window.saveQuickArtikel = async function() {
     try {
         const newArtikel = {
           name: artikelName,
-          projektId: projektId,
-          projekt_id: projektId,
+          projektId: projektId,  // Für state.js Validierung
+          projekt_id: projektId,  // Für API
           typ: '',  // Bleibt leer, User wählt später
           kategorie: effektTyp,  // Hier speichern wir Neu-Produkt/Cross-Selling/etc.
           geschaeftsmodell: '',
