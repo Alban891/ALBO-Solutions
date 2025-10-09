@@ -278,27 +278,20 @@ window.saveArtikelChanges = async function() {
       console.log('✅ Artikel saved');
 
       // Update charts
-  charts.updateAllCharts();
+      charts.updateAllCharts();
   
-  // Show success message
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'success',
-      title: '✅ Artikel gespeichert',
-      text: `"${artikelData.name}" wurde erfolgreich aktualisiert.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
+      // Show success message
+      if (window.cfoDashboard.aiController) {
+        window.cfoDashboard.aiController.addAIMessage({
+          level: 'success',
+          title: '✅ Artikel gespeichert',
+          text: `"${artikelData.name}" wurde erfolgreich aktualisiert.`,
+          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+        });
+      }
   
-  // Return to list
-  closeArtikelDetail();
-  
-  // NEU: Wechsle automatisch zum Projektkosten-Tab
-  setTimeout(() => {
-    if (window.switchProjektTab) {
-      window.switchProjektTab('projektkosten');
-    }
-  }, 300);
+      // Return to list
+      closeArtikelDetail();
 
       // Update charts
       charts.updateAllCharts();
