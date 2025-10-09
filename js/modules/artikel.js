@@ -191,8 +191,8 @@ function loadArtikelIntoForm(artikel) {
 
   // Basic Info
   helpers.setInputValue('artikel-name', artikel.name);
-  helpers.setInputValue('artikel-typ', artikel.typ);
-  helpers.setInputValue('kategorie', artikel.kategorie);
+  helpers.setInputValue('artikel-typ', artikel.typ || '');
+  helpers.setInputValue('kategorie', artikel.kategorie || artikel.effekt_typ || '');
   helpers.setInputValue('geschaeftsmodell', artikel.geschaeftsmodell);
   helpers.setInputValue('zielmarkt', artikel.zielmarkt);
   helpers.setInputValue('strategie', artikel.strategie);
@@ -497,7 +497,7 @@ window.createNewArtikel = function() {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Effekt-Typ *</label>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Typ *</label>
                         <select id="quick-artikel-typ" 
                                 style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
                                        border-radius: 4px; font-size: 14px; background: white;">
@@ -557,7 +557,7 @@ window.saveQuickArtikel = async function() {
         const newArtikel = {
             name: artikelName,
             projektId: projektId,  // Wichtig: projektId (wie im Original)
-            typ: effektTyp === 'Neu-Produkt' ? 'Hardware' : 'Service',
+            typ: '',
             kategorie: effektTyp,
             geschaeftsmodell: '',
             zielmarkt: '',
