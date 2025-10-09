@@ -555,28 +555,29 @@ window.saveQuickArtikel = async function() {
     
     try {
         const newArtikel = {
-            name: artikelName,
-            projekt_Id: projektId,
-            typ: '',
-            kategorie: effektTyp,
-            geschaeftsmodell: '',
-            zielmarkt: '',
-            strategie: '',
-            investment_typ: '',
-            beschreibung: '',
-            release_datum: releaseDatum,
-            annahmen: '',
-            start_menge: 100,
-            start_preis: 1000,
-            start_hk: 600,
-            mengen_modell: 'realistisch',
-            preis_modell: 'konstant',
-            kosten_modell: 'lernkurve',
-            zeitraum: 5,
-            volumes: {},
-            prices: {},
-            hk: 600
-        };
+          name: artikelName,
+          projekt_id: projektId,  // mit Unterstrich
+          artikeltyp: effektTyp,  // WICHTIG: Füge dieses Feld hinzu!
+          typ: '',  // Leer für spätere Auswahl
+          kategorie: effektTyp,
+          geschaeftsmodell: '',
+          zielmarkt: '',
+          strategie: '',
+          investment_typ: '',
+          beschreibung: '',
+          release_datum: releaseDatum,
+          annahmen: '',
+          start_menge: 100,
+          start_preis: 1000,
+          start_hk: 600,
+          mengen_modell: 'realistisch',
+          preis_modell: 'konstant',
+          kosten_modell: 'lernkurve',
+          zeitraum: 5,
+          volumes: {},
+          prices: {},
+          hk: 600
+      };
 
         // Save to database
         const saved = await api.saveArticle(newArtikel);
