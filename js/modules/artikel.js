@@ -582,18 +582,33 @@ window.saveQuickArtikel = async function() {
         const saved = await api.saveArticle(newArtikel);
 
         if (saved) {
-            console.log('✅ Artikel created');
-            
-            // Close modal
-            closeArtikelQuickCreate();
-            
-            // Re-render list
-            renderArtikelListByProjekt();
-            
-            // Update charts if available
-            if (window.charts?.updateAllCharts) {
-                charts.updateAllCharts();
+        console.log('✅ Artikel created');
+        
+        // Close modal
+        closeArtikelQuickCreate();
+        
+        // WICHTIG: Lade Artikel neu aus der Datenbank
+        await api.loadArticles(projektId);
+        
+        // Dann erst re-render
+        renderArtikelListByProjekt();
+        
+        // Alternativ: Direkt den neuen Artikel zum State hinzufügen
+        const artikelId = 'artikel-db-' + saved.id;
+        state.setArtikel(artikelId, {
+            ...newArtikel,
+            id: artikelId
+        });
+        
+        // Force re-render der Tabelle
+        const tbody = document.getElementById('projekt-artikel-list-tbody');
+        if (tbody && window.renderArtikelListByProjekt) {
+            window.renderArtikelListByProjekt();
+            const sourceBody = document.getElementById('artikel-list-tbody');
+            if (sourceBody) {
+                tbody.innerHTML = sourceBody.innerHTML;
             }
+        }
             
             // AI Feedback
             if (window.cfoDashboard.aiController) {
