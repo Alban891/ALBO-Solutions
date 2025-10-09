@@ -430,6 +430,40 @@ function collectArtikelFormData() {
   return data;
 }
 
+// ==========================================
+// WIRTSCHAFTLICHKEIT HELPERS
+// ==========================================
+
+/**
+ * Set planning horizon (3, 5, or 7 years)
+ */
+window.setzeZeitraum = function(jahre) {
+    document.querySelectorAll('.zeitraum-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#374151';
+        btn.style.border = '1px solid #e5e7eb';
+        btn.style.fontWeight = 'normal';
+    });
+    
+    if (event && event.target) {
+        event.target.classList.add('active');
+        event.target.style.background = '#3b82f6';
+        event.target.style.color = 'white';
+        event.target.style.border = '1px solid #3b82f6';
+        event.target.style.fontWeight = '600';
+    }
+    
+    // Store the selected zeitraum
+    const artikelId = window.cfoDashboard.currentArtikel;
+    if (artikelId) {
+        const artikel = state.getArtikel(artikelId);
+        if (artikel) {
+            artikel.zeitraum = jahre;
+        }
+    }
+}
+
 /**
  * Close artikel detail view
  */
