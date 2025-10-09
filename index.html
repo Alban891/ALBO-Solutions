@@ -831,16 +831,65 @@
                         </div>
                     </div>
                     
-                    <!-- Link zu Wirtschaftlichkeit auf Projekt-Ebene -->
+                    <!-- Finanz-Parameter (Vereinfachte Version) -->
                     <div class="form-section" style="margin-bottom: 24px;">
-                        <h3>📈 Wirtschaftlichkeit</h3>
-                        <p style="color: var(--gray);">
-                            Die Wirtschaftlichkeitsberechnung erfolgt auf Projekt-Ebene für alle Artikel gemeinsam.
-                        </p>
-                        <button class="btn btn-primary" onclick="navigateToProjektWirtschaftlichkeit()">
-                            → Zur Projekt-Wirtschaftlichkeit
-                        </button>
+                        <h3>💰 Wirtschaftlichkeits-Parameter</h3>
+                        
+                        <!-- Startwerte -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Startmenge (Jahr 1)</label>
+                                <input type="text" id="start-menge" placeholder="z.B. 100">
+                            </div>
+                            <div class="form-group">
+                                <label>Startpreis (€/Stück)</label>
+                                <input type="text" id="start-preis" placeholder="z.B. 1000">
+                            </div>
+                            <div class="form-group">
+                                <label>Herstellkosten (€/Stück)</label>
+                                <input type="text" id="start-hk" placeholder="z.B. 600">
+                            </div>
+                        </div>
+
+                        <!-- Entwicklungsmodelle -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Mengenmodell</label>
+                                <select id="mengen-modell">
+                                    <option value="realistisch">Realistisch (S-Kurve)</option>
+                                    <option value="konservativ">Konservativ (+15% p.a.)</option>
+                                    <option value="optimistisch">Optimistisch (Hockey-Stick)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Preismodell</label>
+                                <select id="preis-modell">
+                                    <option value="konstant">Konstant</option>
+                                    <option value="inflation">Inflation (+2% p.a.)</option>
+                                    <option value="skimming">Skimming (-3% p.a.)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Kostenmodell</label>
+                                <select id="kosten-modell">
+                                    <option value="lernkurve">Lernkurve (-5% bei 2x)</option>
+                                    <option value="konstant">Konstant</option>
+                                    <option value="inflation">Inflation (+3% p.a.)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Zeitraum -->
+                        <div class="form-group">
+                            <label>Planungshorizont</label>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" onclick="setzeZeitraum(3)">3 Jahre</button>
+                                <button class="btn btn-primary" onclick="setzeZeitraum(5)">5 Jahre</button>
+                                <button class="btn btn-secondary" onclick="setzeZeitraum(7)">7 Jahre</button>
+                            </div>
+                        </div>
                     </div>
+
 
                 </div>
                 <!-- Ende artikel-detail-view -->
