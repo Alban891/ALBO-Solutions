@@ -332,7 +332,7 @@ function renderEmptyState() {
 /**
  * Switch project view (called from index.html)
  */
-wwindow.switchProjectView = function(viewType) {
+window.switchProjectView = function(viewType) {
   console.log('🔄 Switching project view to:', viewType);
 
   currentView = viewType;
