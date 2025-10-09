@@ -278,6 +278,29 @@ window.saveArtikelChanges = async function() {
       console.log('✅ Artikel saved');
 
       // Update charts
+  charts.updateAllCharts();
+  
+  // Show success message
+  if (window.cfoDashboard.aiController) {
+    window.cfoDashboard.aiController.addAIMessage({
+      level: 'success',
+      title: '✅ Artikel gespeichert',
+      text: `"${artikelData.name}" wurde erfolgreich aktualisiert.`,
+      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+    });
+  }
+  
+  // Return to list
+  closeArtikelDetail();
+  
+  // NEU: Wechsle automatisch zum Projektkosten-Tab
+  setTimeout(() => {
+    if (window.switchProjektTab) {
+      window.switchProjektTab('projektkosten');
+    }
+  }, 300);
+
+      // Update charts
       charts.updateAllCharts();
 
       // Show success message
@@ -320,10 +343,10 @@ function collectArtikelFormData() {
     annahmen: helpers.getInputValue('annahmen')
   };
 
-  // Start values
-  data.start_menge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge'));
-  data.start_preis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis'));
-  data.start_hk = helpers.parseFormattedNumber(helpers.getInputValue('start-hk'));
+  // Start values - mit Fallback auf 0
+  data.start_menge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge')) || 0;
+  data.start_preis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis')) || 0;
+  data.start_hk = helpers.parseFormattedNumber(helpers.getInputValue('start-hk')) || 0;
 
   // Models
   const mengenModell = document.querySelector('input[name="mengen-modell"]:checked');
@@ -334,32 +357,44 @@ function collectArtikelFormData() {
   data.preis_modell = preisModell?.value || 'konstant';
   data.kosten_modell = kostenModell?.value || 'lernkurve';
 
-  // Zeitraum
+  // Zeitraum - FIX: Aus Button-Text extrahieren
   const zeitraumBtn = document.querySelector('.zeitraum-btn.active');
-  data.zeitraum = parseInt(zeitraumBtn?.dataset?.jahre || '5');
+  if (zeitraumBtn) {
+    const btnText = zeitraumBtn.textContent;
+    const match = btnText.match(/(\d+)/);
+    data.zeitraum = match ? parseInt(match[1]) : 5;
+  } else {
+    data.zeitraum = 5; // Default
+  }
 
-  // Year data (volumes, prices)
-  const startYear = parseInt((data.release_datum || '2025-01').split('-')[0]);
+  // Year data - sicherer
+  const releaseDatum = data.release_datum || new Date().toISOString().substring(0, 7);
+  const startYear = parseInt(releaseDatum.split('-')[0]);
+  
   data.volumes = {};
   data.prices = {};
 
-  for (let i = 1; i <= data.zeitraum; i++) {
-    const year = startYear + i - 1;
-
-    const mengeValue = helpers.getInputValue(`menge-jahr-${i}`);
-    const preisValue = helpers.getInputValue(`preis-jahr-${i}`);
-
-    if (mengeValue) {
-      data.volumes[year] = helpers.parseFormattedNumber(mengeValue);
+  // Nur Felder sammeln die existieren
+  for (let i = 1; i <= 7; i++) { // Bis zu 7 Jahre möglich
+    const mengeInput = document.getElementById(`menge-jahr-${i}`);
+    const preisInput = document.getElementById(`preis-jahr-${i}`);
+    
+    if (mengeInput && mengeInput.value) {
+      const year = startYear + i - 1;
+      data.volumes[year] = helpers.parseFormattedNumber(mengeInput.value) || 0;
     }
-
-    if (preisValue) {
-      data.prices[year] = helpers.parseFormattedNumber(preisValue);
+    
+    if (preisInput && preisInput.value) {
+      const year = startYear + i - 1;
+      data.prices[year] = helpers.parseFormattedNumber(preisInput.value) || 0;
     }
   }
 
-  data.hk = data.start_hk; // For now, use start HK for all years
+  // HK und table_start_year
+  data.hk = data.start_hk || 0;
+  data.table_start_year = startYear;
 
+  console.log('📊 Collected data:', data);
   return data;
 }
 
