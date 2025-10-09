@@ -6,11 +6,30 @@
 
 export class DashboardState {
   constructor() {
-    // Current View State
+    // ==========================================
+    // COMPLETE NAVIGATION STATE
+    // ==========================================
+    
+    // Level 1: Main Tab
     this.currentView = 'dashboard';
-    this.currentTab = 'dashboard';
-    this.currentProjekt = null;
-    this.currentArtikel = null;
+    this.currentTab = 'cockpit';
+    
+    // Level 2: Projekt Navigation
+    this.currentProjekt = null;           // Which projekt is open?
+    this.projektViewMode = 'overview';    // 'overview' | 'detail'
+    this.projektListView = 'liste';       // 'liste' | 'karten' | 'kompakt'
+    
+    // Level 3: Projekt-Detail Tabs
+    this.currentProjektTab = null;        // 'uebersicht' | 'artikel' | 'projektkosten' | 'wirtschaftlichkeit' | 'dashboard'
+    
+    // Level 4: Artikel Navigation
+    this.currentArtikel = null;           // Which artikel is open?
+    this.artikelViewMode = 'list';        // 'list' | 'detail'
+    
+    // Level 5: Artikel-Detail (currently editing)
+    this.artikelDetailScroll = 0;         // Scroll position in artikel detail
+    
+    // Legacy (for compatibility)
     this.currentDetailTab = 'artikel';
 
     // Data Storage - Isolated per session
@@ -201,53 +220,108 @@ export class DashboardState {
   /**
    * Save state to localStorage (encrypted in production)
    */
-  saveState() {
-    try {
-      const stateToSave = {
-        currentView: this.currentView,
-        currentTab: this.currentTab,
-        currentProjekt: this.currentProjekt,
-        currentArtikel: this.currentArtikel,
-        currentDetailTab: this.currentDetailTab,
-        currentValues: this.currentValues,
-        timestamp: new Date().toISOString()
-      };
+  /**
+ * Save COMPLETE navigation state to localStorage
+ * This ensures user stays on exact page after refresh
+ */
+saveState() {
+  try {
+    const stateToSave = {
+      // Level 1: Main Tab
+      currentView: this.currentView,
+      currentTab: this.currentTab,
+      
+      // Level 2: Projekt Navigation
+      currentProjekt: this.currentProjekt,
+      projektViewMode: this.projektViewMode,
+      projektListView: this.projektListView,
+      
+      // Level 3: Projekt-Detail Tabs
+      currentProjektTab: this.currentProjektTab,
+      
+      // Level 4: Artikel Navigation
+      currentArtikel: this.currentArtikel,
+      artikelViewMode: this.artikelViewMode,
+      
+      // Level 5: Artikel-Detail
+      artikelDetailScroll: this.artikelDetailScroll,
+      
+      // Legacy
+      currentDetailTab: this.currentDetailTab,
+      
+      // Dashboard Values
+      currentValues: this.currentValues,
+      
+      timestamp: new Date().toISOString()
+    };
 
-      localStorage.setItem('cfo-dashboard-state', JSON.stringify(stateToSave));
-      return true;
-    } catch (error) {
-      console.error('Failed to save state:', error);
-      return false;
-    }
+    localStorage.setItem('cfo-dashboard-state', JSON.stringify(stateToSave));
+    console.log('💾 State saved:', stateToSave);
+    return true;
+  } catch (error) {
+    console.error('Failed to save state:', error);
+    return false;
   }
+}
 
   /**
    * Restore state from localStorage
    */
-  restoreState() {
-    try {
-      const savedState = localStorage.getItem('cfo-dashboard-state');
-      if (!savedState) return false;
-
-      const state = JSON.parse(savedState);
-      
-      // Restore only UI state, not data (data comes from DB)
-      this.currentView = state.currentView || 'dashboard';
-      this.currentTab = state.currentTab || 'dashboard';
-      this.currentProjekt = state.currentProjekt;
-      this.currentArtikel = state.currentArtikel;
-      this.currentDetailTab = state.currentDetailTab || 'artikel';
-      
-      if (state.currentValues) {
-        this.currentValues = { ...this.currentValues, ...state.currentValues };
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to restore state:', error);
+  /**
+ * Restore COMPLETE navigation state from localStorage
+ * This ensures user returns to exact page after refresh
+ */
+restoreState() {
+  try {
+    const savedState = localStorage.getItem('cfo-dashboard-state');
+    if (!savedState) {
+      console.log('ℹ️ No saved state found - using defaults');
       return false;
     }
+
+    const state = JSON.parse(savedState);
+    
+    // Level 1: Main Tab
+    this.currentView = state.currentView || 'dashboard';
+    this.currentTab = state.currentTab || 'cockpit';
+    
+    // Level 2: Projekt Navigation
+    this.currentProjekt = state.currentProjekt || null;
+    this.projektViewMode = state.projektViewMode || 'overview';
+    this.projektListView = state.projektListView || 'liste';
+    
+    // Level 3: Projekt-Detail Tabs
+    this.currentProjektTab = state.currentProjektTab || null;
+    
+    // Level 4: Artikel Navigation
+    this.currentArtikel = state.currentArtikel || null;
+    this.artikelViewMode = state.artikelViewMode || 'list';
+    
+    // Level 5: Artikel-Detail
+    this.artikelDetailScroll = state.artikelDetailScroll || 0;
+    
+    // Legacy
+    this.currentDetailTab = state.currentDetailTab || 'artikel';
+    
+    // Dashboard Values
+    if (state.currentValues) {
+      this.currentValues = { ...this.currentValues, ...state.currentValues };
+    }
+
+    console.log('✅ State restored:', {
+      tab: this.currentTab,
+      projekt: this.currentProjekt,
+      projektTab: this.currentProjektTab,
+      artikel: this.currentArtikel,
+      viewMode: this.projektViewMode
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to restore state:', error);
+    return false;
   }
+}
 
   /**
    * Clear all state (logout)
