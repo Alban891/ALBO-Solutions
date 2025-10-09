@@ -556,11 +556,10 @@ window.saveQuickArtikel = async function() {
     try {
         const newArtikel = {
           name: artikelName,
-          projektId: projektId,  // für Kompatibilität
-          projekt_id: projektId,  // für die API
-          artikeltyp: effektTyp,  // WICHTIG: Füge dieses Feld hinzu!
-          typ: '',  // Leer für spätere Auswahl
-          kategorie: effektTyp,
+          projektId: projektId,
+          projekt_id: projektId,
+          typ: '',  // Bleibt leer, User wählt später
+          kategorie: effektTyp,  // Hier speichern wir Neu-Produkt/Cross-Selling/etc.
           geschaeftsmodell: '',
           zielmarkt: '',
           strategie: '',
