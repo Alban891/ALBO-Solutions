@@ -562,7 +562,7 @@ export async function loadKostenblöcke(projektId) {
   if (!client) return [];
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
 
     const { data, error } = await client
       .from('albo_kostenblöcke')
@@ -594,16 +594,27 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
   try {
     const dbId = projektId.replace('projekt-db-', '');
+    
+    console.log('💾 Speichere Kostenblöcke:', {
+      projektId,
+      dbId,
+      blockCount: kostenblöcke.length
+    });
 
     // Delete alte Kostenblöcke
-    await client
+    const { error: deleteError } = await client
       .from('albo_kostenblöcke')
       .delete()
       .eq('project_id', dbId);
 
+    if (deleteError) {
+      console.warn('⚠️ Delete warning:', deleteError);
+      // Ignoriere "no rows" Fehler
+    }
+
     // Insert neue Kostenblöcke
     const blocksToInsert = kostenblöcke.map(block => ({
-      project_id: dbId,
+      project_id: parseInt(dbId), // WICHTIG: als Number, nicht String
       block_id: block.id,
       block_name: block.name,
       block_icon: block.icon || '📦',
@@ -611,14 +622,20 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
       is_active: block.isActive !== false,
       kosten_werte: block.kostenWerte || {}
     }));
+    
+    console.log('📦 Blocks to insert:', blocksToInsert);
 
-    const { error } = await client
+    const { data, error } = await client
       .from('albo_kostenblöcke')
-      .insert(blocksToInsert);
+      .insert(blocksToInsert)
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Insert error:', error);
+      throw error;
+    }
 
-    console.log(`✅ Saved ${kostenblöcke.length} Kostenblöcke for project ${projektId}`);
+    console.log(`✅ Saved ${data.length} Kostenblöcke for project ${projektId}`);
     return true;
 
   } catch (error) {
@@ -641,7 +658,15 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
   if (!client) return false;
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    
+    console.log('💾 Update Kostenblock:', {
+      projektId,
+      dbId,
+      blockId,
+      jahr,
+      wert
+    });
 
     // Prüfe ob Block existiert
     const { data: existingBlock, error: fetchError } = await client
@@ -649,10 +674,10 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
       .select('*')
       .eq('project_id', dbId)
       .eq('block_id', blockId)
-      .maybeSingle(); // WICHTIG: maybeSingle() statt single() - kein Fehler wenn nicht gefunden
+      .maybeSingle();
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      // PGRST116 = "not found" ist OK, andere Fehler nicht
+      console.error('❌ Fetch error:', fetchError);
       throw fetchError;
     }
 
@@ -667,7 +692,10 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
         .eq('project_id', dbId)
         .eq('block_id', blockId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('❌ Update error:', updateError);
+        throw updateError;
+      }
       
       console.log(`✅ Updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
     } else {
@@ -685,7 +713,10 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
           kosten_werte: kostenWerte
         }]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Insert error:', insertError);
+        throw insertError;
+      }
       
       console.log(`✅ Created and updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
     }
@@ -709,7 +740,7 @@ export async function loadPersonalPositionen(projektId) {
   if (!client) return [];
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
 
     const { data, error } = await client
       .from('albo_personal_positionen')
@@ -741,16 +772,26 @@ export async function savePersonalPositionen(projektId, positionen) {
 
   try {
     const dbId = projektId.replace('projekt-db-', '');
+    
+    console.log('💾 Speichere Personal-Positionen:', {
+      projektId,
+      dbId,
+      positionCount: positionen.length
+    });
 
     // Delete alte Positionen
-    await client
+    const { error: deleteError } = await client
       .from('albo_personal_positionen')
       .delete()
       .eq('project_id', dbId);
 
+    if (deleteError) {
+      console.warn('⚠️ Delete warning:', deleteError);
+    }
+
     // Insert neue Positionen
     const positionenToInsert = positionen.map(pos => ({
-      project_id: dbId,
+      project_id: parseInt(dbId), // WICHTIG: als Number
       position_id: pos.id,
       position_name: pos.name,
       basis_gehalt: pos.basisGehalt || 0,
@@ -759,14 +800,20 @@ export async function savePersonalPositionen(projektId, positionen) {
       nebenkosten_faktor: pos.nebenkostenFaktor || 1.30,
       gehaltssteigerung: pos.gehaltssteigerung || 0.025
     }));
+    
+    console.log('👥 Positionen to insert:', positionenToInsert);
 
-    const { error } = await client
+    const { data, error } = await client
       .from('albo_personal_positionen')
-      .insert(positionenToInsert);
+      .insert(positionenToInsert)
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Insert error:', error);
+      throw error;
+    }
 
-    console.log(`✅ Saved ${positionen.length} Personal-Positionen for project ${projektId}`);
+    console.log(`✅ Saved ${data.length} Personal-Positionen for project ${projektId}`);
     return true;
 
   } catch (error) {
@@ -787,7 +834,7 @@ export async function deleteKostenblock(projektId, blockId) {
   if (!client) return false;
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
 
     const { error } = await client
       .from('albo_kostenblöcke')
