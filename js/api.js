@@ -593,7 +593,19 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
   if (!client) return false;
 
   try {
-    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    // Validierung: Prüfe ob projektId gültig ist
+    if (!projektId || !projektId.startsWith('projekt-db-')) {
+      console.error('❌ Ungültige projektId:', projektId);
+      return false;
+    }
+
+    const dbId = parseInt(projektId.replace('projekt-db-', ''));
+    
+    // Validierung: Prüfe ob dbId eine gültige Zahl ist
+    if (isNaN(dbId) || dbId <= 0) {
+      console.error('❌ Ungültige dbId nach Parsing:', dbId, 'von projektId:', projektId);
+      return false;
+    }
     
     console.log('💾 Speichere Kostenblöcke:', {
       projektId,
@@ -606,16 +618,15 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
     const { error: deleteError } = await client
       .from('albo_kostenblöcke')
       .delete()
-      .eq('project_id', dbId); // Jetzt als Number
+      .eq('project_id', dbId);
 
     if (deleteError) {
       console.warn('⚠️ Delete warning:', deleteError);
-      // Ignoriere "no rows" Fehler
     }
 
     // Insert neue Kostenblöcke
     const blocksToInsert = kostenblöcke.map(block => ({
-      project_id: dbId, // Auch hier: Number
+      project_id: dbId,
       block_id: block.id,
       block_name: block.name,
       block_icon: block.icon || '📦',
@@ -624,7 +635,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
       kosten_werte: block.kostenWerte || {}
     }));
     
-    console.log('📦 Blocks to insert:', blocksToInsert);
+    console.log('📦 Blocks to insert:', JSON.stringify(blocksToInsert, null, 2));
 
     const { data, error } = await client
       .from('albo_kostenblöcke')
@@ -774,7 +785,19 @@ export async function savePersonalPositionen(projektId, positionen) {
   if (!client) return false;
 
   try {
-    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    // Validierung: Prüfe ob projektId gültig ist
+    if (!projektId || !projektId.startsWith('projekt-db-')) {
+      console.error('❌ Ungültige projektId:', projektId);
+      return false;
+    }
+
+    const dbId = parseInt(projektId.replace('projekt-db-', ''));
+    
+    // Validierung: Prüfe ob dbId eine gültige Zahl ist
+    if (isNaN(dbId) || dbId <= 0) {
+      console.error('❌ Ungültige dbId nach Parsing:', dbId, 'von projektId:', projektId);
+      return false;
+    }
     
     console.log('💾 Speichere Personal-Positionen:', {
       projektId,
@@ -787,7 +810,7 @@ export async function savePersonalPositionen(projektId, positionen) {
     const { error: deleteError } = await client
       .from('albo_personal_positionen')
       .delete()
-      .eq('project_id', dbId); // Jetzt als Number
+      .eq('project_id', dbId);
 
     if (deleteError) {
       console.warn('⚠️ Delete warning:', deleteError);
@@ -795,7 +818,7 @@ export async function savePersonalPositionen(projektId, positionen) {
 
     // Insert neue Positionen
     const positionenToInsert = positionen.map(pos => ({
-      project_id: dbId, // Auch hier: Number
+      project_id: dbId,
       position_id: pos.id,
       position_name: pos.name,
       basis_gehalt: pos.basisGehalt || 0,
@@ -805,7 +828,7 @@ export async function savePersonalPositionen(projektId, positionen) {
       gehaltssteigerung: pos.gehaltssteigerung || 0.025
     }));
     
-    console.log('👥 Positionen to insert:', positionenToInsert);
+    console.log('👥 Positionen to insert:', JSON.stringify(positionenToInsert, null, 2));
 
     const { data, error } = await client
       .from('albo_personal_positionen')
