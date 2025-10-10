@@ -505,10 +505,36 @@ window.setzeZeitraum = function(jahre) {
       state.saveState();
     }
   }
+
+  // Prüfe und aktualisiere Projekt-Ende wenn nötig
+  const releaseDatum = document.getElementById('release-datum')?.value || '2025-01';
+  const releaseYear = parseInt(releaseDatum.split('-')[0]);
+  const artikelEnde = releaseYear + jahre - 1;
+  
+  // Hole aktuelles Projekt-Ende
+  const projektEndeInput = document.getElementById('projekt-ende');
+  if (projektEndeInput) {
+    const projektEndeYear = parseInt(projektEndeInput.value.split('-')[0]);
+    
+    // Wenn Artikel länger läuft als Projekt, erweitere Projekt
+    if (artikelEnde > projektEndeYear) {
+      projektEndeInput.value = `${artikelEnde}-12`;
+      
+      // Zeige Info-Message
+      if (window.cfoDashboard?.aiController) {
+        window.cfoDashboard.aiController.addAIMessage({
+          level: 'info',
+          title: '📅 Projektzeitraum angepasst',
+          text: `Projektende wurde auf ${artikelEnde} erweitert, um den Artikel-Zeitraum abzudecken.`,
+          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+        });
+      }
+    }
+  }
   
   // Tabellen-Spalten anpassen
   updateTabellenSpalten(jahre);
-}
+}  // <- HIER war die schließende Klammer an der falschen Stelle
 
 /**
  * Tabellen-Spalten basierend auf Zeitraum anzeigen/verstecken
