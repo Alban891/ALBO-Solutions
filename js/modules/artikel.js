@@ -465,6 +465,51 @@ window.setzeZeitraum = function(jahre) {
 }
 
 /**
+ * Berechne Modelle basierend auf Startwerten und gewählten Modellen
+ */
+window.berechneModelle = function() {
+    console.log('📊 Berechne Modelle...');
+    
+    const startMenge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge')) || 0;
+    const startPreis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis')) || 0;
+    const startHK = helpers.parseFormattedNumber(helpers.getInputValue('start-hk')) || 0;
+    
+    const mengenModell = document.querySelector('input[name="mengen-modell"]:checked')?.value || 'realistisch';
+    const preisModell = document.querySelector('input[name="preis-modell"]:checked')?.value || 'konstant';
+    const kostenModell = document.querySelector('input[name="kosten-modell"]:checked')?.value || 'lernkurve';
+    
+    console.log('Startwerte:', { startMenge, startPreis, startHK });
+    console.log('Modelle:', { mengenModell, preisModell, kostenModell });
+    
+    // TODO: Implementiere die Berechnungslogik für die verschiedenen Modelle
+    // Aktualisiere die Ergebnis-Tabelle basierend auf den Modellen
+}
+
+/**
+ * Reset alle Modelle auf Standardwerte
+ */
+window.resetModelle = function() {
+    console.log('🔄 Reset Modelle...');
+    
+    // Reset Radio Buttons auf Defaults
+    const mengenRadio = document.querySelector('input[name="mengen-modell"][value="realistisch"]');
+    const preisRadio = document.querySelector('input[name="preis-modell"][value="konstant"]');
+    const kostenRadio = document.querySelector('input[name="kosten-modell"][value="lernkurve"]');
+    
+    if (mengenRadio) mengenRadio.checked = true;
+    if (preisRadio) preisRadio.checked = true;
+    if (kostenRadio) kostenRadio.checked = true;
+    
+    // Reset Startwerte
+    helpers.setInputValue('start-menge', '20');
+    helpers.setInputValue('start-preis', '10,00');
+    helpers.setInputValue('start-hk', '5,00');
+    
+    // Berechne neu
+    window.berechneModelle();
+}
+
+/**
  * Close artikel detail view
  */
 window.closeArtikelDetail = function() {
