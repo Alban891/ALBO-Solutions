@@ -1010,6 +1010,9 @@ window.savePersonalDetail = function() {
             
             // Schreibe unformatierte Zahl ins Input-Feld
             mainInput.value = Math.round(numValue);
+            
+            // Trigger Blur Event für Formatierung
+            window.handleKostenInputBlur(mainInput);
         }
     });
     
@@ -1272,12 +1275,18 @@ function getSavedValue(blockId, jahr) {
     const projekt = state.getProjekt(projektId);
     
     if (projekt?.kostenWerte?.[blockId]?.[jahr]) {
-        // Gebe formatierte Zahl zurück für bessere UX (ohne €-Zeichen)
+        // Gebe formatierte Zahl zurück für bessere UX (deutsch formatiert, ohne €)
         const value = projekt.kostenWerte[blockId][jahr];
-        return value.toLocaleString('de-DE', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
+        
+        // Wenn Wert eine Zahl ist, formatiere sie
+        if (typeof value === 'number' && value > 0) {
+            return value.toLocaleString('de-DE', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+        
+        return value.toString();
     }
     return '';
 }
