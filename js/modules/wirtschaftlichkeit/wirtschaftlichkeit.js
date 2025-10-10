@@ -1,300 +1,1003 @@
 /**
  * CFO Dashboard - Wirtschaftlichkeit Module
- * Calculator - Business Logic Layer
+ * UI Layer - Presentation & User Interaction
  * 
- * @module wirtschaftlichkeit/calculator
- * @description Core calculation engine for contribution margin scheme and KPIs
+ * @module wirtschaftlichkeit
+ * @description Complete profitability analysis with contribution margin scheme
  * @author Senior Development Team
  * @version 2.0.0
  */
 
 import { state } from '../../state.js';
 import * as helpers from '../../helpers.js';
+import { calculateProjektWirtschaftlichkeit } from './calculator.js';
+import { analyzeKostenblockKategorisierung } from './ki-integration.js';
 import {
     HK_DEFAULTS,
-    KOSTEN_MAPPING,
     OVERHEAD_DEFAULTS,
-    CALCULATION_CONSTANTS,
+    UI_LABELS,
     BRANCHEN_BENCHMARKS
 } from './constants.js';
 
+// ========================================
+// PROJEKT-WIRTSCHAFTLICHKEIT (Aggregiert)
+// ========================================
+
 /**
- * Main calculation engine for project profitability
- * Implements full DB1-DB5 contribution margin scheme
+ * Render aggregated profitability view for entire project
+ * Shows DB1-DB5 contribution margin scheme with all articles combined
  * 
- * @param {string} projektId - Project ID
- * @param {import('./types').CalculationOptions} [options={}] - Calculation options
- * @returns {import('./types').WirtschaftlichkeitResult} Complete profitability analysis
- * 
- * @example
- * const result = calculateProjektWirtschaftlichkeit('projekt-123', {
- *   wacc: 0.10,
- *   validateInputs: true,
- *   filteredArtikel: [artikel1, artikel2]  // Optional: pre-filtered list
- * });
- * console.log(result.kpis.ebit_margin);
+ * @public
  */
-export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
-    const {
-        includeKI = true,
-        validateInputs = true,
-        wacc = CALCULATION_CONSTANTS.DEFAULT_WACC,
-        aggregated = false,
-        filteredArtikel = null  // NEW: Accept pre-filtered article list
-    } = options;
+export async function renderProjektWirtschaftlichkeit() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    const container = document.getElementById('projekt-tab-wirtschaftlichkeit');
+    
+    if (!container) {
+        console.error('Container #projekt-tab-wirtschaftlichkeit not found');
+        return;
+    }
+    
+    // Show loading state
+    container.innerHTML = createLoadingState();
     
     try {
-        // 1. Load data
-        const projekt = state.getProjekt(projektId);
-        if (!projekt) {
-            throw new Error(`Projekt ${projektId} nicht gefunden`);
+        // Get article list
+        let artikelListe = state.getArtikelByProjekt(projektId);
+        
+        // ✅ CRITICAL: Apply article filter if active
+        const activeFilter = window.cfoDashboard?.artikelFilter;
+        if (activeFilter) {
+            console.log('🔍 Filtering calculation to artikel:', activeFilter);
+            artikelListe = artikelListe.filter(a => a.id === activeFilter);
         }
         
-        // Use filtered articles if provided, otherwise get all
-        const artikelListe = filteredArtikel || state.getArtikelByProjekt(projektId);
+        // Calculate profitability (with filtered articles)
+        const result = calculateProjektWirtschaftlichkeit(projektId, {
+            wacc: 0.08,
+            validateInputs: true,
+            filteredArtikel: artikelListe  // Pass filtered list
+        });
         
-        if (!artikelListe || artikelListe.length === 0) {
-            return createEmptyResult(projektId, 'Keine Artikel vorhanden');
-        }
+        // Get FULL article list for display (unfiltered)
+        const allArtikelListe = state.getArtikelByProjekt(projektId);
         
-        const projektkosten = getProjektkosten(projektId);
+        // Render complete UI
+        container.innerHTML = `
+            <div style="padding: 20px;">
+                ${renderHeader(projekt, allArtikelListe)}
+                ${renderArtikelOverview(allArtikelListe)}
+                ${renderContributionMarginTable(result)}
+                ${renderKPIDashboard(result, result.kpis, allArtikelListe[0]?.typ)}
+                ${renderActionButtons()}
+            </div>
+        `;
         
-        // 2. Validate inputs if required
-        if (validateInputs) {
-            const validation = validateCalculationInputs(artikelListe, projektkosten);
-            if (!validation.isValid) {
-                console.warn('Validation warnings:', validation.warnings);
+        // Initialize interactivity
+        initializeEventHandlers();
+        
+        // Re-apply graying if filter is active
+        if (activeFilter) {
+            grayOutProjectCostRows(true);
+            const infoBox = document.getElementById('artikel-filter-info');
+            if (infoBox) {
+                infoBox.style.display = 'block';
+                const artikel = state.getArtikel(activeFilter);
+                const nameSpan = document.getElementById('filtered-artikel-name');
+                if (nameSpan && artikel) {
+                    nameSpan.textContent = artikel.name || 'Unbenannt';
+                }
             }
         }
         
-        // 3. Determine year range
-        const jahre = determineYearRange(artikelListe, projektkosten);
+    } catch (error) {
+        console.error('Fehler beim Rendern der Wirtschaftlichkeit:', error);
+        container.innerHTML = renderErrorState(error);
+    }
+}
+
+// ========================================
+// ARTIKEL-WIRTSCHAFTLICHKEIT (Einzeln)
+// ========================================
+
+/**
+ * Render profitability view for single article
+ * 
+ * @public
+ */
+export async function renderWirtschaftlichkeit() {
+    const artikelId = window.cfoDashboard.currentArtikel;
+    const artikel = state.getArtikel(artikelId);
+    const container = document.getElementById('artikel-tab-wirtschaftlichkeit');
+    
+    if (!container) {
+        console.error('Container #artikel-tab-wirtschaftlichkeit not found');
+        return;
+    }
+    
+    // Show loading state
+    container.innerHTML = createLoadingState();
+    
+    try {
+        // For single article, we need to calculate on project level
+        // but filter to show only this article
+        const projektId = artikel?.projekt_id;
+        if (!projektId) {
+            throw new Error('Artikel hat keine Projekt-Zuordnung');
+        }
         
-        // 4. Calculate per year
-        const jahresErgebnisse = {};
-        
-        jahre.forEach(jahr => {
-            jahresErgebnisse[jahr] = calculateJahresWirtschaftlichkeit(
-                artikelListe,
-                projektkosten,
-                jahr,
-                options
-            );
+        const result = calculateProjektWirtschaftlichkeit(projektId, {
+            wacc: 0.08,
+            validateInputs: true
         });
         
-        // 5. Calculate totals
-        const totals = calculateTotals(jahresErgebnisse);
+        // Render UI
+        container.innerHTML = `
+            <div style="padding: 20px;">
+                ${renderArtikelHeader(artikel)}
+                ${renderHKConfigSection(artikel)}
+                ${renderContributionMarginTable(result, artikel)}
+                ${renderKPIDashboard(result, result.kpis, artikel.typ)}
+                ${renderActionButtons()}
+            </div>
+        `;
         
-        // 6. Calculate KPIs
-        const kpis = calculateKPIs(jahresErgebnisse, totals, wacc, artikelListe[0]?.typ);
-        
-        // 7. Create metadata
-        const metadata = createMetadata(projektId, artikelListe, projektkosten, jahre);
-        
-        return {
-            jahre: jahresErgebnisse,
-            totals,
-            kpis,
-            metadata
-        };
+        // Initialize interactivity
+        initializeEventHandlers();
         
     } catch (error) {
-        console.error('Fehler in calculateProjektWirtschaftlichkeit:', error);
-        return createEmptyResult(projektId, error.message);
+        console.error('Fehler beim Rendern der Artikel-Wirtschaftlichkeit:', error);
+        container.innerHTML = renderErrorState(error);
     }
 }
 
+// ========================================
+// RENDERING FUNCTIONS
+// ========================================
+
 /**
- * Calculate profitability for a single year
- * Core calculation logic implementing DB1-DB5 scheme
+ * Render header section with project info
  * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
- * @param {import('./types').Kostenblock[]} projektkosten - Project cost blocks
- * @param {string} jahr - Year to calculate (YYYY)
- * @param {import('./types').CalculationOptions} options - Calculation options
- * @returns {import('./types').JahresWirtschaftlichkeit} Year profitability
+ * @param {Object} projekt - Project data
+ * @param {Array} artikelListe - List of articles
+ * @returns {string} HTML
  * 
  * @private
  */
-function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, options = {}) {
-    // Step 1: Calculate Sales Revenue
-    const sales_revenue = calculateSalesRevenue(artikelListe, jahr);
-    
-    // Step 2: Calculate HK components (Material, Labour, Overhead)
-    const hk_components = calculateHKComponents(artikelListe, jahr);
-    
-    // Step 3: DB1 = Sales - Material - Direct Labour
-    const material_costs = hk_components.material;
-    const direct_labour = hk_components.labour;
-    const db1 = sales_revenue - material_costs - direct_labour;
-    
-    // Step 4: Calculate Manufacturing Overheads
-    const material_overhead = hk_components.material_overhead;
-    const manufacturing_overhead = hk_components.manufacturing_overhead;
-    
-    // Step 5: DB2 = DB1 - Material Overhead - Manufacturing Overhead
-    const db2 = db1 - material_overhead - manufacturing_overhead;
-    const db2_margin_prozent = sales_revenue > 0 ? (db2 / sales_revenue * 100) : 0;
-    
-    // Step 6: Get Development Costs from Project Costs (DB3)
-    const development_overhead = sumProjectCostsByCategory(
-        projektkosten, 
-        KOSTEN_MAPPING.development, 
-        jahr
-    );
-    const db3 = db2 - development_overhead;
-    
-    // Step 7: Get Selling & Marketing Costs (DB4)
-    const selling_marketing_costs = sumProjectCostsByCategory(
-        projektkosten,
-        KOSTEN_MAPPING.selling_marketing,
-        jahr
-    );
-    // Split into selling and marketing for detailed view
-    const selling_overhead = selling_marketing_costs * 0.6;  // 60% selling
-    const marketing_overhead = selling_marketing_costs * 0.4;  // 40% marketing
-    
-    const db4 = db3 - selling_overhead - marketing_overhead;
-    
-    // Step 8: Get Admin & Distribution Costs (DB5)
-    const admin_distribution_costs = sumProjectCostsByCategory(
-        projektkosten,
-        KOSTEN_MAPPING.admin_distribution,
-        jahr
-    );
-    // Split into distribution and admin for detailed view
-    const distribution_overhead = admin_distribution_costs * 0.4;  // 40% distribution
-    const admin_overhead = admin_distribution_costs * 0.6;  // 60% admin
-    
-    const db5 = db4 - distribution_overhead - admin_overhead;
-    
-    // Step 9: EBIT = DB5 (no other adjustments for now)
-    const ebit = db5;
-    const ebit_margin_prozent = sales_revenue > 0 ? (ebit / sales_revenue * 100) : 0;
-    
-    return {
-        sales_revenue,
-        material_costs,
-        direct_labour,
-        db1,
-        material_overhead,
-        manufacturing_overhead,
-        db2,
-        db2_margin_prozent,
-        development_overhead,
-        db3,
-        selling_overhead,
-        marketing_overhead,
-        db4,
-        distribution_overhead,
-        admin_overhead,
-        db5,
-        ebit,
-        ebit_margin_prozent
-    };
+function renderHeader(projekt, artikelListe) {
+    return `
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                    border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--primary);">
+                        📊 Projekt-Wirtschaftlichkeit
+                    </h3>
+                    <div style="font-size: 13px; color: var(--gray);">
+                        ${projekt?.name || 'Projekt'} • ${artikelListe?.length || 0} Artikel
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button onclick="window.exportWirtschaftlichkeit()" 
+                            class="btn btn-secondary btn-sm"
+                            style="display: flex; align-items: center; gap: 6px;">
+                        <span>📥</span>
+                        <span>Export Excel</span>
+                    </button>
+                    <select id="view-level" onchange="window.updateViewLevel()" 
+                            style="padding: 6px 12px; border: 1px solid var(--border); 
+                                   border-radius: 4px; font-size: 12px; background: white;">
+                        <option value="all" selected>Alle Stufen anzeigen</option>
+                        <option value="db2">Bis Manufacturing Margin (DB2)</option>
+                        <option value="db5">Bis DB5 (vor EBIT)</option>
+                        <option value="ebit">Nur EBIT</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Calculate sales revenue for all articles in a given year
- * Supports multiple data structures:
- * 1. volumes/prices: artikel.volumes[2026] * artikel.prices[2026]
- * 2. mengen/preise objects: artikel.mengen[jahr] * artikel.preise[jahr]
- * 3. jahr_X structure: artikel.jahr_1.menge * artikel.jahr_1.preis
- * 4. Direct umsatz field: artikel.umsatz_2025, artikel['jahr_1'].umsatz
+ * Render article header for single article view
  * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
- * @param {string} jahr - Year (YYYY)
- * @returns {number} Total sales revenue
+ * @param {Object} artikel - Article data
+ * @returns {string} HTML
  * 
  * @private
  */
-function calculateSalesRevenue(artikelListe, jahr) {
-    return artikelListe.reduce((sum, artikel) => {
-        // PRIMARY: Calculate from volumes * prices (your current structure)
-        const menge = getArtikelValueForYear(artikel, 'menge', jahr);
-        const preis = getArtikelValueForYear(artikel, 'preis', jahr);
-        
-        if (menge > 0 && preis > 0) {
-            return sum + (menge * preis);
-        }
-        
-        // FALLBACK 1: Direct umsatz field per year (e.g., umsatz_2025)
-        const umsatzField = `umsatz_${jahr}`;
-        if (artikel[umsatzField] !== undefined) {
-            return sum + (parseFloat(artikel[umsatzField]) || 0);
-        }
-        
-        // FALLBACK 2: jahr_X structure with umsatz
-        const jahrIndex = parseInt(jahr) - 2024;  // 2025 = jahr_1
-        if (artikel[`jahr_${jahrIndex}`] && artikel[`jahr_${jahrIndex}`].umsatz !== undefined) {
-            return sum + (parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0);
-        }
-        
-        return sum;
-    }, 0);
+function renderArtikelHeader(artikel) {
+    return `
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                    border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--primary);">
+                        📊 Artikel-Wirtschaftlichkeit
+                    </h3>
+                    <div style="font-size: 13px; color: var(--gray);">
+                        ${artikel?.name || 'Artikel'} • ${artikel?.typ || 'Typ unbekannt'}
+                    </div>
+                </div>
+                <button onclick="window.openHKConfig()" 
+                        class="btn btn-primary btn-sm"
+                        style="display: flex; align-items: center; gap: 6px;">
+                    <span>⚙️</span>
+                    <span>HK-Struktur anpassen</span>
+                </button>
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Calculate HK components (Material, Labour, Overhead) for all articles
- * Uses HK-Aufteilung from article or defaults
+ * Render article overview section with filter buttons
  * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
- * @param {string} jahr - Year (YYYY)
- * @returns {Object} HK components {material, labour, material_overhead, manufacturing_overhead}
+ * @param {Array} artikelListe - List of articles
+ * @returns {string} HTML
  * 
  * @private
  */
-function calculateHKComponents(artikelListe, jahr) {
-    const result = {
-        material: 0,
-        labour: 0,
-        material_overhead: 0,
-        manufacturing_overhead: 0
-    };
+function renderArtikelOverview(artikelListe) {
+    if (!artikelListe || artikelListe.length === 0) {
+        return `
+            <div style="background: #fff3cd; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                        border: 1px solid #ffc107;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">⚠️</span>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Keine Artikel vorhanden</div>
+                        <div style="font-size: 12px; color: var(--gray);">
+                            Bitte legen Sie zunächst Artikel im Artikel-Tab an.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
     
-    const yearNum = parseInt(jahr);
+    return `
+        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 16px; 
+                    border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div style="font-size: 12px; font-weight: 600; color: var(--primary);">
+                    📦 Artikel-Filter
+                </div>
+                <div style="font-size: 11px; color: var(--gray);">
+                    Wählen Sie einen Artikel für Produkt-Analyse (bis DB2)
+                </div>
+            </div>
+            
+            <!-- Filter Buttons -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- "Alle" Button -->
+                <button 
+                    id="filter-alle"
+                    data-artikel-id="null"
+                    class="artikel-filter-btn active"
+                    style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
+                           background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
+                           border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;
+                           transition: all 0.2s;">
+                    <span style="font-size: 16px;">📊</span>
+                    <span>Alle Artikel (Projekt-Gesamt)</span>
+                </button>
+                
+                ${artikelListe.map(artikel => `
+                    <button 
+                        id="filter-${artikel.id}"
+                        data-artikel-id="${artikel.id}"
+                        class="artikel-filter-btn"
+                        style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
+                               background: white; color: #374151; border: 1px solid #e5e7eb;
+                               border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500;
+                               transition: all 0.2s;">
+                        <span style="color: ${getTypeColor(artikel.typ)}; font-size: 14px;">●</span>
+                        <span>${artikel.name || 'Unbenannt'}</span>
+                        <span style="color: var(--gray); font-size: 10px;">${artikel.typ || 'N/A'}</span>
+                    </button>
+                `).join('')}
+            </div>
+            
+            <!-- Info-Box (initially hidden) -->
+            <div id="artikel-filter-info" style="display: none; margin-top: 12px; padding: 12px; 
+                                                  background: #fef3c7; border-left: 4px solid #f59e0b;
+                                                  border-radius: 4px;">
+                <div style="display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">ℹ️</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #92400e;">
+                            PRODUKT-ANALYSE MODUS
+                        </div>
+                        <div style="font-size: 11px; color: #78350f; line-height: 1.5;">
+                            Sie sehen die Wirtschaftlichkeit für: <strong id="filtered-artikel-name"></strong><br>
+                            <strong>Angezeigt:</strong> DB1 & DB2 (Manufacturing Margin)<br>
+                            <strong>Ausgegraut:</strong> DB3-EBIT (Projektkosten sind nicht artikelspezifisch zuordenbar)
+                        </div>
+                        <button id="back-to-all-btn"
+                                data-artikel-id="null"
+                                class="artikel-filter-btn"
+                                style="margin-top: 8px; padding: 6px 12px; background: white; 
+                                       border: 1px solid #f59e0b; border-radius: 4px; 
+                                       font-size: 11px; cursor: pointer; font-weight: 500;">
+                            ← Zur Projekt-Gesamtsicht wechseln
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render HK configuration section for article
+ * 
+ * @param {Object} artikel - Article data
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderHKConfigSection(artikel) {
+    const aufteilung = artikel.hk_aufteilung || getDefaultHKAufteilung(artikel.typ);
     
-    artikelListe.forEach(artikel => {
-        const menge = getArtikelValueForYear(artikel, 'menge', jahr);
+    return `
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                    border: 1px solid var(--border);">
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">
+                🔧 Herstellkosten-Struktur
+            </h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 12px;">
+                <div style="text-align: center; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 4px;">MATERIAL</div>
+                    <div style="font-size: 20px; font-weight: bold; color: var(--primary);">
+                        ${aufteilung.material_prozent}%
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 4px;">FERTIGUNG</div>
+                    <div style="font-size: 20px; font-weight: bold; color: var(--success);">
+                        ${aufteilung.fertigung_prozent}%
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 12px; background: #f8fafc; border-radius: 6px;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 4px;">OVERHEAD</div>
+                    <div style="font-size: 20px; font-weight: bold; color: var(--warning);">
+                        ${aufteilung.overhead_prozent}%
+                    </div>
+                </div>
+            </div>
+            
+            <div style="font-size: 11px; color: var(--gray); padding: 10px; 
+                        background: #f0f9ff; border-radius: 4px;">
+                💡 <strong>Quelle:</strong> ${aufteilung.quelle === 'ki-default' 
+                    ? 'KI-Default basierend auf Artikel-Typ' 
+                    : 'Benutzer-definiert'}
+                ${aufteilung.quelle === 'ki-default' 
+                    ? ` • <a href="#" onclick="window.openHKConfig()" style="color: var(--primary);">Anpassen</a>`
+                    : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render main contribution margin table
+ * 
+ * @param {Object} result - Calculation result
+ * @param {Object} [filterArtikel] - Optional: Filter to single article
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderContributionMarginTable(result, filterArtikel = null) {
+    const jahre = Object.keys(result.jahre).sort();
+    
+    if (jahre.length === 0) {
+        return renderEmptyDataState();
+    }
+    
+    return `
+        <div style="background: white; border-radius: 8px; overflow: hidden; 
+                    border: 1px solid var(--border); margin-bottom: 20px;">
+            <table id="profitability-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                    <tr style="background: linear-gradient(to right, #1e40af, #3730a3); color: white;">
+                        <th style="padding: 12px; text-align: left; width: 280px; position: sticky; left: 0; background: inherit;">
+                            Position
+                        </th>
+                        ${jahre.map(jahr => `
+                            <th style="padding: 12px; text-align: center; min-width: 120px;">
+                                ${jahr}
+                            </th>
+                        `).join('')}
+                        <th style="padding: 12px; text-align: center; background: #1e293b; min-width: 120px;">
+                            Total
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${renderTableRows(result, jahre)}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+/**
+ * Render table rows for contribution margin scheme
+ * 
+ * @param {Object} result - Calculation result
+ * @param {Array} jahre - Years
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderTableRows(result, jahre) {
+    return `
+        <!-- Sales Revenue -->
+        <tr style="background: #f0f9ff;" class="sales-row">
+            <td style="padding: 10px; font-weight: 600; position: sticky; left: 0; background: #f0f9ff;">
+                📈 Sales Revenue (Gesamt)
+            </td>
+            ${renderValueCells(result, jahre, 'sales_revenue', 'primary')}
+        </tr>
         
-        // Support both hk and hk_gesamt
-        const hk_pro_stueck = artikel.hk || artikel.hk_gesamt || 0;
-        const total_hk = menge * hk_pro_stueck;
+        <!-- Material Costs -->
+        <tr class="cost-row">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Material Costs
+            </td>
+            ${renderValueCells(result, jahre, 'material_costs', 'danger', true)}
+        </tr>
         
-        // Get HK-Aufteilung (from article or defaults)
-        const aufteilung = getHKAufteilung(artikel);
+        <!-- Direct Labour -->
+        <tr class="cost-row">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Direct Labour
+            </td>
+            ${renderValueCells(result, jahre, 'direct_labour', 'danger', true)}
+        </tr>
         
-        // Calculate components
-        result.material += total_hk * (aufteilung.material_prozent / 100);
-        result.labour += total_hk * (aufteilung.fertigung_prozent / 100);
+        <!-- DB1 -->
+        <tr style="background: #e0e7ff; font-weight: 600;" class="db1-row">
+            <td style="padding: 10px; position: sticky; left: 0; background: #e0e7ff;">
+                = ${UI_LABELS.db_stufen.db1}
+            </td>
+            ${renderValueCells(result, jahre, 'db1', 'primary')}
+        </tr>
+        <tr style="font-size: 10px; color: var(--gray);" class="db1-margin-row">
+            <td style="padding: 4px 8px 4px 32px;">DB1 Margin %</td>
+            ${renderMarginCells(result, jahre, 'db1')}
+        </tr>
         
-        // Overhead split from HK overhead portion
-        const overhead_total = total_hk * (aufteilung.overhead_prozent / 100);
-        // Assume 40% material overhead, 60% manufacturing overhead
-        result.material_overhead += overhead_total * 0.4;
-        result.manufacturing_overhead += overhead_total * 0.6;
+        <!-- Material Overhead -->
+        <tr class="cost-row db2-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Material Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'material_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- Manufacturing Overhead -->
+        <tr class="cost-row db2-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Manufacturing Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'manufacturing_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- DB2 - WICHTIG! -->
+        <tr style="background: #dbeafe; font-weight: 600;" class="db2-row">
+            <td style="padding: 10px; position: sticky; left: 0; background: #dbeafe;">
+                = ${UI_LABELS.db_stufen.db2}
+            </td>
+            ${renderValueCells(result, jahre, 'db2', 'success')}
+        </tr>
+        <tr style="font-size: 10px; color: var(--gray);" class="db2-margin-row">
+            <td style="padding: 4px 8px 4px 32px;">Manufacturing Margin %</td>
+            ${renderMarginCells(result, jahre, 'db2')}
+        </tr>
+        
+        <!-- Development Overhead -->
+        <tr class="cost-row db3-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Development Overhead
+                <a href="#projekt-tab-projektkosten" 
+                   style="font-size: 10px; color: var(--primary); margin-left: 6px;">
+                    [aus Projektkosten]
+                </a>
+            </td>
+            ${renderValueCells(result, jahre, 'development_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- DB3 -->
+        <tr style="background: #fef3c7; font-weight: 600;" class="db3-row">
+            <td style="padding: 10px; position: sticky; left: 0; background: #fef3c7;">
+                = ${UI_LABELS.db_stufen.db3}
+            </td>
+            ${renderValueCells(result, jahre, 'db3', 'warning')}
+        </tr>
+        
+        <!-- Selling Overhead -->
+        <tr class="cost-row db4-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Selling Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'selling_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- Marketing Overhead -->
+        <tr class="cost-row db4-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Marketing Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'marketing_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- DB4 -->
+        <tr style="background: #f3e8ff; font-weight: 600;" class="db4-row">
+            <td style="padding: 10px; position: sticky; left: 0; background: #f3e8ff;">
+                = ${UI_LABELS.db_stufen.db4}
+            </td>
+            ${renderValueCells(result, jahre, 'db4', 'purple')}
+        </tr>
+        
+        <!-- Distribution Overhead -->
+        <tr class="cost-row db5-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Distribution Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'distribution_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- Administration Overhead -->
+        <tr class="cost-row db5-section">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ Administration Overhead
+            </td>
+            ${renderValueCells(result, jahre, 'admin_overhead', 'danger', true)}
+        </tr>
+        
+        <!-- DB5 -->
+        <tr style="background: #e0f2fe; font-weight: 600;" class="db5-row">
+            <td style="padding: 10px; position: sticky; left: 0; background: #e0f2fe;">
+                = ${UI_LABELS.db_stufen.db5}
+            </td>
+            ${renderValueCells(result, jahre, 'db5', 'info')}
+        </tr>
+        
+        <!-- EBIT - FINALE ZEILE -->
+        <tr style="background: linear-gradient(to right, #10b981, #059669); color: white; font-weight: 600;" 
+            class="ebit-row">
+            <td style="padding: 12px; position: sticky; left: 0; 
+                       background: linear-gradient(to right, #10b981, #059669);">
+                = ${UI_LABELS.db_stufen.ebit}
+            </td>
+            ${renderValueCells(result, jahre, 'ebit', 'white')}
+        </tr>
+        <tr style="font-size: 10px; color: var(--gray); background: #f0fdf4;" class="ebit-margin-row">
+            <td style="padding: 4px 8px 4px 32px;">EBIT Margin %</td>
+            ${renderMarginCells(result, jahre, 'ebit')}
+        </tr>
+    `;
+}
+
+/**
+ * Render value cells for a specific field
+ * 
+ * @param {Object} result - Calculation result
+ * @param {Array} jahre - Years
+ * @param {string} field - Field name
+ * @param {string} color - Color class
+ * @param {boolean} isNegative - Whether to show as negative (red)
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderValueCells(result, jahre, field, color = 'inherit', isNegative = false) {
+    let total = 0;
+    const colorStyle = isNegative ? 'color: var(--danger);' : '';
+    
+    let html = jahre.map(jahr => {
+        const value = result.jahre[jahr]?.[field] || 0;
+        total += value;
+        return `
+            <td style="padding: 10px; text-align: right; ${colorStyle}">
+                ${helpers.formatCurrency(value)}
+            </td>
+        `;
+    }).join('');
+    
+    html += `
+        <td style="padding: 10px; text-align: right; font-weight: bold; 
+                   background: #f1f5f9; ${colorStyle}">
+            ${helpers.formatCurrency(total)}
+        </td>
+    `;
+    
+    return html;
+}
+
+/**
+ * Render margin percentage cells
+ * 
+ * @param {Object} result - Calculation result
+ * @param {Array} jahre - Years
+ * @param {string} baseField - Base field (db1, db2, ebit)
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderMarginCells(result, jahre, baseField) {
+    let totalRevenue = 0;
+    let totalBase = 0;
+    
+    let html = jahre.map(jahr => {
+        const revenue = result.jahre[jahr]?.sales_revenue || 0;
+        const value = result.jahre[jahr]?.[baseField] || 0;
+        const margin = revenue > 0 ? (value / revenue * 100) : 0;
+        
+        totalRevenue += revenue;
+        totalBase += value;
+        
+        const color = margin >= 0 ? 'var(--success)' : 'var(--danger)';
+        
+        return `
+            <td style="padding: 4px 8px; text-align: right; color: ${color};">
+                ${margin.toFixed(1)}%
+            </td>
+        `;
+    }).join('');
+    
+    const avgMargin = totalRevenue > 0 ? (totalBase / totalRevenue * 100) : 0;
+    const avgColor = avgMargin >= 0 ? 'var(--success)' : 'var(--danger)';
+    
+    html += `
+        <td style="padding: 4px 8px; text-align: right; background: #f1f5f9; 
+                   font-weight: 600; color: ${avgColor};">
+            ${avgMargin.toFixed(1)}%
+        </td>
+    `;
+    
+    return html;
+}
+
+/**
+ * Render KPI dashboard
+ * 
+ * @param {Object} kpis - KPI data
+ * @param {string} artikelTyp - Article type for benchmarking
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderKPIDashboard(result, kpis, artikelTyp) {
+    const benchmark = BRANCHEN_BENCHMARKS[artikelTyp] || BRANCHEN_BENCHMARKS['Software'];
+    
+    // Check if we're in filter mode
+    const isFiltered = window.cfoDashboard?.artikelFilter;
+    
+    return `
+        ${!isFiltered ? renderProduktVergleich(result) : ''}
+        
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4 style="font-size: 14px; font-weight: 600; margin: 0;">
+                    📊 Key Performance Indicators ${isFiltered ? '(Einzelprodukt - nur DB2 relevant)' : '(Projekt-Gesamt)'}
+                </h4>
+                <div style="font-size: 11px; color: var(--gray);">
+                    Benchmark: ${artikelTyp || 'Software'} Industrie
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+                ${renderKPICard(
+                    'Manufacturing Margin Ø',
+                    kpis.avg_manufacturing_margin,
+                    '%',
+                    benchmark.manufacturing_margin,
+                    'primary'
+                )}
+                ${!isFiltered ? renderKPICard(
+                    'EBIT Margin Ø',
+                    kpis.avg_ebit_margin,
+                    '%',
+                    benchmark.ebit_margin,
+                    'success'
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px; 
+                                text-transform: uppercase; letter-spacing: 0.5px;">
+                        EBIT MARGIN Ø
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
+                    'Break-Even',
+                    kpis.break_even_year || 'N/A',
+                    '',
+                    null,
+                    'warning'
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        BREAK-EVEN
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
+                    'NPV (8% WACC)',
+                    kpis.npv / 1000000,
+                    'M€',
+                    null,
+                    'info'
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        NPV (8% WACC)
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
+                    'IRR',
+                    kpis.irr,
+                    '%',
+                    null,
+                    'purple'
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        IRR
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render product comparison table (DB2 focus)
+ * Shows all articles side-by-side for profitability comparison
+ * 
+ * @param {Object} result - Calculation result
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderProduktVergleich(result) {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const artikelListe = state.getArtikelByProjekt(projektId);
+    
+    if (!artikelListe || artikelListe.length === 0) {
+        return '';
+    }
+    
+    // Calculate per-article metrics
+    const artikelMetrics = artikelListe.map(artikel => {
+        const jahre = Object.keys(result.jahre).sort();
+        let totalRevenue = 0;
+        let totalHK = 0;
+        
+        jahre.forEach(jahr => {
+            const yearNum = parseInt(jahr);
+            const menge = artikel.volumes?.[yearNum] || 0;
+            const preis = artikel.prices?.[yearNum] || 0;
+            const hk = artikel.hk || 0;
+            
+            totalRevenue += menge * preis;
+            totalHK += menge * hk;
+        });
+        
+        const db2 = totalRevenue - totalHK;
+        const db2_prozent = totalRevenue > 0 ? (db2 / totalRevenue * 100) : 0;
+        
+        return {
+            id: artikel.id,
+            name: artikel.name,
+            typ: artikel.typ,
+            revenue: totalRevenue,
+            hk: totalHK,
+            db2: db2,
+            db2_prozent: db2_prozent
+        };
     });
     
-    return result;
+    // Sort by DB2 absolute
+    artikelMetrics.sort((a, b) => b.db2 - a.db2);
+    
+    return `
+        <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; 
+                    border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4 style="font-size: 14px; font-weight: 600; margin: 0;">
+                    🏆 Produkt-Profitabilität (DB2-Vergleich)
+                </h4>
+                <div style="font-size: 11px; color: var(--gray);">
+                    Sortiert nach DB2 absolut
+                </div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 10px; text-align: left; font-weight: 600;">Artikel</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">Umsatz</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">HK</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">DB2</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">DB2 %</th>
+                        <th style="padding: 10px; text-align: center; font-weight: 600;">Bewertung</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${artikelMetrics.map((artikel, index) => {
+                        const isTop = index === 0;
+                        const rowColor = isTop ? '#f0fdf4' : 'white';
+                        const badge = artikel.db2_prozent >= 60 ? '🌟 Exzellent' :
+                                     artikel.db2_prozent >= 40 ? '✅ Gut' :
+                                     artikel.db2_prozent >= 20 ? '⚠️ Okay' : '❌ Kritisch';
+                        
+                        return `
+                            <tr style="background: ${rowColor}; border-bottom: 1px solid #f3f4f6;">
+                                <td style="padding: 12px;">
+                                    ${isTop ? '<span style="color: #f59e0b; margin-right: 6px;">🏆</span>' : ''}
+                                    <span style="font-weight: 500;">${artikel.name}</span>
+                                    <div style="font-size: 10px; color: var(--gray); margin-top: 2px;">
+                                        <span style="color: ${getTypeColor(artikel.typ)};">●</span> ${artikel.typ}
+                                    </div>
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 500;">
+                                    ${helpers.formatCurrency(artikel.revenue)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; color: var(--danger);">
+                                    ${helpers.formatCurrency(artikel.hk)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: var(--success);">
+                                    ${helpers.formatCurrency(artikel.db2)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 14px; 
+                                           color: ${artikel.db2_prozent >= 40 ? 'var(--success)' : 'var(--warning)'};">
+                                    ${artikel.db2_prozent.toFixed(1)}%
+                                </td>
+                                <td style="padding: 12px; text-align: center; font-size: 11px;">
+                                    ${badge}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                    <tr style="background: #1e3a8a; color: white; font-weight: 600;">
+                        <td style="padding: 12px;">SUMME (Projekt-Gesamt)</td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.revenue, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.hk, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.db2, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${((artikelMetrics.reduce((sum, a) => sum + a.db2, 0) / 
+                               artikelMetrics.reduce((sum, a) => sum + a.revenue, 0)) * 100).toFixed(1)}%
+                        </td>
+                        <td style="padding: 12px;"></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 12px; padding: 10px; background: #f0f9ff; border-radius: 4px; 
+                        font-size: 11px; color: var(--text);">
+                💡 <strong>Hinweis:</strong> DB2 (Manufacturing Margin) ist die letzte sinnvolle Vergleichsebene 
+                für Produktentscheidungen, da Projektkosten (Entwicklung, Marketing, Vertrieb) nicht 
+                eindeutig einzelnen Produkten zuordenbar sind.
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Get HK-Aufteilung for an article (from article data or defaults)
+ * Render single KPI card
  * 
- * @param {import('./types').ArtikelExtended} artikel - Article
- * @returns {import('./types').HKAufteilung} HK split
+ * @param {string} label - KPI label
+ * @param {number} value - KPI value
+ * @param {string} unit - Unit (%, €, etc.)
+ * @param {Object} benchmark - Optional benchmark data
+ * @param {string} color - Color theme
+ * @returns {string} HTML
  * 
  * @private
  */
-function getHKAufteilung(artikel) {
-    // If article has explicit HK-Aufteilung, use it
-    if (artikel.hk_aufteilung && 
-        artikel.hk_aufteilung.material_prozent !== undefined) {
-        return artikel.hk_aufteilung;
+function renderKPICard(label, value, unit, benchmark, color) {
+    const displayValue = typeof value === 'number' ? value.toFixed(1) : value;
+    
+    let benchmarkHTML = '';
+    if (benchmark) {
+        const comparison = value >= benchmark.median ? '↑' : '↓';
+        const comparisonColor = value >= benchmark.median ? 'var(--success)' : 'var(--danger)';
+        benchmarkHTML = `
+            <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
+                Median: ${benchmark.median}${unit}
+                <span style="color: ${comparisonColor}; margin-left: 4px;">${comparison}</span>
+            </div>
+        `;
     }
     
-    // Otherwise, use defaults based on article type
-    const typ = artikel.typ || 'Default';
+    return `
+        <div style="background: white; padding: 14px; border-radius: 6px; 
+                    border: 1px solid var(--border); position: relative;">
+            <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px; 
+                        text-transform: uppercase; letter-spacing: 0.5px;">
+                ${label}
+            </div>
+            <div style="font-size: 24px; font-weight: bold; color: var(--${color});">
+                ${displayValue}${unit}
+            </div>
+            ${benchmarkHTML}
+        </div>
+    `;
+}
+
+/**
+ * Render action buttons
+ * 
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderActionButtons() {
+    return `
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="window.analyzeWirtschaftlichkeit()" 
+                    class="btn btn-secondary"
+                    style="display: flex; align-items: center; gap: 8px;">
+                <span>🤖</span>
+                <span>KI-Analyse starten</span>
+            </button>
+            <button onclick="window.saveProjektWirtschaftlichkeit()" 
+                    class="btn btn-primary"
+                    style="display: flex; align-items: center; gap: 8px;">
+                <span>💾</span>
+                <span>Speichern</span>
+            </button>
+        </div>
+    `;
+}
+
+// ========================================
+// STATE FUNCTIONS
+// ========================================
+
+/**
+ * Get default HK-Aufteilung based on article type
+ * 
+ * @param {string} typ - Article type
+ * @returns {Object} HK split
+ * 
+ * @private
+ */
+function getDefaultHKAufteilung(typ) {
     const defaults = HK_DEFAULTS[typ] || HK_DEFAULTS['Default'];
     
     return {
@@ -307,561 +1010,352 @@ function getHKAufteilung(artikel) {
 }
 
 /**
- * Get artikel value for a specific year
- * Handles different data structures:
- * - volumes/prices objects (current structure)
- * - mengen/preise objects (alternative)
- * - jahr_X properties (legacy)
+ * Get color for article type
  * 
- * @param {import('./types').ArtikelExtended} artikel - Article
- * @param {string} field - Field name ('menge' or 'preis')
- * @param {string} jahr - Year (YYYY)
- * @returns {number} Value for the year
+ * @param {string} typ - Article type
+ * @returns {string} Color
  * 
  * @private
  */
-function getArtikelValueForYear(artikel, field, jahr) {
-    const yearNum = parseInt(jahr);
-    
-    // PRIMARY: volumes/prices structure (your current structure)
-    if (field === 'menge' && artikel.volumes && artikel.volumes[yearNum] !== undefined) {
-        return parseFloat(artikel.volumes[yearNum]) || 0;
-    }
-    if (field === 'preis' && artikel.prices && artikel.prices[yearNum] !== undefined) {
-        return parseFloat(artikel.prices[yearNum]) || 0;
-    }
-    
-    // ALTERNATIVE: mengen/preise structure
-    if (artikel.mengen && artikel.mengen[jahr] !== undefined) {
-        return parseFloat(artikel.mengen[jahr]) || 0;
-    }
-    if (artikel.preise && artikel.preise[jahr] !== undefined) {
-        return parseFloat(artikel.preise[jahr]) || 0;
-    }
-    
-    // LEGACY: jahr_X structure
-    const jahrIndex = yearNum - 2024;  // 2025 = jahr_1
-    const yearData = artikel[`jahr_${jahrIndex}`];
-    
-    if (yearData && yearData[field] !== undefined) {
-        return parseFloat(yearData[field]) || 0;
-    }
-    
-    // Last fallback: Direct property
-    if (field === 'preis' && artikel.preis !== undefined) {
-        return parseFloat(artikel.preis) || 0;
-    }
-    
-    return 0;
+function getTypeColor(typ) {
+    const colors = {
+        'Hardware': '#3b82f6',
+        'Software': '#8b5cf6',
+        'Service': '#10b981',
+        'Default': '#6b7280'
+    };
+    return colors[typ] || colors['Default'];
+}
+
+// ========================================
+// LOADING & ERROR STATES
+// ========================================
+
+/**
+ * Create loading state
+ * 
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function createLoadingState() {
+    return `
+        <div style="display: flex; align-items: center; justify-content: center; 
+                    padding: 60px; background: white; border-radius: 8px;">
+            <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                <div style="font-size: 14px; color: var(--gray);">
+                    Berechne Wirtschaftlichkeit...
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Sum project costs by category (development, selling_marketing, admin_distribution)
+ * Render empty data state
  * 
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @param {string[]} blockIds - IDs of cost blocks in this category
- * @param {string} jahr - Year (YYYY)
- * @returns {number} Sum of costs
+ * @returns {string} HTML
  * 
  * @private
  */
-function sumProjectCostsByCategory(projektkosten, blockIds, jahr) {
-    if (!projektkosten || !Array.isArray(blockIds)) {
-        return 0;
-    }
-    
-    return blockIds.reduce((sum, blockId) => {
-        const block = projektkosten.find(b => b.id === blockId);
-        if (!block || !block.isActive) {
-            return sum;
-        }
-        
-        const wert = block.kostenWerte && block.kostenWerte[jahr] 
-            ? parseFloat(block.kostenWerte[jahr]) || 0
-            : 0;
-            
-        return sum + wert;
-    }, 0);
+function renderEmptyDataState() {
+    return `
+        <div style="background: white; padding: 40px; border-radius: 8px; 
+                    text-align: center; border: 1px solid var(--border);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+                Keine Daten vorhanden
+            </div>
+            <div style="font-size: 13px; color: var(--gray); margin-bottom: 20px;">
+                Bitte legen Sie zunächst Artikel mit Mengen und Preisen an.
+            </div>
+            <button onclick="window.location.hash='#artikel'" 
+                    class="btn btn-primary">
+                Zu den Artikeln
+            </button>
+        </div>
+    `;
 }
 
 /**
- * Load project costs from state
+ * Render error state
  * 
- * @param {string} projektId - Project ID
- * @returns {import('./types').Kostenblock[]} Array of cost blocks
+ * @param {Error} error - Error object
+ * @returns {string} HTML
  * 
  * @private
  */
-function getProjektkosten(projektId) {
-    const projekt = state.getProjekt(projektId);
-    if (!projekt) {
-        return [];
-    }
-    
-    // Get active cost blocks
-    const aktiveBlöcke = projekt.aktiveKostenblöcke || [];
-    const kostenWerte = projekt.kostenWerte || {};
-    
-    // Transform to Kostenblock structure
-    return aktiveBlöcke.map(blockId => ({
-        id: blockId,
-        name: blockId,  // TODO: Get from metadata
-        icon: '📦',
-        isActive: true,
-        kostenWerte: kostenWerte[blockId] || {},
-        kategorisierung: null  // Will be filled by KI if available
-    }));
+function renderErrorState(error) {
+    return `
+        <div style="background: #fee; padding: 20px; border-radius: 8px; border: 1px solid #f00;">
+            <div style="font-size: 18px; font-weight: 600; color: var(--danger); margin-bottom: 8px;">
+                ❌ Fehler beim Laden der Wirtschaftlichkeit
+            </div>
+            <div style="font-size: 13px; color: var(--gray); margin-bottom: 16px;">
+                ${error.message}
+            </div>
+            <button onclick="location.reload()" class="btn btn-secondary">
+                Seite neu laden
+            </button>
+        </div>
+    `;
 }
 
+// ========================================
+// EVENT HANDLERS
+// ========================================
+
 /**
- * Determine year range from articles and project costs
- * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @returns {string[]} Array of years (YYYY) as strings
+ * Initialize event handlers
  * 
  * @private
  */
-function determineYearRange(artikelListe, projektkosten) {
-    const jahre = new Set();
+function initializeEventHandlers() {
+    // View level filter
+    const viewLevel = document.getElementById('view-level');
+    if (viewLevel) {
+        viewLevel.addEventListener('change', handleViewLevelChange);
+    }
     
-    // From articles - volumes/prices structure (numeric keys)
-    artikelListe.forEach(artikel => {
-        if (artikel.volumes) {
-            Object.keys(artikel.volumes).forEach(year => {
-                // Convert numeric keys to string YYYY format
-                const yearStr = year.toString();
-                if (yearStr.length === 4) {
-                    jahre.add(yearStr);
-                }
-            });
-        }
-        if (artikel.prices) {
-            Object.keys(artikel.prices).forEach(year => {
-                const yearStr = year.toString();
-                if (yearStr.length === 4) {
-                    jahre.add(yearStr);
-                }
-            });
-        }
-        
-        // Also check mengen/preise structure (string keys)
-        if (artikel.mengen) {
-            Object.keys(artikel.mengen).forEach(jahr => jahre.add(jahr));
-        }
-        if (artikel.preise) {
-            Object.keys(artikel.preise).forEach(jahr => jahre.add(jahr));
-        }
-        
-        // Legacy: jahr_X structure
-        for (let i = 1; i <= 10; i++) {
-            if (artikel[`jahr_${i}`]) {
-                jahre.add((2024 + i).toString());
-            }
-        }
+    // Article filter buttons
+    const filterButtons = document.querySelectorAll('.artikel-filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const artikelId = this.getAttribute('data-artikel-id');
+            window.filterArtikel(artikelId === 'null' ? null : artikelId);
+        });
     });
     
-    // From project costs
-    projektkosten.forEach(block => {
-        if (block.kostenWerte) {
-            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr.toString()));
+    // Restore active filter button state after re-render
+    const activeFilter = window.cfoDashboard?.artikelFilter;
+    if (activeFilter) {
+        // Update button states
+        document.querySelectorAll('.artikel-filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.style.background = 'white';
+            btn.style.color = '#374151';
+            btn.style.border = '1px solid #e5e7eb';
+            btn.style.fontWeight = '500';
+        });
+        
+        const targetBtn = document.getElementById(`filter-${activeFilter}`);
+        if (targetBtn) {
+            targetBtn.classList.add('active');
+            targetBtn.style.background = '#1e3a8a';
+            targetBtn.style.color = 'white';
+            targetBtn.style.border = '2px solid #1e3a8a';
+            targetBtn.style.fontWeight = '600';
         }
-    });
-    
-    // Default range if nothing found
-    if (jahre.size === 0) {
-        return ['2024', '2025', '2026', '2027', '2028'];
+    } else {
+        // Ensure "Alle" is active
+        const alleBtn = document.getElementById('filter-alle');
+        if (alleBtn) {
+            alleBtn.classList.add('active');
+            alleBtn.style.background = '#1e3a8a';
+            alleBtn.style.color = 'white';
+            alleBtn.style.border = '2px solid #1e3a8a';
+            alleBtn.style.fontWeight = '600';
+        }
     }
     
-    return Array.from(jahre).sort();
+    console.log('✅ Event handlers initialized');
 }
 
 /**
- * Calculate totals across all years
+ * Handle view level change (show/hide DB sections)
  * 
- * @param {Object.<string, import('./types').JahresWirtschaftlichkeit>} jahresErgebnisse - Results per year
- * @returns {import('./types').WirtschaftlichkeitTotals} Totals
+ * @param {Event} event - Change event
  * 
  * @private
  */
-function calculateTotals(jahresErgebnisse) {
-    const jahre = Object.keys(jahresErgebnisse);
+function handleViewLevelChange(event) {
+    const level = event.target.value;
     
-    const totals = {
-        sales_revenue_total: 0,
-        material_costs_total: 0,
-        direct_labour_total: 0,
-        db1_total: 0,
-        db2_total: 0,
-        db3_total: 0,
-        db4_total: 0,
-        db5_total: 0,
-        ebit_total: 0
+    const sections = {
+        'db2': ['.db3-section', '.db4-section', '.db5-section', '.ebit-row', '.ebit-margin-row'],
+        'db5': ['.ebit-row', '.ebit-margin-row'],
+        'ebit': ['.db1-row', '.db1-margin-row', '.db2-section', '.db2-row', '.db2-margin-row',
+                 '.db3-section', '.db3-row', '.db4-section', '.db4-row', 
+                 '.db5-section', '.db5-row'],
+        'all': []
     };
     
-    jahre.forEach(jahr => {
-        const j = jahresErgebnisse[jahr];
-        totals.sales_revenue_total += j.sales_revenue;
-        totals.material_costs_total += j.material_costs;
-        totals.direct_labour_total += j.direct_labour;
-        totals.db1_total += j.db1;
-        totals.db2_total += j.db2;
-        totals.db3_total += j.db3;
-        totals.db4_total += j.db4;
-        totals.db5_total += j.db5;
-        totals.ebit_total += j.ebit;
-    });
+    // Reset all
+    document.querySelectorAll('.db2-section, .db3-section, .db4-section, .db5-section, ' +
+                              '.db1-row, .db1-margin-row, .db2-row, .db2-margin-row, ' +
+                              '.db3-row, .db4-row, .db5-row, .ebit-row, .ebit-margin-row')
+        .forEach(el => el.style.display = '');
     
-    return totals;
-}
-
-/**
- * Calculate Key Performance Indicators
- * Includes margins, break-even, NPV, IRR
- * 
- * @param {Object.<string, import('./types').JahresWirtschaftlichkeit>} jahresErgebnisse - Results per year
- * @param {import('./types').WirtschaftlichkeitTotals} totals - Totals
- * @param {number} wacc - Weighted Average Cost of Capital
- * @param {string} [artikelTyp] - Article type for benchmarking
- * @returns {import('./types').WirtschaftlichkeitKPIs} KPIs
- * 
- * @private
- */
-function calculateKPIs(jahresErgebnisse, totals, wacc, artikelTyp) {
-    const jahre = Object.keys(jahresErgebnisse).sort();
-    
-    // Average margins
-    const avg_manufacturing_margin = calculateAverageMargin(
-        jahresErgebnisse,
-        'db2',
-        'db2_margin_prozent'
-    );
-    
-    const avg_ebit_margin = calculateAverageMargin(
-        jahresErgebnisse,
-        'ebit',
-        'ebit_margin_prozent'
-    );
-    
-    // Break-even calculation
-    const break_even_year = calculateBreakEvenYear(jahresErgebnisse);
-    
-    // NPV calculation
-    const cashflows = jahre.map(jahr => jahresErgebnisse[jahr].ebit);
-    const npv = calculateNPV(cashflows, wacc);
-    
-    // IRR calculation
-    const irrResult = calculateIRR(cashflows);
-    const irr = irrResult.converged ? irrResult.irr : null;
-    
-    // Payback period
-    const payback_period = calculatePaybackPeriod(cashflows);
-    
-    return {
-        avg_manufacturing_margin,
-        avg_ebit_margin,
-        break_even_year,
-        npv,
-        irr,
-        payback_period
-    };
-}
-
-/**
- * Calculate average margin across years
- * 
- * @param {Object} jahresErgebnisse - Results per year
- * @param {string} absoluteField - Field name for absolute values
- * @param {string} percentField - Field name for percentage values
- * @returns {number} Average margin in percent
- * 
- * @private
- */
-function calculateAverageMargin(jahresErgebnisse, absoluteField, percentField) {
-    const jahre = Object.keys(jahresErgebnisse);
-    
-    if (jahre.length === 0) return 0;
-    
-    // Calculate weighted average by revenue
-    let weightedSum = 0;
-    let totalRevenue = 0;
-    
-    jahre.forEach(jahr => {
-        const result = jahresErgebnisse[jahr];
-        const revenue = result.sales_revenue;
-        const margin = result[percentField] || 0;
-        
-        weightedSum += margin * revenue;
-        totalRevenue += revenue;
-    });
-    
-    return totalRevenue > 0 ? (weightedSum / totalRevenue) : 0;
-}
-
-/**
- * Calculate break-even year (first year with positive cumulative EBIT)
- * 
- * @param {Object} jahresErgebnisse - Results per year
- * @returns {string|null} Break-even year or null if not reached
- * 
- * @private
- */
-function calculateBreakEvenYear(jahresErgebnisse) {
-    const jahre = Object.keys(jahresErgebnisse).sort();
-    let cumulativeEBIT = 0;
-    
-    for (const jahr of jahre) {
-        cumulativeEBIT += jahresErgebnisse[jahr].ebit;
-        if (cumulativeEBIT >= 0) {
-            return jahr;
-        }
-    }
-    
-    return null;  // Not reached within project period
-}
-
-/**
- * Calculate Net Present Value
- * 
- * @param {number[]} cashflows - Array of cashflows per period
- * @param {number} discountRate - Discount rate (WACC)
- * @param {number} [initialInvestment=0] - Initial investment at t=0
- * @returns {number} NPV
- * 
- * @private
- */
-function calculateNPV(cashflows, discountRate, initialInvestment = 0) {
-    if (!Array.isArray(cashflows) || cashflows.length === 0) {
-        return 0;
-    }
-    
-    let npv = -initialInvestment;
-    
-    cashflows.forEach((cf, index) => {
-        const period = index + 1;  // Periods start at 1
-        npv += cf / Math.pow(1 + discountRate, period);
-    });
-    
-    return Math.round(npv * 100) / 100;  // Round to 2 decimals
-}
-
-/**
- * Calculate Internal Rate of Return using Newton-Raphson method
- * 
- * @param {number[]} cashflows - Array of cashflows per period
- * @param {number} [initialGuess=0.1] - Initial guess for IRR
- * @returns {import('./types').IRRResult} IRR result
- * 
- * @private
- */
-function calculateIRR(cashflows, initialGuess = 0.1) {
-    const maxIterations = CALCULATION_CONSTANTS.IRR_MAX_ITERATIONS;
-    const precision = CALCULATION_CONSTANTS.IRR_PRECISION;
-    
-    let irr = initialGuess;
-    let iteration = 0;
-    
-    while (iteration < maxIterations) {
-        const npv = calculateNPVForIRR(cashflows, irr);
-        const derivative = calculateNPVDerivative(cashflows, irr);
-        
-        if (Math.abs(npv) < precision) {
-            return {
-                irr: Math.round(irr * 10000) / 100,  // Convert to percentage
-                iterations: iteration,
-                converged: true
-            };
-        }
-        
-        if (Math.abs(derivative) < 1e-10) {
-            // Derivative too small, algorithm won't converge
-            break;
-        }
-        
-        irr = irr - (npv / derivative);
-        iteration++;
-    }
-    
-    return {
-        irr: 0,
-        iterations: iteration,
-        converged: false
-    };
-}
-
-/**
- * Calculate NPV for IRR calculation (without initial investment)
- * 
- * @param {number[]} cashflows - Cashflows
- * @param {number} rate - Discount rate
- * @returns {number} NPV
- * 
- * @private
- */
-function calculateNPVForIRR(cashflows, rate) {
-    return cashflows.reduce((sum, cf, index) => {
-        return sum + cf / Math.pow(1 + rate, index + 1);
-    }, 0);
-}
-
-/**
- * Calculate derivative of NPV for Newton-Raphson method
- * 
- * @param {number[]} cashflows - Cashflows
- * @param {number} rate - Discount rate
- * @returns {number} Derivative
- * 
- * @private
- */
-function calculateNPVDerivative(cashflows, rate) {
-    return cashflows.reduce((sum, cf, index) => {
-        const period = index + 1;
-        return sum - (period * cf) / Math.pow(1 + rate, period + 1);
-    }, 0);
-}
-
-/**
- * Calculate payback period (years until cumulative cashflow is positive)
- * 
- * @param {number[]} cashflows - Cashflows
- * @returns {number} Payback period in years
- * 
- * @private
- */
-function calculatePaybackPeriod(cashflows) {
-    let cumulative = 0;
-    
-    for (let i = 0; i < cashflows.length; i++) {
-        cumulative += cashflows[i];
-        if (cumulative >= 0) {
-            return i + 1;
-        }
-    }
-    
-    return cashflows.length;  // Not recovered within period
-}
-
-/**
- * Validate calculation inputs
- * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @returns {import('./types').ValidationResult} Validation result
- * 
- * @private
- */
-function validateCalculationInputs(artikelListe, projektkosten) {
-    const errors = [];
-    const warnings = [];
-    
-    // Check articles
-    if (!artikelListe || artikelListe.length === 0) {
-        errors.push({
-            field: 'artikel',
-            message: 'Keine Artikel vorhanden',
-            code: 'NO_ARTICLES'
+    // Hide selected sections
+    if (sections[level]) {
+        sections[level].forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => el.style.display = 'none');
         });
     }
+}
+
+// ========================================
+// WINDOW FUNCTIONS
+// ========================================
+
+/**
+ * Open HK configuration modal
+ * 
+ * @public
+ */
+window.openHKConfig = function() {
+    const artikelId = window.cfoDashboard.currentArtikel;
+    const artikel = state.getArtikel(artikelId);
     
-    // Check HK-Aufteilung
-    artikelListe.forEach((artikel, index) => {
-        if (artikel.hk_aufteilung) {
-            const sum = artikel.hk_aufteilung.material_prozent +
-                       artikel.hk_aufteilung.fertigung_prozent +
-                       artikel.hk_aufteilung.overhead_prozent;
-            
-            if (Math.abs(sum - 100) > 0.1) {
-                errors.push({
-                    field: `artikel[${index}].hk_aufteilung`,
-                    message: `HK-Aufteilung ergibt ${sum}% statt 100%`,
-                    code: 'HK_SUM_NOT_100'
-                });
-            }
-        }
-    });
-    
-    // Check project costs
-    if (!projektkosten || projektkosten.length === 0) {
-        warnings.push({
-            field: 'projektkosten',
-            message: 'Keine Projektkosten definiert - DB3-DB5 werden 0 sein',
-            recommendation: 'Projektkosten im Projektkosten-Tab erfassen'
-        });
+    if (!artikel) {
+        alert('Kein Artikel ausgewählt');
+        return;
     }
     
-    return {
-        isValid: errors.length === 0,
-        errors,
-        warnings
-    };
-}
+    // TODO: Implement HK config modal
+    console.log('Opening HK config for', artikel.name);
+    alert('HK-Konfiguration wird noch implementiert');
+};
 
 /**
- * Create metadata for calculation result
+ * Show article details modal
  * 
- * @param {string} projektId - Project ID
- * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @param {string[]} jahre - Years
- * @returns {import('./types').WirtschaftlichkeitMetadata} Metadata
+ * @public
+ */
+window.showArtikelDetails = function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const artikelListe = state.getArtikelByProjekt(projektId);
+    
+    // TODO: Implement details modal
+    console.log('Showing details for', artikelListe.length, 'articles');
+    alert(`${artikelListe.length} Artikel vorhanden`);
+};
+
+/**
+ * Export profitability to Excel
+ * 
+ * @public
+ */
+window.exportWirtschaftlichkeit = function() {
+    // TODO: Implement Excel export
+    alert('Excel-Export wird noch implementiert');
+};
+
+/**
+ * Run AI analysis on profitability
+ * 
+ * @public
+ */
+window.analyzeWirtschaftlichkeit = async function() {
+    // TODO: Implement AI analysis
+    alert('KI-Analyse wird noch implementiert');
+};
+
+/**
+ * Save profitability data
+ * 
+ * @public
+ */
+window.saveProjektWirtschaftlichkeit = function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    
+    // Data is already saved in calculator
+    // This is more for explicit user confirmation
+    
+    alert('Wirtschaftlichkeits-Daten gespeichert');
+};
+
+/**
+ * Filter artikel and gray out DB3-EBIT when single article selected
+ * 
+ * @param {string|null} artikelId - Article ID to filter, or null for all
+ * 
+ * @public
+ */
+window.filterArtikel = function(artikelId) {
+    console.log('🔍 Filtering to artikel:', artikelId || 'ALLE');
+    
+    // Store filter state
+    window.cfoDashboard = window.cfoDashboard || {};
+    window.cfoDashboard.artikelFilter = artikelId;
+    
+    // Re-render with filter applied
+    renderProjektWirtschaftlichkeit();
+};
+
+/**
+ * Gray out or restore DB3-EBIT rows
+ * 
+ * @param {boolean} shouldGray - True to gray out, false to restore
  * 
  * @private
  */
-function createMetadata(projektId, artikelListe, projektkosten, jahre) {
-    return {
-        berechnet_am: new Date().toISOString(),
-        artikel_id: 'projekt-aggregiert',
-        projekt_id: projektId,
-        anzahl_artikel: artikelListe.length,
-        verwendete_kostenblöcke: projektkosten.map(b => b.id),
-        hk_aufteilungs_faktoren: {}  // TODO: Add details
-    };
+function grayOutProjectCostRows(shouldGray) {
+    const rowsToGray = [
+        '.db3-section',
+        '.db3-row',
+        '.db4-section',
+        '.db4-row',
+        '.db5-section',
+        '.db5-row',
+        '.ebit-row',
+        '.ebit-margin-row'
+    ];
+    
+    rowsToGray.forEach(selector => {
+        document.querySelectorAll(selector).forEach(row => {
+            if (shouldGray) {
+                row.style.opacity = '0.3';
+                row.style.pointerEvents = 'none';
+                row.style.position = 'relative';
+                
+                // Add overlay tooltip
+                if (!row.querySelector('.gray-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'gray-overlay';
+                    overlay.style.cssText = `
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        cursor: not-allowed;
+                    `;
+                    overlay.title = 'Projektkosten sind nicht artikelspezifisch zuordenbar. Wechseln Sie zur Projekt-Gesamtsicht.';
+                    row.appendChild(overlay);
+                }
+            } else {
+                row.style.opacity = '1';
+                row.style.pointerEvents = 'auto';
+                
+                // Remove overlay
+                const overlay = row.querySelector('.gray-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+        });
+    });
 }
 
 /**
- * Create empty result structure for error cases
+ * Update view level (legacy compatibility)
  * 
- * @param {string} projektId - Project ID
- * @param {string} reason - Reason for empty result
- * @returns {import('./types').WirtschaftlichkeitResult} Empty result
- * 
- * @private
+ * @public
  */
-function createEmptyResult(projektId, reason) {
-    return {
-        jahre: {},
-        totals: {
-            sales_revenue_total: 0,
-            db1_total: 0,
-            db2_total: 0,
-            db3_total: 0,
-            ebit_total: 0
-        },
-        kpis: {
-            avg_manufacturing_margin: 0,
-            avg_ebit_margin: 0,
-            break_even_year: null,
-            npv: 0,
-            irr: 0,
-            payback_period: 0
-        },
-        metadata: {
-            berechnet_am: new Date().toISOString(),
-            artikel_id: null,
-            projekt_id: projektId,
-            anzahl_artikel: 0,
-            verwendete_kostenblöcke: [],
-            hk_aufteilungs_faktoren: {},
-            error: reason
-        }
-    };
-}
+window.updateViewLevel = function() {
+    const viewLevel = document.getElementById('view-level');
+    if (viewLevel) {
+        handleViewLevelChange({ target: viewLevel });
+    }
+};
 
-/**
- * Export public API
- */
+// ========================================
+// EXPORTS
+// ========================================
+
 export default {
-    calculateProjektWirtschaftlichkeit,
-    calculateNPV,
-    calculateIRR
+    renderWirtschaftlichkeit,
+    renderProjektWirtschaftlichkeit
 };
