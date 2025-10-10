@@ -518,7 +518,7 @@ window.updateTabellenSpalten = function(jahre) {
   
   // Alle Jahr-Spalten durchgehen
   for (let i = 1; i <= 7; i++) {
-    const cols = document.querySelectorAll(`.jahr-col.jahr-${i}`);
+    const cols = document.querySelectorAll('.jahr-col.jahr-' + i);
     cols.forEach(col => {
       col.style.display = i <= zeitraum ? '' : 'none';
     });
@@ -529,11 +529,19 @@ window.updateTabellenSpalten = function(jahre) {
   const startYear = parseInt(releaseDatum.split('-')[0]);
   
   for (let i = 1; i <= zeitraum; i++) {
-    const header = document.querySelector(`.jahr-header-${i}`);
+    const header = document.querySelector('.jahr-header-' + i);
     if (header) {
-      header.textContent = startYear + i - 1;
+      // Jahr 1 bekommt speziellen Hinweis
+      if (i === 1) {
+        header.textContent = (startYear + i - 1) + ' (Start)';
+      } else {
+        header.textContent = startYear + i - 1;
+      }
     }
   }
+  
+  // Nach Update auch Startwerte in Jahr 1 setzen
+  updateErsteZeile();
 }
 
 /**
@@ -552,6 +560,10 @@ function getCurrentZeitraum() {
 /**
  * Update erste Zeile der Tabelle mit Startwerten
  */
+/**
+ * Update erste Zeile der Tabelle mit Startwerten
+ * Startwerte werden IMMER in Jahr 1 übernommen
+ */
 window.updateErsteZeile = function() {
   // Werte aus Inputs holen, aber Beispielwerte ignorieren
   const mengeValue = helpers.getInputValue('start-menge');
@@ -562,6 +574,7 @@ window.updateErsteZeile = function() {
   let startPreis = 0;
   let startHK = 0;
   
+  // Nur übernehmen wenn kein Beispielwert
   if (mengeValue && !mengeValue.startsWith('z.B.')) {
     startMenge = helpers.parseFormattedNumber(mengeValue) || 0;
   }
@@ -572,40 +585,63 @@ window.updateErsteZeile = function() {
     startHK = helpers.parseFormattedNumber(hkValue) || 0;
   }
   
-  // Erste Spalte mit Startwerten füllen
+  // IMMER in erste Spalte (Jahr 1) der Ergebnis-Vorschau übernehmen
   const mengeInput = document.getElementById('menge-jahr-1');
   const preisInput = document.getElementById('preis-jahr-1');
   const hkInput = document.getElementById('hk-jahr-1');
   
-  if (mengeInput) mengeInput.value = helpers.formatThousands(startMenge);
-  if (preisInput) preisInput.value = helpers.formatDecimal(startPreis);
-  if (hkInput) hkInput.value = helpers.formatDecimal(startHK);
+  if (mengeInput) {
+    mengeInput.value = startMenge > 0 ? helpers.formatThousands(startMenge) : '';
+    mengeInput.readOnly = true; // Jahr 1 ist immer readonly
+    mengeInput.style.background = '#f9fafb'; // Grauer Hintergrund
+  }
+  if (preisInput) {
+    preisInput.value = startPreis > 0 ? helpers.formatDecimal(startPreis) : '';
+    preisInput.readOnly = true;
+    preisInput.style.background = '#f9fafb';
+  }
+  if (hkInput) {
+    hkInput.value = startHK > 0 ? helpers.formatDecimal(startHK) : '';
+    hkInput.readOnly = true;
+    hkInput.style.background = '#f9fafb';
+  }
 }
 
 /**
  * Berechne Modelle basierend auf gewählten Einstellungen
  */
+/**
+ * Berechne Modelle basierend auf gewählten Einstellungen
+ * Jahr 1 = Startwerte (immer identisch)
+ * Modelle greifen erst ab Jahr 2
+ */
 window.berechneModelle = function() {
   console.log('📊 Berechne Modelle...');
   
   // Werte aus Inputs holen, aber Beispielwerte ignorieren
-  let startMenge = 1000;
-  let startPreis = 50;
-  let startHK = 20;
+  let startMenge = 0;
+  let startPreis = 0;
+  let startHK = 0;
   
   const mengeValue = helpers.getInputValue('start-menge');
   const preisValue = helpers.getInputValue('start-preis');
   const hkValue = helpers.getInputValue('start-hk');
   
-  // Nur übernehmen wenn kein Beispielwert
+  // Nur übernehmen wenn kein Beispielwert und nicht leer
   if (mengeValue && !mengeValue.startsWith('z.B.')) {
-    startMenge = helpers.parseFormattedNumber(mengeValue) || 1000;
+    startMenge = helpers.parseFormattedNumber(mengeValue) || 0;
   }
   if (preisValue && !preisValue.startsWith('z.B.')) {
-    startPreis = helpers.parseFormattedNumber(preisValue) || 50;
+    startPreis = helpers.parseFormattedNumber(preisValue) || 0;
   }
   if (hkValue && !hkValue.startsWith('z.B.')) {
-    startHK = helpers.parseFormattedNumber(hkValue) || 20;
+    startHK = helpers.parseFormattedNumber(hkValue) || 0;
+  }
+  
+  // Wenn keine Startwerte, abbrechen
+  if (startMenge === 0 && startPreis === 0 && startHK === 0) {
+    console.log('⚠️ Keine Startwerte vorhanden');
+    return;
   }
   
   const mengenModell = document.querySelector('input[name="mengen-modell"]:checked')?.value || 'realistisch';
@@ -617,91 +653,110 @@ window.berechneModelle = function() {
   console.log('Startwerte:', { startMenge, startPreis, startHK });
   console.log('Modelle:', { mengenModell, preisModell, kostenModell });
   
-  // Erste Zeile setzen
+  // IMMER Jahr 1 mit Startwerten setzen
   updateErsteZeile();
   
-  // Berechne für alle Jahre
+  // Berechne ab Jahr 2 basierend auf den Modellen
   for (let jahr = 2; jahr <= zeitraum; jahr++) {
-    // Mengenberechnung
+    // Mengenberechnung (ab Jahr 2)
     let menge = startMenge;
-    switch(mengenModell) {
-      case 'konservativ':
-        menge = startMenge * Math.pow(1.15, jahr - 1);
-        break;
-      case 'realistisch': // S-Kurve
-        const t = (jahr - 1) / (zeitraum - 1);
-        menge = startMenge * (1 + 4 / (1 + Math.exp(-10 * (t - 0.5))));
-        break;
-      case 'optimistisch': // Hockey-Stick
-        if (jahr <= 2) {
-          menge = startMenge * (1 + 0.2 * (jahr - 1));
-        } else {
-          menge = startMenge * Math.pow(2, jahr - 2);
-        }
-        break;
-      case 'manuell':
-        // Behalte vorhandene Werte
-        continue;
+    if (mengenModell !== 'manuell') {
+      switch(mengenModell) {
+        case 'konservativ':
+          // +15% p.a.
+          menge = startMenge * Math.pow(1.15, jahr - 1);
+          break;
+        case 'realistisch': 
+          // S-Kurve
+          const t = (jahr - 1) / (zeitraum - 1);
+          menge = startMenge * (1 + 4 * (1 / (1 + Math.exp(-10 * (t - 0.5)))));
+          break;
+        case 'optimistisch': 
+          // Hockey-Stick
+          if (jahr <= 3) {
+            menge = startMenge * (1 + 0.5 * (jahr - 1));
+          } else {
+            menge = startMenge * Math.pow(2.5, jahr - 3) * 2;
+          }
+          break;
+      }
+      
+      const mengeInput = document.getElementById(`menge-jahr-${jahr}`);
+      if (mengeInput) {
+        mengeInput.value = helpers.formatThousands(Math.round(menge));
+        mengeInput.readOnly = false;
+        mengeInput.style.background = 'white';
+      }
     }
     
-    // Preisberechnung
+    // Preisberechnung (ab Jahr 2)
     let preis = startPreis;
-    switch(preisModell) {
-      case 'konstant':
-        preis = startPreis;
-        break;
-      case 'inflation':
-        preis = startPreis * Math.pow(1.02, jahr - 1);
-        break;
-      case 'premium':
-        preis = startPreis * Math.pow(1.05, jahr - 1);
-        break;
-      case 'skimming':
-        preis = startPreis * Math.pow(0.97, jahr - 1);
-        break;
-      case 'manuell':
-        // Behalte vorhandene Werte
-        continue;
+    if (preisModell !== 'manuell') {
+      switch(preisModell) {
+        case 'konstant':
+          preis = startPreis;
+          break;
+        case 'inflation':
+          // +2% p.a.
+          preis = startPreis * Math.pow(1.02, jahr - 1);
+          break;
+        case 'premium':
+          // +5% p.a.
+          preis = startPreis * Math.pow(1.05, jahr - 1);
+          break;
+        case 'skimming':
+          // -3% p.a.
+          preis = startPreis * Math.pow(0.97, jahr - 1);
+          break;
+      }
+      
+      const preisInput = document.getElementById(`preis-jahr-${jahr}`);
+      if (preisInput) {
+        preisInput.value = helpers.formatDecimal(preis);
+        preisInput.readOnly = false;
+        preisInput.style.background = 'white';
+      }
     }
     
-    // Kostenberechnung
+    // Kostenberechnung (ab Jahr 2)
     let hk = startHK;
-    switch(kostenModell) {
-      case 'konstant':
-        hk = startHK;
-        break;
-      case 'lernkurve':
-        // -5% bei Verdopplung der kumulierten Menge
-        const kumulierteMenge = startMenge * ((Math.pow(1.5, jahr) - 1) / 0.5);
-        const verdopplungen = Math.log2(kumulierteMenge / startMenge);
-        hk = startHK * Math.pow(0.95, verdopplungen);
-        break;
-      case 'inflation':
-        hk = startHK * Math.pow(1.03, jahr - 1);
-        break;
-      case 'skaleneffekte':
-        // Stufenweise Reduktion
-        if (menge > 10000) hk = startHK * 0.7;
-        else if (menge > 5000) hk = startHK * 0.8;
-        else if (menge > 2000) hk = startHK * 0.9;
-        else hk = startHK;
-        break;
-      case 'manuell':
-        // Behalte vorhandene Werte
-        continue;
+    if (kostenModell !== 'manuell') {
+      switch(kostenModell) {
+        case 'konstant':
+          hk = startHK;
+          break;
+        case 'lernkurve':
+          // -5% bei Verdopplung der kumulierten Menge
+          let kumulierteMenge = startMenge;
+          for (let j = 2; j <= jahr; j++) {
+            kumulierteMenge += startMenge * Math.pow(1.15, j - 1);
+          }
+          const verdopplungen = Math.log2(kumulierteMenge / startMenge);
+          hk = startHK * Math.pow(0.95, verdopplungen);
+          break;
+        case 'inflation':
+          // +3% p.a.
+          hk = startHK * Math.pow(1.03, jahr - 1);
+          break;
+        case 'skaleneffekte':
+          // Stufenweise Reduktion basierend auf aktueller Menge
+          if (menge > 10000) hk = startHK * 0.7;
+          else if (menge > 5000) hk = startHK * 0.8;
+          else if (menge > 2000) hk = startHK * 0.9;
+          else hk = startHK;
+          break;
+      }
+      
+      const hkInput = document.getElementById(`hk-jahr-${jahr}`);
+      if (hkInput) {
+        hkInput.value = helpers.formatDecimal(hk);
+        hkInput.readOnly = false;
+        hkInput.style.background = 'white';
+      }
     }
-    
-    // Werte in Tabelle eintragen
-    const mengeInput = document.getElementById(`menge-jahr-${jahr}`);
-    const preisInput = document.getElementById(`preis-jahr-${jahr}`);
-    const hkInput = document.getElementById(`hk-jahr-${jahr}`);
-    
-    if (mengeInput) mengeInput.value = helpers.formatThousands(Math.round(menge));
-    if (preisInput) preisInput.value = helpers.formatDecimal(preis);
-    if (hkInput) hkInput.value = helpers.formatDecimal(hk);
   }
   
-  console.log('✅ Modelle berechnet');
+  console.log('✅ Modelle berechnet (Jahr 1 = Startwerte, ab Jahr 2 = Modelle)');
 }
 
 /**
