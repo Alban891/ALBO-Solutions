@@ -1788,11 +1788,44 @@ async function loadPersonalPositionenFromDB(projektId) {
             gehaltssteigerung: dbPos.gehaltssteigerung || 0.025
         }));
         
+        // ✅ NEU: Berechne und speichere die Summen in kostenWerte['personal']
+        if (!projekt.kostenWerte) projekt.kostenWerte = {};
+        if (!projekt.kostenWerte['personal']) projekt.kostenWerte['personal'] = {};
+        
+        // Sammle alle Jahre aus allen Positionen
+        const alleJahre = new Set();
+        projekt.personalPositionen.forEach(pos => {
+            Object.keys(pos.fteWerte || {}).forEach(jahr => alleJahre.add(jahr));
+        });
+        
+        // Berechne Summen pro Jahr
+        alleJahre.forEach(jahr => {
+            let jahresSumme = 0;
+            
+            projekt.personalPositionen.forEach(pos => {
+                const fte = pos.fteWerte?.[jahr] || 0;
+                const nkFaktor = pos.nebenkostenFaktor || 1.3;
+                const gehalt = pos.basisGehalt || 0;
+                const steigerung = pos.gehaltssteigerung || 0.025;
+                
+                // Berechne Index (Jahr - erstes Jahr)
+                const sortedJahre = Array.from(alleJahre).sort();
+                const jahrIndex = sortedJahre.indexOf(jahr);
+                const steigerungsFaktor = Math.pow(1 + steigerung, jahrIndex);
+                
+                const kosten = gehalt * nkFaktor * fte * steigerungsFaktor;
+                jahresSumme += kosten;
+            });
+            
+            projekt.kostenWerte['personal'][jahr] = Math.round(jahresSumme);
+            console.log(`  ✓ Personal ${jahr}: ${Math.round(jahresSumme)}`);
+        });
+        
         // State aktualisieren
         state.setProjekt(projektId, projekt);
         state.saveState();
         
-        console.log('✅ Personal-Positionen in State übernommen:', projekt.personalPositionen.length);
+        console.log('✅ Personal-Positionen UND Summen in State übernommen:', projekt.personalPositionen.length);
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Personal-Positionen:', error);
