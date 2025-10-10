@@ -14,7 +14,7 @@ import * as helpers from '../helpers.js';
 import * as api from '../api.js';
 
 // Render Projektkosten Tab Content
-export function renderProjektkosten() {
+export async function renderProjektkosten() {
     const projektId = window.cfoDashboard.currentProjekt;
     if (!projektId) return;
     
@@ -27,6 +27,11 @@ export function renderProjektkosten() {
     
     // Generiere KI-Empfehlung mit verbesserter Analyse
     const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
+    
+    // 🆕 SUPABASE: Lade gespeicherte Kostenblöcke aus DB
+    if (projektId.startsWith('projekt-db-')) {
+        await loadKostenbloeckeFromDB(projektId);
+    }
     
     // Hole gespeicherte aktive Kostenblöcke oder nutze Defaults
     const aktiveBlöcke = projekt.aktiveKostenblöcke || empfehlung.kostenblöcke.map(b => b.id);
@@ -986,7 +991,7 @@ window.closePersonalDetail = function() {
 };
 
 // FIX: Save Personal Detail - Korrekte Übertragung OHNE Formatierung
-window.savePersonalDetail = function() {
+window.savePersonalDetail = async function() {
     const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
     const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
     const startYear = parseInt(startDatum.split('-')[0]);
@@ -1017,17 +1022,84 @@ window.savePersonalDetail = function() {
     });
     
     window.updateKostenSumme();
+    
+    // 🆕 SUPABASE: Speichere Personal-Positionen nach DB
+    const projektId = window.cfoDashboard.currentProjekt;
+    if (projektId && projektId.startsWith('projekt-db-')) {
+        await savePersonalDetailToDB(projektId, jahre);
+    }
+    
     window.closePersonalDetail();
     
     if (window.cfoDashboard?.aiController) {
         window.cfoDashboard.aiController.addAIMessage({
             level: 'success',
             title: '✅ Personalkosten übernommen',
-            text: 'Die detaillierten Personalkosten wurden in die Haupttabelle übertragen.',
+            text: 'Die detaillierten Personalkosten wurden in die Haupttabelle übertragen und gespeichert.',
             timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
         });
     }
 };
+
+/**
+ * Speichere Personal-Detail nach Supabase
+ */
+async function savePersonalDetailToDB(projektId, jahre) {
+    try {
+        const tbody = document.getElementById('personal-detail-tbody');
+        if (!tbody) return;
+        
+        const positionen = [];
+        
+        // Sammle alle Positionen aus der Tabelle
+        tbody.querySelectorAll('tr[data-position-id]').forEach(row => {
+            const positionId = row.dataset.positionId;
+            const nameInput = row.querySelector('.position-name');
+            const gehaltInput = row.querySelector('.position-gehalt');
+            
+            const name = nameInput?.value || 'Unbenannt';
+            let gehaltValue = gehaltInput?.value || '0';
+            gehaltValue = gehaltValue.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
+            const basisGehalt = parseFloat(gehaltValue) || 0;
+            
+            // Nebenkosten-Faktor (1.3 = 30%)
+            const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+            const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
+            const vollkosten = basisGehalt * nkFaktor;
+            
+            // Sammle FTE-Werte für alle Jahre
+            const fteWerte = {};
+            jahre.forEach(jahr => {
+                const fteInput = row.querySelector(`.position-fte-${jahr}`);
+                const fte = parseFloat(fteInput?.value) || 0;
+                if (fte > 0) {
+                    fteWerte[jahr] = fte;
+                }
+            });
+            
+            // Nur speichern wenn FTE-Werte vorhanden
+            if (Object.keys(fteWerte).length > 0) {
+                positionen.push({
+                    id: positionId,
+                    name: name,
+                    basisGehalt: basisGehalt,
+                    vollkosten: vollkosten,
+                    fteWerte: fteWerte,
+                    nebenkostenFaktor: nkFaktor,
+                    gehaltssteigerung: 0.025 // 2.5% Standard
+                });
+            }
+        });
+        
+        if (positionen.length > 0) {
+            await savePersonalPositionenToDB(projektId, positionen);
+            console.log('✅ Personal-Positionen nach DB gespeichert:', positionen.length);
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Personal-Positionen:', error);
+    }
+}
 
 window.addPersonalPosition = function() {
     const tbody = document.getElementById('personal-detail-tbody');
@@ -1202,7 +1274,7 @@ window.removeKostenblock = function(blockId) {
     }
 };
 
-window.toggleKostenblock = function(checkbox) {
+window.toggleKostenblock = async function(checkbox) {
     const aktiveBlöcke = [];
     document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(cb => {
         aktiveBlöcke.push(cb.dataset.blockId);
@@ -1214,6 +1286,11 @@ window.toggleKostenblock = function(checkbox) {
         projekt.aktiveKostenblöcke = aktiveBlöcke;
         state.setProjekt(projektId, projekt);
         state.saveState();
+    }
+    
+    // 🆕 SUPABASE: Speichere aktive Kostenblöcke nach DB
+    if (projektId && projektId.startsWith('projekt-db-')) {
+        await saveAllKostenbloeckeToDB(projektId);
     }
     
     renderProjektkosten();
@@ -1268,6 +1345,11 @@ window.saveKostenValue = function(blockId, jahr, value) {
     
     state.setProjekt(projektId, projekt);
     state.saveState();
+    
+    // 🆕 SUPABASE: Speichere nach DB (mit Debouncing)
+    if (projektId.startsWith('projekt-db-')) {
+        debouncedSaveKostenblockToDB(projektId, blockId, jahr, projekt.kostenWerte[blockId][jahr]);
+    }
 }
 
 function getSavedValue(blockId, jahr) {
@@ -1450,3 +1532,140 @@ window.saveKostenblock = function() {
 export default {
     renderProjektkosten
 };
+
+// ==========================================
+// SUPABASE INTEGRATION (NEU)
+// ==========================================
+
+/**
+ * Lade Kostenblöcke aus Supabase
+ * @param {string} projektId - Project ID
+ */
+async function loadKostenbloeckeFromDB(projektId) {
+    try {
+        console.log('📥 Lade Kostenblöcke aus Supabase für', projektId);
+        
+        const dbBlocks = await api.loadKostenblöcke(projektId);
+        const projekt = state.getProjekt(projektId);
+        
+        if (!projekt) return;
+        
+        // Initialisiere kostenWerte und aktiveKostenblöcke
+        if (!projekt.kostenWerte) projekt.kostenWerte = {};
+        if (!projekt.aktiveKostenblöcke) projekt.aktiveKostenblöcke = [];
+        
+        // Übertrage Daten aus DB in State
+        dbBlocks.forEach(dbBlock => {
+            const blockId = dbBlock.block_id;
+            
+            // Kostenblöcke als aktiv markieren
+            if (dbBlock.is_active && !projekt.aktiveKostenblöcke.includes(blockId)) {
+                projekt.aktiveKostenblöcke.push(blockId);
+            }
+            
+            // Kosten-Werte übernehmen
+            if (dbBlock.kosten_werte) {
+                projekt.kostenWerte[blockId] = dbBlock.kosten_werte;
+            }
+        });
+        
+        // State aktualisieren
+        state.setProjekt(projektId, projekt);
+        
+        console.log('✅ Kostenblöcke geladen:', dbBlocks.length);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Kostenblöcke:', error);
+    }
+}
+
+/**
+ * Speichere Kostenblock-Wert nach Supabase (debounced)
+ */
+const debouncedSaveKostenblockToDB = helpers.debounce(async (projektId, blockId, jahr, wert) => {
+    try {
+        console.log('💾 Speichere Kostenblock nach Supabase:', blockId, jahr, wert);
+        
+        await api.updateKostenblockWert(projektId, blockId, jahr, wert);
+        
+        console.log('✅ Kostenblock gespeichert');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern des Kostenblocks:', error);
+    }
+}, 1000); // 1 Sekunde Debounce
+
+/**
+ * Speichere alle aktiven Kostenblöcke nach Supabase
+ * @param {string} projektId - Project ID
+ */
+async function saveAllKostenbloeckeToDB(projektId) {
+    try {
+        const projekt = state.getProjekt(projektId);
+        if (!projekt) return;
+        
+        const aktiveBlöcke = projekt.aktiveKostenblöcke || [];
+        
+        // Erstelle Block-Objekte für API
+        const blocksToSave = aktiveBlöcke.map(blockId => {
+            // Finde Block-Name und Icon aus Checkboxen
+            const checkbox = document.getElementById(`block-${blockId}`);
+            const blockName = checkbox?.dataset.blockName || blockId;
+            const blockIcon = checkbox?.dataset.blockIcon || '📦';
+            const blockAnteil = parseInt(checkbox?.dataset.blockAnteil) || 0;
+            
+            return {
+                id: blockId,
+                name: blockName,
+                icon: blockIcon,
+                anteil: blockAnteil,
+                isActive: true,
+                kostenWerte: projekt.kostenWerte?.[blockId] || {}
+            };
+        });
+        
+        await api.saveKostenblöcke(projektId, blocksToSave);
+        console.log('✅ Alle Kostenblöcke gespeichert');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Kostenblöcke:', error);
+    }
+}
+
+/**
+ * Lade Personal-Positionen aus Supabase
+ * @param {string} projektId - Project ID
+ */
+async function loadPersonalPositionenFromDB(projektId) {
+    try {
+        console.log('📥 Lade Personal-Positionen aus Supabase für', projektId);
+        
+        const dbPositionen = await api.loadPersonalPositionen(projektId);
+        
+        console.log('✅ Personal-Positionen geladen:', dbPositionen.length);
+        
+        return dbPositionen;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Personal-Positionen:', error);
+        return [];
+    }
+}
+
+/**
+ * Speichere Personal-Positionen nach Supabase
+ * @param {string} projektId - Project ID
+ * @param {Array} positionen - Array of positions
+ */
+async function savePersonalPositionenToDB(projektId, positionen) {
+    try {
+        console.log('💾 Speichere Personal-Positionen nach Supabase:', positionen.length);
+        
+        await api.savePersonalPositionen(projektId, positionen);
+        
+        console.log('✅ Personal-Positionen gespeichert');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Personal-Positionen:', error);
+    }
+}
