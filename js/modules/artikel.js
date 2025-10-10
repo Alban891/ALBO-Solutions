@@ -580,6 +580,277 @@ window.closeArtikelDetail = function() {
   if (window.saveNavigationState) {
     window.saveNavigationState();
   }
+/**
+ * Setze Zeithorizont und aktualisiere Tabelle
+ */
+window.setzeZeitraum = function(jahre) {
+    console.log('📅 Setting Zeitraum to:', jahre);
+    
+    // Alle Buttons zurücksetzen
+    document.querySelectorAll('.zeitraum-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#374151';
+        btn.style.border = '1px solid #e5e7eb';
+        btn.style.fontWeight = '500';
+    });
+    
+    // Den korrekten Button aktivieren
+    const targetBtn = document.getElementById(`zeitraum-btn-${jahre}`);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.style.background = '#3b82f6';
+        targetBtn.style.color = 'white';
+        targetBtn.style.border = '2px solid #3b82f6';
+        targetBtn.style.fontWeight = '600';
+    }
+    
+    // Zeitraum speichern
+    const artikelId = window.cfoDashboard.currentArtikel;
+    if (artikelId) {
+        const artikel = state.getArtikel(artikelId);
+        if (artikel) {
+            artikel.zeitraum = jahre;
+            state.setArtikel(artikelId, artikel);
+        }
+    }
+    
+    // Tabellen-Spalten anpassen
+    updateTabellenSpalten(jahre);
+}
+
+/**
+ * Tabellen-Spalten basierend auf Zeitraum anzeigen/verstecken
+ */
+window.updateTabellenSpalten = function(jahre) {
+    const zeitraum = jahre || getCurrentZeitraum();
+    
+    // Alle Jahr-Spalten durchgehen
+    for (let i = 1; i <= 7; i++) {
+        const cols = document.querySelectorAll(`.jahr-col.jahr-${i}`);
+        cols.forEach(col => {
+            col.style.display = i <= zeitraum ? '' : 'none';
+        });
+    }
+    
+    // Jahr-Header mit tatsächlichen Jahren aktualisieren
+    const releaseDatum = document.getElementById('release-datum')?.value || '2025-01';
+    const startYear = parseInt(releaseDatum.split('-')[0]);
+    
+    for (let i = 1; i <= zeitraum; i++) {
+        const header = document.querySelector(`.jahr-header-${i}`);
+        if (header) {
+            header.textContent = startYear + i - 1;
+        }
+    }
+}
+
+/**
+ * Aktuellen Zeitraum ermitteln
+ */
+function getCurrentZeitraum() {
+    const activeBtn = document.querySelector('.zeitraum-btn.active');
+    if (activeBtn) {
+        const text = activeBtn.textContent;
+        const match = text.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 5;
+    }
+    return 5; // Default
+}
+
+/**
+ * Update erste Zeile der Tabelle mit Startwerten
+ */
+window.updateErsteZeile = function() {
+    const startMenge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge')) || 0;
+    const startPreis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis')) || 0;
+    const startHK = helpers.parseFormattedNumber(helpers.getInputValue('start-hk')) || 0;
+    
+    // Erste Spalte mit Startwerten füllen
+    const mengeInput = document.getElementById('menge-jahr-1');
+    const preisInput = document.getElementById('preis-jahr-1');
+    const hkInput = document.getElementById('hk-jahr-1');
+    
+    if (mengeInput) mengeInput.value = helpers.formatThousands(startMenge);
+    if (preisInput) preisInput.value = helpers.formatDecimal(startPreis);
+    if (hkInput) hkInput.value = helpers.formatDecimal(startHK);
+}
+
+/**
+ * Berechne Modelle basierend auf gewählten Einstellungen
+ */
+window.berechneModelle = function() {
+    console.log('📊 Berechne Modelle...');
+    
+    const startMenge = helpers.parseFormattedNumber(helpers.getInputValue('start-menge')) || 1000;
+    const startPreis = helpers.parseFormattedNumber(helpers.getInputValue('start-preis')) || 50;
+    const startHK = helpers.parseFormattedNumber(helpers.getInputValue('start-hk')) || 20;
+    
+    const mengenModell = document.querySelector('input[name="mengen-modell"]:checked')?.value || 'realistisch';
+    const preisModell = document.querySelector('input[name="preis-modell"]:checked')?.value || 'konstant';
+    const kostenModell = document.querySelector('input[name="kosten-modell"]:checked')?.value || 'lernkurve';
+    
+    const zeitraum = getCurrentZeitraum();
+    
+    // Erste Zeile setzen
+    updateErsteZeile();
+    
+    // Berechne für alle Jahre
+    for (let jahr = 2; jahr <= zeitraum; jahr++) {
+        // Mengenberechnung
+        let menge = startMenge;
+        switch(mengenModell) {
+            case 'konservativ':
+                menge = startMenge * Math.pow(1.15, jahr - 1);
+                break;
+            case 'realistisch': // S-Kurve
+                const t = (jahr - 1) / (zeitraum - 1);
+                menge = startMenge * (1 + 4 / (1 + Math.exp(-10 * (t - 0.5))));
+                break;
+            case 'optimistisch': // Hockey-Stick
+                if (jahr <= 2) {
+                    menge = startMenge * (1 + 0.2 * (jahr - 1));
+                } else {
+                    menge = startMenge * Math.pow(2, jahr - 2);
+                }
+                break;
+            case 'manuell':
+                // Behalte vorhandene Werte
+                continue;
+        }
+        
+        // Preisberechnung
+        let preis = startPreis;
+        switch(preisModell) {
+            case 'konstant':
+                preis = startPreis;
+                break;
+            case 'inflation':
+                preis = startPreis * Math.pow(1.02, jahr - 1);
+                break;
+            case 'premium':
+                preis = startPreis * Math.pow(1.05, jahr - 1);
+                break;
+            case 'skimming':
+                preis = startPreis * Math.pow(0.97, jahr - 1);
+                break;
+            case 'manuell':
+                // Behalte vorhandene Werte
+                continue;
+        }
+        
+        // Kostenberechnung
+        let hk = startHK;
+        switch(kostenModell) {
+            case 'konstant':
+                hk = startHK;
+                break;
+            case 'lernkurve':
+                // -5% bei Verdopplung der kumulierten Menge
+                const kumulierteMenge = startMenge * ((Math.pow(1.5, jahr) - 1) / 0.5);
+                const verdopplungen = Math.log2(kumulierteMenge / startMenge);
+                hk = startHK * Math.pow(0.95, verdopplungen);
+                break;
+            case 'inflation':
+                hk = startHK * Math.pow(1.03, jahr - 1);
+                break;
+            case 'skaleneffekte':
+                // Stufenweise Reduktion
+                if (menge > 10000) hk = startHK * 0.7;
+                else if (menge > 5000) hk = startHK * 0.8;
+                else if (menge > 2000) hk = startHK * 0.9;
+                else hk = startHK;
+                break;
+            case 'manuell':
+                // Behalte vorhandene Werte
+                continue;
+        }
+        
+        // Werte in Tabelle eintragen
+        const mengeInput = document.getElementById(`menge-jahr-${jahr}`);
+        const preisInput = document.getElementById(`preis-jahr-${jahr}`);
+        const hkInput = document.getElementById(`hk-jahr-${jahr}`);
+        
+        if (mengeInput) mengeInput.value = helpers.formatThousands(Math.round(menge));
+        if (preisInput) preisInput.value = helpers.formatDecimal(preis);
+        if (hkInput) hkInput.value = helpers.formatDecimal(hk);
+    }
+    
+    console.log('✅ Modelle berechnet');
+}
+
+/**
+ * Reset alle Modelle auf Standardwerte
+ */
+window.resetModelle = function() {
+    console.log('🔄 Reset Modelle...');
+    
+    // Reset Radio Buttons auf Defaults
+    const mengenRadio = document.querySelector('input[name="mengen-modell"][value="realistisch"]');
+    const preisRadio = document.querySelector('input[name="preis-modell"][value="konstant"]');
+    const kostenRadio = document.querySelector('input[name="kosten-modell"][value="lernkurve"]');
+    
+    if (mengenRadio) mengenRadio.checked = true;
+    if (preisRadio) preisRadio.checked = true;
+    if (kostenRadio) kostenRadio.checked = true;
+    
+    // Reset Startwerte auf Beispielwerte
+    helpers.setInputValue('start-menge', '1.000');
+    helpers.setInputValue('start-preis', '50,00');
+    helpers.setInputValue('start-hk', '20,00');
+    
+    // Zeitraum auf 5 Jahre
+    setzeZeitraum(5);
+    
+    // Berechne neu
+    berechneModelle();
+}
+
+/**
+ * Modell anwenden (wird von Radio-Buttons aufgerufen)
+ */
+window.applyModell = function(typ, modell) {
+    console.log(`Applying ${modell} model for ${typ}`);
+    // Berechnung wird durch berechneModelle() ausgeführt
+}
+
+/**
+ * Update Zeithorizont basierend auf Release-Datum
+ */
+window.updateZeithorizont = function() {
+    const releaseDatum = document.getElementById('release-datum')?.value;
+    if (releaseDatum) {
+        updateTabellenSpalten();
+    }
+}
+
+/**
+ * Format number input helper
+ */
+window.formatNumberInput = function(input) {
+    if (!input || !input.value) return;
+    
+    let value = input.value.replace(/\./g, '').replace(',', '.');
+    const numValue = parseFloat(value);
+    
+    if (!isNaN(numValue)) {
+        input.value = helpers.formatThousands(numValue);
+    }
+}
+
+/**
+ * Format decimal input helper
+ */
+window.formatDecimalInput = function(input, decimals = 2) {
+    if (!input || !input.value) return;
+    
+    let value = input.value.replace(/\./g, '').replace(',', '.');
+    const numValue = parseFloat(value);
+    
+    if (!isNaN(numValue)) {
+        input.value = helpers.formatDecimal(numValue, decimals);
+    }
+}
 };
 
 // ==========================================
