@@ -1296,9 +1296,28 @@ window.toggleKostenblock = async function(checkbox) {
         state.saveState();
     }
     
-    // 🆕 SUPABASE: Speichere aktive Kostenblöcke nach DB
+    // 🆕 SUPABASE: Beim ersten Mal ALLE Blöcke initialisieren
     if (projektId && projektId.startsWith('projekt-db-')) {
-        await saveAllKostenbloeckeToDB(projektId);
+        // Sammle ALLE Checkbox-Daten (auch inaktive)
+        const alleBlöcke = [];
+        document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
+            const blockId = cb.dataset.blockId;
+            const blockName = cb.dataset.blockName || blockId;
+            const blockIcon = cb.dataset.blockIcon || '📦';
+            const blockAnteil = parseInt(cb.dataset.blockAnteil) || 0;
+            
+            alleBlöcke.push({
+                id: blockId,
+                name: blockName,
+                icon: blockIcon,
+                anteil: blockAnteil,
+                isActive: cb.checked, // TRUE wenn checked
+                kostenWerte: projekt.kostenWerte?.[blockId] || {}
+            });
+        });
+        
+        // Speichere ALLE Blöcke (damit sie in DB existieren)
+        await saveAllKostenbloeckeToDB(projektId, alleBlöcke);
     }
     
     renderProjektkosten();
@@ -1601,9 +1620,39 @@ const debouncedSaveKostenblockToDB = helpers.debounce(async (projektId, blockId,
     try {
         console.log('💾 Speichere Kostenblock nach Supabase:', blockId, jahr, wert);
         
-        await api.updateKostenblockWert(projektId, blockId, jahr, wert);
+        // Prüfe erst ob Block existiert, sonst erstelle ihn
+        const success = await api.updateKostenblockWert(projektId, blockId, jahr, wert);
         
-        console.log('✅ Kostenblock gespeichert');
+        if (success) {
+            console.log('✅ Kostenblock gespeichert');
+        } else {
+            console.warn('⚠️ Konnte Kostenblock nicht speichern - versuche Initialisierung...');
+            
+            // Fallback: Initialisiere alle Blöcke
+            const projekt = state.getProjekt(projektId);
+            if (projekt) {
+                const checkbox = document.querySelector(`input[data-block-id="${blockId}"]`);
+                if (checkbox) {
+                    const alleBloecke = [];
+                    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
+                        alleBloecke.push({
+                            id: cb.dataset.blockId,
+                            name: cb.dataset.blockName || cb.dataset.blockId,
+                            icon: cb.dataset.blockIcon || '📦',
+                            anteil: parseInt(cb.dataset.blockAnteil) || 0,
+                            isActive: cb.checked,
+                            kostenWerte: projekt.kostenWerte?.[cb.dataset.blockId] || {}
+                        });
+                    });
+                    
+                    await saveAllKostenbloeckeToDB(projektId, alleBloecke);
+                    console.log('✅ Alle Blöcke initialisiert - versuche erneut...');
+                    
+                    // Versuche nochmal
+                    await api.updateKostenblockWert(projektId, blockId, jahr, wert);
+                }
+            }
+        }
         
     } catch (error) {
         console.error('❌ Fehler beim Speichern des Kostenblocks:', error);
@@ -1611,36 +1660,24 @@ const debouncedSaveKostenblockToDB = helpers.debounce(async (projektId, blockId,
 }, 1000); // 1 Sekunde Debounce
 
 /**
- * Speichere alle aktiven Kostenblöcke nach Supabase
+ * Speichere alle Kostenblöcke nach Supabase
  * @param {string} projektId - Project ID
+ * @param {Array} alleBloecke - Alle Blöcke (inkl. inaktive)
  */
-async function saveAllKostenbloeckeToDB(projektId) {
+async function saveAllKostenbloeckeToDB(projektId, alleBloecke) {
     try {
         const projekt = state.getProjekt(projektId);
         if (!projekt) return;
         
-        const aktiveBlöcke = projekt.aktiveKostenblöcke || [];
+        console.log(`💾 Speichere ${alleBloecke.length} Kostenblöcke nach Supabase...`);
         
-        // Erstelle Block-Objekte für API
-        const blocksToSave = aktiveBlöcke.map(blockId => {
-            // Finde Block-Name und Icon aus Checkboxen
-            const checkbox = document.getElementById(`block-${blockId}`);
-            const blockName = checkbox?.dataset.blockName || blockId;
-            const blockIcon = checkbox?.dataset.blockIcon || '📦';
-            const blockAnteil = parseInt(checkbox?.dataset.blockAnteil) || 0;
-            
-            return {
-                id: blockId,
-                name: blockName,
-                icon: blockIcon,
-                anteil: blockAnteil,
-                isActive: true,
-                kostenWerte: projekt.kostenWerte?.[blockId] || {}
-            };
-        });
+        const success = await api.saveKostenblöcke(projektId, alleBloecke);
         
-        await api.saveKostenblöcke(projektId, blocksToSave);
-        console.log('✅ Alle Kostenblöcke gespeichert');
+        if (success) {
+            console.log('✅ Alle Kostenblöcke erfolgreich gespeichert');
+        } else {
+            console.error('❌ Speichern fehlgeschlagen');
+        }
         
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Kostenblöcke:', error);
