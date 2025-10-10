@@ -183,65 +183,65 @@ function generateKostenTabelle(kostenblöcke) {
     }
     
     return `
-        <div style="background: white; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);">
-            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                <thead>
-                    <tr style="background: #f8fafc;">
-                        <th style="padding: 8px; text-align: left;">Kostenblock</th>
-                        ${jahre.map(jahr => `
-                            <th style="padding: 8px; text-align: center;">${jahr}</th>
-                        `).join('')}
-                        <th style="padding: 8px; text-align: center; font-weight: bold;">Gesamt</th>
-                        <th style="padding: 8px; text-align: center;">Aktion</th>
-                    </tr>
-                </thead>
-                <tbody id="kosten-tbody">
-                    ${kostenblöcke.map(block => `
-                        <tr data-block-id="${block.id}">
-                            <td style="padding: 8px; font-weight: 600;">
-                                ${block.icon} ${block.name}
-                                ${block.id === 'personal' ? `
-                                    <button onclick="window.openPersonalDetail('${block.id}')"
-                                            class="btn btn-primary btn-sm"
-                                            style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
-                                        📊 Details
-                                    </button>
-                                ` : ''}
-                            </td>
-                            ${jahre.map(jahr => `
-                                <td style="padding: 8px;">
-                                    <input type="text" class="kosten-input" 
-                                           id="kosten-${block.id}-${jahr}" 
-                                           placeholder="0"
-                                           onchange="window.updateKostenSumme()"
-                                           style="width: 60px; padding: 2px; border: 1px solid var(--border); 
-                                                  border-radius: 2px; text-align: right;">
-                                </td>
-                            `).join('')}
-                            <td style="padding: 8px; font-weight: bold;" id="summe-${block.id}">0€</td>
-                            <td style="padding: 8px; text-align: center;">
-                                <button onclick="window.removeKostenblock('${block.id}')" 
-                                        class="btn btn-danger btn-sm"
-                                        style="padding: 2px 8px; font-size: 10px;">
-                                    ✕
-                                </button>
-                            </td>
-                        </tr>
+    <div style="background: white; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed;">
+            <thead>
+                <tr style="background: #f8fafc;">
+                    <th style="padding: 8px; text-align: left; width: 200px;">Kostenblock</th>
+                    ${jahre.map(jahr => `
+                        <th style="padding: 8px; text-align: center; width: 100px;">${jahr}</th>
                     `).join('')}
-                </tbody>
-                <tfoot>
-                    <tr style="background: var(--primary); color: white; font-weight: bold;">
-                        <td style="padding: 10px;">GESAMT</td>
+                    <th style="padding: 8px; text-align: center; font-weight: bold; width: 100px;">Gesamt</th>
+                    <th style="padding: 8px; text-align: center; width: 80px;">Aktion</th>
+                </tr>
+            </thead>
+            <tbody id="kosten-tbody">
+                ${kostenblöcke.map(block => `
+                    <tr data-block-id="${block.id}">
+                        <td style="padding: 8px; font-weight: 600;">
+                            ${block.icon} ${block.name}
+                            ${block.id === 'personal' ? `
+                                <button onclick="window.openPersonalDetail('${block.id}')"
+                                        class="btn btn-primary btn-sm"
+                                        style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
+                                    📊 Details
+                                </button>
+                            ` : ''}
+                        </td>
                         ${jahre.map(jahr => `
-                            <td style="padding: 10px; text-align: center;" id="gesamt-${jahr}">0€</td>
+                            <td style="padding: 8px; text-align: center;">
+                                <input type="text" class="kosten-input" 
+                                       id="kosten-${block.id}-${jahr}" 
+                                       placeholder="0"
+                                       onchange="window.updateKostenSumme()"
+                                       style="width: 70px; padding: 2px; border: 1px solid var(--border); 
+                                              border-radius: 2px; text-align: right;">
+                            </td>
                         `).join('')}
-                        <td style="padding: 10px; text-align: center;" id="gesamt-total">0€</td>
-                        <td></td>
+                        <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${block.id}">0€</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <button onclick="window.removeKostenblock('${block.id}')" 
+                                    class="btn btn-danger btn-sm"
+                                    style="padding: 2px 8px; font-size: 10px;">
+                                ✕
+                            </button>
+                        </td>
                     </tr>
-                </tfoot>
-            </table>
-        </div>
-    `;
+                `).join('')}
+            </tbody>
+            <tfoot>
+                <tr style="background: var(--primary); color: white; font-weight: bold;">
+                    <td style="padding: 10px;">GESAMT</td>
+                    ${jahre.map(jahr => `
+                        <td style="padding: 10px; text-align: center;" id="gesamt-${jahr}">0€</td>
+                    `).join('')}
+                    <td style="padding: 10px; text-align: center;" id="gesamt-total">0€</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+`;
 }
 
 // Initialisiere Timeline mit KI-Empfehlung
