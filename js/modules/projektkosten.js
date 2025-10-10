@@ -142,6 +142,12 @@ export async function renderProjektkosten() {
     
     // Initialisiere Timeline
     initializeTimeline(empfehlung);
+
+    // ✅ NEU: Nach dem Rendern die Werte aus dem State in die Inputs laden
+    setTimeout(() => {
+        restoreKostenwerteInInputs();
+        window.updateKostenSumme();
+    }, 100);
 }
 
 // Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
@@ -1848,5 +1854,43 @@ window.saveProjektkostenToDB = async function() {
         const btn = event.target.closest('button');
         btn.disabled = false;
         btn.innerHTML = '<span>💾</span><span>Alle Änderungen speichern</span>';
+    }
+
+    /**
+     * Restore Kostenwerte from State into Input fields
+     * Called after rendering to populate inputs with saved data
+     */
+    function restoreKostenwerteInInputs() {
+        const projektId = window.cfoDashboard.currentProjekt;
+        const projekt = state.getProjekt(projektId);
+        
+        if (!projekt || !projekt.kostenWerte) {
+            console.log('ℹ️ Keine gespeicherten Kostenwerte vorhanden');
+            return;
+        }
+        
+        console.log('🔄 Lade Kostenwerte in Input-Felder:', projekt.kostenWerte);
+        
+        // Durchlaufe alle Kostenblöcke
+        Object.keys(projekt.kostenWerte).forEach(blockId => {
+            const jahreWerte = projekt.kostenWerte[blockId];
+            
+            // Durchlaufe alle Jahre
+            Object.keys(jahreWerte).forEach(jahr => {
+                const wert = jahreWerte[jahr];
+                const input = document.getElementById(`kosten-${blockId}-${jahr}`);
+                
+                if (input && wert) {
+                    // Formatiere den Wert (deutsch, ohne €)
+                    input.value = wert.toLocaleString('de-DE', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    });
+                    console.log(`  ✓ ${blockId} ${jahr}: ${wert}`);
+                }
+            });
+        });
+        
+        console.log('✅ Kostenwerte in Inputs geladen');
     }
 };
