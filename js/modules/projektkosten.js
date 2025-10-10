@@ -281,6 +281,8 @@ function generateKostenTabelle(kostenblöcke) {
                                        id="kosten-${block.id}-${jahr}" 
                                        placeholder="0"
                                        value="${getSavedValue(block.id, jahr) || ''}"
+                                       onfocus="window.handleKostenInputFocus(this)"
+                                       onblur="window.handleKostenInputBlur(this)"
                                        onchange="window.updateKostenSumme(); window.saveKostenValue('${block.id}', '${jahr}', this.value)"
                                        style="width: 70px; padding: 2px; border: 1px solid var(--border); 
                                               border-radius: 2px; text-align: right;">
@@ -335,6 +337,28 @@ window.updateKostentabelle = function() {
 
 window.updateProjektZeitraum = function() {
     renderProjektkosten();
+};
+
+// Formatierungs-Handler für Kosten-Inputs
+window.handleKostenInputFocus = function(input) {
+    // Beim Focus: Entferne Formatierung für einfacheres Editieren
+    if (input.value) {
+        const numValue = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+        input.value = numValue;
+    }
+};
+
+window.handleKostenInputBlur = function(input) {
+    // Beim Blur: Formatiere wieder (deutsch, ohne €)
+    if (input.value) {
+        const numValue = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+        if (numValue > 0) {
+            input.value = numValue.toLocaleString('de-DE', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+        }
+    }
 };
 
 window.updateKostenSumme = function() {
