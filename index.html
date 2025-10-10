@@ -879,7 +879,8 @@
                                         placeholder="z.B. 1.000"
                                         onfocus="handleInputFocus(this)"
                                         onblur="handleInputBlur(this, 'menge')"
-                                        onchange="updateErsteZeile(); formatNumberInput(this);"
+                                        onchange="updateErsteZeile();"
+                                        oninput="updateErsteZeile();"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;
                                                 color: #6b7280;">
@@ -892,7 +893,8 @@
                                         placeholder="z.B. 50,00"
                                         onfocus="handleInputFocus(this)"
                                         onblur="handleInputBlur(this, 'preis')"
-                                        onchange="updateErsteZeile(); formatDecimalInput(this);"
+                                        onchange="updateErsteZeile();"
+                                        oninput="updateErsteZeile();"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;
                                                 color: #6b7280;">
@@ -905,7 +907,8 @@
                                         placeholder="z.B. 20,00"
                                         onfocus="handleInputFocus(this)"
                                         onblur="handleInputBlur(this, 'hk')"
-                                        onchange="updateErsteZeile(); formatDecimalInput(this);"
+                                        onchange="updateErsteZeile();"
+                                        oninput="updateErsteZeile();"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;
                                                 color: #6b7280;">
