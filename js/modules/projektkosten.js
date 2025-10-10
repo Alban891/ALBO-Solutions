@@ -29,8 +29,16 @@ export async function renderProjektkosten() {
     const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
     
     // 🆕 SUPABASE: Lade gespeicherte Kostenblöcke aus DB
+    // WICHTIG: Nur laden wenn es ein DB-Projekt ist UND noch keine lokalen Daten vorhanden
     if (projektId.startsWith('projekt-db-')) {
-        await loadKostenbloeckeFromDB(projektId);
+        const hasLocalData = projekt.kostenWerte && Object.keys(projekt.kostenWerte).length > 0;
+        
+        if (!hasLocalData) {
+            // Nur laden wenn noch keine lokalen Daten vorhanden
+            await loadKostenbloeckeFromDB(projektId);
+        } else {
+            console.log('ℹ️ Lokale Kostenblöcke vorhanden, überspringe DB-Load');
+        }
     }
     
     // Hole gespeicherte aktive Kostenblöcke oder nutze Defaults
@@ -1546,8 +1554,14 @@ async function loadKostenbloeckeFromDB(projektId) {
         console.log('📥 Lade Kostenblöcke aus Supabase für', projektId);
         
         const dbBlocks = await api.loadKostenblöcke(projektId);
-        const projekt = state.getProjekt(projektId);
         
+        // WICHTIG: Nur übernehmen wenn auch Daten vorhanden!
+        if (!dbBlocks || dbBlocks.length === 0) {
+            console.log('ℹ️ Keine Kostenblöcke in DB gefunden - behalte lokale Daten');
+            return;
+        }
+        
+        const projekt = state.getProjekt(projektId);
         if (!projekt) return;
         
         // Initialisiere kostenWerte und aktiveKostenblöcke
@@ -1572,10 +1586,11 @@ async function loadKostenbloeckeFromDB(projektId) {
         // State aktualisieren
         state.setProjekt(projektId, projekt);
         
-        console.log('✅ Kostenblöcke geladen:', dbBlocks.length);
+        console.log('✅ Kostenblöcke aus DB geladen:', dbBlocks.length);
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Kostenblöcke:', error);
+        // Bei Fehler NICHT den State überschreiben!
     }
 }
 
