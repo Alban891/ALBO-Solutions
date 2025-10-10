@@ -1283,21 +1283,38 @@ window.removeKostenblock = function(blockId) {
 };
 
 window.toggleKostenblock = async function(checkbox) {
+    const projektId = window.cfoDashboard.currentProjekt;
+    
+    console.log('🔧 toggleKostenblock called:', {
+        projektId,
+        cfoDashboard: window.cfoDashboard,
+        checkbox: checkbox?.id
+    });
+    
+    // Validierung: Prüfe ob projektId existiert
+    if (!projektId) {
+        console.error('❌ Kein Projekt ausgewählt! window.cfoDashboard.currentProjekt ist:', projektId);
+        alert('Fehler: Kein Projekt ausgewählt. Bitte wählen Sie erst ein Projekt aus.');
+        return;
+    }
+    
     const aktiveBlöcke = [];
     document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(cb => {
         aktiveBlöcke.push(cb.dataset.blockId);
     });
     
-    const projektId = window.cfoDashboard.currentProjekt;
     const projekt = state.getProjekt(projektId);
     if (projekt) {
         projekt.aktiveKostenblöcke = aktiveBlöcke;
         state.setProjekt(projektId, projekt);
         state.saveState();
+    } else {
+        console.error('❌ Projekt nicht gefunden:', projektId);
+        return;
     }
     
     // 🆕 SUPABASE: Beim ersten Mal ALLE Blöcke initialisieren
-    if (projektId && projektId.startsWith('projekt-db-')) {
+    if (projektId.startsWith('projekt-db-')) {
         // Sammle ALLE Checkbox-Daten (auch inaktive)
         const alleBlöcke = [];
         document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
@@ -1315,6 +1332,8 @@ window.toggleKostenblock = async function(checkbox) {
                 kostenWerte: projekt.kostenWerte?.[blockId] || {}
             });
         });
+        
+        console.log('💾 Initialisiere Kostenblöcke für Projekt:', projektId, 'Anzahl:', alleBlöcke.length);
         
         // Speichere ALLE Blöcke (damit sie in DB existieren)
         await saveAllKostenbloeckeToDB(projektId, alleBlöcke);
