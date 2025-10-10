@@ -643,30 +643,53 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
   try {
     const dbId = projektId.replace('projekt-db-', '');
 
-    // Hole aktuellen Block
-    const { data: currentBlock, error: fetchError } = await client
+    // Prüfe ob Block existiert
+    const { data: existingBlock, error: fetchError } = await client
       .from('albo_kostenblöcke')
-      .select('kosten_werte')
+      .select('*')
       .eq('project_id', dbId)
       .eq('block_id', blockId)
-      .single();
+      .maybeSingle(); // WICHTIG: maybeSingle() statt single() - kein Fehler wenn nicht gefunden
 
-    if (fetchError) throw fetchError;
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 = "not found" ist OK, andere Fehler nicht
+      throw fetchError;
+    }
 
-    // Update das Jahr
-    const kostenWerte = currentBlock.kosten_werte || {};
+    const kostenWerte = existingBlock?.kosten_werte || {};
     kostenWerte[jahr] = wert;
 
-    // Speichere zurück
-    const { error: updateError } = await client
-      .from('albo_kostenblöcke')
-      .update({ kosten_werte: kostenWerte })
-      .eq('project_id', dbId)
-      .eq('block_id', blockId);
+    if (existingBlock) {
+      // Block existiert → UPDATE
+      const { error: updateError } = await client
+        .from('albo_kostenblöcke')
+        .update({ kosten_werte: kostenWerte })
+        .eq('project_id', dbId)
+        .eq('block_id', blockId);
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
+      
+      console.log(`✅ Updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
+    } else {
+      // Block existiert NICHT → INSERT
+      console.log(`ℹ️ Block ${blockId} nicht gefunden, erstelle neu...`);
+      
+      const { error: insertError } = await client
+        .from('albo_kostenblöcke')
+        .insert([{
+          project_id: dbId,
+          block_id: blockId,
+          block_name: blockId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          block_icon: '📦',
+          is_active: true,
+          kosten_werte: kostenWerte
+        }]);
 
-    console.log(`✅ Updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
+      if (insertError) throw insertError;
+      
+      console.log(`✅ Created and updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
+    }
+
     return true;
 
   } catch (error) {
