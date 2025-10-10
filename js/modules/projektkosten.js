@@ -121,22 +121,6 @@ export function renderProjektkosten() {
     initializeTimeline(empfehlung);
 }
 
-// FÜGE HINZU: Initialisiere alle aktiven Blöcke in der Tabelle
-setTimeout(() => {
-    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(checkbox => {
-        const blockId = checkbox.dataset.blockId;
-        const blockName = checkbox.dataset.blockName;
-        const blockIcon = checkbox.dataset.blockIcon;
-        const blockAnteil = checkbox.dataset.blockAnteil;
-        
-        // Nur hinzufügen wenn noch nicht vorhanden
-        if (!document.querySelector(`[data-block-id="${blockId}"]`)) {
-            addKostenblockToTable(blockId, blockName, blockIcon, blockAnteil);
-        }
-    });
-    window.updateKostenSumme();
-}, 100);
-
 // Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
 function generiereKostenEmpfehlung(artikel, projekt) {
     // Analysiere Projekt-Beschreibung für Kontext
@@ -257,6 +241,14 @@ function generateKostenTabelle(kostenblöcke) {
         jahre.push(jahr.toString());
     }
     
+    // WICHTIG: Nur Blöcke rendern die auch angehakt sind!
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    const aktiveBlöcke = projekt?.aktiveKostenblöcke || kostenblöcke.map(b => b.id);
+    
+    // Filtere nur aktive Blöcke
+    const sichtbareBlöcke = kostenblöcke.filter(b => aktiveBlöcke.includes(b.id));
+    
     return `
     <div style="background: white; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);">
         <table style="width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed;">
@@ -271,7 +263,7 @@ function generateKostenTabelle(kostenblöcke) {
                 </tr>
             </thead>
             <tbody id="kosten-tbody">
-                ${kostenblöcke.map(block => `
+                ${sichtbareBlöcke.map(block => `
                     <tr data-block-id="${block.id}">
                         <td style="padding: 8px; font-weight: 600;">
                             ${block.icon} ${block.name}
@@ -288,14 +280,15 @@ function generateKostenTabelle(kostenblöcke) {
                                 <input type="text" class="kosten-input" 
                                        id="kosten-${block.id}-${jahr}" 
                                        placeholder="0"
-                                       onchange="window.updateKostenSumme()"
+                                       value="${getSavedValue(block.id, jahr) || ''}"
+                                       onchange="window.updateKostenSumme(); window.saveKostenValue('${block.id}', '${jahr}', this.value)"
                                        style="width: 70px; padding: 2px; border: 1px solid var(--border); 
                                               border-radius: 2px; text-align: right;">
                             </td>
                         `).join('')}
                         <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${block.id}">0€</td>
                         <td style="padding: 8px; text-align: center;">
-                            <button onclick="window.removeKostenblock('${block.id}')" 
+                            <button onclick="window.removeAndUncheckKostenblock('${block.id}')" 
                                     class="btn btn-danger btn-sm"
                                     style="padding: 2px 8px; font-size: 10px;">
                                 ✕
@@ -423,101 +416,51 @@ window.removeKostenblock = function(blockId) {
     }
 };
 
-// Toggle Kostenblock ein/aus
+// Toggle Kostenblock - einfach neu rendern!
 window.toggleKostenblock = function(checkbox) {
-    const blockId = checkbox.dataset.blockId;
-    const blockName = checkbox.dataset.blockName;
-    const blockIcon = checkbox.dataset.blockIcon;
-    const blockAnteil = checkbox.dataset.blockAnteil;
+    // Speichere welche Checkboxen aktiv sind
+    const aktiveBlöcke = [];
+    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(cb => {
+        aktiveBlöcke.push(cb.dataset.blockId);
+    });
     
-    if (checkbox.checked) {
-        // Füge Block zur Tabelle hinzu
-        addKostenblockToTable(blockId, blockName, blockIcon, blockAnteil);
-    } else {
-        // Entferne Block aus Tabelle
-        removeKostenblockFromTable(blockId);
+    // Speichere im State
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    if (projekt) {
+        projekt.aktiveKostenblöcke = aktiveBlöcke;
+        state.setProjekt(projektId, projekt);
+        state.saveState();
     }
     
-    // Speichere aktive Blöcke
-    saveAktiveKostenblöcke();
+    // Neu rendern der gesamten Projektkosten
+    renderProjektkosten();
 }
 
-// Füge Kostenblock zur Tabelle hinzu
-function addKostenblockToTable(blockId, name, icon, anteil) {
-    const tbody = document.getElementById('kosten-tbody');
-    if (!tbody) return;
-    
-    // Prüfe ob Block bereits existiert
-    if (document.querySelector(`[data-block-id="${blockId}"]`)) return;
-    
-    // Hole Jahre aus Tabellen-Header
-    const headerCells = document.querySelectorAll('thead th');
-    const jahre = [];
-    for (let i = 1; i < headerCells.length - 2; i++) {
-        const jahr = headerCells[i].textContent.trim();
-        if (jahr && !isNaN(jahr)) jahre.push(jahr);
-    }
-    
-    const newRow = document.createElement('tr');
-    newRow.dataset.blockId = blockId;
-    newRow.innerHTML = `
-        <td style="padding: 8px; font-weight: 600;">
-            ${icon} ${name}
-            ${blockId === 'personal' ? `
-                <button onclick="window.openPersonalDetail('${blockId}')"
-                        class="btn btn-primary btn-sm"
-                        style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
-                    📊 Details
-                </button>
-            ` : ''}
-        </td>
-        ${jahre.map(jahr => `
-            <td style="padding: 8px; text-align: center;">
-                <input type="text" class="kosten-input" 
-                       id="kosten-${blockId}-${jahr}" 
-                       placeholder="0"
-                       value="${getSavedValue(blockId, jahr) || ''}"
-                       onchange="window.updateKostenSumme(); window.saveKostenValue('${blockId}', '${jahr}', this.value)"
-                       style="width: 70px; padding: 2px; border: 1px solid var(--border); 
-                              border-radius: 2px; text-align: right;">
-            </td>
-        `).join('')}
-        <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${blockId}">0€</td>
-        <td style="padding: 8px; text-align: center;">
-            <button onclick="window.removeKostenblockWithSync('${blockId}')" 
-                    class="btn btn-danger btn-sm"
-                    style="padding: 2px 8px; font-size: 10px;">
-                ✕
-            </button>
-        </td>
-    `;
-    
-    tbody.appendChild(newRow);
-    window.updateKostenSumme();
-}
-
-// Entferne Kostenblock aus Tabelle
-function removeKostenblockFromTable(blockId) {
-    const row = document.querySelector(`[data-block-id="${blockId}"]`);
-    if (row) {
-        row.remove();
-        window.updateKostenSumme();
-    }
-}
-
-// Entferne Kostenblock MIT Synchronisation zur Checkbox
-window.removeKostenblockWithSync = function(blockId) {
-    // Entferne aus Tabelle
-    removeKostenblockFromTable(blockId);
-    
-    // Deaktiviere entsprechende Checkbox
+// Entferne Block und deaktiviere Checkbox
+window.removeAndUncheckKostenblock = function(blockId) {
+    // Deaktiviere Checkbox
     const checkbox = document.getElementById(`block-${blockId}`);
     if (checkbox) {
         checkbox.checked = false;
     }
     
-    // Speichere State
-    saveAktiveKostenblöcke();
+    // Speichere neuen State
+    const aktiveBlöcke = [];
+    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(cb => {
+        aktiveBlöcke.push(cb.dataset.blockId);
+    });
+    
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    if (projekt) {
+        projekt.aktiveKostenblöcke = aktiveBlöcke;
+        state.setProjekt(projektId, projekt);
+        state.saveState();
+    }
+    
+    // Neu rendern
+    renderProjektkosten();
 }
 
 // Speichere aktive Kostenblöcke
