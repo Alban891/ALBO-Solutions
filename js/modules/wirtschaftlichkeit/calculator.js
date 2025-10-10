@@ -193,9 +193,10 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
 /**
  * Calculate sales revenue for all articles in a given year
  * Supports multiple data structures:
- * 1. mengen/preise objects: artikel.mengen[jahr] * artikel.preise[jahr]
- * 2. jahr_X structure: artikel.jahr_1.menge * artikel.jahr_1.preis
- * 3. Direct umsatz field: artikel.umsatz_2025, artikel['jahr_1'].umsatz
+ * 1. volumes/prices: artikel.volumes[2026] * artikel.prices[2026]
+ * 2. mengen/preise objects: artikel.mengen[jahr] * artikel.preise[jahr]
+ * 3. jahr_X structure: artikel.jahr_1.menge * artikel.jahr_1.preis
+ * 4. Direct umsatz field: artikel.umsatz_2025, artikel['jahr_1'].umsatz
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
@@ -205,21 +206,29 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
  */
 function calculateSalesRevenue(artikelListe, jahr) {
     return artikelListe.reduce((sum, artikel) => {
-        // Try multiple approaches to get revenue
+        // PRIMARY: Calculate from volumes * prices (your current structure)
+        const menge = getArtikelValueForYear(artikel, 'menge', jahr);
+        const preis = getArtikelValueForYear(artikel, 'preis', jahr);
         
-        // Approach 1: Direct umsatz field per year (e.g., umsatz_2025)
+        if (menge > 0 && preis > 0) {
+            return sum + (menge * preis);
+        }
+        
+        // FALLBACK 1: Direct umsatz field per year (e.g., umsatz_2025)
         const umsatzField = `umsatz_${jahr}`;
         if (artikel[umsatzField] !== undefined) {
-            return sum + parseFloat(artikel[umsatzField]) || 0;
+            return sum + (parseFloat(artikel[umsatzField]) || 0);
         }
         
-        // Approach 2: jahr_X structure with umsatz
+        // FALLBACK 2: jahr_X structure with umsatz
         const jahrIndex = parseInt(jahr) - 2024;  // 2025 = jahr_1
         if (artikel[`jahr_${jahrIndex}`] && artikel[`jahr_${jahrIndex}`].umsatz !== undefined) {
-            return sum + parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0;
+            return sum + (parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0);
         }
         
-        // Approach
+        return sum;
+    }, 0);
+}
 
 /**
  * Calculate HK components (Material, Labour, Overhead) for all articles
