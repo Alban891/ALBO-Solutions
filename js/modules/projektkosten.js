@@ -45,31 +45,21 @@ export function renderProjektkosten() {
             <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
                 <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">⏱️ Projekt-Timeline</h4>
                 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div>
                         <label style="font-size: 10px; color: var(--gray); text-transform: uppercase;">Projektstart</label>
                         <input type="month" id="projekt-start" value="2024-01" 
-                               onchange="window.updateProjektZeitraum()"
-                               style="width: 100%; padding: 6px; border: 1px solid var(--border); 
-                                      border-radius: 4px; font-size: 12px;">
-                    </div>
-                    
-                    <div>
-                        <label style="font-size: 10px; color: var(--gray); text-transform: uppercase;">
-                            Release (aus Artikel)
-                        </label>
-                        <div style="padding: 6px; background: var(--gray-100); border-radius: 4px; 
-                                    font-size: 12px; font-weight: 600;">
-                            ${artikel[0]?.release_datum || '2025-01'}
-                        </div>
+                            onchange="window.updateProjektZeitraum()"
+                            style="width: 100%; padding: 6px; border: 1px solid var(--border); 
+                                    border-radius: 4px; font-size: 12px;">
                     </div>
                     
                     <div>
                         <label style="font-size: 10px; color: var(--gray); text-transform: uppercase;">Projektende</label>
                         <input type="month" id="projekt-ende" value="2027-12" 
-                               onchange="window.updateProjektZeitraum()"
-                               style="width: 100%; padding: 6px; border: 1px solid var(--border); 
-                                      border-radius: 4px; font-size: 12px;">
+                            onchange="window.updateProjektZeitraum()"
+                            style="width: 100%; padding: 6px; border: 1px solid var(--border); 
+                                    border-radius: 4px; font-size: 12px;">
                     </div>
                 </div>
             </div>
@@ -177,9 +167,20 @@ function generiereKostenEmpfehlung(artikel) {
     return empfehlung;
 }
 
-// Generiere Kostentabelle
+// Generiere Kostentabelle mit dynamischen Jahren
 function generateKostenTabelle(kostenblöcke) {
-    const jahre = ['2024', '2025', '2026', '2027', '2028'];
+    // Hole Start- und Enddatum aus den Input-Feldern
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    // Generiere Jahre-Array basierend auf Start und Ende
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr.toString());
+    }
     
     return `
         <div style="background: white; border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);">
@@ -273,7 +274,18 @@ window.updateProjektZeitraum = function() {
 };
 
 window.updateKostenSumme = function() {
-    const jahre = ['2024', '2025', '2026', '2027', '2028'];
+    // Hole dynamische Jahre aus der Tabelle
+    const headerCells = document.querySelectorAll('thead th');
+    const jahre = [];
+    
+    // Extrahiere Jahre aus den Header-Spalten (skip erste und letzte 2 Spalten)
+    for (let i = 1; i < headerCells.length - 2; i++) {
+        const jahr = headerCells[i].textContent.trim();
+        if (jahr && !isNaN(jahr)) {
+            jahre.push(jahr);
+        }
+    }
+    
     const jahresSummen = {};
     
     jahre.forEach(jahr => {
@@ -424,10 +436,20 @@ window.saveKostenblock = function() {
         return;
     }
     
+    // Hole dynamische Jahre aus der Tabelle
+    const headerCells = document.querySelectorAll('thead th');
+    const jahre = [];
+    
+    for (let i = 1; i < headerCells.length - 2; i++) {
+        const jahr = headerCells[i].textContent.trim();
+        if (jahr && !isNaN(jahr)) {
+            jahre.push(jahr);
+        }
+    }
+    
     const tbody = document.getElementById('kosten-tbody');
     if (tbody) {
         const newBlockId = 'custom-' + Date.now();
-        const jahre = ['2024', '2025', '2026', '2027', '2028'];
         
         const newRow = document.createElement('tr');
         newRow.dataset.blockId = newBlockId;
@@ -460,11 +482,7 @@ window.saveKostenblock = function() {
             </td>
         `;
         
-        // Füge neue Zeile vor der Footer-Zeile ein
-        const tfoot = tbody.parentElement.querySelector('tfoot');
-        if (tfoot) {
-            tbody.appendChild(newRow);
-        }
+        tbody.appendChild(newRow);
     }
     
     closeKostenblockModal();
