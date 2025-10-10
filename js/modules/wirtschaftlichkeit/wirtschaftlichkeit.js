@@ -8,16 +8,16 @@
  * @version 2.0.0
  */
 
-import { state } from '../state.js';
-import * as helpers from '../helpers.js';
-import { calculateProjektWirtschaftlichkeit } from './wirtschaftlichkeit-calculator.js';
-import { analyzeKostenblockKategorisierung } from './wirtschaftlichkeit-ki-integration.js';
+import { state } from '../../state.js';  // Ein Level höher!
+import * as helpers from '../../helpers.js';  // Ein Level höher!
+import { calculateProjektWirtschaftlichkeit } from './calculator.js';  // Kein Prefix!
+import { analyzeKostenblockKategorisierung } from './ki-integration.js';  // Kein Prefix!
 import {
     HK_DEFAULTS,
     OVERHEAD_DEFAULTS,
     UI_LABELS,
     BRANCHEN_BENCHMARKS
-} from './wirtschaftlichkeit-constants.js';
+} from './constants.js';  // Kein Prefix!
 
 // ========================================
 // PROJEKT-WIRTSCHAFTLICHKEIT (Aggregiert)
