@@ -8,15 +8,15 @@
  * @version 2.0.0
  */
 
-import { state } from '../../state.js';  // Ein Level höher!
-import * as helpers from '../../helpers.js';  // Ein Level höher!
+import { state } from '../../state.js';
+import * as helpers from '../../helpers.js';
 import {
     HK_DEFAULTS,
     KOSTEN_MAPPING,
     OVERHEAD_DEFAULTS,
     CALCULATION_CONSTANTS,
     BRANCHEN_BENCHMARKS
-} from './constants.js';  // Kein Prefix!
+} from './constants.js';
 
 /**
  * Main calculation engine for project profitability
@@ -192,6 +192,10 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
 
 /**
  * Calculate sales revenue for all articles in a given year
+ * Supports multiple data structures:
+ * 1. mengen/preise objects: artikel.mengen[jahr] * artikel.preise[jahr]
+ * 2. jahr_X structure: artikel.jahr_1.menge * artikel.jahr_1.preis
+ * 3. Direct umsatz field: artikel.umsatz_2025, artikel['jahr_1'].umsatz
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
@@ -201,11 +205,21 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
  */
 function calculateSalesRevenue(artikelListe, jahr) {
     return artikelListe.reduce((sum, artikel) => {
-        const menge = getArtikelValueForYear(artikel, 'menge', jahr);
-        const preis = getArtikelValueForYear(artikel, 'preis', jahr);
-        return sum + (menge * preis);
-    }, 0);
-}
+        // Try multiple approaches to get revenue
+        
+        // Approach 1: Direct umsatz field per year (e.g., umsatz_2025)
+        const umsatzField = `umsatz_${jahr}`;
+        if (artikel[umsatzField] !== undefined) {
+            return sum + parseFloat(artikel[umsatzField]) || 0;
+        }
+        
+        // Approach 2: jahr_X structure with umsatz
+        const jahrIndex = parseInt(jahr) - 2024;  // 2025 = jahr_1
+        if (artikel[`jahr_${jahrIndex}`] && artikel[`jahr_${jahrIndex}`].umsatz !== undefined) {
+            return sum + parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0;
+        }
+        
+        // Approach
 
 /**
  * Calculate HK components (Material, Labour, Overhead) for all articles
@@ -225,9 +239,13 @@ function calculateHKComponents(artikelListe, jahr) {
         manufacturing_overhead: 0
     };
     
+    const yearNum = parseInt(jahr);
+    
     artikelListe.forEach(artikel => {
         const menge = getArtikelValueForYear(artikel, 'menge', jahr);
-        const hk_pro_stueck = artikel.hk_gesamt || 0;
+        
+        // Support both hk and hk_gesamt
+        const hk_pro_stueck = artikel.hk || artikel.hk_gesamt || 0;
         const total_hk = menge * hk_pro_stueck;
         
         // Get HK-Aufteilung (from article or defaults)
@@ -277,7 +295,10 @@ function getHKAufteilung(artikel) {
 
 /**
  * Get artikel value for a specific year
- * Handles different data structures (mengen/preise objects or jahr_X properties)
+ * Handles different data structures:
+ * - volumes/prices objects (current structure)
+ * - mengen/preise objects (alternative)
+ * - jahr_X properties (legacy)
  * 
  * @param {import('./types').ArtikelExtended} artikel - Article
  * @param {string} field - Field name ('menge' or 'preis')
@@ -287,7 +308,17 @@ function getHKAufteilung(artikel) {
  * @private
  */
 function getArtikelValueForYear(artikel, field, jahr) {
-    // Try mengen/preise object structure first
+    const yearNum = parseInt(jahr);
+    
+    // PRIMARY: volumes/prices structure (your current structure)
+    if (field === 'menge' && artikel.volumes && artikel.volumes[yearNum] !== undefined) {
+        return parseFloat(artikel.volumes[yearNum]) || 0;
+    }
+    if (field === 'preis' && artikel.prices && artikel.prices[yearNum] !== undefined) {
+        return parseFloat(artikel.prices[yearNum]) || 0;
+    }
+    
+    // ALTERNATIVE: mengen/preise structure
     if (artikel.mengen && artikel.mengen[jahr] !== undefined) {
         return parseFloat(artikel.mengen[jahr]) || 0;
     }
@@ -295,8 +326,8 @@ function getArtikelValueForYear(artikel, field, jahr) {
         return parseFloat(artikel.preise[jahr]) || 0;
     }
     
-    // Fallback to jahr_X structure
-    const jahrIndex = parseInt(jahr) - 2023;  // Assuming 2024 = jahr_1
+    // LEGACY: jahr_X structure
+    const jahrIndex = yearNum - 2024;  // 2025 = jahr_1
     const yearData = artikel[`jahr_${jahrIndex}`];
     
     if (yearData && yearData[field] !== undefined) {
@@ -374,22 +405,45 @@ function getProjektkosten(projektId) {
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
  * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @returns {string[]} Array of years (YYYY)
+ * @returns {string[]} Array of years (YYYY) as strings
  * 
  * @private
  */
 function determineYearRange(artikelListe, projektkosten) {
     const jahre = new Set();
     
-    // From articles
+    // From articles - volumes/prices structure (numeric keys)
     artikelListe.forEach(artikel => {
+        if (artikel.volumes) {
+            Object.keys(artikel.volumes).forEach(year => {
+                // Convert numeric keys to string YYYY format
+                const yearStr = year.toString();
+                if (yearStr.length === 4) {
+                    jahre.add(yearStr);
+                }
+            });
+        }
+        if (artikel.prices) {
+            Object.keys(artikel.prices).forEach(year => {
+                const yearStr = year.toString();
+                if (yearStr.length === 4) {
+                    jahre.add(yearStr);
+                }
+            });
+        }
+        
+        // Also check mengen/preise structure (string keys)
         if (artikel.mengen) {
             Object.keys(artikel.mengen).forEach(jahr => jahre.add(jahr));
         }
-        // Also check jahr_X structure
+        if (artikel.preise) {
+            Object.keys(artikel.preise).forEach(jahr => jahre.add(jahr));
+        }
+        
+        // Legacy: jahr_X structure
         for (let i = 1; i <= 10; i++) {
             if (artikel[`jahr_${i}`]) {
-                jahre.add((2023 + i).toString());
+                jahre.add((2024 + i).toString());
             }
         }
     });
@@ -397,7 +451,7 @@ function determineYearRange(artikelListe, projektkosten) {
     // From project costs
     projektkosten.forEach(block => {
         if (block.kostenWerte) {
-            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr));
+            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr.toString()));
         }
     });
     
