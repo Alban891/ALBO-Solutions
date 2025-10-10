@@ -19,8 +19,11 @@ export function renderProjektkosten() {
     const projekt = state.getProjekt(projektId);
     const artikel = state.getArtikelByProjekt(projektId);
     
-    // Generiere KI-Empfehlung basierend auf Artikel-Typen
-    const empfehlung = generiereKostenEmpfehlung(artikel);
+    // Generiere KI-Empfehlung mit verbesserter Analyse
+    const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
+    
+    // Hole gespeicherte aktive Kostenblöcke oder nutze Defaults
+    const aktiveBlöcke = projekt.aktiveKostenblöcke || empfehlung.kostenblöcke.map(b => b.id);
     
     container.innerHTML = `
         <div style="padding: 20px;">
@@ -37,6 +40,11 @@ export function renderProjektkosten() {
                             Empfohlene Vorlaufzeit: <strong>${empfehlung.vorlaufzeit} Monate</strong> | 
                             Nachlaufzeit: <strong>${empfehlung.nachlaufzeit} Monate</strong>
                         </div>
+                        ${empfehlung.kontext ? `
+                            <div style="font-size: 11px; color: var(--gray); margin-top: 4px; font-style: italic;">
+                                Basierend auf: ${empfehlung.kontext}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -80,8 +88,14 @@ export function renderProjektkosten() {
                             <div class="kostenblock-item" style="display: inline-flex; align-items: center; 
                                  padding: 6px 10px; background: white; border: 1px solid var(--primary); 
                                  border-radius: 4px;">
-                                <input type="checkbox" checked id="block-${block.id}" 
-                                       onchange="window.updateKostentabelle()"
+                                <input type="checkbox" 
+                                       ${aktiveBlöcke.includes(block.id) ? 'checked' : ''} 
+                                       id="block-${block.id}" 
+                                       data-block-id="${block.id}"
+                                       data-block-name="${block.name}"
+                                       data-block-icon="${block.icon}"
+                                       data-block-anteil="${block.anteil}"
+                                       onchange="window.toggleKostenblock(this)"
                                        style="margin-right: 6px;">
                                 <label for="block-${block.id}" style="font-size: 11px; cursor: pointer;">
                                     ${block.icon} ${block.name} (${block.anteil}%)
@@ -98,7 +112,7 @@ export function renderProjektkosten() {
 
             <!-- Kostentabelle -->
             <div id="kosten-tabelle-container">
-                ${generateKostenTabelle(empfehlung.kostenblöcke)}
+                ${generateKostenTabelle(empfehlung.kostenblöcke.filter(b => aktiveBlöcke.includes(b.id)))}
             </div>
         </div>
     `;
@@ -107,22 +121,49 @@ export function renderProjektkosten() {
     initializeTimeline(empfehlung);
 }
 
-// Generiere KI-Empfehlung basierend auf Artikel-Typen
-function generiereKostenEmpfehlung(artikel) {
+// Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
+function generiereKostenEmpfehlung(artikel, projekt) {
+    // Analysiere Projekt-Beschreibung für Kontext
+    const beschreibung = (projekt?.beschreibung || '').toLowerCase();
+    const projektName = (projekt?.name || '').toLowerCase();
+    
     // Analysiere Artikel-Typen
-    const hasHardware = artikel.some(a => a.typ === 'Hardware');
-    const hasSoftware = artikel.some(a => a.typ === 'Software');
-    const hasService = artikel.some(a => a.typ === 'Service');
+    const hasHardware = artikel.some(a => a.typ === 'Hardware' || a.kategorie === 'Hardware');
+    const hasSoftware = artikel.some(a => a.typ === 'Software' || a.kategorie === 'Software');
+    const hasService = artikel.some(a => a.typ === 'Service' || a.kategorie === 'Service');
+    const hasAI = beschreibung.includes('ki') || beschreibung.includes('ai') || 
+                  beschreibung.includes('machine learning') || beschreibung.includes('künstliche intelligenz');
+    const hasCloud = beschreibung.includes('cloud') || beschreibung.includes('saas') || 
+                     beschreibung.includes('azure') || beschreibung.includes('aws');
+    const hasSecurity = beschreibung.includes('security') || beschreibung.includes('cyber') || 
+                        beschreibung.includes('sicherheit') || projektName.includes('security');
     
     let empfehlung = {
         titel: 'Standard-Projekt',
         vorlaufzeit: 6,
         nachlaufzeit: 12,
-        kostenblöcke: []
+        kostenblöcke: [],
+        kontext: ''
     };
     
+    // Cyber Security Projekt (aus Beispiel)
+    if (hasSecurity) {
+        empfehlung = {
+            titel: 'Cyber Security Consulting',
+            vorlaufzeit: 3,
+            nachlaufzeit: 24,
+            kostenblöcke: [
+                { id: 'personal', name: 'Personal', icon: '👥', anteil: 60 },
+                { id: 'security-tools', name: 'Security Tools & Lizenzen', icon: '🔒', anteil: 15 },
+                { id: 'audits', name: 'Audits & Pentesting', icon: '🔍', anteil: 10 },
+                { id: 'schulung', name: 'Security Awareness Training', icon: '🎓', anteil: 10 },
+                { id: 'compliance', name: 'Compliance & Zertifizierung', icon: '📋', anteil: 5 }
+            ],
+            kontext: 'Security-Fokus mit Beratungskomponenten erkannt'
+        };
+    }
     // Hardware-Projekt
-    if (hasHardware) {
+    else if (hasHardware) {
         empfehlung = {
             titel: 'Hardware-Entwicklung',
             vorlaufzeit: 18,
@@ -132,13 +173,29 @@ function generiereKostenEmpfehlung(artikel) {
                 { id: 'material', name: 'Material & Prototypen', icon: '🔧', anteil: 30 },
                 { id: 'werkzeuge', name: 'Werkzeuge & Formen', icon: '⚙️', anteil: 20 },
                 { id: 'zertifizierung', name: 'Zertifizierung', icon: '📋', anteil: 10 }
-            ]
+            ],
+            kontext: `${artikel.filter(a => a.typ === 'Hardware').length} Hardware-Artikel identifiziert`
+        };
+    }
+    // AI/ML Projekt
+    else if (hasAI) {
+        empfehlung = {
+            titel: 'AI/ML-Entwicklung',
+            vorlaufzeit: 9,
+            nachlaufzeit: 18,
+            kostenblöcke: [
+                { id: 'personal', name: 'Data Scientists & Engineers', icon: '👥', anteil: 50 },
+                { id: 'compute', name: 'GPU/Compute Resources', icon: '🖥️', anteil: 25 },
+                { id: 'daten', name: 'Daten-Beschaffung & Labeling', icon: '📊', anteil: 15 },
+                { id: 'tools', name: 'ML-Tools & Frameworks', icon: '🤖', anteil: 10 }
+            ],
+            kontext: 'KI/ML-Komponenten in Projektbeschreibung gefunden'
         };
     }
     // Software-Projekt
-    else if (hasSoftware) {
+    else if (hasSoftware || hasCloud) {
         empfehlung = {
-            titel: 'Software-Entwicklung', 
+            titel: hasCloud ? 'Cloud Software-Entwicklung' : 'Software-Entwicklung', 
             vorlaufzeit: 6,
             nachlaufzeit: 24,
             kostenblöcke: [
@@ -146,7 +203,8 @@ function generiereKostenEmpfehlung(artikel) {
                 { id: 'cloud', name: 'Cloud & Infrastructure', icon: '☁️', anteil: 20 },
                 { id: 'lizenzen', name: 'Software-Lizenzen', icon: '💿', anteil: 15 },
                 { id: 'testing', name: 'Testing & QA', icon: '🧪', anteil: 5 }
-            ]
+            ],
+            kontext: hasCloud ? 'Cloud-basierte Lösung erkannt' : 'Software-Entwicklungsprojekt'
         };
     }
     // Service-Projekt
@@ -160,7 +218,8 @@ function generiereKostenEmpfehlung(artikel) {
                 { id: 'schulung', name: 'Schulungen', icon: '🎓', anteil: 15 },
                 { id: 'reise', name: 'Reisekosten', icon: '✈️', anteil: 10 },
                 { id: 'material', name: 'Unterlagen', icon: '📚', anteil: 5 }
-            ]
+            ],
+            kontext: 'Dienstleistungsprojekt identifiziert'
         };
     }
     
@@ -339,6 +398,126 @@ window.removeKostenblock = function(blockId) {
         window.updateKostenSumme();
     }
 };
+
+// Toggle Kostenblock ein/aus
+window.toggleKostenblock = function(checkbox) {
+    const blockId = checkbox.dataset.blockId;
+    const blockName = checkbox.dataset.blockName;
+    const blockIcon = checkbox.dataset.blockIcon;
+    const blockAnteil = checkbox.dataset.blockAnteil;
+    
+    if (checkbox.checked) {
+        // Füge Block zur Tabelle hinzu
+        addKostenblockToTable(blockId, blockName, blockIcon, blockAnteil);
+    } else {
+        // Entferne Block aus Tabelle
+        removeKostenblockFromTable(blockId);
+    }
+    
+    // Speichere aktive Blöcke im Projekt-State
+    saveAktiveKostenblöcke();
+}
+
+// Füge Kostenblock zur Tabelle hinzu
+function addKostenblockToTable(blockId, name, icon, anteil) {
+    const tbody = document.getElementById('kosten-tbody');
+    if (!tbody) return;
+    
+    // Prüfe ob Block bereits existiert
+    if (document.querySelector(`[data-block-id="${blockId}"]`)) return;
+    
+    // Hole Jahre aus Tabellen-Header
+    const headerCells = document.querySelectorAll('thead th');
+    const jahre = [];
+    for (let i = 1; i < headerCells.length - 2; i++) {
+        const jahr = headerCells[i].textContent.trim();
+        if (jahr && !isNaN(jahr)) jahre.push(jahr);
+    }
+    
+    const newRow = document.createElement('tr');
+    newRow.dataset.blockId = blockId;
+    newRow.innerHTML = `
+        <td style="padding: 8px; font-weight: 600;">
+            ${icon} ${name}
+            ${blockId === 'personal' ? `
+                <button onclick="window.openPersonalDetail('${blockId}')"
+                        class="btn btn-primary btn-sm"
+                        style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
+                    📊 Details
+                </button>
+            ` : ''}
+        </td>
+        ${jahre.map(jahr => `
+            <td style="padding: 8px; text-align: center;">
+                <input type="text" class="kosten-input" 
+                       id="kosten-${blockId}-${jahr}" 
+                       placeholder="0"
+                       value="${getSavedValue(blockId, jahr) || ''}"
+                       onchange="window.updateKostenSumme(); window.saveKostenValue('${blockId}', '${jahr}', this.value)"
+                       style="width: 70px; padding: 2px; border: 1px solid var(--border); 
+                              border-radius: 2px; text-align: right;">
+            </td>
+        `).join('')}
+        <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${blockId}">0€</td>
+        <td style="padding: 8px; text-align: center;">
+            <!-- Kein Löschen-Button für vordefinierte Blöcke -->
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    window.updateKostenSumme();
+}
+
+// Entferne Kostenblock aus Tabelle
+function removeKostenblockFromTable(blockId) {
+    const row = document.querySelector(`[data-block-id="${blockId}"]`);
+    if (row) {
+        row.remove();
+        window.updateKostenSumme();
+    }
+}
+
+// Speichere aktive Kostenblöcke
+function saveAktiveKostenblöcke() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) return;
+    
+    const aktiveBlöcke = [];
+    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(cb => {
+        aktiveBlöcke.push(cb.dataset.blockId);
+    });
+    
+    projekt.aktiveKostenblöcke = aktiveBlöcke;
+    state.setProjekt(projektId, projekt);
+    state.saveState();
+}
+
+// Speichere Kostenwerte
+window.saveKostenValue = function(blockId, jahr, value) {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) return;
+    
+    if (!projekt.kostenWerte) projekt.kostenWerte = {};
+    if (!projekt.kostenWerte[blockId]) projekt.kostenWerte[blockId] = {};
+    
+    projekt.kostenWerte[blockId][jahr] = parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    
+    state.setProjekt(projektId, projekt);
+    state.saveState();
+}
+
+// Hole gespeicherte Werte
+function getSavedValue(blockId, jahr) {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    
+    if (projekt?.kostenWerte?.[blockId]?.[jahr]) {
+        return helpers.formatCurrency(projekt.kostenWerte[blockId][jahr]);
+    }
+    return '';
+}
 
 window.openKostenblockModal = function() {
     const modalHTML = `
