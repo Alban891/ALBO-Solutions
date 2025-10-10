@@ -844,39 +844,39 @@
                                     <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">
                                         📅 Release / Startdatum
                                     </label>
-                                    <input type="month" id="release-datum" readonly
+                                    <input type="month" id="release-datum" 
                                         style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 13px;">
                                 </div>
                                 
                                 <div>
-                                <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                                    Zeithorizont
-                                </label>
-                                <div style="display: flex; gap: 8px;">
-                                    <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn" 
-                                            style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                                                border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
-                                                font-weight: 500; color: #374151;">
-                                        3 Jahre
-                                    </button>
-                                    <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active"
-                                            style="flex: 1; padding: 10px 20px; border: 2px solid #3b82f6; background: #3b82f6; 
-                                                color: white; border-radius: 6px; font-size: 13px; cursor: pointer; 
-                                                font-weight: 600;">
-                                        5 Jahre
-                                    </button>
-                                    <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn"
-                                            style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                                                border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
-                                                font-weight: 500; color: #374151;">
-                                        7 Jahre
-                                    </button>
+                                    <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">
+                                        Zeithorizont
+                                    </label>
+                                    <div class="zeitraum-selector" style="display: flex; gap: 8px;">
+                                        <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn"
+                                                style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
+                                                    border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
+                                                    font-weight: 500; color: #374151;">
+                                            3 Jahre
+                                        </button>
+                                        <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active"
+                                                style="flex: 1; padding: 10px 20px; border: 2px solid #3b82f6; background: #3b82f6; 
+                                                    color: white; border-radius: 6px; font-size: 13px; cursor: pointer; 
+                                                    font-weight: 600;">
+                                            5 Jahre
+                                        </button>
+                                        <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn"
+                                                style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
+                                                    border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
+                                                    font-weight: 500; color: #374151;">
+                                            7 Jahre
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                         
-                        <!-- Startwerte -->
+                        <!-- Startwerte mit Beispielwerten -->
                         <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
                             <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 12px;">
                                 📊 Startwerte (Jahr 1)
@@ -891,9 +891,11 @@
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
                                         MENGE (Stück)
                                     </label>
-                                    <input type="text" id="start-menge" value="1.000" 
+                                    <input type="text" id="start-menge" 
                                         placeholder="z.B. 1.000"
-                                        onchange="formatNumberInput(this);" onblur="formatNumberInput(this)"
+                                        value="1.000"
+                                        onchange="formatNumberInput(this);" 
+                                        onblur="formatNumberInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
                                 </div>
@@ -901,9 +903,11 @@
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
                                         PREIS (€/Stück)
                                     </label>
-                                    <input type="text" id="start-preis" value="50,00"
+                                    <input type="text" id="start-preis"
                                         placeholder="z.B. 50,00"
-                                        onchange="formatDecimalInput(this);" onblur="formatDecimalInput(this)"
+                                        value="50,00"
+                                        onchange="formatDecimalInput(this);" 
+                                        onblur="formatDecimalInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
                                 </div>
@@ -911,13 +915,16 @@
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
                                         HK (€/Stück)
                                     </label>
-                                    <input type="text" id="start-hk" value="20,00"
+                                    <input type="text" id="start-hk"
                                         placeholder="z.B. 20,00"
-                                        onchange="formatDecimalInput(this);" onblur="formatDecimalInput(this)"
+                                        value="20,00"
+                                        onchange="formatDecimalInput(this);" 
+                                        onblur="formatDecimalInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
                                 </div>
                             </div>
+                        </div>
 
                         <!-- Entwicklungsmodelle -->
                         <div style="margin-bottom: 16px;">
