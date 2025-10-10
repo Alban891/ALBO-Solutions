@@ -391,6 +391,34 @@ window.updateKostenSumme = function() {
     if (totalCell) totalCell.textContent = helpers.formatCurrency(total) + '€';
 };
 
+// Hilfsfunktion für dynamische Jahre-Header
+function generateJahreHeaders() {
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    let headers = '';
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        headers += `<th style="padding: 10px; text-align: center;">${jahr}<br><span style="font-size: 10px; font-weight: normal;">FTE</span></th>`;
+    }
+    return headers;
+}
+
+// Hilfsfunktion für dynamische Footer-Zellen
+function generateJahreFooterCells() {
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    let cells = '';
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        cells += `<td style="padding: 10px; text-align: center;" id="personal-sum-${jahr}">0€</td>`;
+    }
+    return cells;
+}
+
 window.openPersonalDetail = function(blockId) {
     // Öffne Personal-Detail Sidebar (wie in deinem alten Code)
     alert('Personal-Detailplanung kommt als nächstes!');
@@ -682,6 +710,33 @@ window.openPersonalDetail = function(blockId) {
                 </div>
             </div>
             
+            <!-- Kostenfaktoren Toggle -->
+            <div style="padding: 16px; background: #f8fafc; border-bottom: 1px solid var(--border);">
+                <div style="font-size: 12px; font-weight: 600; margin-bottom: 12px;">
+                    💰 Kostenfaktoren einbeziehen:
+                </div>
+                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                        <input type="checkbox" id="toggle-nebenkosten" checked 
+                               onchange="window.updatePersonalBerechnung()">
+                        <span>Nebenkosten (+30%)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                        <input type="checkbox" id="toggle-gehaltssteigerung" checked 
+                               onchange="window.updatePersonalBerechnung()">
+                        <span>Gehaltssteigerung (2,5% p.a.)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
+                        <input type="checkbox" id="toggle-fluktuation" 
+                               onchange="window.updatePersonalBerechnung()">
+                        <span>Fluktuationsreserve (+10%)</span>
+                    </label>
+                </div>
+                <div style="font-size: 10px; color: var(--gray); margin-top: 8px; font-style: italic;">
+                    Nebenkosten = AG-Anteil SV, Arbeitsplatz, IT-Ausstattung, Benefits
+                </div>
+            </div>
+            
             <!-- KI-Hinweise -->
             <div id="ki-hints" style="padding: 16px; background: #fef3c7; border-left: 4px solid var(--warning); 
                                        margin: 16px;">
@@ -701,31 +756,35 @@ window.openPersonalDetail = function(blockId) {
                     <thead>
                         <tr style="background: #f8fafc; border-bottom: 2px solid var(--border);">
                             <th style="padding: 10px; text-align: left;">Position</th>
-                            <th style="padding: 10px; text-align: center;">Anzahl</th>
-                            <th style="padding: 10px; text-align: center;">Gehalt/Jahr</th>
-                            <th style="padding: 10px; text-align: center;">2024</th>
-                            <th style="padding: 10px; text-align: center;">2025</th>
-                            <th style="padding: 10px; text-align: center;">2026</th>
-                            <th style="padding: 10px; text-align: center;">2027</th>
+                            <th style="padding: 10px; text-align: center;">Basis-Gehalt<br><span style="font-size: 10px; font-weight: normal;">(Brutto p.a.)</span></th>
+                            <th style="padding: 10px; text-align: center;">Vollkosten<br><span style="font-size: 10px; font-weight: normal;">(inkl. NK)</span></th>
+                            ${generateJahreHeaders()}
                             <th style="padding: 10px; text-align: center;">Gesamt</th>
                             <th style="padding: 10px; text-align: center;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="personal-detail-tbody">
-                        ${generatePersonalPositions()}
+                        ${generatePersonalPositionsVollkosten()}
                     </tbody>
                     <tfoot>
                         <tr style="background: var(--primary); color: white; font-weight: bold;">
                             <td style="padding: 10px;" colspan="3">SUMME</td>
-                            <td style="padding: 10px; text-align: center;" id="personal-sum-2024">0€</td>
-                            <td style="padding: 10px; text-align: center;" id="personal-sum-2025">0€</td>
-                            <td style="padding: 10px; text-align: center;" id="personal-sum-2026">0€</td>
-                            <td style="padding: 10px; text-align: center;" id="personal-sum-2027">0€</td>
+                            ${generateJahreFooterCells()}
                             <td style="padding: 10px; text-align: center;" id="personal-sum-total">0€</td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
+                
+                <!-- Berechnungshinweis -->
+                <div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 6px;">
+                    <div style="font-size: 10px; color: var(--gray);">
+                        <strong>Berechnungsformel:</strong><br>
+                        <span id="formel-anzeige">
+                            Kosten = Basis-Gehalt × 1,3 (NK) × FTE × Steigerungsfaktor
+                        </span>
+                    </div>
+                </div>
                 
                 <button onclick="window.addPersonalPosition()" 
                         class="btn btn-primary btn-sm"
@@ -777,8 +836,8 @@ window.openPersonalDetail = function(blockId) {
     }, 10);
     
     // Initial-Berechnung
-    window.calculatePersonalSums();
-    window.checkPersonalPlausibility();
+    window.updatePersonalBerechnung();
+    window.checkPersonalPlausibilityVollkosten();
 };
 
 // Generiere Standard-Positionen basierend auf Projekt-Typ
@@ -852,6 +911,350 @@ function generatePersonalPositions() {
     `).join('');
 }
 
+// Generiere Standard-Positionen mit Vollkosten und dynamischen Jahren
+function generatePersonalPositionsVollkosten() {
+    const artikel = state.getArtikelByProjekt(window.cfoDashboard.currentProjekt);
+    const hasSoftware = artikel.some(a => a.typ === 'Software');
+    const hasHardware = artikel.some(a => a.typ === 'Hardware');
+    const hasService = artikel.some(a => a.typ === 'Service');
+    
+    // Hole Projekt-Zeitraum dynamisch
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    // Generiere Jahre-Array
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr);
+    }
+    
+    const projektDauer = jahre.length;
+    let positions = [];
+    
+    // Software-Projekt Positionen
+    if (hasSoftware) {
+        positions = [
+            { 
+                id: 'senior-dev', 
+                name: 'Senior Developer', 
+                gehalt: 120000,
+                ftePattern: generateFTEPattern('entwicklung', projektDauer, [0.5, 2.0, 3.0, 2.0, 1.0, 0.5])
+            },
+            { 
+                id: 'junior-dev', 
+                name: 'Junior Developer', 
+                gehalt: 70000,
+                ftePattern: generateFTEPattern('entwicklung', projektDauer, [1.0, 2.0, 2.0, 1.5, 0.5, 0])
+            },
+            { 
+                id: 'pm', 
+                name: 'Projektleiter', 
+                gehalt: 130000,
+                ftePattern: generateFTEPattern('management', projektDauer, [0.5, 1.0, 1.0, 1.0, 0.5, 0.5])
+            },
+            { 
+                id: 'qa', 
+                name: 'QA Engineer', 
+                gehalt: 85000,
+                ftePattern: generateFTEPattern('testing', projektDauer, [0, 1.0, 2.0, 2.0, 1.0, 0.5])
+            },
+            { 
+                id: 'devops', 
+                name: 'DevOps Engineer', 
+                gehalt: 110000,
+                ftePattern: generateFTEPattern('infrastruktur', projektDauer, [0.5, 1.0, 1.5, 1.0, 1.0, 0.5])
+            }
+        ];
+    } 
+    // Hardware-Projekt Positionen
+    else if (hasHardware) {
+        positions = [
+            { 
+                id: 'hw-engineer', 
+                name: 'Hardware Engineer', 
+                gehalt: 110000,
+                ftePattern: generateFTEPattern('entwicklung', projektDauer, [1.0, 2.0, 2.0, 1.5, 1.0, 0.5])
+            },
+            { 
+                id: 'mech-engineer', 
+                name: 'Mechanical Engineer', 
+                gehalt: 95000,
+                ftePattern: generateFTEPattern('entwicklung', projektDauer, [0.5, 2.0, 2.0, 1.0, 0.5, 0])
+            },
+            { 
+                id: 'pm', 
+                name: 'Projektleiter', 
+                gehalt: 130000,
+                ftePattern: generateFTEPattern('management', projektDauer, [0.5, 1.0, 1.0, 1.0, 0.5, 0.5])
+            },
+            { 
+                id: 'technician', 
+                name: 'Techniker', 
+                gehalt: 65000,
+                ftePattern: generateFTEPattern('produktion', projektDauer, [1.0, 2.0, 3.0, 2.0, 1.0, 0.5])
+            },
+            { 
+                id: 'quality', 
+                name: 'Qualitätsingenieur', 
+                gehalt: 90000,
+                ftePattern: generateFTEPattern('testing', projektDauer, [0, 0.5, 1.0, 1.5, 1.0, 0.5])
+            }
+        ];
+    } 
+    // Service/Consulting Projekt
+    else {
+        positions = [
+            { 
+                id: 'consultant', 
+                name: 'Senior Consultant', 
+                gehalt: 140000,
+                ftePattern: generateFTEPattern('beratung', projektDauer, [1.0, 2.0, 2.0, 1.0, 0.5, 0])
+            },
+            { 
+                id: 'analyst', 
+                name: 'Business Analyst', 
+                gehalt: 85000,
+                ftePattern: generateFTEPattern('analyse', projektDauer, [1.0, 2.0, 3.0, 2.0, 1.0, 0.5])
+            },
+            { 
+                id: 'pm', 
+                name: 'Projektleiter', 
+                gehalt: 130000,
+                ftePattern: generateFTEPattern('management', projektDauer, [0.5, 1.0, 1.0, 0.5, 0.5, 0])
+            },
+            { 
+                id: 'trainer', 
+                name: 'Trainer/Coach', 
+                gehalt: 95000,
+                ftePattern: generateFTEPattern('schulung', projektDauer, [0, 0.5, 1.0, 1.5, 1.0, 0.5])
+            }
+        ];
+    }
+    
+    // Generiere HTML für jede Position
+    return positions.map(pos => {
+        // Stelle sicher dass FTE-Pattern zur Projektlänge passt
+        let fteValues = adjustFTEToProjectLength(pos.ftePattern, projektDauer);
+        
+        return `
+            <tr data-position-id="${pos.id}">
+                <td style="padding: 8px;">
+                    <input type="text" value="${pos.name}" class="position-name"
+                           style="width: 100%; padding: 4px; border: 1px solid var(--border); 
+                                  border-radius: 3px; font-size: 11px;">
+                </td>
+                <td style="padding: 8px; text-align: right;">
+                    <input type="number" value="${pos.gehalt}" step="1000" class="position-gehalt"
+                           onchange="window.updatePersonalBerechnung();"
+                           style="width: 90px; padding: 4px; border: 1px solid var(--border); 
+                                  border-radius: 3px; text-align: right;">€
+                </td>
+                <td style="padding: 8px; text-align: right; background: #f8fafc; font-weight: 600;" 
+                    class="position-vollkosten">
+                    ${helpers.formatCurrency(pos.gehalt * 1.3)}€
+                </td>
+                ${jahre.map((jahr, index) => `
+                    <td style="padding: 8px;">
+                        <input type="number" min="0" max="10" step="0.1" 
+                               class="position-fte-${jahr}"
+                               value="${fteValues[index]}"
+                               onchange="window.updatePersonalBerechnung();"
+                               style="width: 50px; padding: 4px; border: 1px solid var(--border); 
+                                      border-radius: 3px; text-align: center; font-size: 11px;">
+                    </td>
+                `).join('')}
+                <td style="padding: 8px; text-align: right; font-weight: bold;" 
+                    class="position-summe">0€</td>
+                <td style="padding: 8px; text-align: center;">
+                    <button onclick="window.removePersonalPosition('${pos.id}')"
+                            class="btn btn-danger btn-sm"
+                            style="padding: 2px 6px; font-size: 10px;">✕</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Hilfsfunktion: Generiere FTE-Pattern basierend auf Rolle und Projektdauer
+function generateFTEPattern(rolle, projektDauer, idealPattern) {
+    // idealPattern ist das optimale 6-Jahres-Muster
+    
+    if (projektDauer <= 2) {
+        // Sehr kurzes Projekt: Komprimiere auf Start und Ende
+        switch(rolle) {
+            case 'entwicklung':
+                return [1.5, 1.0];
+            case 'management':
+                return [1.0, 0.5];
+            case 'testing':
+                return [0.5, 1.0];
+            case 'infrastruktur':
+                return [0.5, 0.5];
+            case 'beratung':
+                return [2.0, 1.0];
+            case 'analyse':
+                return [1.5, 1.0];
+            case 'produktion':
+                return [1.0, 2.0];
+            case 'schulung':
+                return [0, 1.0];
+            default:
+                return [1.0, 0.5];
+        }
+    } else if (projektDauer === 3) {
+        // Kurzes Projekt: Konzept, Umsetzung, Abschluss
+        switch(rolle) {
+            case 'entwicklung':
+                return [1.0, 2.5, 1.0];
+            case 'management':
+                return [0.5, 1.0, 0.5];
+            case 'testing':
+                return [0, 1.5, 1.0];
+            case 'infrastruktur':
+                return [0.5, 1.0, 0.5];
+            case 'beratung':
+                return [1.0, 2.0, 0.5];
+            case 'analyse':
+                return [1.5, 2.0, 1.0];
+            case 'produktion':
+                return [0.5, 2.0, 1.5];
+            case 'schulung':
+                return [0, 1.0, 0.5];
+            default:
+                return [0.5, 1.0, 0.5];
+        }
+    } else if (projektDauer === 4) {
+        // Standard-Projekt
+        return idealPattern.slice(0, 4);
+    } else {
+        // Längeres Projekt: Nutze ideal Pattern oder erweitere
+        if (projektDauer <= 6) {
+            return idealPattern.slice(0, projektDauer);
+        } else {
+            // Für sehr lange Projekte: Füge Maintenance-Phase hinzu
+            let extended = [...idealPattern];
+            while (extended.length < projektDauer) {
+                extended.push(0.25); // Minimal-Besetzung für Wartung
+            }
+            return extended;
+        }
+    }
+}
+
+// Hilfsfunktion: Passe FTE-Array an Projektlänge an
+function adjustFTEToProjectLength(ftePattern, targetLength) {
+    if (!ftePattern || ftePattern.length === 0) {
+        // Fallback: Erstelle Array mit 0.5 FTE
+        return Array(targetLength).fill(0.5);
+    }
+    
+    if (ftePattern.length === targetLength) {
+        return ftePattern;
+    } else if (ftePattern.length > targetLength) {
+        // Kürze das Pattern
+        return ftePattern.slice(0, targetLength);
+    } else {
+        // Erweitere das Pattern mit 0
+        let extended = [...ftePattern];
+        while (extended.length < targetLength) {
+            extended.push(0);
+        }
+        return extended;
+    }
+}
+
+// Update Personal-Berechnung mit Vollkosten
+window.updatePersonalBerechnung = function() {
+    const tbody = document.getElementById('personal-detail-tbody');
+    if (!tbody) return;
+    
+    // Hole Toggle-Zustände
+    const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+    const mitGehaltssteigerung = document.getElementById('toggle-gehaltssteigerung')?.checked;
+    const mitFluktuation = document.getElementById('toggle-fluktuation')?.checked;
+    
+    // Berechne Faktoren
+    const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
+    const fluktuationsFaktor = mitFluktuation ? 1.1 : 1.0;
+    
+    // Hole dynamische Jahre
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr.toString());
+    }
+    const jahresSummen = {};
+    jahre.forEach(jahr => jahresSummen[jahr] = 0);
+    
+    let gesamtSumme = 0;
+    
+    // Update Formel-Anzeige
+    const formelAnzeige = document.getElementById('formel-anzeige');
+    if (formelAnzeige) {
+        let formel = 'Kosten = Basis-Gehalt';
+        if (mitNebenkosten) formel += ' × 1,3 (NK)';
+        formel += ' × FTE';
+        if (mitGehaltssteigerung) formel += ' × Steigerung';
+        if (mitFluktuation) formel += ' × 1,1 (Flukt.)';
+        formelAnzeige.textContent = formel;
+    }
+    
+    // Durchlaufe alle Positionen
+    tbody.querySelectorAll('tr').forEach(row => {
+        const gehalt = parseFloat(row.querySelector('.position-gehalt')?.value) || 0;
+        
+        // Update Vollkosten-Anzeige
+        const vollkostenCell = row.querySelector('.position-vollkosten');
+        if (vollkostenCell) {
+            vollkostenCell.textContent = helpers.formatCurrency(gehalt * nkFaktor) + '€';
+        }
+        
+        let positionsSumme = 0;
+        
+        // Berechne für jedes Jahr
+        jahre.forEach((jahr, index) => {
+            const fteInput = row.querySelector(`.position-fte-${jahr}`);
+            const fte = parseFloat(fteInput?.value) || 0;
+            
+            // Gehaltssteigerung: 2,5% pro Jahr kumulativ
+            const steigerungsFaktor = mitGehaltssteigerung ? Math.pow(1.025, index) : 1.0;
+            
+            const jahresKosten = gehalt * nkFaktor * fte * steigerungsFaktor * fluktuationsFaktor;
+            jahresSummen[jahr] += jahresKosten;
+            positionsSumme += jahresKosten;
+        });
+        
+        // Update Positionssumme
+        const sumCell = row.querySelector('.position-summe');
+        if (sumCell) {
+            sumCell.textContent = helpers.formatCurrency(positionsSumme) + '€';
+        }
+        
+        gesamtSumme += positionsSumme;
+    });
+    
+    // Update Footer-Summen
+    jahre.forEach(jahr => {
+        const cell = document.getElementById(`personal-sum-${jahr}`);
+        if (cell) {
+            cell.textContent = helpers.formatCurrency(jahresSummen[jahr]) + '€';
+        }
+    });
+    
+    const totalCell = document.getElementById('personal-sum-total');
+    if (totalCell) {
+        totalCell.textContent = helpers.formatCurrency(gesamtSumme) + '€';
+    }
+    
+    // Update KI-Analyse
+    window.checkPersonalPlausibilityVollkosten();
+};
+
 // Berechne Personal-Summen
 window.calculatePersonalSums = function() {
     const tbody = document.getElementById('personal-detail-tbody');
@@ -902,15 +1305,36 @@ window.calculatePersonalSums = function() {
     }
 };
 
-// KI-Plausibilitätsprüfung
-window.checkPersonalPlausibility = function() {
+// Erweiterte KI-Plausibilitätsprüfung mit Vollkosten
+window.checkPersonalPlausibilityVollkosten = function() {
     const feedback = document.getElementById('ki-feedback');
     if (!feedback) return;
     
     const warnings = [];
     const tbody = document.getElementById('personal-detail-tbody');
     
-    // Prüfe Gehälter
+    // Prüfe FTE-Verteilung über Jahre
+    const fte2024Total = [...tbody.querySelectorAll('.position-fte-2024')]
+        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    const fte2025Total = [...tbody.querySelectorAll('.position-fte-2025')]
+        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    const fte2026Total = [...tbody.querySelectorAll('.position-fte-2026')]
+        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    const fte2027Total = [...tbody.querySelectorAll('.position-fte-2027')]
+        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    
+    // Projektphasen-Analyse
+    if (fte2024Total < 2) {
+        warnings.push(`⚠️ 2024: Nur ${fte2024Total.toFixed(1)} FTE - Zu wenig für Projektstart?`);
+    }
+    if (fte2026Total > fte2025Total * 1.5) {
+        warnings.push(`📈 Starker Anstieg 2025→2026 - Recruiting rechtzeitig planen!`);
+    }
+    if (fte2027Total > fte2026Total * 0.5) {
+        warnings.push(`💡 2027: Hohe Nachbetreuung - Support-Vertrag prüfen`);
+    }
+    
+    // Gehälter-Plausibilität
     tbody.querySelectorAll('tr').forEach(row => {
         const nameInput = row.querySelector('.position-name');
         const gehaltInput = row.querySelector('.position-gehalt');
@@ -918,26 +1342,18 @@ window.checkPersonalPlausibility = function() {
         const position = nameInput?.value.toLowerCase() || '';
         const gehalt = parseFloat(gehaltInput?.value) || 0;
         
-        // Plausibilitätsprüfungen
-        if (position.includes('praktikant') && gehalt > 30000) {
-            warnings.push(`⚠️ Praktikanten-Gehalt (${gehalt}€) ungewöhnlich hoch`);
+        if (position.includes('senior') && gehalt < 100000) {
+            warnings.push(`⚠️ ${nameInput.value}: Gehalt unter Markt (< 100k€)`);
         }
-        if (position.includes('senior') && gehalt < 80000) {
-            warnings.push(`⚠️ Senior-Position unter Marktdurchschnitt`);
-        }
-        if (position.includes('junior') && gehalt > 100000) {
-            warnings.push(`⚠️ Junior-Gehalt über Marktdurchschnitt`);
+        if (position.includes('junior') && gehalt > 80000) {
+            warnings.push(`💰 ${nameInput.value}: Gehalt über Junior-Niveau`);
         }
     });
     
-    // Team-Zusammensetzung prüfen
-    const devCount = [...tbody.querySelectorAll('.position-name')]
-        .filter(i => i.value.toLowerCase().includes('developer')).length;
-    const qaCount = [...tbody.querySelectorAll('.position-name')]
-        .filter(i => i.value.toLowerCase().includes('qa') || i.value.toLowerCase().includes('test')).length;
-    
-    if (devCount > 3 && qaCount === 0) {
-        warnings.push(`💡 Empfehlung: QA-Ressourcen für ${devCount} Entwickler fehlen`);
+    // Toggle-Warnungen
+    const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+    if (!mitNebenkosten) {
+        warnings.push(`🚨 Nebenkosten deaktiviert - Kalkulation ~30% zu niedrig!`);
     }
     
     // Update KI-Feedback
@@ -945,7 +1361,8 @@ window.checkPersonalPlausibility = function() {
         feedback.innerHTML = warnings.join('<br>');
         feedback.parentElement.style.background = '#fef3c7';
     } else {
-        feedback.innerHTML = '✅ Teamzusammensetzung sieht plausibel aus';
+        feedback.innerHTML = '✅ Teamplanung sieht plausibel aus<br>' +
+                             `📊 Durchschnitt: ${((fte2024Total + fte2025Total + fte2026Total + fte2027Total) / 4).toFixed(1)} FTE/Jahr`;
         feedback.parentElement.style.background = '#d1fae5';
     }
 };
