@@ -562,7 +562,7 @@ export async function loadKostenblöcke(projektId) {
   if (!client) return [];
 
   try {
-    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    const dbId = projektId.replace('projekt-db-', ''); // UUID als String
 
     const { data, error } = await client
       .from('albo_kostenblöcke')
@@ -599,13 +599,8 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
       return false;
     }
 
-    const dbId = parseInt(projektId.replace('projekt-db-', ''));
-    
-    // Validierung: Prüfe ob dbId eine gültige Zahl ist
-    if (isNaN(dbId) || dbId <= 0) {
-      console.error('❌ Ungültige dbId nach Parsing:', dbId, 'von projektId:', projektId);
-      return false;
-    }
+    // Extrahiere UUID (nicht als INT parsen!)
+    const dbId = projektId.replace('projekt-db-', '');
     
     console.log('💾 Speichere Kostenblöcke:', {
       projektId,
@@ -626,7 +621,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
     // Insert neue Kostenblöcke
     const blocksToInsert = kostenblöcke.map(block => ({
-      project_id: dbId,
+      project_id: dbId, // UUID als String
       block_id: block.id,
       block_name: block.name,
       block_icon: block.icon || '📦',
@@ -672,7 +667,7 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
   if (!client) return false;
 
   try {
-    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    const dbId = projektId.replace('projekt-db-', ''); // UUID als String
     
     console.log('💾 Update Kostenblock:', {
       projektId,
@@ -862,7 +857,7 @@ export async function deleteKostenblock(projektId, blockId) {
   if (!client) return false;
 
   try {
-    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
+    const dbId = projektId.replace('projekt-db-', ''); // UUID als String
 
     const { error } = await client
       .from('albo_kostenblöcke')
@@ -883,8 +878,109 @@ export async function deleteKostenblock(projektId, blockId) {
 }
 
 // ==========================================
-// BATCH OPERATIONS
+// PERSONAL POSITIONEN
 // ==========================================
+
+/**
+ * Load Personal-Positionen für ein Projekt
+ * @param {string} projektId - Project ID
+ * @returns {Promise<Array>} Array of Personal-Positionen
+ */
+export async function loadPersonalPositionen(projektId) {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const dbId = projektId.replace('projekt-db-', ''); // UUID als String
+
+    const { data, error } = await client
+      .from('albo_personal_positionen')
+      .select('*')
+      .eq('project_id', dbId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    console.log(`✅ Loaded ${data.length} Personal-Positionen for project ${projektId}`);
+    return data;
+
+  } catch (error) {
+    console.error('❌ Failed to load Personal-Positionen:', error);
+    state.setError('loadPersonalPositionen', error);
+    return [];
+  }
+}
+
+/**
+ * Save/Update Personal-Positionen für ein Projekt
+ * @param {string} projektId - Project ID
+ * @param {Array} positionen - Array of Personal-Positionen
+ * @returns {Promise<boolean>} Success status
+ */
+export async function savePersonalPositionen(projektId, positionen) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    // Validierung: Prüfe ob projektId gültig ist
+    if (!projektId || !projektId.startsWith('projekt-db-')) {
+      console.error('❌ Ungültige projektId:', projektId);
+      return false;
+    }
+
+    const dbId = projektId.replace('projekt-db-', ''); // UUID als String
+    
+    console.log('💾 Speichere Personal-Positionen:', {
+      projektId,
+      dbId,
+      dbIdType: typeof dbId,
+      positionCount: positionen.length
+    });
+
+    // Delete alte Positionen
+    const { error: deleteError } = await client
+      .from('albo_personal_positionen')
+      .delete()
+      .eq('project_id', dbId);
+
+    if (deleteError) {
+      console.warn('⚠️ Delete warning:', deleteError);
+    }
+
+    // Insert neue Positionen
+    const positionenToInsert = positionen.map(pos => ({
+      project_id: dbId,
+      position_id: pos.id,
+      position_name: pos.name,
+      basis_gehalt: pos.basisGehalt || 0,
+      vollkosten: pos.vollkosten || 0,
+      fte_werte: pos.fteWerte || {},
+      nebenkosten_faktor: pos.nebenkostenFaktor || 1.30,
+      gehaltssteigerung: pos.gehaltssteigerung || 0.025
+    }));
+    
+    console.log('👥 Positionen to insert:', JSON.stringify(positionenToInsert, null, 2));
+
+    const { data, error } = await client
+      .from('albo_personal_positionen')
+      .insert(positionenToInsert)
+      .select();
+
+    if (error) {
+      console.error('❌ Insert error:', error);
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
+      throw error;
+    }
+
+    console.log(`✅ Saved ${data.length} Personal-Positionen for project ${projektId}`);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Failed to save Personal-Positionen:', error);
+    state.setError('savePersonalPositionen', error);
+    return false;
+  }
+}
 
 /**
  * Delete multiple projects
