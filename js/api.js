@@ -565,7 +565,7 @@ export async function loadKostenblöcke(projektId) {
     const dbId = projektId.replace('projekt-db-', '');
 
     const { data, error } = await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .select('*')
       .eq('project_id', dbId)
       .order('created_at', { ascending: true });
@@ -597,7 +597,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
     // Delete alte Kostenblöcke
     await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .delete()
       .eq('project_id', dbId);
 
@@ -613,7 +613,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
     }));
 
     const { error } = await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .insert(blocksToInsert);
 
     if (error) throw error;
@@ -645,7 +645,7 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
 
     // Hole aktuellen Block
     const { data: currentBlock, error: fetchError } = await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .select('kosten_werte')
       .eq('project_id', dbId)
       .eq('block_id', blockId)
@@ -659,7 +659,7 @@ export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
 
     // Speichere zurück
     const { error: updateError } = await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .update({ kosten_werte: kostenWerte })
       .eq('project_id', dbId)
       .eq('block_id', blockId);
@@ -689,7 +689,7 @@ export async function loadPersonalPositionen(projektId) {
     const dbId = projektId.replace('projekt-db-', '');
 
     const { data, error } = await client
-      .from('ALBO_Personal_Positionen')
+      .from('albo_personal_positionen')
       .select('*')
       .eq('project_id', dbId)
       .order('created_at', { ascending: true });
@@ -721,7 +721,7 @@ export async function savePersonalPositionen(projektId, positionen) {
 
     // Delete alte Positionen
     await client
-      .from('ALBO_Personal_Positionen')
+      .from('albo_personal_positionen')
       .delete()
       .eq('project_id', dbId);
 
@@ -738,7 +738,7 @@ export async function savePersonalPositionen(projektId, positionen) {
     }));
 
     const { error } = await client
-      .from('ALBO_Personal_Positionen')
+      .from('albo_personal_positionen')
       .insert(positionenToInsert);
 
     if (error) throw error;
@@ -767,7 +767,7 @@ export async function deleteKostenblock(projektId, blockId) {
     const dbId = projektId.replace('projekt-db-', '');
 
     const { error } = await client
-      .from('ALBO_Kostenblöcke')
+      .from('albo_kostenblöcke')
       .delete()
       .eq('project_id', dbId)
       .eq('block_id', blockId);
