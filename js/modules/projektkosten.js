@@ -1056,14 +1056,16 @@ function generatePersonalPositionsVollkostenDynamic(jahre) {
                                   border-radius: 3px; font-size: 11px;">
                 </td>
                 <td style="padding: 8px; text-align: right;">
-                    <input type="number" value="${pos.gehalt}" step="1000" class="position-gehalt"
-                           onchange="window.updatePersonalBerechnung();"
-                           style="width: 90px; padding: 4px; border: 1px solid var(--border); 
-                                  border-radius: 3px; text-align: right;">€
+                    <input type="text" value="${helpers.formatCurrency(pos.gehalt)}" class="position-gehalt"
+                        onchange="window.updatePersonalBerechnung();"
+                        placeholder="0"
+                        style="width: 90px; padding: 4px; border: 1px solid var(--border); 
+                                border-radius: 3px; text-align: right;">
+                    <span style="margin-left: 4px;">€</span>
                 </td>
                 <td style="padding: 8px; text-align: right; background: #f8fafc; font-weight: 600;" 
                     class="position-vollkosten">
-                    ${helpers.formatCurrency(pos.gehalt * 1.3)}€
+                    ${helpers.formatCurrency(pos.gehalt * 1.3)} €
                 </td>
                 ${jahre.map((jahr, index) => `
                     <td style="padding: 8px;">
