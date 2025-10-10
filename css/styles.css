@@ -2900,3 +2900,29 @@ body {
     min-height: 60px !important;
     background: white !important;
 }
+
+/* Placeholder-Style für Startwerte */
+input[placeholder^="z.B."]::placeholder {
+    color: #9ca3af;
+    font-style: italic;
+}
+
+input[placeholder^="z.B."]:focus::placeholder {
+    color: transparent;
+}
+
+/* Startwerte Inputs mit Beispielwerten */
+#start-menge[value^="z.B."],
+#start-preis[value^="z.B."],
+#start-hk[value^="z.B."] {
+    color: #6b7280 !important;
+    font-style: italic;
+}
+
+/* Startwerte Inputs mit echten Werten */
+#start-menge:not([value^="z.B."]),
+#start-preis:not([value^="z.B."]),
+#start-hk:not([value^="z.B."]) {
+    color: #111827 !important;
+    font-style: normal;
+}
