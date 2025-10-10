@@ -812,24 +812,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Timeline & Release -->
-                    <div class="form-section" style="margin-bottom: 24px;">
-                        <h3>📅 Timeline & Release</h3>
-
-                        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 24px;">
-                            <div class="form-group">
-                                <label>Release-Datum (Monat)</label>
-                                <input type="month" id="release-datum">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Annahmen & Risiken</label>
-                                <textarea id="annahmen" rows="2" 
-                                        placeholder="Wichtige Annahmen zum Artikel..."></textarea>
-                            </div>
-                        </div>
-                    </div>
                     
                     <!-- ========================================== -->
                     <!-- FINANZ-PARAMETER & ENTWICKLUNGSMODELLE -->
@@ -845,6 +827,7 @@
                                         📅 Release / Startdatum
                                     </label>
                                     <input type="month" id="release-datum" 
+                                        onchange="updateZeithorizont(); updateTabellenSpalten(); berechneModelle();"
                                         style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 13px;">
                                 </div>
                                 
@@ -853,19 +836,19 @@
                                         Zeithorizont
                                     </label>
                                     <div class="zeitraum-selector" style="display: flex; gap: 8px;">
-                                        <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn"
+                                        <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn" id="zeitraum-btn-3"
                                                 style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
                                                     border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
                                                     font-weight: 500; color: #374151;">
                                             3 Jahre
                                         </button>
-                                        <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active"
+                                        <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active" id="zeitraum-btn-5"
                                                 style="flex: 1; padding: 10px 20px; border: 2px solid #3b82f6; background: #3b82f6; 
                                                     color: white; border-radius: 6px; font-size: 13px; cursor: pointer; 
                                                     font-weight: 600;">
                                             5 Jahre
                                         </button>
-                                        <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn"
+                                        <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn" id="zeitraum-btn-7"
                                                 style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
                                                     border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
                                                     font-weight: 500; color: #374151;">
@@ -876,12 +859,13 @@
                             </div>
                         </div>
                         
-                        <!-- Startwerte mit Beispielwerten -->
+                        <!-- Startwerte (Jahr 1) -->
                         <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
                             <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 12px;">
                                 📊 Startwerte (Jahr 1)
                             </div>
 
+                            <!-- Hinweis-Box -->
                             <div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
                                 <strong>💡 Tipp:</strong> Tragen Sie hier Ihre Annahmen für das erste Jahr ein. Diese Werte dienen als Basis für die automatischen Entwicklungsmodelle.
                             </div>
@@ -893,8 +877,7 @@
                                     </label>
                                     <input type="text" id="start-menge" 
                                         placeholder="z.B. 1.000"
-                                        value="1.000"
-                                        onchange="formatNumberInput(this);" 
+                                        onchange="updateErsteZeile(); formatNumberInput(this);" 
                                         onblur="formatNumberInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
@@ -905,8 +888,7 @@
                                     </label>
                                     <input type="text" id="start-preis"
                                         placeholder="z.B. 50,00"
-                                        value="50,00"
-                                        onchange="formatDecimalInput(this);" 
+                                        onchange="updateErsteZeile(); formatDecimalInput(this);" 
                                         onblur="formatDecimalInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
@@ -917,8 +899,7 @@
                                     </label>
                                     <input type="text" id="start-hk"
                                         placeholder="z.B. 20,00"
-                                        value="20,00"
-                                        onchange="formatDecimalInput(this);" 
+                                        onchange="updateErsteZeile(); formatDecimalInput(this);" 
                                         onblur="formatDecimalInput(this)"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
                                                 font-size: 14px; text-align: center; font-weight: 600; background: white;">
@@ -929,7 +910,7 @@
                         <!-- Entwicklungsmodelle -->
                         <div style="margin-bottom: 16px;">
                             <div style="border-top: 2px solid #e5e7eb; margin: 20px 0; position: relative;">
-                                <span style="position: absolute; top: -10px; left: 20px; background: #f9fafb; padding: 0 10px; font-size: 11px; font-weight: 600; color: #6b7280;">
+                                <span style="position: absolute; top: -10px; left: 20px; background: white; padding: 0 10px; font-size: 11px; font-weight: 600; color: #6b7280;">
                                     📈 ENTWICKLUNGSMODELLE
                                 </span>
                             </div>
@@ -942,27 +923,19 @@
                                     </div>
                                     <div style="font-size: 11px;">
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="konservativ">
+                                            <input type="radio" name="mengen-modell" value="konservativ" onchange="applyModell('menge', 'konservativ')">
                                             <span style="margin-left: 6px;">Konservativ <span style="color: #6b7280;">(+15% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="realistisch" checked>
+                                            <input type="radio" name="mengen-modell" value="realistisch" checked onchange="applyModell('menge', 'realistisch')">
                                             <span style="margin-left: 6px; font-weight: 600;">Realistisch <span style="color: #6b7280; font-weight: normal;">(S-Kurve)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="optimistisch">
+                                            <input type="radio" name="mengen-modell" value="optimistisch" onchange="applyModell('menge', 'optimistisch')">
                                             <span style="margin-left: 6px;">Optimistisch <span style="color: #6b7280;">(Hockey-Stick)</span></span>
                                         </label>
-                                        
-                                        <details style="margin-top: 8px;">
-                                            <summary style="cursor: pointer; font-size: 10px; color: #3b82f6;">▶ Erweiterte Modelle</summary>
-                                            <div style="padding: 8px 0 0 20px;">
-                                                <!-- Erweiterte Optionen hier -->
-                                            </div>
-                                        </details>
-                                        
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="manuell">
+                                            <input type="radio" name="mengen-modell" value="manuell" onchange="applyModell('menge', 'manuell')">
                                             <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
                                         </label>
                                     </div>
@@ -975,23 +948,23 @@
                                     </div>
                                     <div style="font-size: 11px;">
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="konstant" checked>
+                                            <input type="radio" name="preis-modell" value="konstant" checked onchange="applyModell('preis', 'konstant')">
                                             <span style="margin-left: 6px; font-weight: 600;">Konstant <span style="color: #6b7280; font-weight: normal;">(0% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="inflation">
+                                            <input type="radio" name="preis-modell" value="inflation" onchange="applyModell('preis', 'inflation')">
                                             <span style="margin-left: 6px;">Inflation <span style="color: #6b7280;">(+2% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="premium">
+                                            <input type="radio" name="preis-modell" value="premium" onchange="applyModell('preis', 'premium')">
                                             <span style="margin-left: 6px;">Premium <span style="color: #6b7280;">(+5% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="skimming">
+                                            <input type="radio" name="preis-modell" value="skimming" onchange="applyModell('preis', 'skimming')">
                                             <span style="margin-left: 6px;">Skimming <span style="color: #6b7280;">(-3% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="manuell">
+                                            <input type="radio" name="preis-modell" value="manuell" onchange="applyModell('preis', 'manuell')">
                                             <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
                                         </label>
                                     </div>
@@ -1004,23 +977,23 @@
                                     </div>
                                     <div style="font-size: 11px;">
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="konstant">
+                                            <input type="radio" name="kosten-modell" value="konstant" onchange="applyModell('kosten', 'konstant')">
                                             <span style="margin-left: 6px;">Konstant <span style="color: #6b7280;">(0% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="lernkurve" checked>
+                                            <input type="radio" name="kosten-modell" value="lernkurve" checked onchange="applyModell('kosten', 'lernkurve')">
                                             <span style="margin-left: 6px; font-weight: 600;">Lernkurve <span style="color: #6b7280; font-weight: normal;">(-5% bei 2x)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="inflation">
+                                            <input type="radio" name="kosten-modell" value="inflation" onchange="applyModell('kosten', 'inflation')">
                                             <span style="margin-left: 6px;">Inflation <span style="color: #6b7280;">(+3% p.a.)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="skaleneffekte">
+                                            <input type="radio" name="kosten-modell" value="skaleneffekte" onchange="applyModell('kosten', 'skaleneffekte')">
                                             <span style="margin-left: 6px;">Skaleneffekte <span style="color: #6b7280;">(Stufen)</span></span>
                                         </label>
                                         <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="manuell">
+                                            <input type="radio" name="kosten-modell" value="manuell" onchange="applyModell('kosten', 'manuell')">
                                             <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
                                         </label>
                                     </div>
@@ -1028,60 +1001,167 @@
                             </div>
                             
                             <div style="text-align: center; margin-top: 16px;">
-                                <button onclick="berechneModelle();" style="padding: 10px 30px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
+                                <button onclick="berechneModelle();" 
+                                        style="padding: 10px 30px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
                                     Berechnen & Vorschau aktualisieren
                                 </button>
-                                <button onclick="resetModelle()" style="padding: 10px 30px; background: white; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; margin-left: 12px;">
+                                <button onclick="resetModelle()" 
+                                        style="padding: 10px 30px; background: white; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; margin-left: 12px;">
                                     Zurücksetzen
                                 </button>
                             </div>
                         </div>
-                    </div>
-                    <!-- Ende Finanz-Parameter & Entwicklungsmodelle -->
-
-                    <!-- Nach den Entwicklungsmodellen, vor dem schließenden </div> -->
-                    <div style="background: white; border-radius: 6px; overflow: hidden; margin-top: 24px;">
-                        <div style="padding: 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                            <div style="font-size: 12px; font-weight: 600; color: #374151;">📊 ERGEBNIS-VORSCHAU</div>
+                        
+                        <!-- Ergebnis-Vorschau Tabelle -->
+                        <div style="background: white; border-radius: 6px; overflow-x: auto;">
+                            <div style="padding: 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                                <div style="font-size: 12px; font-weight: 600; color: #374151;">📊 ERGEBNIS-VORSCHAU</div>
+                            </div>
+                            <table id="vorschau-tabelle" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #f8fafc;">
+                                        <th style="padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Parameter</th>
+                                        <th class="jahr-col jahr-1" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">
+                                            <span class="jahr-header-1">2025</span>
+                                        </th>
+                                        <th class="jahr-col jahr-2" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">
+                                            <span class="jahr-header-2">2026</span>
+                                        </th>
+                                        <th class="jahr-col jahr-3" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">
+                                            <span class="jahr-header-3">2027</span>
+                                        </th>
+                                        <th class="jahr-col jahr-4" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">
+                                            <span class="jahr-header-4">2028</span>
+                                        </th>
+                                        <th class="jahr-col jahr-5" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb;">
+                                            <span class="jahr-header-5">2029</span>
+                                        </th>
+                                        <th class="jahr-col jahr-6" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; display: none;">
+                                            <span class="jahr-header-6">2030</span>
+                                        </th>
+                                        <th class="jahr-col jahr-7" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; display: none;">
+                                            <span class="jahr-header-7">2031</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 10px; font-weight: 600; background: #f8fafc;">Menge (Stück)</td>
+                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="menge-jahr-1" 
+                                                onchange="formatNumberInput(this)" 
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="menge-jahr-2" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="menge-jahr-3" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="menge-jahr-4" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="menge-jahr-5" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="menge-jahr-6" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="menge-jahr-7" 
+                                                onchange="formatNumberInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                    </tr>
+                                    <tr style="background: #f8fafc;">
+                                        <td style="padding: 10px; font-weight: 600;">Preis (€/Stück)</td>
+                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="preis-jahr-1" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="preis-jahr-2" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="preis-jahr-3" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="preis-jahr-4" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="preis-jahr-5" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="preis-jahr-6" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="preis-jahr-7" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px; font-weight: 600; background: #f8fafc;">HK (€/Stück)</td>
+                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="hk-jahr-1" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="hk-jahr-2" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="hk-jahr-3" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="hk-jahr-4" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
+                                            <input type="text" id="hk-jahr-5" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="hk-jahr-6" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
+                                            <input type="text" id="hk-jahr-7" 
+                                                onchange="formatDecimalInput(this)"
+                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                            <thead>
-                                <tr style="background: #f8fafc;">
-                                    <th style="padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb;">Parameter</th>
-                                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">2025</th>
-                                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">2026</th>
-                                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">2027</th>
-                                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">2028</th>
-                                    <th style="padding: 10px; text-align: center; border-bottom: 1px solid #e5e7eb;">2029</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td style="padding: 10px; font-weight: 600;">Menge (Stk)</td>
-                                    <td style="padding: 10px; text-align: center;">20</td>
-                                    <td style="padding: 10px; text-align: center;">46</td>
-                                    <td style="padding: 10px; text-align: center;">300</td>
-                                    <td style="padding: 10px; text-align: center;">554</td>
-                                    <td style="padding: 10px; text-align: center;">596</td>
-                                </tr>
-                                <tr style="background: #f8fafc;">
-                                    <td style="padding: 10px; font-weight: 600;">Preis (€)</td>
-                                    <td style="padding: 10px; text-align: center;">10,00</td>
-                                    <td style="padding: 10px; text-align: center;">10,00</td>
-                                    <td style="padding: 10px; text-align: center;">10,00</td>
-                                    <td style="padding: 10px; text-align: center;">10,00</td>
-                                    <td style="padding: 10px; text-align: center;">10,00</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px; font-weight: 600;">HK (€)</td>
-                                    <td style="padding: 10px; text-align: center;">5,00</td>
-                                    <td style="padding: 10px; text-align: center;">4,15</td>
-                                    <td style="padding: 10px; text-align: center;">3,59</td>
-                                    <td style="padding: 10px; text-align: center;">3,35</td>
-                                    <td style="padding: 10px; text-align: center;">3,22</td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
                    
                 <!-- Ende artikel-detail-view -->
