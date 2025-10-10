@@ -338,7 +338,14 @@ window.updateProjektZeitraum = function() {
 };
 
 window.updateKostenSumme = function() {
-    const headerCells = document.querySelectorAll('thead th');
+    // Stelle sicher dass wir nur die sichtbare Tabelle verwenden
+    const container = document.getElementById('kosten-tabelle-container');
+    if (!container) return;
+    
+    const table = container.querySelector('table');
+    if (!table) return;
+    
+    const headerCells = table.querySelectorAll('thead th');
     const jahre = [];
     
     for (let i = 1; i < headerCells.length - 2; i++) {
@@ -350,10 +357,12 @@ window.updateKostenSumme = function() {
     
     const jahresSummen = {};
     
+    // Berechne Spalten-Summen (über alle Blöcke)
     jahre.forEach(jahr => {
         jahresSummen[jahr] = 0;
         
-        document.querySelectorAll(`[id^="kosten-"][id$="-${jahr}"]`).forEach(input => {
+        // Nutze nur Inputs innerhalb dieser spezifischen Tabelle
+        table.querySelectorAll(`input[id^="kosten-"][id$="-${jahr}"]`).forEach(input => {
             const value = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             jahresSummen[jahr] += value;
         });
@@ -362,12 +371,14 @@ window.updateKostenSumme = function() {
         if (cell) cell.textContent = helpers.formatCurrency(jahresSummen[jahr]);
     });
     
-    document.querySelectorAll('[data-block-id]').forEach(row => {
+    // Berechne Zeilen-Summen (pro Block über alle Jahre)
+    table.querySelectorAll('tbody tr[data-block-id]').forEach(row => {
         const blockId = row.dataset.blockId;
         let zeileSumme = 0;
         
         jahre.forEach(jahr => {
-            const input = document.getElementById(`kosten-${blockId}-${jahr}`);
+            // Nutze querySelector innerhalb der Row um sicherzustellen dass wir den richtigen Input haben
+            const input = row.querySelector(`#kosten-${blockId}-${jahr}`);
             if (input) {
                 const value = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
                 zeileSumme += value;
@@ -378,6 +389,7 @@ window.updateKostenSumme = function() {
         if (sumCell) sumCell.textContent = helpers.formatCurrency(zeileSumme);
     });
     
+    // Berechne Gesamt-Summe
     const total = Object.values(jahresSummen).reduce((a, b) => a + b, 0);
     const totalCell = document.getElementById('gesamt-total');
     if (totalCell) totalCell.textContent = helpers.formatCurrency(total);
@@ -1236,8 +1248,12 @@ function getSavedValue(blockId, jahr) {
     const projekt = state.getProjekt(projektId);
     
     if (projekt?.kostenWerte?.[blockId]?.[jahr]) {
-        // Gebe UNFORMATIERTE Zahl zurück - Formatierung erfolgt nur zur Anzeige
-        return projekt.kostenWerte[blockId][jahr];
+        // Gebe formatierte Zahl zurück für bessere UX (ohne €-Zeichen)
+        const value = projekt.kostenWerte[blockId][jahr];
+        return value.toLocaleString('de-DE', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
     }
     return '';
 }
