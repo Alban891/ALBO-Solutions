@@ -142,6 +142,11 @@ export async function renderProjektkosten() {
     
     // Initialisiere Timeline
     initializeTimeline(empfehlung);
+
+    // ✅ NEU: Berechne Summen nach dem Rendern!
+    setTimeout(() => {
+        window.updateKostenSumme();
+    }, 100);
 }
 
 // Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
