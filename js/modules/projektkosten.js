@@ -46,6 +46,16 @@ export async function renderProjektkosten() {
     
     container.innerHTML = `
         <div style="padding: 20px;">
+            <!-- Header mit Speichern-Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">💰 Projektkosten</h3>
+                <button class="btn btn-primary" onclick="window.saveProjektkostenToDB()" 
+                        style="display: flex; align-items: center; gap: 8px;">
+                    <span>💾</span>
+                    <span>Alle Änderungen speichern</span>
+                </button>
+            </div>
+
             <!-- KI-Analyse Header -->
             <div style="background: linear-gradient(135deg, #dbeafe, #e0e7ff); 
                         padding: 16px; border-radius: 8px; margin-bottom: 20px;">
@@ -1740,3 +1750,81 @@ async function savePersonalPositionenToDB(projektId, positionen) {
         console.error('❌ Fehler beim Speichern der Personal-Positionen:', error);
     }
 }
+
+/**
+ * Globale Speichern-Funktion - Speichert ALLE Projektkosten-Daten
+ * Aufgerufen vom "Alle Änderungen speichern" Button
+ */
+window.saveProjektkostenToDB = async function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    
+    if (!projektId) {
+        alert('❌ Kein Projekt ausgewählt!');
+        return;
+    }
+    
+    if (!projektId.startsWith('projekt-db-')) {
+        console.log('ℹ️ Lokales Projekt - keine DB-Speicherung nötig');
+        return;
+    }
+    
+    try {
+        console.log('💾 Starte Speicherung aller Projektkosten...');
+        
+        // Zeige Loading-Indikator
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>Speichere...</span>';
+        
+        const projekt = state.getProjekt(projektId);
+        
+        // 1. Sammle ALLE aktiven Kostenblöcke mit ihren Werten
+        const alleBlöcke = [];
+        document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
+            const blockId = cb.dataset.blockId;
+            const blockName = cb.dataset.blockName || blockId;
+            const blockIcon = cb.dataset.blockIcon || '📦';
+            const blockAnteil = parseInt(cb.dataset.blockAnteil) || 0;
+            
+            alleBlöcke.push({
+                id: blockId,
+                name: blockName,
+                icon: blockIcon,
+                anteil: blockAnteil,
+                isActive: cb.checked,
+                kostenWerte: projekt.kostenWerte?.[blockId] || {}
+            });
+        });
+        
+        console.log('📦 Speichere Kostenblöcke:', alleBlöcke.length);
+        await api.saveKostenblöcke(projektId, alleBlöcke);
+        
+        // 2. Sammle alle Personal-Positionen
+        if (projekt.personalPositionen && projekt.personalPositionen.length > 0) {
+            console.log('👥 Speichere Personal-Positionen:', projekt.personalPositionen.length);
+            await api.savePersonalPositionen(projektId, projekt.personalPositionen);
+        }
+        
+        // Erfolgs-Feedback
+        btn.innerHTML = '<span>✅</span><span>Gespeichert!</span>';
+        btn.style.background = 'var(--success)';
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+            btn.style.background = '';
+        }, 2000);
+        
+        console.log('✅ Alle Projektkosten erfolgreich gespeichert!');
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern:', error);
+        alert('❌ Fehler beim Speichern: ' + error.message);
+        
+        // Reset Button
+        const btn = event.target.closest('button');
+        btn.disabled = false;
+        btn.innerHTML = '<span>💾</span><span>Alle Änderungen speichern</span>';
+    }
+};
