@@ -285,32 +285,27 @@ function generateKostenTabelle(kostenblöcke) {
                     <th style="padding: 8px; text-align: center; width: 80px;">Aktion</th>
                 </tr>
             </thead>
-            <tbody id="kosten-tbody">
-                ${sichtbareBlöcke.map(block => `
-                    <tr data-block-id="${block.id}">
-                        <td style="padding: 8px; font-weight: 600;">
-                            ${block.icon} ${block.name}
-                            ${block.id === 'personal' ? `
-                                <button onclick="window.openPersonalDetail('${block.id}')"
-                                        class="btn btn-primary btn-sm"
-                                        style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
-                                    📊 Details
-                                </button>
-                            ` : ''}
+            ${sichtbareBlöcke.map(block => `
+                <tr data-block-id="${block.id}">
+                    <td style="padding: 8px; font-weight: 600;">
+                        ${block.icon} ${block.name}
+                        ${block.id === 'personal' ? `
+                            <button onclick="window.openPersonalDetail('${block.id}')"
+                                    class="btn btn-primary btn-sm"
+                                    style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
+                                📊 Details
+                            </button>
+                        ` : ''}
+                    </td>
+                    ${jahre.map(jahr => `
+                        <td style="padding: 8px; text-align: center;">
+                            <input type="text" class="kosten-input" 
+                                id="kosten-${block.id}-${jahr}" 
+                                placeholder="0"
+                                value="${getSavedValue(block.id, jahr) || ''}"
+                                ${block.id === 'personal' ? 'readonly style="background: #f8fafc; cursor: not-allowed; width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"' : 'onfocus="window.handleKostenInputFocus(this)" onblur="window.handleKostenInputBlur(this)" onchange="window.updateKostenSumme(); window.saveKostenValue(\'' + block.id + '\', \'' + jahr + '\', this.value)" style="width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"'}>
                         </td>
-                        ${jahre.map(jahr => `
-                            <td style="padding: 8px; text-align: center;">
-                                <input type="text" class="kosten-input" 
-                                       id="kosten-${block.id}-${jahr}" 
-                                       placeholder="0"
-                                       value="${getSavedValue(block.id, jahr) || ''}"
-                                       onfocus="window.handleKostenInputFocus(this)"
-                                       onblur="window.handleKostenInputBlur(this)"
-                                       onchange="window.updateKostenSumme(); window.saveKostenValue('${block.id}', '${jahr}', this.value)"
-                                       style="width: 70px; padding: 2px; border: 1px solid var(--border); 
-                                              border-radius: 2px; text-align: right;">
-                            </td>
-                        `).join('')}
+                    `).join('')}
                         <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${block.id}">0</td>
                         <td style="padding: 8px; text-align: center;">
                             <button onclick="window.removeAndUncheckKostenblock('${block.id}')" 
@@ -1020,8 +1015,7 @@ window.savePersonalDetail = async function() {
         jahre.push(jahr.toString());
     }
     
-    // FIX: Schreibe UNFORMATIERTE Zahlen in die Inputs
-    // Die Inputs enthalten unformatierte Werte, formatierung erfolgt nur in Anzeige-Zellen
+    // Schreibe Werte in die Haupttabelle UND speichere sie im State
     jahre.forEach(jahr => {
         const sumCell = document.getElementById(`personal-sum-${jahr}`);
         const mainInput = document.getElementById(`kosten-personal-${jahr}`);
@@ -1033,6 +1027,9 @@ window.savePersonalDetail = async function() {
             
             // Schreibe unformatierte Zahl ins Input-Feld
             mainInput.value = Math.round(numValue);
+            
+            // ✅ Speichere den Wert im State (wird beim Refresh aus personalPositionen neu berechnet)
+            window.saveKostenValue('personal', jahr, Math.round(numValue).toString());
             
             // Trigger Blur Event für Formatierung
             window.handleKostenInputBlur(mainInput);
@@ -1109,9 +1106,17 @@ async function savePersonalDetailToDB(projektId, jahre) {
             }
         });
         
+        // ✅ NEU: Speichere Positionen auch im State
+        const projekt = state.getProjekt(projektId);
+        if (projekt) {
+            projekt.personalPositionen = positionen;
+            state.setProjekt(projektId, projekt);
+            state.saveState();
+        }
+        
         if (positionen.length > 0) {
             await savePersonalPositionenToDB(projektId, positionen);
-            console.log('✅ Personal-Positionen nach DB gespeichert:', positionen.length);
+            console.log('✅ Personal-Positionen nach DB und State gespeichert:', positionen.length);
         }
         
     } catch (error) {
