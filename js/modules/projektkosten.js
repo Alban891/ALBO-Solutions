@@ -692,6 +692,28 @@ window.saveKostenblock = function() {
 
 // Personal-Detail Sidebar öffnen
 window.openPersonalDetail = function(blockId) {
+    // ERST die Jahre berechnen, BEVOR wir das HTML generieren
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    // Generiere Jahre-Array
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr);
+    }
+    
+    // Generiere Header-HTML
+    const jahreHeaders = jahre.map(jahr => 
+        `<th style="padding: 10px; text-align: center;">${jahr}<br><span style="font-size: 10px; font-weight: normal;">FTE</span></th>`
+    ).join('');
+    
+    // Generiere Footer-Zellen-HTML
+    const jahreFooterCells = jahre.map(jahr =>
+        `<td style="padding: 10px; text-align: center;" id="personal-sum-${jahr}">0€</td>`
+    ).join('');
+    
     const sidebarHTML = `
         <div id="personal-detail-sidebar" style="position: fixed; top: 0; right: -50%; bottom: 0; 
              width: 50%; background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.1); 
@@ -758,18 +780,18 @@ window.openPersonalDetail = function(blockId) {
                             <th style="padding: 10px; text-align: left;">Position</th>
                             <th style="padding: 10px; text-align: center;">Basis-Gehalt<br><span style="font-size: 10px; font-weight: normal;">(Brutto p.a.)</span></th>
                             <th style="padding: 10px; text-align: center;">Vollkosten<br><span style="font-size: 10px; font-weight: normal;">(inkl. NK)</span></th>
-                            ${generateJahreHeaders()}
+                            ${jahreHeaders}
                             <th style="padding: 10px; text-align: center;">Gesamt</th>
                             <th style="padding: 10px; text-align: center;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="personal-detail-tbody">
-                        ${generatePersonalPositionsVollkosten()}
+                        ${generatePersonalPositionsVollkostenDynamic(jahre)}
                     </tbody>
                     <tfoot>
                         <tr style="background: var(--primary); color: white; font-weight: bold;">
                             <td style="padding: 10px;" colspan="3">SUMME</td>
-                            ${generateJahreFooterCells()}
+                            ${jahreFooterCells}
                             <td style="padding: 10px; text-align: center;" id="personal-sum-total">0€</td>
                             <td></td>
                         </tr>
@@ -912,23 +934,11 @@ function generatePersonalPositions() {
 }
 
 // Generiere Standard-Positionen mit Vollkosten und dynamischen Jahren
-function generatePersonalPositionsVollkosten() {
+function generatePersonalPositionsVollkostenDynamic(jahre) {
     const artikel = state.getArtikelByProjekt(window.cfoDashboard.currentProjekt);
     const hasSoftware = artikel.some(a => a.typ === 'Software');
     const hasHardware = artikel.some(a => a.typ === 'Hardware');
     const hasService = artikel.some(a => a.typ === 'Service');
-    
-    // Hole Projekt-Zeitraum dynamisch
-    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
-    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
-    const startYear = parseInt(startDatum.split('-')[0]);
-    const endeYear = parseInt(endeDatum.split('-')[0]);
-    
-    // Generiere Jahre-Array
-    const jahre = [];
-    for (let jahr = startYear; jahr <= endeYear; jahr++) {
-        jahre.push(jahr);
-    }
     
     const projektDauer = jahre.length;
     let positions = [];
@@ -1313,25 +1323,49 @@ window.checkPersonalPlausibilityVollkosten = function() {
     const warnings = [];
     const tbody = document.getElementById('personal-detail-tbody');
     
-    // Prüfe FTE-Verteilung über Jahre
-    const fte2024Total = [...tbody.querySelectorAll('.position-fte-2024')]
-        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-    const fte2025Total = [...tbody.querySelectorAll('.position-fte-2025')]
-        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-    const fte2026Total = [...tbody.querySelectorAll('.position-fte-2026')]
-        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
-    const fte2027Total = [...tbody.querySelectorAll('.position-fte-2027')]
-        .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    // Hole dynamische Jahre
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr.toString());
+    }
     
-    // Projektphasen-Analyse
-    if (fte2024Total < 2) {
-        warnings.push(`⚠️ 2024: Nur ${fte2024Total.toFixed(1)} FTE - Zu wenig für Projektstart?`);
-    }
-    if (fte2026Total > fte2025Total * 1.5) {
-        warnings.push(`📈 Starker Anstieg 2025→2026 - Recruiting rechtzeitig planen!`);
-    }
-    if (fte2027Total > fte2026Total * 0.5) {
-        warnings.push(`💡 2027: Hohe Nachbetreuung - Support-Vertrag prüfen`);
+    // Berechne FTE-Totals für jedes Jahr dynamisch
+    const fteTotals = {};
+    jahre.forEach(jahr => {
+        fteTotals[jahr] = [...tbody.querySelectorAll(`.position-fte-${jahr}`)]
+            .reduce((sum, input) => sum + (parseFloat(input.value) || 0), 0);
+    });
+    
+    // Projektphasen-Analyse (nur wenn mindestens 2 Jahre)
+    if (jahre.length >= 2) {
+        const firstYear = jahre[0];
+        const lastYear = jahre[jahre.length - 1];
+        
+        if (fteTotals[firstYear] < 2) {
+            warnings.push(`⚠️ ${firstYear}: Nur ${fteTotals[firstYear].toFixed(1)} FTE - Zu wenig für Projektstart?`);
+        }
+        
+        // Prüfe auf starke Anstiege zwischen aufeinanderfolgenden Jahren
+        for (let i = 0; i < jahre.length - 1; i++) {
+            const currentYear = jahre[i];
+            const nextYear = jahre[i + 1];
+            
+            if (fteTotals[nextYear] > fteTotals[currentYear] * 1.5 && fteTotals[currentYear] > 0) {
+                warnings.push(`📈 Starker Anstieg ${currentYear}→${nextYear} - Recruiting rechtzeitig planen!`);
+            }
+        }
+        
+        // Prüfe Nachbetreuung im letzten Jahr
+        if (jahre.length >= 2) {
+            const secondLastYear = jahre[jahre.length - 2];
+            if (fteTotals[lastYear] > fteTotals[secondLastYear] * 0.5) {
+                warnings.push(`💡 ${lastYear}: Hohe Nachbetreuung - Support-Vertrag prüfen`);
+            }
+        }
     }
     
     // Gehälter-Plausibilität
@@ -1361,8 +1395,9 @@ window.checkPersonalPlausibilityVollkosten = function() {
         feedback.innerHTML = warnings.join('<br>');
         feedback.parentElement.style.background = '#fef3c7';
     } else {
+        const avgFTE = Object.values(fteTotals).reduce((a, b) => a + b, 0) / jahre.length;
         feedback.innerHTML = '✅ Teamplanung sieht plausibel aus<br>' +
-                             `📊 Durchschnitt: ${((fte2024Total + fte2025Total + fte2026Total + fte2027Total) / 4).toFixed(1)} FTE/Jahr`;
+                             `📊 Durchschnitt: ${avgFTE.toFixed(1)} FTE/Jahr`;
         feedback.parentElement.style.background = '#d1fae5';
     }
 };
@@ -1377,13 +1412,23 @@ window.closePersonalDetail = function() {
 };
 
 window.savePersonalDetail = function() {
+    // Hole dynamische Jahre
+    const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
+    const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
+    const startYear = parseInt(startDatum.split('-')[0]);
+    const endeYear = parseInt(endeDatum.split('-')[0]);
+    
+    const jahre = [];
+    for (let jahr = startYear; jahr <= endeYear; jahr++) {
+        jahre.push(jahr.toString());
+    }
+    
     // Übertrage Summen in Haupttabelle
-    const jahre = ['2024', '2025', '2026', '2027'];
     jahre.forEach(jahr => {
         const sumValue = document.getElementById(`personal-sum-${jahr}`);
         const mainInput = document.getElementById(`kosten-personal-${jahr}`);
         if (sumValue && mainInput) {
-            const value = sumValue.textContent.replace('k€', '').replace(',', '.');
+            const value = sumValue.textContent.replace('€', '').replace(/\./g, '').replace(',', '.');
             mainInput.value = parseFloat(value) || 0;
         }
     });
