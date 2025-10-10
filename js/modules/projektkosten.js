@@ -121,6 +121,22 @@ export function renderProjektkosten() {
     initializeTimeline(empfehlung);
 }
 
+// FÜGE HINZU: Initialisiere alle aktiven Blöcke in der Tabelle
+setTimeout(() => {
+    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]:checked').forEach(checkbox => {
+        const blockId = checkbox.dataset.blockId;
+        const blockName = checkbox.dataset.blockName;
+        const blockIcon = checkbox.dataset.blockIcon;
+        const blockAnteil = checkbox.dataset.blockAnteil;
+        
+        // Nur hinzufügen wenn noch nicht vorhanden
+        if (!document.querySelector(`[data-block-id="${blockId}"]`)) {
+            addKostenblockToTable(blockId, blockName, blockIcon, blockAnteil);
+        }
+    });
+    window.updateKostenSumme();
+}, 100);
+
 // Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
 function generiereKostenEmpfehlung(artikel, projekt) {
     // Analysiere Projekt-Beschreibung für Kontext
@@ -392,10 +408,18 @@ window.addKostenblock = function() {
 };
 
 window.removeKostenblock = function(blockId) {
+    // Für custom blocks - diese Funktion bleibt für manuelle Blöcke
     const row = document.querySelector(`[data-block-id="${blockId}"]`);
     if (row) {
         row.remove();
         window.updateKostenSumme();
+        
+        // Bei vordefinierten Blöcken auch Checkbox deaktivieren
+        const checkbox = document.getElementById(`block-${blockId}`);
+        if (checkbox) {
+            checkbox.checked = false;
+            saveAktiveKostenblöcke();
+        }
     }
 };
 
@@ -414,7 +438,7 @@ window.toggleKostenblock = function(checkbox) {
         removeKostenblockFromTable(blockId);
     }
     
-    // Speichere aktive Blöcke im Projekt-State
+    // Speichere aktive Blöcke
     saveAktiveKostenblöcke();
 }
 
@@ -460,7 +484,11 @@ function addKostenblockToTable(blockId, name, icon, anteil) {
         `).join('')}
         <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${blockId}">0€</td>
         <td style="padding: 8px; text-align: center;">
-            <!-- Kein Löschen-Button für vordefinierte Blöcke -->
+            <button onclick="window.removeKostenblockWithSync('${blockId}')" 
+                    class="btn btn-danger btn-sm"
+                    style="padding: 2px 8px; font-size: 10px;">
+                ✕
+            </button>
         </td>
     `;
     
@@ -475,6 +503,21 @@ function removeKostenblockFromTable(blockId) {
         row.remove();
         window.updateKostenSumme();
     }
+}
+
+// Entferne Kostenblock MIT Synchronisation zur Checkbox
+window.removeKostenblockWithSync = function(blockId) {
+    // Entferne aus Tabelle
+    removeKostenblockFromTable(blockId);
+    
+    // Deaktiviere entsprechende Checkbox
+    const checkbox = document.getElementById(`block-${blockId}`);
+    if (checkbox) {
+        checkbox.checked = false;
+    }
+    
+    // Speichere State
+    saveAktiveKostenblöcke();
 }
 
 // Speichere aktive Kostenblöcke
