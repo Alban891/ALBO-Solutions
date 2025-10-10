@@ -593,11 +593,12 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
   if (!client) return false;
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
     
     console.log('💾 Speichere Kostenblöcke:', {
       projektId,
       dbId,
+      dbIdType: typeof dbId,
       blockCount: kostenblöcke.length
     });
 
@@ -605,7 +606,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
     const { error: deleteError } = await client
       .from('albo_kostenblöcke')
       .delete()
-      .eq('project_id', dbId);
+      .eq('project_id', dbId); // Jetzt als Number
 
     if (deleteError) {
       console.warn('⚠️ Delete warning:', deleteError);
@@ -614,7 +615,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
     // Insert neue Kostenblöcke
     const blocksToInsert = kostenblöcke.map(block => ({
-      project_id: parseInt(dbId), // WICHTIG: als Number, nicht String
+      project_id: dbId, // Auch hier: Number
       block_id: block.id,
       block_name: block.name,
       block_icon: block.icon || '📦',
@@ -632,6 +633,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
     if (error) {
       console.error('❌ Insert error:', error);
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
 
@@ -640,6 +642,7 @@ export async function saveKostenblöcke(projektId, kostenblöcke) {
 
   } catch (error) {
     console.error('❌ Failed to save Kostenblöcke:', error);
+    console.error('❌ Full error object:', error);
     state.setError('saveKostenblöcke', error);
     return false;
   }
@@ -771,11 +774,12 @@ export async function savePersonalPositionen(projektId, positionen) {
   if (!client) return false;
 
   try {
-    const dbId = projektId.replace('projekt-db-', '');
+    const dbId = parseInt(projektId.replace('projekt-db-', '')); // WICHTIG: als Number
     
     console.log('💾 Speichere Personal-Positionen:', {
       projektId,
       dbId,
+      dbIdType: typeof dbId,
       positionCount: positionen.length
     });
 
@@ -783,7 +787,7 @@ export async function savePersonalPositionen(projektId, positionen) {
     const { error: deleteError } = await client
       .from('albo_personal_positionen')
       .delete()
-      .eq('project_id', dbId);
+      .eq('project_id', dbId); // Jetzt als Number
 
     if (deleteError) {
       console.warn('⚠️ Delete warning:', deleteError);
@@ -791,7 +795,7 @@ export async function savePersonalPositionen(projektId, positionen) {
 
     // Insert neue Positionen
     const positionenToInsert = positionen.map(pos => ({
-      project_id: parseInt(dbId), // WICHTIG: als Number
+      project_id: dbId, // Auch hier: Number
       position_id: pos.id,
       position_name: pos.name,
       basis_gehalt: pos.basisGehalt || 0,
@@ -810,6 +814,7 @@ export async function savePersonalPositionen(projektId, positionen) {
 
     if (error) {
       console.error('❌ Insert error:', error);
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
 
