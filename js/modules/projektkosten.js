@@ -1004,6 +1004,7 @@ window.closePersonalDetail = function() {
 };
 
 // FIX: Save Personal Detail - Korrekte Übertragung OHNE Formatierung
+// FIX: Save Personal Detail - Sammle Positionen DIREKT aus der Tabelle
 window.savePersonalDetail = async function() {
     const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
     const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
@@ -1015,33 +1016,101 @@ window.savePersonalDetail = async function() {
         jahre.push(jahr.toString());
     }
     
-    // Schreibe Werte in die Haupttabelle UND speichere sie im State
-    jahre.forEach(jahr => {
-        const sumCell = document.getElementById(`personal-sum-${jahr}`);
-        const mainInput = document.getElementById(`kosten-personal-${jahr}`);
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) return;
+    
+    // ✅ NEU: Sammle die aktuellen Positionen DIREKT aus der Tabelle
+    const tbody = document.getElementById('personal-detail-tbody');
+    if (!tbody) return;
+    
+    const positionen = [];
+    
+    tbody.querySelectorAll('tr[data-position-id]').forEach(row => {
+        const positionId = row.dataset.positionId;
+        const nameInput = row.querySelector('.position-name');
+        const gehaltInput = row.querySelector('.position-gehalt');
         
-        if (sumCell && mainInput) {
-            let value = sumCell.textContent;
-            value = value.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
-            const numValue = parseFloat(value) || 0;
+        const name = nameInput?.value || 'Unbenannt';
+        let gehaltValue = gehaltInput?.value || '0';
+        gehaltValue = gehaltValue.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
+        const basisGehalt = parseFloat(gehaltValue) || 0;
+        
+        // Nebenkosten-Faktor
+        const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+        const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
+        const vollkosten = basisGehalt * nkFaktor;
+        
+        // Sammle FTE-Werte für alle Jahre
+        const fteWerte = {};
+        jahre.forEach(jahr => {
+            const fteInput = row.querySelector(`.position-fte-${jahr}`);
+            const fte = parseFloat(fteInput?.value) || 0;
+            fteWerte[jahr] = fte; // Speichere auch 0-Werte!
+        });
+        
+        positionen.push({
+            id: positionId,
+            name: name,
+            basisGehalt: basisGehalt,
+            vollkosten: vollkosten,
+            fteWerte: fteWerte,
+            nebenkostenFaktor: nkFaktor,
+            gehaltssteigerung: 0.025
+        });
+    });
+    
+    // ✅ Speichere Positionen im State
+    projekt.personalPositionen = positionen;
+    
+    // ✅ Berechne die Summen für die Haupttabelle
+    if (!projekt.kostenWerte) projekt.kostenWerte = {};
+    if (!projekt.kostenWerte['personal']) projekt.kostenWerte['personal'] = {};
+    
+    const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+    const mitGehaltssteigerung = document.getElementById('toggle-gehaltssteigerung')?.checked;
+    const mitFluktuation = document.getElementById('toggle-fluktuation')?.checked;
+    
+    const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
+    const fluktuationsFaktor = mitFluktuation ? 1.1 : 1.0;
+    
+    jahre.forEach((jahr, jahrIndex) => {
+        let jahresSumme = 0;
+        
+        positionen.forEach(pos => {
+            const fte = pos.fteWerte?.[jahr] || 0;
+            const gehalt = pos.basisGehalt || 0;
+            const steigerungsFaktor = mitGehaltssteigerung ? Math.pow(1.025, jahrIndex) : 1.0;
             
-            // Schreibe unformatierte Zahl ins Input-Feld
-            mainInput.value = Math.round(numValue);
-            
-            // ✅ Speichere den Wert im State (wird beim Refresh aus personalPositionen neu berechnet)
-            window.saveKostenValue('personal', jahr, Math.round(numValue).toString());
-            
-            // Trigger Blur Event für Formatierung
+            const kosten = gehalt * nkFaktor * fte * steigerungsFaktor * fluktuationsFaktor;
+            jahresSumme += kosten;
+        });
+        
+        projekt.kostenWerte['personal'][jahr] = Math.round(jahresSumme);
+        
+        // ✅ Schreibe auch in die Haupttabelle-Inputs
+        const mainInput = document.getElementById(`kosten-personal-${jahr}`);
+        if (mainInput) {
+            mainInput.value = Math.round(jahresSumme);
             window.handleKostenInputBlur(mainInput);
         }
     });
     
+    // ✅ Speichere State
+    state.setProjekt(projektId, projekt);
+    state.saveState();
+    
+    // ✅ Update Summen
     window.updateKostenSumme();
     
-    // 🆕 SUPABASE: Speichere Personal-Positionen nach DB
-    const projektId = window.cfoDashboard.currentProjekt;
+    // ✅ SUPABASE: Speichere nach DB
     if (projektId && projektId.startsWith('projekt-db-')) {
-        await savePersonalDetailToDB(projektId, jahre);
+        try {
+            await api.savePersonalPositionen(projektId, positionen);
+            console.log('✅ Personal-Positionen gespeichert:', positionen.length);
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern:', error);
+        }
     }
     
     window.closePersonalDetail();
@@ -1050,7 +1119,7 @@ window.savePersonalDetail = async function() {
         window.cfoDashboard.aiController.addAIMessage({
             level: 'success',
             title: '✅ Personalkosten übernommen',
-            text: 'Die detaillierten Personalkosten wurden in die Haupttabelle übertragen und gespeichert.',
+            text: 'Die detaillierten Personalkosten wurden gespeichert.',
             timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
         });
     }
