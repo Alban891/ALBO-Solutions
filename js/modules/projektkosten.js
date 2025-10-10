@@ -21,19 +21,19 @@ export async function renderProjektkosten() {
     const container = document.getElementById('projekt-tab-projektkosten');
     if (!container) return;
     
-    // Hole Projekt und Artikel für KI-Analyse
-    const projekt = state.getProjekt(projektId);
-    const artikel = state.getArtikelByProjekt(projektId);
-    
-    // Generiere KI-Empfehlung mit verbesserter Analyse
-    const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
-    
-    // 🆕 SUPABASE: Lade gespeicherte Kostenblöcke aus DB
+    // 🆕 SUPABASE: Lade gespeicherte Kostenblöcke aus DB ZUERST!
     if (projektId.startsWith('projekt-db-')) {
         console.log('📥 DB-Projekt erkannt - lade Kostenblöcke aus Supabase...');
         await loadKostenbloeckeFromDB(projektId);
         await loadPersonalPositionenFromDB(projektId);
     }
+    
+    // JETZT ERST Projekt und Artikel holen (NACH dem Laden!)
+    const projekt = state.getProjekt(projektId);
+    const artikel = state.getArtikelByProjekt(projektId);
+    
+    // Generiere KI-Empfehlung mit verbesserter Analyse
+    const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
     
     // Hole gespeicherte aktive Kostenblöcke oder nutze Defaults
     const aktiveBlöcke = projekt.aktiveKostenblöcke || empfehlung.kostenblöcke.map(b => b.id);
