@@ -873,36 +873,42 @@
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
                                 <div>
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        MENGE (Stück)
+                                        MENGE (STÜCK)
                                     </label>
                                     <input type="text" id="start-menge" 
                                         placeholder="z.B. 1.000"
-                                        onchange="updateErsteZeile(); formatNumberInput(this);" 
-                                        onblur="formatNumberInput(this)"
+                                        onfocus="handleInputFocus(this)"
+                                        onblur="handleInputBlur(this, 'menge')"
+                                        onchange="updateErsteZeile(); formatNumberInput(this);"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;">
+                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
+                                                color: #6b7280;">
                                 </div>
                                 <div>
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        PREIS (€/Stück)
+                                        PREIS (€/STÜCK)
                                     </label>
                                     <input type="text" id="start-preis"
                                         placeholder="z.B. 50,00"
-                                        onchange="updateErsteZeile(); formatDecimalInput(this);" 
-                                        onblur="formatDecimalInput(this)"
+                                        onfocus="handleInputFocus(this)"
+                                        onblur="handleInputBlur(this, 'preis')"
+                                        onchange="updateErsteZeile(); formatDecimalInput(this);"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;">
+                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
+                                                color: #6b7280;">
                                 </div>
                                 <div>
                                     <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        HK (€/Stück)
+                                        HK (€/STÜCK)
                                     </label>
                                     <input type="text" id="start-hk"
                                         placeholder="z.B. 20,00"
-                                        onchange="updateErsteZeile(); formatDecimalInput(this);" 
-                                        onblur="formatDecimalInput(this)"
+                                        onfocus="handleInputFocus(this)"
+                                        onblur="handleInputBlur(this, 'hk')"
+                                        onchange="updateErsteZeile(); formatDecimalInput(this);"
                                         style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;">
+                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
+                                                color: #6b7280;">
                                 </div>
                             </div>
                         </div>
