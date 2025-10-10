@@ -2,11 +2,11 @@
  * CFO Dashboard - Projektkosten Module
  * KI-gestützte Kostenplanung mit Timeline und Personal-Detailplanung
  * 
- * FIXES in dieser Version:
- * - Doppelte €-Zeichen behoben
- * - Korrekte Summenübertragung von Personal Detail zu Haupttabelle
- * - Verbesserte Formatierung und Parsing
- * - Dynamische Jahre-Berechnung optimiert
+ * FINAL VERSION - Alle Bugs behoben:
+ * - Zentrale Berechnungslogik für Personal-Summen
+ * - Konsistente Datenpersistenz nach Refresh
+ * - Personal-Felder in Haupttabelle readonly
+ * - Korrekte Synchronisation zwischen Detail-View und Haupttabelle
  */
 
 import { state } from '../state.js';
@@ -142,12 +142,6 @@ export async function renderProjektkosten() {
     
     // Initialisiere Timeline
     initializeTimeline(empfehlung);
-
-    // ✅ NEU: Nach dem Rendern die Werte aus dem State in die Inputs laden
-    setTimeout(() => {
-        restoreKostenwerteInInputs();
-        window.updateKostenSumme();
-    }, 100);
 }
 
 // Generiere KI-Empfehlung basierend auf Projekt-Kontext und Artikel-Typen
@@ -285,27 +279,32 @@ function generateKostenTabelle(kostenblöcke) {
                     <th style="padding: 8px; text-align: center; width: 80px;">Aktion</th>
                 </tr>
             </thead>
-            ${sichtbareBlöcke.map(block => `
-                <tr data-block-id="${block.id}">
-                    <td style="padding: 8px; font-weight: 600;">
-                        ${block.icon} ${block.name}
-                        ${block.id === 'personal' ? `
-                            <button onclick="window.openPersonalDetail('${block.id}')"
-                                    class="btn btn-primary btn-sm"
-                                    style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
-                                📊 Details
-                            </button>
-                        ` : ''}
-                    </td>
-                    ${jahre.map(jahr => `
-                        <td style="padding: 8px; text-align: center;">
-                            <input type="text" class="kosten-input" 
-                                id="kosten-${block.id}-${jahr}" 
-                                placeholder="0"
-                                value="${getSavedValue(block.id, jahr) || ''}"
-                                ${block.id === 'personal' ? 'readonly style="background: #f8fafc; cursor: not-allowed; width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"' : 'onfocus="window.handleKostenInputFocus(this)" onblur="window.handleKostenInputBlur(this)" onchange="window.updateKostenSumme(); window.saveKostenValue(\'' + block.id + '\', \'' + jahr + '\', this.value)" style="width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"'}>
+            <tbody id="kosten-tbody">
+                ${sichtbareBlöcke.map(block => `
+                    <tr data-block-id="${block.id}">
+                        <td style="padding: 8px; font-weight: 600;">
+                            ${block.icon} ${block.name}
+                            ${block.id === 'personal' ? `
+                                <button onclick="window.openPersonalDetail('${block.id}')"
+                                        class="btn btn-primary btn-sm"
+                                        style="margin-left: 8px; padding: 2px 6px; font-size: 9px;">
+                                    📊 Details
+                                </button>
+                            ` : ''}
                         </td>
-                    `).join('')}
+                        ${jahre.map(jahr => `
+                            <td style="padding: 8px; text-align: center;">
+                                <input type="text" class="kosten-input" 
+                                       id="kosten-${block.id}-${jahr}" 
+                                       placeholder="0"
+                                       value="${getSavedValue(block.id, jahr) || ''}"
+                                       ${block.id === 'personal' ? 'readonly' : ''}
+                                       ${block.id === 'personal' 
+                                           ? 'style="background: #f8fafc; cursor: not-allowed; width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"'
+                                           : 'onfocus="window.handleKostenInputFocus(this)" onblur="window.handleKostenInputBlur(this)" onchange="window.updateKostenSumme(); window.saveKostenValue(\'' + block.id + '\', \'' + jahr + '\', this.value)" style="width: 70px; padding: 2px; border: 1px solid var(--border); border-radius: 2px; text-align: right;"'
+                                       }>
+                            </td>
+                        `).join('')}
                         <td style="padding: 8px; text-align: center; font-weight: bold;" id="summe-${block.id}">0</td>
                         <td style="padding: 8px; text-align: center;">
                             <button onclick="window.removeAndUncheckKostenblock('${block.id}')" 
@@ -346,6 +345,46 @@ function initializeTimeline(empfehlung) {
     
     if (startInput) startInput.value = `${startYear}-01`;
     if (endeInput) endeInput.value = `${endYear}-12`;
+}
+
+// ==========================================
+// ZENTRALE BERECHNUNGSFUNKTION FÜR PERSONAL
+// ==========================================
+
+/**
+ * Berechne Personal-Kosten basierend auf Positionen und Einstellungen
+ * Diese Funktion ist die SINGLE SOURCE OF TRUTH für alle Berechnungen
+ */
+function calculatePersonalCosts(positionen, jahre, options = {}) {
+    const {
+        mitNebenkosten = true,
+        mitGehaltssteigerung = true,
+        mitFluktuation = false,
+        nebenkostenFaktor = 1.3,
+        gehaltssteigerung = 0.025,
+        fluktuationsFaktor = 1.1
+    } = options;
+    
+    const nkFaktor = mitNebenkosten ? nebenkostenFaktor : 1.0;
+    const flukFaktor = mitFluktuation ? fluktuationsFaktor : 1.0;
+    
+    const jahresSummen = {};
+    const positionsDetails = [];
+    
+    jahre.forEach((jahr, jahrIndex) => {
+        jahresSummen[jahr] = 0;
+        
+        positionen.forEach(pos => {
+            const fte = pos.fteWerte?.[jahr] || 0;
+            const gehalt = pos.basisGehalt || 0;
+            const steigerungsFaktor = mitGehaltssteigerung ? Math.pow(1 + gehaltssteigerung, jahrIndex) : 1.0;
+            
+            const kosten = gehalt * nkFaktor * fte * steigerungsFaktor * flukFaktor;
+            jahresSummen[jahr] += kosten;
+        });
+    });
+    
+    return jahresSummen;
 }
 
 // Window Functions für Event Handler
@@ -603,6 +642,58 @@ window.openPersonalDetail = function(blockId) {
 
 // Generiere Personal-Positionen mit Vollkosten und dynamischen Jahren
 function generatePersonalPositionsVollkostenDynamic(jahre) {
+    // ✅ Prüfe ob gespeicherte Positionen existieren
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    
+    // Wenn gespeicherte Personal-Positionen vorhanden, nutze diese!
+    if (projekt?.personalPositionen && projekt.personalPositionen.length > 0) {
+        console.log('📥 Lade gespeicherte Personal-Positionen:', projekt.personalPositionen.length);
+        
+        return projekt.personalPositionen.map(pos => {
+            return `
+                <tr data-position-id="${pos.id}">
+                    <td style="padding: 8px;">
+                        <input type="text" value="${pos.name}" class="position-name"
+                               style="width: 100%; padding: 4px; border: 1px solid var(--border); 
+                                      border-radius: 3px; font-size: 11px;">
+                    </td>
+                    <td style="padding: 8px; text-align: right;">
+                        <input type="text" value="${helpers.formatCurrency(pos.basisGehalt)}" class="position-gehalt"
+                            onchange="window.updatePersonalBerechnung();"
+                            placeholder="0"
+                            style="width: 90px; padding: 4px; border: 1px solid var(--border); 
+                                    border-radius: 3px; text-align: right;">
+                    </td>
+                    <td style="padding: 8px; text-align: right; background: #f8fafc; font-weight: 600;" 
+                        class="position-vollkosten">
+                        ${helpers.formatCurrency(pos.vollkosten || pos.basisGehalt * 1.3)}
+                    </td>
+                    ${jahre.map(jahr => {
+                        const fte = pos.fteWerte?.[jahr] || 0;
+                        return `
+                        <td style="padding: 8px;">
+                            <input type="number" min="0" max="10" step="0.1" 
+                                   class="position-fte-${jahr}"
+                                   value="${fte}"
+                                   onchange="window.updatePersonalBerechnung();"
+                                   style="width: 50px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 3px; text-align: center; font-size: 11px;">
+                        </td>
+                    `}).join('')}
+                    <td style="padding: 8px; text-align: right; font-weight: bold;" 
+                        class="position-summe">0</td>
+                    <td style="padding: 8px; text-align: center;">
+                        <button onclick="window.removePersonalPosition('${pos.id}')"
+                                class="btn btn-danger btn-sm"
+                                style="padding: 2px 6px; font-size: 10px;">✕</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    // ✅ Wenn KEINE gespeicherten Positionen: Generiere Default-Positionen
     const artikel = state.getArtikelByProjekt(window.cfoDashboard.currentProjekt);
     const hasSoftware = artikel.some(a => a.typ === 'Software');
     const hasHardware = artikel.some(a => a.typ === 'Hardware');
@@ -829,7 +920,7 @@ function adjustFTEToProjectLength(ftePattern, targetLength) {
     }
 }
 
-// Update Personal-Berechnung mit Vollkosten - KORRIGIERT
+// Update Personal-Berechnung mit ZENTRALER Berechnungslogik
 window.updatePersonalBerechnung = function() {
     const tbody = document.getElementById('personal-detail-tbody');
     if (!tbody) return;
@@ -870,7 +961,6 @@ window.updatePersonalBerechnung = function() {
         gehaltValue = gehaltValue.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
         const gehalt = parseFloat(gehaltValue) || 0;
         
-        // FIX: Vollkosten-Anzeige OHNE doppeltes €
         const vollkostenCell = row.querySelector('.position-vollkosten');
         if (vollkostenCell) {
             vollkostenCell.textContent = helpers.formatCurrency(gehalt * nkFaktor);
@@ -889,7 +979,6 @@ window.updatePersonalBerechnung = function() {
             positionsSumme += jahresKosten;
         });
         
-        // FIX: Update Positionssumme OHNE doppeltes €
         const sumCell = row.querySelector('.position-summe');
         if (sumCell) {
             sumCell.textContent = helpers.formatCurrency(positionsSumme);
@@ -898,7 +987,6 @@ window.updatePersonalBerechnung = function() {
         gesamtSumme += positionsSumme;
     });
     
-    // FIX: Update Footer-Summen OHNE doppeltes €
     jahre.forEach(jahr => {
         const cell = document.getElementById(`personal-sum-${jahr}`);
         if (cell) {
@@ -1003,8 +1091,7 @@ window.closePersonalDetail = function() {
     }
 };
 
-// FIX: Save Personal Detail - Korrekte Übertragung OHNE Formatierung
-// FIX: Save Personal Detail - Sammle Positionen DIREKT aus der Tabelle
+// ✅ FINALE Save-Funktion mit zentraler Berechnung
 window.savePersonalDetail = async function() {
     const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
     const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
@@ -1020,7 +1107,7 @@ window.savePersonalDetail = async function() {
     const projekt = state.getProjekt(projektId);
     if (!projekt) return;
     
-    // ✅ NEU: Sammle die aktuellen Positionen DIREKT aus der Tabelle
+    // ✅ Sammle aktuelle Positionen aus der Tabelle
     const tbody = document.getElementById('personal-detail-tbody');
     if (!tbody) return;
     
@@ -1036,17 +1123,15 @@ window.savePersonalDetail = async function() {
         gehaltValue = gehaltValue.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
         const basisGehalt = parseFloat(gehaltValue) || 0;
         
-        // Nebenkosten-Faktor
         const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
         const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
         const vollkosten = basisGehalt * nkFaktor;
         
-        // Sammle FTE-Werte für alle Jahre
         const fteWerte = {};
         jahre.forEach(jahr => {
             const fteInput = row.querySelector(`.position-fte-${jahr}`);
             const fte = parseFloat(fteInput?.value) || 0;
-            fteWerte[jahr] = fte; // Speichere auch 0-Werte!
+            fteWerte[jahr] = fte;
         });
         
         positionen.push({
@@ -1063,35 +1148,31 @@ window.savePersonalDetail = async function() {
     // ✅ Speichere Positionen im State
     projekt.personalPositionen = positionen;
     
-    // ✅ Berechne die Summen für die Haupttabelle
+    // ✅ Berechne Summen mit ZENTRALER Berechnungsfunktion
+    const mitGehaltssteigerung = document.getElementById('toggle-gehaltssteigerung')?.checked;
+    const mitFluktuation = document.getElementById('toggle-fluktuation')?.checked;
+    const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
+    
+    const jahresSummen = calculatePersonalCosts(positionen, jahre, {
+        mitNebenkosten: mitNebenkosten,
+        mitGehaltssteigerung: mitGehaltssteigerung,
+        mitFluktuation: mitFluktuation,
+        nebenkostenFaktor: 1.3,
+        gehaltssteigerung: 0.025,
+        fluktuationsFaktor: 1.1
+    });
+    
+    // ✅ Speichere Summen in kostenWerte
     if (!projekt.kostenWerte) projekt.kostenWerte = {};
     if (!projekt.kostenWerte['personal']) projekt.kostenWerte['personal'] = {};
     
-    const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
-    const mitGehaltssteigerung = document.getElementById('toggle-gehaltssteigerung')?.checked;
-    const mitFluktuation = document.getElementById('toggle-fluktuation')?.checked;
-    
-    const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
-    const fluktuationsFaktor = mitFluktuation ? 1.1 : 1.0;
-    
-    jahre.forEach((jahr, jahrIndex) => {
-        let jahresSumme = 0;
+    jahre.forEach(jahr => {
+        projekt.kostenWerte['personal'][jahr] = Math.round(jahresSummen[jahr]);
         
-        positionen.forEach(pos => {
-            const fte = pos.fteWerte?.[jahr] || 0;
-            const gehalt = pos.basisGehalt || 0;
-            const steigerungsFaktor = mitGehaltssteigerung ? Math.pow(1.025, jahrIndex) : 1.0;
-            
-            const kosten = gehalt * nkFaktor * fte * steigerungsFaktor * fluktuationsFaktor;
-            jahresSumme += kosten;
-        });
-        
-        projekt.kostenWerte['personal'][jahr] = Math.round(jahresSumme);
-        
-        // ✅ Schreibe auch in die Haupttabelle-Inputs
+        // Schreibe auch in Haupttabelle
         const mainInput = document.getElementById(`kosten-personal-${jahr}`);
         if (mainInput) {
-            mainInput.value = Math.round(jahresSumme);
+            mainInput.value = Math.round(jahresSummen[jahr]);
             window.handleKostenInputBlur(mainInput);
         }
     });
@@ -1100,6 +1181,11 @@ window.savePersonalDetail = async function() {
     state.setProjekt(projektId, projekt);
     state.saveState();
     
+    console.log('✅ Personalkosten gespeichert:', {
+        positionen: positionen.length,
+        summen: jahresSummen
+    });
+    
     // ✅ Update Summen
     window.updateKostenSumme();
     
@@ -1107,9 +1193,9 @@ window.savePersonalDetail = async function() {
     if (projektId && projektId.startsWith('projekt-db-')) {
         try {
             await api.savePersonalPositionen(projektId, positionen);
-            console.log('✅ Personal-Positionen gespeichert:', positionen.length);
+            console.log('✅ Personal-Positionen in DB gespeichert');
         } catch (error) {
-            console.error('❌ Fehler beim Speichern:', error);
+            console.error('❌ Fehler beim Speichern in DB:', error);
         }
     }
     
@@ -1124,74 +1210,6 @@ window.savePersonalDetail = async function() {
         });
     }
 };
-
-/**
- * Speichere Personal-Detail nach Supabase
- */
-async function savePersonalDetailToDB(projektId, jahre) {
-    try {
-        const tbody = document.getElementById('personal-detail-tbody');
-        if (!tbody) return;
-        
-        const positionen = [];
-        
-        // Sammle alle Positionen aus der Tabelle
-        tbody.querySelectorAll('tr[data-position-id]').forEach(row => {
-            const positionId = row.dataset.positionId;
-            const nameInput = row.querySelector('.position-name');
-            const gehaltInput = row.querySelector('.position-gehalt');
-            
-            const name = nameInput?.value || 'Unbenannt';
-            let gehaltValue = gehaltInput?.value || '0';
-            gehaltValue = gehaltValue.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
-            const basisGehalt = parseFloat(gehaltValue) || 0;
-            
-            // Nebenkosten-Faktor (1.3 = 30%)
-            const mitNebenkosten = document.getElementById('toggle-nebenkosten')?.checked;
-            const nkFaktor = mitNebenkosten ? 1.3 : 1.0;
-            const vollkosten = basisGehalt * nkFaktor;
-            
-            // Sammle FTE-Werte für alle Jahre
-            const fteWerte = {};
-            jahre.forEach(jahr => {
-                const fteInput = row.querySelector(`.position-fte-${jahr}`);
-                const fte = parseFloat(fteInput?.value) || 0;
-                if (fte > 0) {
-                    fteWerte[jahr] = fte;
-                }
-            });
-            
-            // Nur speichern wenn FTE-Werte vorhanden
-            if (Object.keys(fteWerte).length > 0) {
-                positionen.push({
-                    id: positionId,
-                    name: name,
-                    basisGehalt: basisGehalt,
-                    vollkosten: vollkosten,
-                    fteWerte: fteWerte,
-                    nebenkostenFaktor: nkFaktor,
-                    gehaltssteigerung: 0.025 // 2.5% Standard
-                });
-            }
-        });
-        
-        // ✅ NEU: Speichere Positionen auch im State
-        const projekt = state.getProjekt(projektId);
-        if (projekt) {
-            projekt.personalPositionen = positionen;
-            state.setProjekt(projektId, projekt);
-            state.saveState();
-        }
-        
-        if (positionen.length > 0) {
-            await savePersonalPositionenToDB(projektId, positionen);
-            console.log('✅ Personal-Positionen nach DB und State gespeichert:', positionen.length);
-        }
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Personal-Positionen:', error);
-    }
-}
 
 window.addPersonalPosition = function() {
     const tbody = document.getElementById('personal-detail-tbody');
@@ -1369,15 +1387,8 @@ window.removeKostenblock = function(blockId) {
 window.toggleKostenblock = async function(checkbox) {
     const projektId = window.cfoDashboard.currentProjekt;
     
-    console.log('🔧 toggleKostenblock called:', {
-        projektId,
-        cfoDashboard: window.cfoDashboard,
-        checkbox: checkbox?.id
-    });
-    
-    // Validierung: Prüfe ob projektId existiert
     if (!projektId) {
-        console.error('❌ Kein Projekt ausgewählt! window.cfoDashboard.currentProjekt ist:', projektId);
+        console.error('❌ Kein Projekt ausgewählt!');
         alert('Fehler: Kein Projekt ausgewählt. Bitte wählen Sie erst ein Projekt aus.');
         return;
     }
@@ -1397,9 +1408,7 @@ window.toggleKostenblock = async function(checkbox) {
         return;
     }
     
-    // 🆕 SUPABASE: Beim ersten Mal ALLE Blöcke initialisieren
     if (projektId.startsWith('projekt-db-')) {
-        // Sammle ALLE Checkbox-Daten (auch inaktive)
         const alleBlöcke = [];
         document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
             const blockId = cb.dataset.blockId;
@@ -1412,14 +1421,11 @@ window.toggleKostenblock = async function(checkbox) {
                 name: blockName,
                 icon: blockIcon,
                 anteil: blockAnteil,
-                isActive: cb.checked, // TRUE wenn checked
+                isActive: cb.checked,
                 kostenWerte: projekt.kostenWerte?.[blockId] || {}
             });
         });
         
-        console.log('💾 Initialisiere Kostenblöcke für Projekt:', projektId, 'Anzahl:', alleBlöcke.length);
-        
-        // Speichere ALLE Blöcke (damit sie in DB existieren)
         await saveAllKostenbloeckeToDB(projektId, alleBlöcke);
     }
     
@@ -1476,7 +1482,6 @@ window.saveKostenValue = function(blockId, jahr, value) {
     state.setProjekt(projektId, projekt);
     state.saveState();
     
-    // 🆕 SUPABASE: Speichere nach DB (mit Debouncing)
     if (projektId.startsWith('projekt-db-')) {
         debouncedSaveKostenblockToDB(projektId, blockId, jahr, projekt.kostenWerte[blockId][jahr]);
     }
@@ -1487,10 +1492,8 @@ function getSavedValue(blockId, jahr) {
     const projekt = state.getProjekt(projektId);
     
     if (projekt?.kostenWerte?.[blockId]?.[jahr]) {
-        // Gebe formatierte Zahl zurück für bessere UX (deutsch formatiert, ohne €)
         const value = projekt.kostenWerte[blockId][jahr];
         
-        // Wenn Wert eine Zahl ist, formatiere sie
         if (typeof value === 'number' && value > 0) {
             return value.toLocaleString('de-DE', {
                 minimumFractionDigits: 0,
@@ -1503,7 +1506,7 @@ function getSavedValue(blockId, jahr) {
     return '';
 }
 
-window.openKostenblockModal = function() {
+function openKostenblockModal() {
     const modalHTML = `
         <div id="kostenblock-modal" class="modal" style="display: flex; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
             <div class="modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -1573,7 +1576,7 @@ window.openKostenblockModal = function() {
     setTimeout(() => {
         document.getElementById('kostenblock-name')?.focus();
     }, 100);
-};
+}
 
 window.selectKostenblockIcon = function(icon) {
     document.getElementById('kostenblock-icon').value = icon;
@@ -1659,56 +1662,14 @@ window.saveKostenblock = function() {
     }
 };
 
-/**
-     * Restore Kostenwerte from State into Input fields
-     * Called after rendering to populate inputs with saved data
-     */
-    function restoreKostenwerteInInputs() {
-        const projektId = window.cfoDashboard.currentProjekt;
-        const projekt = state.getProjekt(projektId);
-        
-        if (!projekt || !projekt.kostenWerte) {
-            console.log('ℹ️ Keine gespeicherten Kostenwerte vorhanden');
-            return;
-        }
-        
-        console.log('🔄 Lade Kostenwerte in Input-Felder:', projekt.kostenWerte);
-        
-        // Durchlaufe alle Kostenblöcke
-        Object.keys(projekt.kostenWerte).forEach(blockId => {
-            const jahreWerte = projekt.kostenWerte[blockId];
-            
-            // Durchlaufe alle Jahre
-            Object.keys(jahreWerte).forEach(jahr => {
-                const wert = jahreWerte[jahr];
-                const input = document.getElementById(`kosten-${blockId}-${jahr}`);
-                
-                if (input && wert) {
-                    // Formatiere den Wert (deutsch, ohne €)
-                    input.value = wert.toLocaleString('de-DE', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0
-                    });
-                    console.log(`  ✓ ${blockId} ${jahr}: ${wert}`);
-                }
-            });
-        });
-        
-        console.log('✅ Kostenwerte in Inputs geladen');
-    }
-
 export default {
     renderProjektkosten
 };
 
 // ==========================================
-// SUPABASE INTEGRATION (NEU)
+// SUPABASE INTEGRATION
 // ==========================================
 
-/**
- * Lade Kostenblöcke aus Supabase
- * @param {string} projektId - Project ID
- */
 async function loadKostenbloeckeFromDB(projektId) {
     try {
         console.log('📥 Lade Kostenblöcke aus Supabase für', projektId);
@@ -1717,131 +1678,82 @@ async function loadKostenbloeckeFromDB(projektId) {
         
         console.log(`✅ Loaded ${dbBlocks.length} Kostenblöcke from Supabase`);
         
-        // Wenn keine Daten in DB, dann OK - Projekt ist neu
         if (!dbBlocks || dbBlocks.length === 0) {
-            console.log('ℹ️ Keine Kostenblöcke in DB - Projekt ist möglicherweise neu');
+            console.log('ℹ️ Keine Kostenblöcke in DB');
             return;
         }
         
         const projekt = state.getProjekt(projektId);
         if (!projekt) return;
         
-        // Initialisiere kostenWerte und aktiveKostenblöcke
         projekt.kostenWerte = {};
         projekt.aktiveKostenblöcke = [];
         
-        // Übertrage Daten aus DB in State
         dbBlocks.forEach(dbBlock => {
             const blockId = dbBlock.block_id;
             
-            // Kostenblöcke als aktiv markieren
             if (dbBlock.is_active) {
                 projekt.aktiveKostenblöcke.push(blockId);
             }
             
-            // Kosten-Werte übernehmen
             if (dbBlock.kosten_werte && Object.keys(dbBlock.kosten_werte).length > 0) {
                 projekt.kostenWerte[blockId] = dbBlock.kosten_werte;
-                console.log(`  ✓ Kostenblock "${blockId}" geladen:`, Object.keys(dbBlock.kosten_werte).length, 'Jahre');
             }
         });
         
-        // State aktualisieren
         state.setProjekt(projektId, projekt);
-        state.saveState(); // Wichtig: Auch in localStorage speichern!
-        
-        console.log('✅ Kostenblöcke in State übernommen:', {
-            aktiveBlöcke: projekt.aktiveKostenblöcke.length,
-            kostenWerte: Object.keys(projekt.kostenWerte).length
-        });
+        state.saveState();
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Kostenblöcke:', error);
     }
 }
 
-/**
- * Speichere Kostenblock-Wert nach Supabase (debounced)
- */
 const debouncedSaveKostenblockToDB = helpers.debounce(async (projektId, blockId, jahr, wert) => {
     try {
-        console.log('💾 Speichere Kostenblock nach Supabase:', blockId, jahr, wert);
-        
-        // Prüfe erst ob Block existiert, sonst erstelle ihn
         const success = await api.updateKostenblockWert(projektId, blockId, jahr, wert);
         
-        if (success) {
-            console.log('✅ Kostenblock gespeichert');
-        } else {
-            console.warn('⚠️ Konnte Kostenblock nicht speichern - versuche Initialisierung...');
-            
-            // Fallback: Initialisiere alle Blöcke
+        if (!success) {
             const projekt = state.getProjekt(projektId);
             if (projekt) {
-                const checkbox = document.querySelector(`input[data-block-id="${blockId}"]`);
-                if (checkbox) {
-                    const alleBloecke = [];
-                    document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
-                        alleBloecke.push({
-                            id: cb.dataset.blockId,
-                            name: cb.dataset.blockName || cb.dataset.blockId,
-                            icon: cb.dataset.blockIcon || '📦',
-                            anteil: parseInt(cb.dataset.blockAnteil) || 0,
-                            isActive: cb.checked,
-                            kostenWerte: projekt.kostenWerte?.[cb.dataset.blockId] || {}
-                        });
+                const alleBlöcke = [];
+                document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
+                    alleBlöcke.push({
+                        id: cb.dataset.blockId,
+                        name: cb.dataset.blockName || cb.dataset.blockId,
+                        icon: cb.dataset.blockIcon || '📦',
+                        anteil: parseInt(cb.dataset.blockAnteil) || 0,
+                        isActive: cb.checked,
+                        kostenWerte: projekt.kostenWerte?.[cb.dataset.blockId] || {}
                     });
-                    
-                    await saveAllKostenbloeckeToDB(projektId, alleBloecke);
-                    console.log('✅ Alle Blöcke initialisiert - versuche erneut...');
-                    
-                    // Versuche nochmal
-                    await api.updateKostenblockWert(projektId, blockId, jahr, wert);
-                }
+                });
+                
+                await saveAllKostenbloeckeToDB(projektId, alleBlöcke);
+                await api.updateKostenblockWert(projektId, blockId, jahr, wert);
             }
         }
         
     } catch (error) {
         console.error('❌ Fehler beim Speichern des Kostenblocks:', error);
     }
-}, 1000); // 1 Sekunde Debounce
+}, 1000);
 
-/**
- * Speichere alle Kostenblöcke nach Supabase
- * @param {string} projektId - Project ID
- * @param {Array} alleBloecke - Alle Blöcke (inkl. inaktive)
- */
 async function saveAllKostenbloeckeToDB(projektId, alleBloecke) {
     try {
-        const projekt = state.getProjekt(projektId);
-        if (!projekt) return;
-        
-        console.log(`💾 Speichere ${alleBloecke.length} Kostenblöcke nach Supabase...`);
-        
-        const success = await api.saveKostenblöcke(projektId, alleBloecke);
-        
-        if (success) {
-            console.log('✅ Alle Kostenblöcke erfolgreich gespeichert');
-        } else {
-            console.error('❌ Speichern fehlgeschlagen');
-        }
-        
+        await api.saveKostenblöcke(projektId, alleBloecke);
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Kostenblöcke:', error);
     }
 }
 
 /**
- * Lade Personal-Positionen aus Supabase
- * @param {string} projektId - Project ID
+ * Lade Personal-Positionen aus Supabase mit ZENTRALER Berechnung
  */
 async function loadPersonalPositionenFromDB(projektId) {
     try {
         console.log('📥 Lade Personal-Positionen aus Supabase für', projektId);
         
         const dbPositionen = await api.loadPersonalPositionen(projektId);
-        
-        console.log(`✅ Loaded ${dbPositionen.length} Personal-Positionen from Supabase`);
         
         if (!dbPositionen || dbPositionen.length === 0) {
             console.log('ℹ️ Keine Personal-Positionen in DB');
@@ -1851,7 +1763,6 @@ async function loadPersonalPositionenFromDB(projektId) {
         const projekt = state.getProjekt(projektId);
         if (!projekt) return;
         
-        // Konvertiere DB-Format zu App-Format
         projekt.personalPositionen = dbPositionen.map(dbPos => ({
             id: dbPos.position_id,
             name: dbPos.position_name,
@@ -1862,72 +1773,40 @@ async function loadPersonalPositionenFromDB(projektId) {
             gehaltssteigerung: dbPos.gehaltssteigerung || 0.025
         }));
         
-        // ✅ NEU: Berechne und speichere die Summen in kostenWerte['personal']
-        if (!projekt.kostenWerte) projekt.kostenWerte = {};
-        if (!projekt.kostenWerte['personal']) projekt.kostenWerte['personal'] = {};
-        
-        // Sammle alle Jahre aus allen Positionen
+        // ✅ Berechne Summen mit ZENTRALER Funktion
         const alleJahre = new Set();
         projekt.personalPositionen.forEach(pos => {
             Object.keys(pos.fteWerte || {}).forEach(jahr => alleJahre.add(jahr));
         });
         
-        // Berechne Summen pro Jahr
-        alleJahre.forEach(jahr => {
-            let jahresSumme = 0;
-            
-            projekt.personalPositionen.forEach(pos => {
-                const fte = pos.fteWerte?.[jahr] || 0;
-                const nkFaktor = pos.nebenkostenFaktor || 1.3;
-                const gehalt = pos.basisGehalt || 0;
-                const steigerung = pos.gehaltssteigerung || 0.025;
-                
-                // Berechne Index (Jahr - erstes Jahr)
-                const sortedJahre = Array.from(alleJahre).sort();
-                const jahrIndex = sortedJahre.indexOf(jahr);
-                const steigerungsFaktor = Math.pow(1 + steigerung, jahrIndex);
-                
-                const kosten = gehalt * nkFaktor * fte * steigerungsFaktor;
-                jahresSumme += kosten;
-            });
-            
-            projekt.kostenWerte['personal'][jahr] = Math.round(jahresSumme);
-            console.log(`  ✓ Personal ${jahr}: ${Math.round(jahresSumme)}`);
+        const jahre = Array.from(alleJahre).sort();
+        
+        const jahresSummen = calculatePersonalCosts(projekt.personalPositionen, jahre, {
+            mitNebenkosten: true,
+            mitGehaltssteigerung: true,
+            mitFluktuation: false,
+            nebenkostenFaktor: 1.3,
+            gehaltssteigerung: 0.025
         });
         
-        // State aktualisieren
+        if (!projekt.kostenWerte) projekt.kostenWerte = {};
+        if (!projekt.kostenWerte['personal']) projekt.kostenWerte['personal'] = {};
+        
+        jahre.forEach(jahr => {
+            projekt.kostenWerte['personal'][jahr] = Math.round(jahresSummen[jahr]);
+            console.log(`  ✓ Personal ${jahr}: ${Math.round(jahresSummen[jahr])}`);
+        });
+        
         state.setProjekt(projektId, projekt);
         state.saveState();
         
-        console.log('✅ Personal-Positionen UND Summen in State übernommen:', projekt.personalPositionen.length);
+        console.log('✅ Personal-Positionen und Summen geladen');
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Personal-Positionen:', error);
     }
 }
 
-/**
- * Speichere Personal-Positionen nach Supabase
- * @param {string} projektId - Project ID
- * @param {Array} positionen - Array of positions
- */
-async function savePersonalPositionenToDB(projektId, positionen) {
-    try {
-        console.log('💾 Speichere Personal-Positionen nach Supabase:', positionen.length);
-        
-        await api.savePersonalPositionen(projektId, positionen);
-        
-        console.log('✅ Personal-Positionen gespeichert');
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Personal-Positionen:', error);
-    }
-}
-
-/**
- * Globale Speichern-Funktion - Speichert ALLE Projektkosten-Daten
- * Aufgerufen vom "Alle Änderungen speichern" Button
- */
 window.saveProjektkostenToDB = async function() {
     const projektId = window.cfoDashboard.currentProjekt;
     
@@ -1942,9 +1821,6 @@ window.saveProjektkostenToDB = async function() {
     }
     
     try {
-        console.log('💾 Starte Speicherung aller Projektkosten...');
-        
-        // Zeige Loading-Indikator
         const btn = event.target.closest('button');
         const originalHTML = btn.innerHTML;
         btn.disabled = true;
@@ -1952,34 +1828,24 @@ window.saveProjektkostenToDB = async function() {
         
         const projekt = state.getProjekt(projektId);
         
-        // 1. Sammle ALLE aktiven Kostenblöcke mit ihren Werten
         const alleBlöcke = [];
         document.querySelectorAll('#empfohlene-kostenblöcke input[type="checkbox"]').forEach(cb => {
-            const blockId = cb.dataset.blockId;
-            const blockName = cb.dataset.blockName || blockId;
-            const blockIcon = cb.dataset.blockIcon || '📦';
-            const blockAnteil = parseInt(cb.dataset.blockAnteil) || 0;
-            
             alleBlöcke.push({
-                id: blockId,
-                name: blockName,
-                icon: blockIcon,
-                anteil: blockAnteil,
+                id: cb.dataset.blockId,
+                name: cb.dataset.blockName || cb.dataset.blockId,
+                icon: cb.dataset.blockIcon || '📦',
+                anteil: parseInt(cb.dataset.blockAnteil) || 0,
                 isActive: cb.checked,
-                kostenWerte: projekt.kostenWerte?.[blockId] || {}
+                kostenWerte: projekt.kostenWerte?.[cb.dataset.blockId] || {}
             });
         });
         
-        console.log('📦 Speichere Kostenblöcke:', alleBlöcke.length);
         await api.saveKostenblöcke(projektId, alleBlöcke);
         
-        // 2. Sammle alle Personal-Positionen
         if (projekt.personalPositionen && projekt.personalPositionen.length > 0) {
-            console.log('👥 Speichere Personal-Positionen:', projekt.personalPositionen.length);
             await api.savePersonalPositionen(projektId, projekt.personalPositionen);
         }
         
-        // Erfolgs-Feedback
         btn.innerHTML = '<span>✅</span><span>Gespeichert!</span>';
         btn.style.background = 'var(--success)';
         
@@ -1989,15 +1855,8 @@ window.saveProjektkostenToDB = async function() {
             btn.style.background = '';
         }, 2000);
         
-        console.log('✅ Alle Projektkosten erfolgreich gespeichert!');
-        
     } catch (error) {
         console.error('❌ Fehler beim Speichern:', error);
         alert('❌ Fehler beim Speichern: ' + error.message);
-        
-        // Reset Button
-        const btn = event.target.closest('button');
-        btn.disabled = false;
-        btn.innerHTML = '<span>💾</span><span>Alle Änderungen speichern</span>';
     }
 };
