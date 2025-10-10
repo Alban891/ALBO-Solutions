@@ -2,6 +2,8 @@
  * CFO Dashboard - Helper Functions
  * Professional formatting, parsing, and utility functions
  * Production-ready with extensive error handling
+ * 
+ * FIXES: formatCurrency() nun mit korrektem deutschen Format ohne Nachkommastellen
  */
 
 // ==========================================
@@ -99,23 +101,37 @@ export function formatRevenue(value) {
 }
 
 /**
- * Format currency (always in €)
+ * Format currency (always in €) - Deutsches Format
  * @param {number} value - Value to format
- * @param {boolean} showDecimals - Show decimal places
- * @returns {string} Formatted currency (e.g., "1.234,56€")
+ * @param {boolean} showDecimals - Show decimal places (default: false für ganze Euros)
+ * @returns {string} Formatted currency (e.g., "120.000€" oder "1.234,56€")
  */
-export function formatCurrency(value, showDecimals = true) {
+export function formatCurrency(value, showDecimals = false) {
   if (value === null || value === undefined) return '0€';
   
   try {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    // Parse string to number if needed
+    const numValue = typeof value === 'string' 
+      ? parseFloat(value.replace(/\./g, '').replace(',', '.')) 
+      : value;
+    
     if (isNaN(numValue)) return '0€';
     
-    if (showDecimals) {
-      return numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace('.', ',') + '€';
+    // OHNE Nachkommastellen (Standard für CFO Dashboard)
+    if (!showDecimals) {
+      const rounded = Math.round(numValue);
+      return rounded.toLocaleString('de-DE', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }) + '€';
     }
     
-    return Math.round(numValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '€';
+    // MIT Nachkommastellen (falls explizit gewünscht)
+    return numValue.toLocaleString('de-DE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + '€';
+    
   } catch (error) {
     console.error('formatCurrency error:', error);
     return '0€';
