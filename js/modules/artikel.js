@@ -200,10 +200,14 @@ function loadArtikelIntoForm(artikel) {
   helpers.setInputValue('artikel-beschreibung', artikel.beschreibung);
   helpers.setInputValue('release-datum', artikel.release_datum ? artikel.release_datum.substring(0, 7) : '');
 
-  // Start values
-  helpers.setInputValue('start-menge', helpers.formatThousands(artikel.start_menge || 0));
-  helpers.setInputValue('start-preis', helpers.formatDecimal(artikel.start_preis || 0));
-  helpers.setInputValue('start-hk', helpers.formatDecimal(artikel.start_hk || 0));
+  // Start values - MIT BEISPIELWERTEN ALS FALLBACK
+  const startMenge = artikel.start_menge || 1000;  // Fallback: 1000
+  const startPreis = artikel.start_preis || 50;    // Fallback: 50
+  const startHK = artikel.start_hk || 20;          // Fallback: 20
+  
+  helpers.setInputValue('start-menge', helpers.formatThousands(startMenge));
+  helpers.setInputValue('start-preis', helpers.formatDecimal(startPreis, 2));
+  helpers.setInputValue('start-hk', helpers.formatDecimal(startHK, 2));
 
   // Models
   if (artikel.mengen_modell) {
@@ -219,15 +223,32 @@ function loadArtikelIntoForm(artikel) {
     if (kostenRadio) kostenRadio.checked = true;
   }
 
-  // Zeitraum
-  if (artikel.zeitraum) {
-    const zeitraumBtn = document.querySelector(`button[onclick*="${artikel.zeitraum}"]`);
-    if (zeitraumBtn) {
-      document.querySelectorAll('.zeitraum-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      zeitraumBtn.classList.add('active');
-    }
+  // Zeitraum - MIT KORREKTER BUTTON-AKTIVIERUNG
+  const zeitraum = artikel.zeitraum || 5;  // Default: 5 Jahre
+  
+  // Alle Buttons zurücksetzen
+  document.querySelectorAll('.zeitraum-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.background = 'white';
+    btn.style.color = '#374151';
+    btn.style.border = '1px solid #e5e7eb';
+    btn.style.fontWeight = '500';
+  });
+  
+  // Richtigen Button finden und aktivieren
+  const buttons = document.querySelectorAll('.zeitraum-btn');
+  let targetBtn;
+  
+  if (zeitraum === 3) targetBtn = buttons[0];
+  else if (zeitraum === 5) targetBtn = buttons[1];
+  else if (zeitraum === 7) targetBtn = buttons[2];
+  
+  if (targetBtn) {
+    targetBtn.classList.add('active');
+    targetBtn.style.background = '#3b82f6';
+    targetBtn.style.color = 'white';
+    targetBtn.style.border = '2px solid #3b82f6';
+    targetBtn.style.fontWeight = '600';
   }
 
   // Load year data into table
@@ -438,20 +459,30 @@ function collectArtikelFormData() {
  * Set planning horizon (3, 5, or 7 years)
  */
 window.setzeZeitraum = function(jahre) {
+    // Alle Buttons zurücksetzen
     document.querySelectorAll('.zeitraum-btn').forEach(btn => {
         btn.classList.remove('active');
         btn.style.background = 'white';
         btn.style.color = '#374151';
         btn.style.border = '1px solid #e5e7eb';
-        btn.style.fontWeight = 'normal';
+        btn.style.fontWeight = '500';
     });
     
-    if (event && event.target) {
-        event.target.classList.add('active');
-        event.target.style.background = '#3b82f6';
-        event.target.style.color = 'white';
-        event.target.style.border = '1px solid #3b82f6';
-        event.target.style.fontWeight = '600';
+    // Den richtigen Button finden basierend auf dem Jahre-Parameter
+    const buttons = document.querySelectorAll('.zeitraum-btn');
+    let targetBtn;
+    
+    // Button nach Position auswählen (sicherer als nach Text)
+    if (jahre === 3) targetBtn = buttons[0];
+    else if (jahre === 5) targetBtn = buttons[1];
+    else if (jahre === 7) targetBtn = buttons[2];
+    
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.style.background = '#3b82f6';
+        targetBtn.style.color = 'white';
+        targetBtn.style.border = '2px solid #3b82f6';
+        targetBtn.style.fontWeight = '600';
     }
     
     // Store the selected zeitraum
@@ -460,8 +491,12 @@ window.setzeZeitraum = function(jahre) {
         const artikel = state.getArtikel(artikelId);
         if (artikel) {
             artikel.zeitraum = jahre;
+            state.saveState();  // WICHTIG: State speichern
         }
     }
+    
+    // Optional: Jahr-Tabelle mit neuer Anzahl Jahre neu rendern
+    // updateJahresTabelle(jahre);
 }
 
 /**
