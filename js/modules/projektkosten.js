@@ -273,7 +273,6 @@ window.updateProjektZeitraum = function() {
 };
 
 window.updateKostenSumme = function() {
-    // Berechne Summen
     const jahre = ['2024', '2025', '2026', '2027', '2028'];
     const jahresSummen = {};
     
@@ -281,18 +280,35 @@ window.updateKostenSumme = function() {
         jahresSummen[jahr] = 0;
         
         document.querySelectorAll(`[id^="kosten-"][id$="-${jahr}"]`).forEach(input => {
-            const value = parseFloat(input.value) || 0;
+            const value = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
             jahresSummen[jahr] += value;
         });
         
         const cell = document.getElementById(`gesamt-${jahr}`);
-        if (cell) cell.textContent = helpers.formatCurrency(jahresSummen[jahr]);
+        if (cell) cell.textContent = helpers.formatCurrency(jahresSummen[jahr]) + '€';
+    });
+    
+    // Zeilen-Summen berechnen
+    document.querySelectorAll('[data-block-id]').forEach(row => {
+        const blockId = row.dataset.blockId;
+        let zeileSumme = 0;
+        
+        jahre.forEach(jahr => {
+            const input = document.getElementById(`kosten-${blockId}-${jahr}`);
+            if (input) {
+                const value = parseFloat(input.value.replace(/\./g, '').replace(',', '.')) || 0;
+                zeileSumme += value;
+            }
+        });
+        
+        const sumCell = document.getElementById(`summe-${blockId}`);
+        if (sumCell) sumCell.textContent = helpers.formatCurrency(zeileSumme) + '€';
     });
     
     // Gesamt-Summe
     const total = Object.values(jahresSummen).reduce((a, b) => a + b, 0);
     const totalCell = document.getElementById('gesamt-total');
-    if (totalCell) totalCell.textContent = helpers.formatCurrency(total);
+    if (totalCell) totalCell.textContent = helpers.formatCurrency(total) + '€';
 };
 
 window.openPersonalDetail = function(blockId) {
@@ -301,7 +317,7 @@ window.openPersonalDetail = function(blockId) {
 };
 
 window.addKostenblock = function() {
-    alert('Kostenblock hinzufügen Dialog kommt!');
+    openKostenblockModal();
 };
 
 window.removeKostenblock = function(blockId) {
@@ -309,6 +325,157 @@ window.removeKostenblock = function(blockId) {
     if (row) {
         row.remove();
         window.updateKostenSumme();
+    }
+};
+
+window.openKostenblockModal = function() {
+    const modalHTML = `
+        <div id="kostenblock-modal" class="modal" style="display: flex; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+            <div class="modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                    <h2 style="margin: 0; color: #1e3a8a; font-size: 18px;">➕ Eigenen Kostenblock hinzufügen</h2>
+                </div>
+                
+                <div class="modal-body" style="padding: 20px;">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Bezeichnung *</label>
+                        <input type="text" id="kostenblock-name" 
+                               placeholder="z.B. Externe Beratung" 
+                               style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
+                                      border-radius: 4px; font-size: 14px;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Icon (Emoji)</label>
+                        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-bottom: 8px;">
+                            <button type="button" onclick="selectKostenblockIcon('💼')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">💼</button>
+                            <button type="button" onclick="selectKostenblockIcon('🏭')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">🏭</button>
+                            <button type="button" onclick="selectKostenblockIcon('🚀')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">🚀</button>
+                            <button type="button" onclick="selectKostenblockIcon('💡')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">💡</button>
+                            <button type="button" onclick="selectKostenblockIcon('🛠️')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">🛠️</button>
+                            <button type="button" onclick="selectKostenblockIcon('📊')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">📊</button>
+                            <button type="button" onclick="selectKostenblockIcon('🎯')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">🎯</button>
+                            <button type="button" onclick="selectKostenblockIcon('📈')" class="icon-btn" style="padding: 8px; border: 1px solid #e5e7eb; background: white; border-radius: 4px; cursor: pointer; font-size: 20px;">📈</button>
+                        </div>
+                        <input type="text" id="kostenblock-icon" 
+                               placeholder="💼" 
+                               value="💼"
+                               maxlength="2"
+                               style="width: 60px; padding: 10px; border: 1px solid #e5e7eb; 
+                                      border-radius: 4px; font-size: 20px; text-align: center;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie</label>
+                        <select id="kostenblock-kategorie" 
+                                style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
+                                       border-radius: 4px; font-size: 14px; background: white;">
+                            <option value="einmalig">Einmalig</option>
+                            <option value="laufend">Laufend</option>
+                            <option value="variabel">Variabel</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button onclick="closeKostenblockModal()" 
+                            style="padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
+                                   border-radius: 6px; cursor: pointer;">
+                        Abbrechen
+                    </button>
+                    <button onclick="saveKostenblock()" 
+                            style="padding: 10px 20px; background: #1e3a8a; color: white; 
+                                   border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        Hinzufügen
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    setTimeout(() => {
+        document.getElementById('kostenblock-name')?.focus();
+    }, 100);
+};
+
+window.selectKostenblockIcon = function(icon) {
+    document.getElementById('kostenblock-icon').value = icon;
+    
+    document.querySelectorAll('.icon-btn').forEach(btn => {
+        btn.style.background = btn.textContent === icon ? '#dbeafe' : 'white';
+        btn.style.border = btn.textContent === icon ? '2px solid #1e3a8a' : '1px solid #e5e7eb';
+    });
+};
+
+window.closeKostenblockModal = function() {
+    const modal = document.getElementById('kostenblock-modal');
+    if (modal) modal.remove();
+};
+
+window.saveKostenblock = function() {
+    const name = document.getElementById('kostenblock-name')?.value;
+    const icon = document.getElementById('kostenblock-icon')?.value || '💼';
+    const kategorie = document.getElementById('kostenblock-kategorie')?.value;
+    
+    if (!name || name.trim() === '') {
+        alert('Bitte Bezeichnung eingeben!');
+        return;
+    }
+    
+    const tbody = document.getElementById('kosten-tbody');
+    if (tbody) {
+        const newBlockId = 'custom-' + Date.now();
+        const jahre = ['2024', '2025', '2026', '2027', '2028'];
+        
+        const newRow = document.createElement('tr');
+        newRow.dataset.blockId = newBlockId;
+        newRow.innerHTML = `
+            <td style="padding: 8px; font-weight: 600;">
+                ${icon} ${name}
+                ${kategorie === 'variabel' ? `
+                    <span style="font-size: 10px; color: #6b7280; margin-left: 8px;">
+                        (${kategorie})
+                    </span>
+                ` : ''}
+            </td>
+            ${jahre.map(jahr => `
+                <td style="padding: 8px;">
+                    <input type="text" class="kosten-input" 
+                           id="kosten-${newBlockId}-${jahr}" 
+                           placeholder="0"
+                           onchange="window.updateKostenSumme()"
+                           style="width: 60px; padding: 2px; border: 1px solid #e5e7eb; 
+                                  border-radius: 2px; text-align: right;">
+                </td>
+            `).join('')}
+            <td style="padding: 8px; font-weight: bold;" id="summe-${newBlockId}">0€</td>
+            <td style="padding: 8px; text-align: center;">
+                <button onclick="window.removeKostenblock('${newBlockId}')" 
+                        class="btn btn-danger btn-sm"
+                        style="padding: 2px 8px; font-size: 10px;">
+                    ✕
+                </button>
+            </td>
+        `;
+        
+        // Füge neue Zeile vor der Footer-Zeile ein
+        const tfoot = tbody.parentElement.querySelector('tfoot');
+        if (tfoot) {
+            tbody.appendChild(newRow);
+        }
+    }
+    
+    closeKostenblockModal();
+    
+    if (window.cfoDashboard?.aiController) {
+        window.cfoDashboard.aiController.addAIMessage({
+            level: 'success',
+            title: '✅ Kostenblock hinzugefügt',
+            text: `"${name}" wurde erfolgreich angelegt.`,
+            timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+        });
     }
 };
 
