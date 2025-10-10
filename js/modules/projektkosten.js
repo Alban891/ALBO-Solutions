@@ -29,16 +29,10 @@ export async function renderProjektkosten() {
     const empfehlung = generiereKostenEmpfehlung(artikel, projekt);
     
     // 🆕 SUPABASE: Lade gespeicherte Kostenblöcke aus DB
-    // WICHTIG: Nur laden wenn es ein DB-Projekt ist UND noch keine lokalen Daten vorhanden
     if (projektId.startsWith('projekt-db-')) {
-        const hasLocalData = projekt.kostenWerte && Object.keys(projekt.kostenWerte).length > 0;
-        
-        if (!hasLocalData) {
-            // Nur laden wenn noch keine lokalen Daten vorhanden
-            await loadKostenbloeckeFromDB(projektId);
-        } else {
-            console.log('ℹ️ Lokale Kostenblöcke vorhanden, überspringe DB-Load');
-        }
+        console.log('📥 DB-Projekt erkannt - lade Kostenblöcke aus Supabase...');
+        await loadKostenbloeckeFromDB(projektId);
+        await loadPersonalPositionenFromDB(projektId);
     }
     
     // Hole gespeicherte aktive Kostenblöcke oder nutze Defaults
@@ -1603,9 +1597,11 @@ async function loadKostenbloeckeFromDB(projektId) {
         
         const dbBlocks = await api.loadKostenblöcke(projektId);
         
-        // WICHTIG: Nur übernehmen wenn auch Daten vorhanden!
+        console.log(`✅ Loaded ${dbBlocks.length} Kostenblöcke from Supabase`);
+        
+        // Wenn keine Daten in DB, dann OK - Projekt ist neu
         if (!dbBlocks || dbBlocks.length === 0) {
-            console.log('ℹ️ Keine Kostenblöcke in DB gefunden - behalte lokale Daten');
+            console.log('ℹ️ Keine Kostenblöcke in DB - Projekt ist möglicherweise neu');
             return;
         }
         
@@ -1613,32 +1609,36 @@ async function loadKostenbloeckeFromDB(projektId) {
         if (!projekt) return;
         
         // Initialisiere kostenWerte und aktiveKostenblöcke
-        if (!projekt.kostenWerte) projekt.kostenWerte = {};
-        if (!projekt.aktiveKostenblöcke) projekt.aktiveKostenblöcke = [];
+        projekt.kostenWerte = {};
+        projekt.aktiveKostenblöcke = [];
         
         // Übertrage Daten aus DB in State
         dbBlocks.forEach(dbBlock => {
             const blockId = dbBlock.block_id;
             
             // Kostenblöcke als aktiv markieren
-            if (dbBlock.is_active && !projekt.aktiveKostenblöcke.includes(blockId)) {
+            if (dbBlock.is_active) {
                 projekt.aktiveKostenblöcke.push(blockId);
             }
             
             // Kosten-Werte übernehmen
-            if (dbBlock.kosten_werte) {
+            if (dbBlock.kosten_werte && Object.keys(dbBlock.kosten_werte).length > 0) {
                 projekt.kostenWerte[blockId] = dbBlock.kosten_werte;
+                console.log(`  ✓ Kostenblock "${blockId}" geladen:`, Object.keys(dbBlock.kosten_werte).length, 'Jahre');
             }
         });
         
         // State aktualisieren
         state.setProjekt(projektId, projekt);
+        state.saveState(); // Wichtig: Auch in localStorage speichern!
         
-        console.log('✅ Kostenblöcke aus DB geladen:', dbBlocks.length);
+        console.log('✅ Kostenblöcke in State übernommen:', {
+            aktiveBlöcke: projekt.aktiveKostenblöcke.length,
+            kostenWerte: Object.keys(projekt.kostenWerte).length
+        });
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Kostenblöcke:', error);
-        // Bei Fehler NICHT den State überschreiben!
     }
 }
 
@@ -1723,13 +1723,35 @@ async function loadPersonalPositionenFromDB(projektId) {
         
         const dbPositionen = await api.loadPersonalPositionen(projektId);
         
-        console.log('✅ Personal-Positionen geladen:', dbPositionen.length);
+        console.log(`✅ Loaded ${dbPositionen.length} Personal-Positionen from Supabase`);
         
-        return dbPositionen;
+        if (!dbPositionen || dbPositionen.length === 0) {
+            console.log('ℹ️ Keine Personal-Positionen in DB');
+            return;
+        }
+        
+        const projekt = state.getProjekt(projektId);
+        if (!projekt) return;
+        
+        // Konvertiere DB-Format zu App-Format
+        projekt.personalPositionen = dbPositionen.map(dbPos => ({
+            id: dbPos.position_id,
+            name: dbPos.position_name,
+            basisGehalt: dbPos.basis_gehalt || 0,
+            vollkosten: dbPos.vollkosten || 0,
+            fteWerte: dbPos.fte_werte || {},
+            nebenkostenFaktor: dbPos.nebenkosten_faktor || 1.30,
+            gehaltssteigerung: dbPos.gehaltssteigerung || 0.025
+        }));
+        
+        // State aktualisieren
+        state.setProjekt(projektId, projekt);
+        state.saveState();
+        
+        console.log('✅ Personal-Positionen in State übernommen:', projekt.personalPositionen.length);
         
     } catch (error) {
         console.error('❌ Fehler beim Laden der Personal-Positionen:', error);
-        return [];
     }
 }
 
