@@ -8,15 +8,15 @@
  * @version 2.0.0
  */
 
-import { state } from '../state.js';
-import * as helpers from '../helpers.js';
+import { state } from '../../state.js';  // Ein Level höher!
+import * as helpers from '../../helpers.js';  // Ein Level höher!
 import {
     HK_DEFAULTS,
     KOSTEN_MAPPING,
     OVERHEAD_DEFAULTS,
     CALCULATION_CONSTANTS,
     BRANCHEN_BENCHMARKS
-} from './wirtschaftlichkeit-constants.js';
+} from './constants.js';  // Kein Prefix!
 
 /**
  * Main calculation engine for project profitability
