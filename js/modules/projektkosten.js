@@ -949,7 +949,7 @@ window.closePersonalDetail = function() {
     }
 };
 
-// FIX: Save Personal Detail - Korrekte Übertragung mit Formatierung
+// FIX: Save Personal Detail - Korrekte Übertragung OHNE Formatierung
 window.savePersonalDetail = function() {
     const startDatum = document.getElementById('projekt-start')?.value || '2024-01';
     const endeDatum = document.getElementById('projekt-ende')?.value || '2027-12';
@@ -961,7 +961,8 @@ window.savePersonalDetail = function() {
         jahre.push(jahr.toString());
     }
     
-    // FIX: Korrekte Übertragung der Summen
+    // FIX: Schreibe UNFORMATIERTE Zahlen in die Inputs
+    // Die Inputs enthalten unformatierte Werte, formatierung erfolgt nur in Anzeige-Zellen
     jahre.forEach(jahr => {
         const sumCell = document.getElementById(`personal-sum-${jahr}`);
         const mainInput = document.getElementById(`kosten-personal-${jahr}`);
@@ -971,8 +972,8 @@ window.savePersonalDetail = function() {
             value = value.replace(/\./g, '').replace(',', '.').replace('€', '').trim();
             const numValue = parseFloat(value) || 0;
             
-            // Formatiere für das Input-Feld (Tausender-Punkt, Komma-Dezimal)
-            mainInput.value = helpers.formatCurrency(numValue).replace('€', '').trim();
+            // Schreibe unformatierte Zahl ins Input-Feld
+            mainInput.value = Math.round(numValue);
         }
     });
     
@@ -1235,7 +1236,8 @@ function getSavedValue(blockId, jahr) {
     const projekt = state.getProjekt(projektId);
     
     if (projekt?.kostenWerte?.[blockId]?.[jahr]) {
-        return helpers.formatCurrency(projekt.kostenWerte[blockId][jahr]);
+        // Gebe UNFORMATIERTE Zahl zurück - Formatierung erfolgt nur zur Anzeige
+        return projekt.kostenWerte[blockId][jahr];
     }
     return '';
 }
