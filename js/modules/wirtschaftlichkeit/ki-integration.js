@@ -12,7 +12,7 @@ import {
     KOSTEN_MAPPING,
     MEHRDEUTIGE_BLOECKE,
     RECHTSGRUNDLAGEN_DB
-} from './wirtschaftlichkeit-constants.js';
+} from './constants.js';  // Kein Prefix!
 
 /**
  * Analyze cost block and provide intelligent categorization
