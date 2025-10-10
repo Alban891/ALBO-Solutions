@@ -8,16 +8,16 @@
  * @version 2.0.0
  */
 
-import { state } from '../../state.js';  // Ein Level höher!
-import * as helpers from '../../helpers.js';  // Ein Level höher!
-import { calculateProjektWirtschaftlichkeit } from './calculator.js';  // Kein Prefix!
-import { analyzeKostenblockKategorisierung } from './ki-integration.js';  // Kein Prefix!
+import { state } from '../../state.js';
+import * as helpers from '../../helpers.js';
+import { calculateProjektWirtschaftlichkeit } from './calculator.js';
+import { analyzeKostenblockKategorisierung } from './ki-integration.js';
 import {
     HK_DEFAULTS,
     OVERHEAD_DEFAULTS,
     UI_LABELS,
     BRANCHEN_BENCHMARKS
-} from './constants.js';  // Kein Prefix!
+} from './constants.js';
 
 // ========================================
 // PROJEKT-WIRTSCHAFTLICHKEIT (Aggregiert)
@@ -58,7 +58,7 @@ export async function renderProjektWirtschaftlichkeit() {
                 ${renderHeader(projekt, artikelListe)}
                 ${renderArtikelOverview(artikelListe)}
                 ${renderContributionMarginTable(result)}
-                ${renderKPIDashboard(result.kpis, artikelListe[0]?.typ)}
+                ${renderKPIDashboard(result, result.kpis, artikelListe[0]?.typ)}
                 ${renderActionButtons()}
             </div>
         `;
@@ -113,7 +113,7 @@ export async function renderWirtschaftlichkeit() {
                 ${renderArtikelHeader(artikel)}
                 ${renderHKConfigSection(artikel)}
                 ${renderContributionMarginTable(result, artikel)}
-                ${renderKPIDashboard(result.kpis, artikel.typ)}
+                ${renderKPIDashboard(result, result.kpis, artikel.typ)}
                 ${renderActionButtons()}
             </div>
         `;
@@ -207,7 +207,7 @@ function renderArtikelHeader(artikel) {
 }
 
 /**
- * Render article overview section
+ * Render article overview section with filter buttons
  * 
  * @param {Array} artikelListe - List of articles
  * @returns {string} HTML
@@ -233,28 +233,71 @@ function renderArtikelOverview(artikelListe) {
     }
     
     return `
-        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 14px; 
+        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 16px; 
                     border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div style="font-size: 12px; font-weight: 600; color: var(--primary);">
-                    📦 Enthaltene Artikel (${artikelListe.length})
+                    📦 Artikel-Filter
                 </div>
-                <button onclick="window.showArtikelDetails()" 
-                        style="padding: 4px 10px; border: 1px solid var(--primary); 
-                               background: white; border-radius: 4px; font-size: 11px; cursor: pointer;">
-                    Details anzeigen
-                </button>
+                <div style="font-size: 11px; color: var(--gray);">
+                    Wählen Sie einen Artikel für Produkt-Analyse (bis DB2)
+                </div>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            
+            <!-- Filter Buttons -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <!-- "Alle" Button -->
+                <button 
+                    id="filter-alle"
+                    onclick="window.filterArtikel(null)" 
+                    class="artikel-filter-btn active"
+                    style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
+                           background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
+                           border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;
+                           transition: all 0.2s;">
+                    <span style="font-size: 16px;">📊</span>
+                    <span>Alle Artikel (Projekt-Gesamt)</span>
+                </button>
+                
                 ${artikelListe.map(artikel => `
-                    <div style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; 
-                                background: white; border-radius: 4px; font-size: 11px; 
-                                border: 1px solid #e5e7eb;">
-                        <span style="color: ${getTypeColor(artikel.typ)};">●</span>
-                        <span style="font-weight: 500;">${artikel.name || 'Unbenannt'}</span>
-                        <span style="color: var(--gray);">${artikel.typ || 'N/A'}</span>
-                    </div>
+                    <button 
+                        id="filter-${artikel.id}"
+                        onclick="window.filterArtikel('${artikel.id}')" 
+                        class="artikel-filter-btn"
+                        style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
+                               background: white; color: #374151; border: 1px solid #e5e7eb;
+                               border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500;
+                               transition: all 0.2s;">
+                        <span style="color: ${getTypeColor(artikel.typ)}; font-size: 14px;">●</span>
+                        <span>${artikel.name || 'Unbenannt'}</span>
+                        <span style="color: var(--gray); font-size: 10px;">${artikel.typ || 'N/A'}</span>
+                    </button>
                 `).join('')}
+            </div>
+            
+            <!-- Info-Box (initially hidden) -->
+            <div id="artikel-filter-info" style="display: none; margin-top: 12px; padding: 12px; 
+                                                  background: #fef3c7; border-left: 4px solid #f59e0b;
+                                                  border-radius: 4px;">
+                <div style="display: flex; gap: 10px;">
+                    <span style="font-size: 20px;">ℹ️</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #92400e;">
+                            PRODUKT-ANALYSE MODUS
+                        </div>
+                        <div style="font-size: 11px; color: #78350f; line-height: 1.5;">
+                            Sie sehen die Wirtschaftlichkeit für: <strong id="filtered-artikel-name"></strong><br>
+                            <strong>Angezeigt:</strong> DB1 & DB2 (Manufacturing Margin)<br>
+                            <strong>Ausgegraut:</strong> DB3-EBIT (Projektkosten sind nicht artikelspezifisch zuordenbar)
+                        </div>
+                        <button onclick="window.filterArtikel(null)" 
+                                style="margin-top: 8px; padding: 6px 12px; background: white; 
+                                       border: 1px solid #f59e0b; border-radius: 4px; 
+                                       font-size: 11px; cursor: pointer; font-weight: 500;">
+                            ← Zur Projekt-Gesamtsicht wechseln
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -603,14 +646,19 @@ function renderMarginCells(result, jahre, baseField) {
  * 
  * @private
  */
-function renderKPIDashboard(kpis, artikelTyp) {
+function renderKPIDashboard(result, kpis, artikelTyp) {
     const benchmark = BRANCHEN_BENCHMARKS[artikelTyp] || BRANCHEN_BENCHMARKS['Software'];
     
+    // Check if we're in filter mode
+    const isFiltered = window.cfoDashboard?.artikelFilter;
+    
     return `
+        ${!isFiltered ? renderProduktVergleich(result) : ''}
+        
         <div style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h4 style="font-size: 14px; font-weight: 600; margin: 0;">
-                    📊 Key Performance Indicators
+                    📊 Key Performance Indicators ${isFiltered ? '(Einzelprodukt - nur DB2 relevant)' : '(Projekt-Gesamt)'}
                 </h4>
                 <div style="font-size: 11px; color: var(--gray);">
                     Benchmark: ${artikelTyp || 'Software'} Industrie
@@ -625,34 +673,218 @@ function renderKPIDashboard(kpis, artikelTyp) {
                     benchmark.manufacturing_margin,
                     'primary'
                 )}
-                ${renderKPICard(
+                ${!isFiltered ? renderKPICard(
                     'EBIT Margin Ø',
                     kpis.avg_ebit_margin,
                     '%',
                     benchmark.ebit_margin,
                     'success'
-                )}
-                ${renderKPICard(
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px; 
+                                text-transform: uppercase; letter-spacing: 0.5px;">
+                        EBIT MARGIN Ø
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
                     'Break-Even',
                     kpis.break_even_year || 'N/A',
                     '',
                     null,
                     'warning'
-                )}
-                ${renderKPICard(
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        BREAK-EVEN
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
                     'NPV (8% WACC)',
                     kpis.npv / 1000000,
                     'M€',
                     null,
                     'info'
-                )}
-                ${renderKPICard(
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        NPV (8% WACC)
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+                ${!isFiltered ? renderKPICard(
                     'IRR',
                     kpis.irr,
                     '%',
                     null,
                     'purple'
-                )}
+                ) : `<div style="background: #f3f4f6; padding: 14px; border-radius: 6px; 
+                                 border: 1px dashed #d1d5db; opacity: 0.5;">
+                    <div style="font-size: 10px; color: var(--gray); margin-bottom: 6px;">
+                        IRR
+                    </div>
+                    <div style="font-size: 16px; font-weight: bold; color: var(--gray);">
+                        N/A
+                    </div>
+                    <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                        Nur in Projekt-Sicht
+                    </div>
+                </div>`}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render product comparison table (DB2 focus)
+ * Shows all articles side-by-side for profitability comparison
+ * 
+ * @param {Object} result - Calculation result
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderProduktVergleich(result) {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const artikelListe = state.getArtikelByProjekt(projektId);
+    
+    if (!artikelListe || artikelListe.length === 0) {
+        return '';
+    }
+    
+    // Calculate per-article metrics
+    const artikelMetrics = artikelListe.map(artikel => {
+        const jahre = Object.keys(result.jahre).sort();
+        let totalRevenue = 0;
+        let totalHK = 0;
+        
+        jahre.forEach(jahr => {
+            const yearNum = parseInt(jahr);
+            const menge = artikel.volumes?.[yearNum] || 0;
+            const preis = artikel.prices?.[yearNum] || 0;
+            const hk = artikel.hk || 0;
+            
+            totalRevenue += menge * preis;
+            totalHK += menge * hk;
+        });
+        
+        const db2 = totalRevenue - totalHK;
+        const db2_prozent = totalRevenue > 0 ? (db2 / totalRevenue * 100) : 0;
+        
+        return {
+            id: artikel.id,
+            name: artikel.name,
+            typ: artikel.typ,
+            revenue: totalRevenue,
+            hk: totalHK,
+            db2: db2,
+            db2_prozent: db2_prozent
+        };
+    });
+    
+    // Sort by DB2 absolute
+    artikelMetrics.sort((a, b) => b.db2 - a.db2);
+    
+    return `
+        <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; 
+                    border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h4 style="font-size: 14px; font-weight: 600; margin: 0;">
+                    🏆 Produkt-Profitabilität (DB2-Vergleich)
+                </h4>
+                <div style="font-size: 11px; color: var(--gray);">
+                    Sortiert nach DB2 absolut
+                </div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 10px; text-align: left; font-weight: 600;">Artikel</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">Umsatz</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">HK</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">DB2</th>
+                        <th style="padding: 10px; text-align: right; font-weight: 600;">DB2 %</th>
+                        <th style="padding: 10px; text-align: center; font-weight: 600;">Bewertung</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${artikelMetrics.map((artikel, index) => {
+                        const isTop = index === 0;
+                        const rowColor = isTop ? '#f0fdf4' : 'white';
+                        const badge = artikel.db2_prozent >= 60 ? '🌟 Exzellent' :
+                                     artikel.db2_prozent >= 40 ? '✅ Gut' :
+                                     artikel.db2_prozent >= 20 ? '⚠️ Okay' : '❌ Kritisch';
+                        
+                        return `
+                            <tr style="background: ${rowColor}; border-bottom: 1px solid #f3f4f6;">
+                                <td style="padding: 12px;">
+                                    ${isTop ? '<span style="color: #f59e0b; margin-right: 6px;">🏆</span>' : ''}
+                                    <span style="font-weight: 500;">${artikel.name}</span>
+                                    <div style="font-size: 10px; color: var(--gray); margin-top: 2px;">
+                                        <span style="color: ${getTypeColor(artikel.typ)};">●</span> ${artikel.typ}
+                                    </div>
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 500;">
+                                    ${helpers.formatCurrency(artikel.revenue)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; color: var(--danger);">
+                                    ${helpers.formatCurrency(artikel.hk)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: var(--success);">
+                                    ${helpers.formatCurrency(artikel.db2)}
+                                </td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 14px; 
+                                           color: ${artikel.db2_prozent >= 40 ? 'var(--success)' : 'var(--warning)'};">
+                                    ${artikel.db2_prozent.toFixed(1)}%
+                                </td>
+                                <td style="padding: 12px; text-align: center; font-size: 11px;">
+                                    ${badge}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                    <tr style="background: #1e3a8a; color: white; font-weight: 600;">
+                        <td style="padding: 12px;">SUMME (Projekt-Gesamt)</td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.revenue, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.hk, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${helpers.formatCurrency(artikelMetrics.reduce((sum, a) => sum + a.db2, 0))}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            ${((artikelMetrics.reduce((sum, a) => sum + a.db2, 0) / 
+                               artikelMetrics.reduce((sum, a) => sum + a.revenue, 0)) * 100).toFixed(1)}%
+                        </td>
+                        <td style="padding: 12px;"></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 12px; padding: 10px; background: #f0f9ff; border-radius: 4px; 
+                        font-size: 11px; color: var(--text);">
+                💡 <strong>Hinweis:</strong> DB2 (Manufacturing Margin) ist die letzte sinnvolle Vergleichsebene 
+                für Produktentscheidungen, da Projektkosten (Entwicklung, Marketing, Vertrieb) nicht 
+                eindeutig einzelnen Produkten zuordenbar sind.
             </div>
         </div>
     `;
@@ -963,6 +1195,125 @@ window.saveProjektWirtschaftlichkeit = function() {
     
     alert('Wirtschaftlichkeits-Daten gespeichert');
 };
+
+/**
+ * Filter artikel and gray out DB3-EBIT when single article selected
+ * 
+ * @param {string|null} artikelId - Article ID to filter, or null for all
+ * 
+ * @public
+ */
+window.filterArtikel = function(artikelId) {
+    console.log('🔍 Filtering to artikel:', artikelId || 'ALLE');
+    
+    // Store filter state
+    window.cfoDashboard = window.cfoDashboard || {};
+    window.cfoDashboard.artikelFilter = artikelId;
+    
+    // Update button states
+    document.querySelectorAll('.artikel-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#374151';
+        btn.style.border = '1px solid #e5e7eb';
+        btn.style.fontWeight = '500';
+    });
+    
+    const targetBtn = artikelId 
+        ? document.getElementById(`filter-${artikelId}`)
+        : document.getElementById('filter-alle');
+    
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+        targetBtn.style.background = '#1e3a8a';
+        targetBtn.style.color = 'white';
+        targetBtn.style.border = '2px solid #1e3a8a';
+        targetBtn.style.fontWeight = '600';
+    }
+    
+    // Show/hide info box
+    const infoBox = document.getElementById('artikel-filter-info');
+    if (infoBox) {
+        if (artikelId) {
+            // Show info box for single article
+            infoBox.style.display = 'block';
+            
+            // Update artikel name in info box
+            const artikel = state.getArtikel(artikelId);
+            const nameSpan = document.getElementById('filtered-artikel-name');
+            if (nameSpan && artikel) {
+                nameSpan.textContent = artikel.name || 'Unbenannt';
+            }
+            
+            // Gray out DB3-EBIT rows
+            grayOutProjectCostRows(true);
+        } else {
+            // Hide info box for all articles
+            infoBox.style.display = 'none';
+            
+            // Un-gray DB3-EBIT rows
+            grayOutProjectCostRows(false);
+        }
+    }
+    
+    // Re-render table with filter
+    renderProjektWirtschaftlichkeit();
+};
+
+/**
+ * Gray out or restore DB3-EBIT rows
+ * 
+ * @param {boolean} shouldGray - True to gray out, false to restore
+ * 
+ * @private
+ */
+function grayOutProjectCostRows(shouldGray) {
+    const rowsToGray = [
+        '.db3-section',
+        '.db3-row',
+        '.db4-section',
+        '.db4-row',
+        '.db5-section',
+        '.db5-row',
+        '.ebit-row',
+        '.ebit-margin-row'
+    ];
+    
+    rowsToGray.forEach(selector => {
+        document.querySelectorAll(selector).forEach(row => {
+            if (shouldGray) {
+                row.style.opacity = '0.3';
+                row.style.pointerEvents = 'none';
+                row.style.position = 'relative';
+                
+                // Add overlay tooltip
+                if (!row.querySelector('.gray-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'gray-overlay';
+                    overlay.style.cssText = `
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        cursor: not-allowed;
+                    `;
+                    overlay.title = 'Projektkosten sind nicht artikelspezifisch zuordenbar. Wechseln Sie zur Projekt-Gesamtsicht.';
+                    row.appendChild(overlay);
+                }
+            } else {
+                row.style.opacity = '1';
+                row.style.pointerEvents = 'auto';
+                
+                // Remove overlay
+                const overlay = row.querySelector('.gray-overlay');
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+        });
+    });
+}
 
 /**
  * Update view level (legacy compatibility)
