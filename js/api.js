@@ -1,7 +1,9 @@
 /**
- * CFO Dashboard - API Layer
+ * CFO Dashboard - API Layer (EXTENDED)
  * Enterprise-grade Supabase wrapper with error handling,
  * retry logic, and data validation
+ * 
+ * ERWEITERT um: Projektkosten (Kostenblöcke + Personal-Positionen)
  */
 
 import CONFIG from './config.js';
@@ -547,6 +549,242 @@ export async function deleteArticle(artikelId) {
 }
 
 // ==========================================
+// PROJEKTKOSTEN API (NEU)
+// ==========================================
+
+/**
+ * Load Kostenblöcke für ein Projekt
+ * @param {string} projektId - Project ID
+ * @returns {Promise<Array>} Array of Kostenblöcke
+ */
+export async function loadKostenblöcke(projektId) {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    const { data, error } = await client
+      .from('ALBO_Kostenblöcke')
+      .select('*')
+      .eq('project_id', dbId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    console.log(`✅ Loaded ${data.length} Kostenblöcke for project ${projektId}`);
+    return data;
+
+  } catch (error) {
+    console.error('❌ Failed to load Kostenblöcke:', error);
+    state.setError('loadKostenblöcke', error);
+    return [];
+  }
+}
+
+/**
+ * Save/Update Kostenblöcke für ein Projekt
+ * @param {string} projektId - Project ID
+ * @param {Array} kostenblöcke - Array of Kostenblöcke
+ * @returns {Promise<boolean>} Success status
+ */
+export async function saveKostenblöcke(projektId, kostenblöcke) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    // Delete alte Kostenblöcke
+    await client
+      .from('ALBO_Kostenblöcke')
+      .delete()
+      .eq('project_id', dbId);
+
+    // Insert neue Kostenblöcke
+    const blocksToInsert = kostenblöcke.map(block => ({
+      project_id: dbId,
+      block_id: block.id,
+      block_name: block.name,
+      block_icon: block.icon || '📦',
+      block_anteil: block.anteil || 0,
+      is_active: block.isActive !== false,
+      kosten_werte: block.kostenWerte || {}
+    }));
+
+    const { error } = await client
+      .from('ALBO_Kostenblöcke')
+      .insert(blocksToInsert);
+
+    if (error) throw error;
+
+    console.log(`✅ Saved ${kostenblöcke.length} Kostenblöcke for project ${projektId}`);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Failed to save Kostenblöcke:', error);
+    state.setError('saveKostenblöcke', error);
+    return false;
+  }
+}
+
+/**
+ * Update einzelnen Kostenblock-Wert
+ * @param {string} projektId - Project ID
+ * @param {string} blockId - Block ID
+ * @param {string} jahr - Jahr (z.B. "2025")
+ * @param {number} wert - Wert in €
+ * @returns {Promise<boolean>} Success status
+ */
+export async function updateKostenblockWert(projektId, blockId, jahr, wert) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    // Hole aktuellen Block
+    const { data: currentBlock, error: fetchError } = await client
+      .from('ALBO_Kostenblöcke')
+      .select('kosten_werte')
+      .eq('project_id', dbId)
+      .eq('block_id', blockId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update das Jahr
+    const kostenWerte = currentBlock.kosten_werte || {};
+    kostenWerte[jahr] = wert;
+
+    // Speichere zurück
+    const { error: updateError } = await client
+      .from('ALBO_Kostenblöcke')
+      .update({ kosten_werte: kostenWerte })
+      .eq('project_id', dbId)
+      .eq('block_id', blockId);
+
+    if (updateError) throw updateError;
+
+    console.log(`✅ Updated Kostenblock ${blockId} for ${jahr}: ${wert}€`);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Failed to update Kostenblock:', error);
+    state.setError('updateKostenblockWert', error);
+    return false;
+  }
+}
+
+/**
+ * Load Personal-Positionen für ein Projekt
+ * @param {string} projektId - Project ID
+ * @returns {Promise<Array>} Array of Personal-Positionen
+ */
+export async function loadPersonalPositionen(projektId) {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    const { data, error } = await client
+      .from('ALBO_Personal_Positionen')
+      .select('*')
+      .eq('project_id', dbId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    console.log(`✅ Loaded ${data.length} Personal-Positionen for project ${projektId}`);
+    return data;
+
+  } catch (error) {
+    console.error('❌ Failed to load Personal-Positionen:', error);
+    state.setError('loadPersonalPositionen', error);
+    return [];
+  }
+}
+
+/**
+ * Save/Update Personal-Positionen für ein Projekt
+ * @param {string} projektId - Project ID
+ * @param {Array} positionen - Array of Personal-Positionen
+ * @returns {Promise<boolean>} Success status
+ */
+export async function savePersonalPositionen(projektId, positionen) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    // Delete alte Positionen
+    await client
+      .from('ALBO_Personal_Positionen')
+      .delete()
+      .eq('project_id', dbId);
+
+    // Insert neue Positionen
+    const positionenToInsert = positionen.map(pos => ({
+      project_id: dbId,
+      position_id: pos.id,
+      position_name: pos.name,
+      basis_gehalt: pos.basisGehalt || 0,
+      vollkosten: pos.vollkosten || 0,
+      fte_werte: pos.fteWerte || {},
+      nebenkosten_faktor: pos.nebenkostenFaktor || 1.30,
+      gehaltssteigerung: pos.gehaltssteigerung || 0.025
+    }));
+
+    const { error } = await client
+      .from('ALBO_Personal_Positionen')
+      .insert(positionenToInsert);
+
+    if (error) throw error;
+
+    console.log(`✅ Saved ${positionen.length} Personal-Positionen for project ${projektId}`);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Failed to save Personal-Positionen:', error);
+    state.setError('savePersonalPositionen', error);
+    return false;
+  }
+}
+
+/**
+ * Delete Kostenblock
+ * @param {string} projektId - Project ID
+ * @param {string} blockId - Block ID
+ * @returns {Promise<boolean>} Success status
+ */
+export async function deleteKostenblock(projektId, blockId) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const dbId = projektId.replace('projekt-db-', '');
+
+    const { error } = await client
+      .from('ALBO_Kostenblöcke')
+      .delete()
+      .eq('project_id', dbId)
+      .eq('block_id', blockId);
+
+    if (error) throw error;
+
+    console.log(`✅ Deleted Kostenblock ${blockId}`);
+    return true;
+
+  } catch (error) {
+    console.error('❌ Failed to delete Kostenblock:', error);
+    state.setError('deleteKostenblock', error);
+    return false;
+  }
+}
+
+// ==========================================
 // BATCH OPERATIONS
 // ==========================================
 
@@ -627,5 +865,12 @@ export default {
   deleteMultipleProjects,
   updateMultipleProjectsStatus,
   isSupabaseReady,
-  getConnectionStatus
+  getConnectionStatus,
+  // Neue Projektkosten-Funktionen
+  loadKostenblöcke,
+  saveKostenblöcke,
+  updateKostenblockWert,
+  loadPersonalPositionen,
+  savePersonalPositionen,
+  deleteKostenblock
 };
