@@ -264,9 +264,9 @@ function loadArtikelIntoForm(artikel) {
   const targetBtn = document.getElementById(`zeitraum-btn-${zeitraum}`);
   if (targetBtn) {
     targetBtn.classList.add('active');
-    targetBtn.style.background = '#3b82f6';
+    targetBtn.style.background = '#1e3a8a';
     targetBtn.style.color = 'white';
-    targetBtn.style.border = '2px solid #3b82f6';
+    targetBtn.style.border = '2px solid #1e3a8a';
     targetBtn.style.fontWeight = '600';
   }
   
@@ -489,9 +489,9 @@ window.setzeZeitraum = function(jahre) {
   const targetBtn = document.getElementById(`zeitraum-btn-${jahre}`);
   if (targetBtn) {
     targetBtn.classList.add('active');
-    targetBtn.style.background = '#3b82f6';
+    targetBtn.style.background = '#1e3a8a';
     targetBtn.style.color = 'white';
-    targetBtn.style.border = '2px solid #3b82f6';
+    targetBtn.style.border = '2px solid #1e3a8a';
     targetBtn.style.fontWeight = '600';
   }
   
@@ -895,7 +895,7 @@ window.createNewArtikel = function() {
     <div id="artikel-quick-create-modal" class="modal" style="display: flex; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
       <div class="modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <h2 style="margin: 0; color: #3b82f6; font-size: 18px;">➕ Neuen Artikel anlegen - Quick Create</h2>
+          <h2 style="margin: 0; color: #1e3a8a; font-size: 18px;">➕ Neuen Artikel anlegen - Quick Create</h2>
         </div>
         
         <div class="modal-body" style="padding: 20px;">
@@ -934,7 +934,7 @@ window.createNewArtikel = function() {
             Abbrechen
           </button>
           <button onclick="saveQuickArtikel()" 
-                  style="padding: 10px 20px; background: #3b82f6; color: white; 
+                  style="padding: 10px 20px; background: #1e3a8a; color: white; 
                          border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
             🚀 Artikel anlegen
           </button>
