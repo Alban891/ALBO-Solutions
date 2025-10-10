@@ -249,7 +249,7 @@ function renderArtikelOverview(artikelListe) {
                 <!-- "Alle" Button -->
                 <button 
                     id="filter-alle"
-                    onclick="window.filterArtikel(null)" 
+                    data-artikel-id="null"
                     class="artikel-filter-btn active"
                     style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
                            background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
@@ -262,7 +262,7 @@ function renderArtikelOverview(artikelListe) {
                 ${artikelListe.map(artikel => `
                     <button 
                         id="filter-${artikel.id}"
-                        onclick="window.filterArtikel('${artikel.id}')" 
+                        data-artikel-id="${artikel.id}"
                         class="artikel-filter-btn"
                         style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
                                background: white; color: #374151; border: 1px solid #e5e7eb;
@@ -290,7 +290,9 @@ function renderArtikelOverview(artikelListe) {
                             <strong>Angezeigt:</strong> DB1 & DB2 (Manufacturing Margin)<br>
                             <strong>Ausgegraut:</strong> DB3-EBIT (Projektkosten sind nicht artikelspezifisch zuordenbar)
                         </div>
-                        <button onclick="window.filterArtikel(null)" 
+                        <button id="back-to-all-btn"
+                                data-artikel-id="null"
+                                class="artikel-filter-btn"
                                 style="margin-top: 8px; padding: 6px 12px; background: white; 
                                        border: 1px solid #f59e0b; border-radius: 4px; 
                                        font-size: 11px; cursor: pointer; font-weight: 500;">
@@ -1090,6 +1092,17 @@ function initializeEventHandlers() {
     if (viewLevel) {
         viewLevel.addEventListener('change', handleViewLevelChange);
     }
+    
+    // Article filter buttons
+    const filterButtons = document.querySelectorAll('.artikel-filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const artikelId = this.getAttribute('data-artikel-id');
+            window.filterArtikel(artikelId === 'null' ? null : artikelId);
+        });
+    });
+    
+    console.log('✅ Event handlers initialized');
 }
 
 /**
@@ -1256,8 +1269,8 @@ window.filterArtikel = function(artikelId) {
         }
     }
     
-    // Re-render table with filter
-    renderProjektWirtschaftlichkeit();
+    // DON'T re-render - just update visibility
+    // The table shows all data, we just gray out what's not relevant
 };
 
 /**
