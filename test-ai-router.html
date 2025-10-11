@@ -78,11 +78,23 @@
         <div id="routing-output" class="output"></div>
     </div>
     
-    <script type="module">
-        import { AIRouter } from '/js/modules/ai/router/ai-router.js';
+        <script type="module">
+        // Dynamically import to handle errors better
+        let router;
         
-        const router = new AIRouter();
-        window.aiRouter = router;
+        async function initRouter() {
+            try {
+                const module = await import('/js/modules/ai/router/ai-router.js');
+                router = new module.AIRouter();
+                console.log('✅ Router loaded successfully');
+                return router;
+            } catch (error) {
+                console.error('❌ Failed to load AI Router:', error);
+                document.getElementById('init-status').innerHTML = 
+                    '<div class="status error">❌ Failed to load AI modules. Check console for details.</div>';
+                throw error;
+            }
+        }
         
         window.testInitialize = async function() {
             const statusDiv = document.getElementById('init-status');
@@ -91,20 +103,28 @@
             statusDiv.innerHTML = '<div class="status info">⏳ Initializing...</div>';
             outputDiv.textContent = '';
             
-            const result = await router.initialize();
-            
-            const available = router.getAvailableServices();
-            
-            statusDiv.innerHTML = `
-                <div class="status success">
-                    ✅ Initialized! Available services: ${available.join(', ')}
-                </div>
-            `;
-            
-            outputDiv.textContent = JSON.stringify({
-                initialized: result,
-                available_services: available
-            }, null, 2);
+            try {
+                if (!router) {
+                    await initRouter();
+                }
+                
+                const result = await router.initialize();
+                const available = router.getAvailableServices();
+                
+                statusDiv.innerHTML = `
+                    <div class="status success">
+                        ✅ Initialized! Available services: ${available.join(', ')}
+                    </div>
+                `;
+                
+                outputDiv.textContent = JSON.stringify({
+                    initialized: result,
+                    available_services: available
+                }, null, 2);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                outputDiv.textContent = error.stack;
+            }
         };
         
         window.testClaude = async function() {
@@ -126,22 +146,31 @@
             statusDiv.innerHTML = `<div class="status info">⏳ Testing ${serviceName}...</div>`;
             outputDiv.textContent = '';
             
-            const response = await router.query(query, {}, { forceAI: serviceName });
-            
-            if (response.success) {
-                statusDiv.innerHTML = `
-                    <div class="status success">
-                        ✅ ${serviceName} successful! 
-                        Tokens: ${response.metadata.tokens.input}/${response.metadata.tokens.output},
-                        Cost: $${response.metadata.cost.toFixed(4)},
-                        Latency: ${response.metadata.latency}ms
-                    </div>
-                `;
-            } else {
-                statusDiv.innerHTML = `<div class="status error">❌ ${serviceName} failed: ${response.message}</div>`;
+            try {
+                if (!router) {
+                    await initRouter();
+                }
+                
+                const response = await router.query(query, {}, { forceAI: serviceName });
+                
+                if (response.success) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ ${serviceName} successful! 
+                            Tokens: ${response.metadata.tokens.input}/${response.metadata.tokens.output},
+                            Cost: $${response.metadata.cost.toFixed(4)},
+                            Latency: ${response.metadata.latency}ms
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ ${serviceName} failed: ${response.message}</div>`;
+                }
+                
+                outputDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ ${serviceName} error: ${error.message}</div>`;
+                outputDiv.textContent = error.stack;
             }
-            
-            outputDiv.textContent = JSON.stringify(response, null, 2);
         }
         
         window.testRouting = async function(query) {
@@ -151,21 +180,33 @@
             statusDiv.innerHTML = `<div class="status info">⏳ Routing query...</div>`;
             outputDiv.textContent = '';
             
-            const response = await router.query(query);
-            
-            if (response.success) {
-                statusDiv.innerHTML = `
-                    <div class="status success">
-                        ✅ Routed to: ${response.routing.selected_ai}
-                        (Classification: ${response.routing.classification})
-                    </div>
-                `;
-            } else {
-                statusDiv.innerHTML = `<div class="status error">❌ Routing failed</div>`;
+            try {
+                if (!router) {
+                    await initRouter();
+                }
+                
+                const response = await router.query(query);
+                
+                if (response.success) {
+                    statusDiv.innerHTML = `
+                        <div class="status success">
+                            ✅ Routed to: ${response.routing.selected_ai}
+                            (Classification: ${response.routing.classification})
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `<div class="status error">❌ Routing failed</div>`;
+                }
+                
+                outputDiv.textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                outputDiv.textContent = error.stack;
             }
-            
-            outputDiv.textContent = JSON.stringify(response, null, 2);
         };
+        
+        // Auto-init on page load (optional)
+        console.log('✅ Test page loaded. Click "Initialize All Services" to start.');
     </script>
 </body>
 </html>
