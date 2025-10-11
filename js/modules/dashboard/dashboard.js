@@ -9,7 +9,48 @@ import * as helpers from '../../helpers.js';
 import { processDataForDashboard, validateDashboardData } from './data-processor.js';
 import * as ChartFactory from './chart-factory.js';
 import * as Widgets from './widgets.js';
-import { ensureKostenDataLoaded } from '../projektkosten/projektkosten.js';
+
+// ==========================================
+// HELPER: Ensure Kosten Data is Loaded
+// ==========================================
+
+/**
+ * Ensure kostenWerte exists and is populated
+ * If DB projekt, trigger load from external module
+ */
+async function ensureKostenDataLoaded(projektId) {
+    if (!projektId) return;
+    
+    console.log('📥 Ensuring Kosten data for:', projektId);
+    
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) {
+        console.warn('⚠️ No projekt found');
+        return;
+    }
+    
+    // Initialize kostenWerte if it doesn't exist
+    if (!projekt.kostenWerte) {
+        console.log('⚠️ Initializing empty kostenWerte');
+        projekt.kostenWerte = {};
+        state.setProjekt(projektId, projekt);
+    }
+    
+    // If DB projekt and kostenWerte is empty, try to load from DB
+    if (projektId.startsWith('projekt-db-') && Object.keys(projekt.kostenWerte).length === 0) {
+        console.log('📥 DB-Projekt with empty kostenWerte - triggering external load');
+        
+        // Try to call projektkosten module's load function if available
+        if (window.projektkostenModule && typeof window.projektkostenModule.ensureKostenDataLoaded === 'function') {
+            await window.projektkostenModule.ensureKostenDataLoaded(projektId);
+            console.log('✅ External load completed');
+        } else {
+            console.warn('⚠️ projektkostenModule not available - data may be incomplete');
+        }
+    }
+    
+    console.log('✅ Kosten data ready:', Object.keys(projekt.kostenWerte).length, 'blocks');
+}
 
 // ==========================================
 // DASHBOARD STATE
