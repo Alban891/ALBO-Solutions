@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Simple Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #374151;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { 
+            background: #5568d3; 
+        }
+        .output {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success { color: #059669; font-weight: bold; }
+        .error { color: #dc2626; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Direct API Test</h1>
+    <p>Teste die Vercel Functions direkt - ohne Router Module.</p>
+    
+    <div>
+        <button onclick="testClaudeAPI()">Test Claude API</button>
+        <button onclick="testOpenAIAPI()">Test OpenAI API</button>
+        <button onclick="testPerplexityAPI()">Test Perplexity API</button>
+    </div>
+    
+    <div id="output" class="output">Klicke einen Button zum Testen...</div>
+    
+    <script>
+        async function testClaudeAPI() {
+            const output = document.getElementById('output');
+            output.textContent = '⏳ Testing Claude API...\n\n';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/claude', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 150,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: 'Erkläre Business Case Management in maximal 2 Sätzen.'
+                            }
+                        ]
+                    })
+                });
+                
+                const latency = Date.now() - startTime;
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const inputTokens = data.usage.input_tokens;
+                    const outputTokens = data.usage.output_tokens;
+                    const cost = ((inputTokens / 1000000) * 3) + ((outputTokens / 1000000) * 15);
+                    
+                    output.innerHTML = 
+                        `<span class="success">✅ CLAUDE API FUNKTIONIERT!</span>\n\n` +
+                        `📝 Antwort:\n${data.content[0].text}\n\n` +
+                        `📊 Statistik:\n` +
+                        `   • Input Tokens: ${inputTokens}\n` +
+                        `   • Output Tokens: ${outputTokens}\n` +
+                        `   • Kosten: $${cost.toFixed(4)}\n` +
+                        `   • Latenz: ${latency}ms\n\n` +
+                        `🔍 Full Response:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    output.innerHTML = 
+                        `<span class="error">❌ CLAUDE API ERROR</span>\n\n` +
+                        `Status: ${response.status}\n\n` +
+                        `${JSON.stringify(data, null, 2)}`;
+                }
+                
+            } catch (error) {
+                output.innerHTML = 
+                    `<span class="error">❌ FEHLER</span>\n\n` +
+                    `${error.message}\n\n${error.stack}`;
+            }
+        }
+        
+        async function testOpenAIAPI() {
+            const output = document.getElementById('output');
+            output.textContent = '⏳ Testing OpenAI API...\n\n';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/openai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        max_tokens: 100,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: 'Liste 3 typische Artikel für IT-Consulting.'
+                            }
+                        ]
+                    })
+                });
+                
+                const latency = Date.now() - startTime;
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const inputTokens = data.usage.prompt_tokens;
+                    const outputTokens = data.usage.completion_tokens;
+                    const cost = ((inputTokens / 1000000) * 2.5) + ((outputTokens / 1000000) * 10);
+                    
+                    output.innerHTML = 
+                        `<span class="success">✅ OPENAI API FUNKTIONIERT!</span>\n\n` +
+                        `📝 Antwort:\n${data.choices[0].message.content}\n\n` +
+                        `📊 Statistik:\n` +
+                        `   • Input Tokens: ${inputTokens}\n` +
+                        `   • Output Tokens: ${outputTokens}\n` +
+                        `   • Kosten: $${cost.toFixed(4)}\n` +
+                        `   • Latenz: ${latency}ms\n\n` +
+                        `🔍 Full Response:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    output.innerHTML = 
+                        `<span class="error">❌ OPENAI API ERROR</span>\n\n` +
+                        `Status: ${response.status}\n\n` +
+                        `${JSON.stringify(data, null, 2)}`;
+                }
+                
+            } catch (error) {
+                output.innerHTML = 
+                    `<span class="error">❌ FEHLER</span>\n\n` +
+                    `${error.message}\n\n${error.stack}`;
+            }
+        }
+        
+        async function testPerplexityAPI() {
+            const output = document.getElementById('output');
+            output.textContent = '⏳ Testing Perplexity API...\n\n';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('/api/perplexity', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-sonar-large-128k-online',
+                        messages: [
+                            {
+                                role: 'user',
+                                content: 'Was sind aktuelle VDMA Benchmarks für Maschinenbau 2024?'
+                            }
+                        ]
+                    })
+                });
+                
+                const latency = Date.now() - startTime;
+                const data = await response.json();
+                
+                if (response.ok) {
+                    output.innerHTML = 
+                        `<span class="success">✅ PERPLEXITY API FUNKTIONIERT!</span>\n\n` +
+                        `📝 Antwort:\n${data.choices[0].message.content}\n\n` +
+                        `📊 Statistik:\n` +
+                        `   • Kosten: ~$0.005 (flat rate)\n` +
+                        `   • Latenz: ${latency}ms\n\n` +
+                        `🔍 Full Response:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    output.innerHTML = 
+                        `<span class="error">❌ PERPLEXITY API ERROR</span>\n\n` +
+                        `Status: ${response.status}\n\n` +
+                        `${JSON.stringify(data, null, 2)}`;
+                }
+                
+            } catch (error) {
+                output.innerHTML = 
+                    `<span class="error">❌ FEHLER</span>\n\n` +
+                    `${error.message}\n\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>
