@@ -14,13 +14,47 @@ import * as helpers from '../../helpers.js';
 /**
  * Render Projektkosten KPI Box
  * Large blue box showing cumulative project costs
+ * READS DIRECTLY FROM STATE - bypasses data-processor!
  */
 export function renderProjektkostenKPI(data) {
-    if (!data || !data.projektkostenData) {
-        return '<div style="color: var(--gray); text-align: center;">Keine Daten</div>';
+    console.log('📦 renderProjektkostenKPI called');
+    
+    // Get projekt ID
+    const projektId = window.cfoDashboard?.currentProjekt;
+    
+    if (!projektId) {
+        return '<div style="color: var(--gray); text-align: center;">Kein Projekt</div>';
     }
     
-    const total = data.projektkostenData.total;
+    // DIRECT STATE ACCESS - bypassing data-processor entirely!
+    let total = 0;
+    
+    if (state.projektKostenData) {
+        const allBlocks = Object.values(state.projektKostenData);
+        const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
+        
+        console.log(`  Found ${projektBlocks.length} cost blocks for projekt ${projektId}`);
+        
+        // Sum ALL years from ALL blocks
+        projektBlocks.forEach(block => {
+            if (block.kostenWerte) {
+                Object.values(block.kostenWerte).forEach(value => {
+                    const numValue = parseFloat(value) || 0;
+                    total += numValue;
+                });
+            }
+        });
+        
+        console.log(`  Total from STATE: ${total.toLocaleString('de-DE')}€`);
+    } else {
+        console.warn('  No projektKostenData in state - using fallback');
+        // Fallback to data-processor if state unavailable
+        if (data?.projektkostenData?.total) {
+            total = data.projektkostenData.total * 1000000; // Convert from Mio to €
+        }
+    }
+    
+    const totalMio = total / 1000000;
     
     return `
         <div style="
@@ -32,7 +66,7 @@ export function renderProjektkostenKPI(data) {
             width: 80%;
         ">
             <div style="font-size: 36px; font-weight: bold; color: #1e40af;">
-                ${total.toFixed(1)}
+                ${totalMio.toFixed(1)}
             </div>
             <div style="font-size: 12px; color: #3b82f6; margin-top: 4px;">
                 Mio. € kumuliert
