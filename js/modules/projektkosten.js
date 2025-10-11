@@ -1635,11 +1635,19 @@ window.saveKostenblock = function() {
     }
 };
 
-export default {
+const projektkostenModule = {
     renderProjektkosten,
     loadKostenbloeckeFromDB,  // Export for dashboard use
-    loadPersonalPositionenFromDB  // Export for dashboard use
+    loadPersonalPositionenFromDB,  // Export for dashboard use
+    ensureKostenDataLoaded  // Export for dashboard use
 };
+
+export default projektkostenModule;
+
+// Register globally for cross-module access (e.g., from dashboard)
+if (typeof window !== 'undefined') {
+    window.projektkostenModule = projektkostenModule;
+}
 
 /**
  * PUBLIC HELPER: Ensure Kosten data is loaded for a projekt
