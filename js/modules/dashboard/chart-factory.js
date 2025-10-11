@@ -279,15 +279,31 @@ function getProjektkostenFromState(projektId, jahre) {
         // Get projekt from state
         const projekt = state.getProjekt(projektId);
         
-        if (!projekt || !projekt.kostenWerte) {
-            console.warn('No projekt.kostenWerte available');
+        if (!projekt) {
+            console.warn('No projekt found');
             return null;
+        }
+        
+        // Initialize kostenWerte if it doesn't exist
+        if (!projekt.kostenWerte) {
+            console.log('⚠️ Initializing kostenWerte (was undefined)');
+            projekt.kostenWerte = {};
+            state.setProjekt(projektId, projekt);
         }
         
         const blockIds = Object.keys(projekt.kostenWerte);
         console.log(`✅ Found ${blockIds.length} cost blocks in projekt.kostenWerte`);
         
-        if (blockIds.length === 0) return null;
+        if (blockIds.length === 0) {
+            console.warn('⚠️ No cost blocks yet - returning zeros');
+            // Return zeros for all years
+            return {
+                labels: jahre,
+                values: jahre.map(() => 0),
+                color: '#9ca3af',
+                source: 'state-empty'
+            };
+        }
         
         // Calculate costs per year
         const values = jahre.map(jahr => {
