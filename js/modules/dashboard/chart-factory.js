@@ -272,38 +272,37 @@ export function createProjektkostenChart(canvasId, data) {
 
 /**
  * Helper: Get Projektkosten directly from State
- * Bypasses data-processor entirely
+ * Uses projekt.kostenWerte structure
  */
 function getProjektkostenFromState(projektId, jahre) {
     try {
-        // Use imported state module
-        if (!state?.projektKostenData) {
-            console.warn('No projektKostenData available in state');
+        // Get projekt from state
+        const projekt = state.getProjekt(projektId);
+        
+        if (!projekt || !projekt.kostenWerte) {
+            console.warn('No projekt.kostenWerte available');
             return null;
         }
         
-        const allBlocks = Object.values(state.projektKostenData);
-        const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
+        const blockIds = Object.keys(projekt.kostenWerte);
+        console.log(`✅ Found ${blockIds.length} cost blocks in projekt.kostenWerte`);
         
-        console.log(`✅ Found ${projektBlocks.length} blocks in state`);
+        if (blockIds.length === 0) return null;
         
-        if (projektBlocks.length === 0) return null;
-        
+        // Calculate costs per year
         const values = jahre.map(jahr => {
-            const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
-            const jahrKey = `jahr_${jahrIndex}`;
-            
             let yearTotal = 0;
-            projektBlocks.forEach(block => {
-                const value = parseFloat(block.kostenWerte?.[jahrKey]) || 0;
+            
+            blockIds.forEach(blockId => {
+                const value = parseFloat(projekt.kostenWerte[blockId]?.[jahr]) || 0;
                 yearTotal += value;
             });
             
-            console.log(`  ${jahr} (${jahrKey}): ${yearTotal.toLocaleString('de-DE')}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
+            console.log(`  ${jahr}: ${yearTotal.toLocaleString('de-DE')}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
             return yearTotal / 1000000; // Convert to Mio
         });
         
-        console.log('✅ Corrected values from STATE:', values.map(v => v.toFixed(2)));
+        console.log('✅ Values from projekt.kostenWerte:', values.map(v => v.toFixed(2)));
         
         return {
             labels: jahre,
