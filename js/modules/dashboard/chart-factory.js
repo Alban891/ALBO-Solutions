@@ -235,6 +235,24 @@ export function createProjektkostenChart(canvasId, data) {
     
     destroyChart('projektkosten');
     
+    console.log('📊 Creating Projektkosten chart');
+    console.log('  Data source:', data.source || 'unknown');
+    console.log('  Values:', data.values);
+    
+    // If data looks wrong (source = calculator), try to get from state directly
+    if (data.source === 'calculator' || !data.source) {
+        console.warn('⚠️ Projektkosten data from calculator - attempting state override');
+        
+        const projektId = window.cfoDashboard?.currentProjekt;
+        if (projektId && window.state?.projektKostenData) {
+            const correctedData = getProjektkostenFromState(projektId, data.labels);
+            if (correctedData) {
+                console.log('✅ Using corrected data from STATE:', correctedData.values);
+                data = correctedData;
+            }
+        }
+    }
+    
     const ctx = canvas.getContext('2d');
     chartInstances.projektkosten = new Chart(ctx, {
         type: 'bar',
@@ -250,6 +268,42 @@ export function createProjektkostenChart(canvasId, data) {
     });
     
     return chartInstances.projektkosten;
+}
+
+/**
+ * Helper: Get Projektkosten directly from State
+ * Bypasses data-processor entirely
+ */
+function getProjektkostenFromState(projektId, jahre) {
+    try {
+        const allBlocks = Object.values(window.state.projektKostenData);
+        const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
+        
+        if (projektBlocks.length === 0) return null;
+        
+        const values = jahre.map(jahr => {
+            const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
+            const jahrKey = `jahr_${jahrIndex}`;
+            
+            let yearTotal = 0;
+            projektBlocks.forEach(block => {
+                const value = parseFloat(block.kostenWerte?.[jahrKey]) || 0;
+                yearTotal += value;
+            });
+            
+            return yearTotal / 1000000; // Convert to Mio
+        });
+        
+        return {
+            labels: jahre,
+            values,
+            color: '#9ca3af',
+            source: 'state'
+        };
+    } catch (error) {
+        console.error('Failed to get Projektkosten from state:', error);
+        return null;
+    }
 }
 
 /**
