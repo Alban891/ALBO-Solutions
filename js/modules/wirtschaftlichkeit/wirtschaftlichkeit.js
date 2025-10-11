@@ -45,12 +45,18 @@ export async function renderProjektWirtschaftlichkeit() {
     try {
         // Get article list
         let artikelListe = state.getArtikelByProjekt(projektId);
+        console.log('📋 All articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
         
         // ✅ CRITICAL: Apply article filter if active
         const activeFilter = window.cfoDashboard?.artikelFilter;
         if (activeFilter) {
-            console.log('🔍 Filtering calculation to artikel:', activeFilter);
+            console.log('🔍 Active filter:', activeFilter);
             artikelListe = artikelListe.filter(a => a.id === activeFilter);
+            console.log('📋 Filtered articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+            
+            if (artikelListe.length === 0) {
+                console.error('❌ No articles after filter!');
+            }
         }
         
         // Calculate profitability (with filtered articles)
@@ -59,6 +65,9 @@ export async function renderProjektWirtschaftlichkeit() {
             validateInputs: true,
             filteredArtikel: artikelListe  // Pass filtered list
         });
+        
+        console.log('💰 Calculated sales revenue:', result.totals?.sales_revenue);
+        console.log('📊 Full result:', result);
         
         // Get FULL article list for display (unfiltered)
         const allArtikelListe = state.getArtikelByProjekt(projektId);
@@ -92,7 +101,8 @@ export async function renderProjektWirtschaftlichkeit() {
         }
         
     } catch (error) {
-        console.error('Fehler beim Rendern der Wirtschaftlichkeit:', error);
+        console.error('❌ Fehler beim Rendern der Wirtschaftlichkeit:', error);
+        console.error('Stack:', error.stack);
         container.innerHTML = renderErrorState(error);
     }
 }
