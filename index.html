@@ -431,11 +431,8 @@
                     <!-- PROJEKT TAB: ÜBERSICHT -->
                     <!-- ========================================== -->
                     <div id="projekt-tab-uebersicht" class="projekt-tab-content active">
-                        <div class="form-section">
-                            <h3>📋 Projekt-Stammdaten</h3>
-                            <p style="color: var(--gray); margin-top: 8px;">
-                                Hier werden die Projekt-Basisinformationen angezeigt (Coming Soon)
-                            </p>
+                        <!-- Wird von uebersicht.js gefüllt -->
+                    </div>
                             
                             <div style="margin-top: 24px; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                                 <h4 style="margin: 0 0 12px 0;">🎯 Quick Facts</h4>
@@ -1337,6 +1334,16 @@
                 window.state.currentArtikel = null;
                 window.state.saveState();
             }
+
+        else if (tabName === 'uebersicht') {
+            // Import und render Übersicht (Executive Summary)
+            import('./js/modules/uebersicht.js').then(module => {
+                if (module.renderUebersicht) {
+                module.renderUebersicht();
+                }
+            }).catch(err => {
+                console.error('Failed to load uebersicht module:', err);
+            });        
         }
         else if (tabName === 'projektkosten') {
             // Import und render Projektkosten
