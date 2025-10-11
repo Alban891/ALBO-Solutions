@@ -53,16 +53,25 @@ export function renderAmortisationKPI(data) {
     const { breakEven, npv, irr } = data.kpis;
     const hasBreakEven = breakEven !== null && breakEven !== 'N/A';
     
+    // Format break-even text
+    let breakEvenText = '∞';
+    let breakEvenLabel = 'Kein Break-Even';
+    
+    if (hasBreakEven) {
+        breakEvenText = breakEven;
+        breakEvenLabel = breakEven === 1 ? 'Jahr bis Break-Even' : 'Jahre bis Break-Even';
+    }
+    
     return `
         <div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <!-- Break-Even Year -->
             <div style="font-size: 48px; font-weight: bold; 
                         color: ${hasBreakEven ? '#059669' : '#6b7280'}; 
                         margin-bottom: 8px;">
-                ${hasBreakEven ? breakEven : '∞'}
+                ${breakEvenText}
             </div>
             <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 4px;">
-                ${hasBreakEven ? 'Jahre bis Break-Even' : 'Kein Break-Even'}
+                ${breakEvenLabel}
             </div>
             
             <!-- Additional KPIs -->
