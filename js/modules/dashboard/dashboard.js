@@ -63,11 +63,13 @@ export function renderProjektDashboard() {
         // Render UI
         container.innerHTML = createDashboardLayout();
         
-        // Initialize charts
-        setTimeout(() => {
+        // Initialize charts immediately (not async)
+        // Wait for next frame to ensure DOM is painted
+        requestAnimationFrame(() => {
             initializeAllCharts();
             dashboardState.isInitialized = true;
-        }, 100);
+            console.log('✅ Dashboard charts initialized');
+        });
         
         console.log('✅ Dashboard rendered successfully');
         
