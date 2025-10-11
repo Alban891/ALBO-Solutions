@@ -26,14 +26,14 @@ export function renderProjektkostenKPI(data) {
         return '<div style="color: var(--gray); text-align: center;">Kein Projekt</div>';
     }
     
-    // DIRECT STATE ACCESS - bypassing data-processor entirely!
+    // DIRECT STATE ACCESS - using imported state module!
     let total = 0;
     
     if (state.projektKostenData) {
         const allBlocks = Object.values(state.projektKostenData);
         const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
         
-        console.log(`  Found ${projektBlocks.length} cost blocks for projekt ${projektId}`);
+        console.log(`✅ Found ${projektBlocks.length} cost blocks for projekt ${projektId}`);
         
         // Sum ALL years from ALL blocks
         projektBlocks.forEach(block => {
@@ -45,9 +45,9 @@ export function renderProjektkostenKPI(data) {
             }
         });
         
-        console.log(`  Total from STATE: ${total.toLocaleString('de-DE')}€`);
+        console.log(`✅ Total from STATE: ${total.toLocaleString('de-DE')}€ = ${(total/1000000).toFixed(2)} Mio.`);
     } else {
-        console.warn('  No projektKostenData in state - using fallback');
+        console.warn('⚠️ No projektKostenData in state - using fallback');
         // Fallback to data-processor if state unavailable
         if (data?.projektkostenData?.total) {
             total = data.projektkostenData.total * 1000000; // Convert from Mio to €
