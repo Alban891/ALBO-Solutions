@@ -9,6 +9,7 @@ import * as helpers from '../../helpers.js';
 import { processDataForDashboard, validateDashboardData } from './data-processor.js';
 import * as ChartFactory from './chart-factory.js';
 import * as Widgets from './widgets.js';
+import { ensureKostenDataLoaded } from '../projektkosten/projektkosten.js';
 
 // ==========================================
 // DASHBOARD STATE
@@ -31,7 +32,7 @@ let dashboardState = {
  * 
  * @public
  */
-export function renderProjektDashboard() {
+export async function renderProjektDashboard() {
     const container = document.getElementById('projekt-tab-dashboard');
     if (!container) {
         console.error('❌ Dashboard container not found');
@@ -50,6 +51,11 @@ export function renderProjektDashboard() {
     container.innerHTML = createLoadingScreen();
     
     try {
+        // CRITICAL: Ensure Kosten data is loaded from DB FIRST!
+        console.log('📥 Loading Kosten data before dashboard render...');
+        await ensureKostenDataLoaded(projektId);
+        console.log('✅ Kosten data loaded');
+        
         // Process data
         dashboardState.data = processDataForDashboard(projektId);
         dashboardState.lastUpdate = new Date();
