@@ -4,6 +4,8 @@
  * All chart types, styles, and update logic in one place
  */
 
+import { state } from '../../state.js';
+
 const Chart = window.Chart;
 
 // ==========================================
@@ -236,20 +238,18 @@ export function createProjektkostenChart(canvasId, data) {
     destroyChart('projektkosten');
     
     console.log('📊 Creating Projektkosten chart');
-    console.log('  Data source:', data.source || 'unknown');
-    console.log('  Values:', data.values);
+    console.log('  Initial data source:', data.source || 'unknown');
+    console.log('  Initial values:', data.values);
     
-    // If data looks wrong (source = calculator), try to get from state directly
-    if (data.source === 'calculator' || !data.source) {
-        console.warn('⚠️ Projektkosten data from calculator - attempting state override');
-        
-        const projektId = window.cfoDashboard?.currentProjekt;
-        if (projektId && window.state?.projektKostenData) {
-            const correctedData = getProjektkostenFromState(projektId, data.labels);
-            if (correctedData) {
-                console.log('✅ Using corrected data from STATE:', correctedData.values);
-                data = correctedData;
-            }
+    // ALWAYS try to get from state first (most accurate)
+    const projektId = window.cfoDashboard?.currentProjekt;
+    if (projektId) {
+        const stateData = getProjektkostenFromState(projektId, data.labels);
+        if (stateData) {
+            console.log('✅ Using STATE data (overriding calculator)');
+            data = stateData;
+        } else {
+            console.warn('⚠️ State data unavailable, using provided data');
         }
     }
     
@@ -276,8 +276,16 @@ export function createProjektkostenChart(canvasId, data) {
  */
 function getProjektkostenFromState(projektId, jahre) {
     try {
-        const allBlocks = Object.values(window.state.projektKostenData);
+        // Use imported state module
+        if (!state?.projektKostenData) {
+            console.warn('No projektKostenData available in state');
+            return null;
+        }
+        
+        const allBlocks = Object.values(state.projektKostenData);
         const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
+        
+        console.log(`✅ Found ${projektBlocks.length} blocks in state`);
         
         if (projektBlocks.length === 0) return null;
         
@@ -291,8 +299,11 @@ function getProjektkostenFromState(projektId, jahre) {
                 yearTotal += value;
             });
             
+            console.log(`  ${jahr} (${jahrKey}): ${yearTotal.toLocaleString('de-DE')}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
             return yearTotal / 1000000; // Convert to Mio
         });
+        
+        console.log('✅ Corrected values from STATE:', values.map(v => v.toFixed(2)));
         
         return {
             labels: jahre,
@@ -301,7 +312,7 @@ function getProjektkostenFromState(projektId, jahre) {
             source: 'state'
         };
     } catch (error) {
-        console.error('Failed to get Projektkosten from state:', error);
+        console.error('❌ Failed to get Projektkosten from state:', error);
         return null;
     }
 }
