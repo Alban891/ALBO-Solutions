@@ -253,21 +253,25 @@ function renderRecommendationStatus(recommendation, status) {
 /**
  * Section 3: Business Case Highlights (KPI Grid)
  */
+/**
+ * Section 3: Business Case Highlights (KPI Grid)
+ */
 function renderKPIGrid(calc) {
-    const npv = calc.kpis.npv / 1000000;
-    const irr = calc.kpis.irr;
-    const payback = calc.kpis.break_even_year || 'N/A';
-    const ebitMargin = calc.kpis.avg_ebit_margin;
-    const breakEven = calc.kpis.break_even_year ? `Jahr ${calc.kpis.break_even_year}` : 'Nicht erreicht';
-    const totalRevenue = calc.totals.sales_revenue / 1000000;
-    const roi = totalRevenue > 0 ? ((npv / (totalRevenue * 0.3)) * 100) : 0; // Simplified ROI
+    // ✅ SAFE NULL CHECKS
+    const npv = (calc?.kpis?.npv ?? 0) / 1000000;
+    const irr = calc?.kpis?.irr ?? 0;
+    const payback = calc?.kpis?.break_even_year || 'N/A';
+    const ebitMargin = calc?.kpis?.avg_ebit_margin ?? 0;
+    const breakEven = calc?.kpis?.break_even_year ? `Jahr ${calc.kpis.break_even_year}` : 'Nicht erreicht';
+    const totalRevenue = (calc?.totals?.sales_revenue ?? 0) / 1000000;
+    const roi = totalRevenue > 0 ? ((npv / (totalRevenue * 0.3)) * 100) : 0;
     
     const kpis = [
         { label: 'NPV', value: `€${npv.toFixed(1)}M`, status: npv > 0 ? 'good' : 'bad', tooltip: 'Net Present Value @ 8% WACC' },
         { label: 'IRR', value: `${irr.toFixed(1)}%`, status: irr > 15 ? 'good' : 'medium', tooltip: 'Internal Rate of Return' },
-        { label: 'Payback', value: payback === 'N/A' ? payback : `${payback} Jahre`, status: payback <= 3 ? 'good' : 'medium', tooltip: 'Break-even in Jahren' },
+        { label: 'Payback', value: payback === 'N/A' ? payback : `${payback} Jahre`, status: (typeof payback === 'number' && payback <= 3) ? 'good' : 'medium', tooltip: 'Break-even in Jahren' },
         { label: 'EBIT-Marge', value: `${ebitMargin.toFixed(1)}%`, status: ebitMargin > 25 ? 'good' : 'medium', tooltip: 'Durchschnittliche EBIT-Marge' },
-        { label: 'Break-Even', value: breakEven, status: payback <= 3 ? 'good' : 'medium', tooltip: 'Amortisationszeitpunkt' },
+        { label: 'Break-Even', value: breakEven, status: (typeof payback === 'number' && payback <= 3) ? 'good' : 'medium', tooltip: 'Amortisationszeitpunkt' },
         { label: 'ROI', value: `${roi.toFixed(0)}%`, status: roi > 200 ? 'good' : 'medium', tooltip: 'Return on Investment' }
     ];
     
@@ -308,8 +312,11 @@ function renderKPIGrid(calc) {
  * Section 4: Kernannahmen & Sensitivitäten
  */
 function renderAssumptionsSensitivities(calc, artikel) {
-    const totalRevenue = calc.totals.sales_revenue / 1000000;
-    const avgPrice = artikel.length > 0 ? (totalRevenue * 1000000) / artikel.reduce((sum, a) => sum + (a.volume || 0), 0) : 0;
+    // ✅ SAFE NULL CHECKS
+    const totalRevenue = (calc?.totals?.sales_revenue ?? 0) / 1000000;
+    const totalVolume = artikel.reduce((sum, a) => sum + (a.volume ?? 0), 0);
+    const avgPrice = totalVolume > 0 ? (totalRevenue * 1000000) / totalVolume : 0;
+    const avgMargin = calc?.kpis?.avg_manufacturing_margin ?? 40;
     
     return `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
@@ -321,9 +328,9 @@ function renderAssumptionsSensitivities(calc, artikel) {
                 </h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #6b7280; line-height: 1.8;">
                     <li><strong>Marktvolumen:</strong> €${(totalRevenue * 10).toFixed(0)}M p.a. (Basis-Szenario)</li>
-                    <li><strong>Marktanteil:</strong> ${((totalRevenue / (totalRevenue * 10)) * 100).toFixed(1)}% nach 3 Jahren</li>
-                    <li><strong>Durchschnittspreis:</strong> €${helpers.formatCurrency(avgPrice)}</li>
-                    <li><strong>Kostenstruktur:</strong> Material ${calc.kpis.avg_manufacturing_margin?.toFixed(0) || 40}% DB</li>
+                    <li><strong>Marktanteil:</strong> ${totalRevenue > 0 ? ((totalRevenue / (totalRevenue * 10)) * 100).toFixed(1) : 0}% nach 3 Jahren</li>
+                    <li><strong>Durchschnittspreis:</strong> €${avgPrice.toFixed(2)}</li>
+                    <li><strong>Kostenstruktur:</strong> Material ${avgMargin.toFixed(0)}% DB</li>
                 </ul>
             </div>
             
@@ -350,9 +357,9 @@ function renderAssumptionsSensitivities(calc, artikel) {
                         </tr>
                         <tr>
                             <td style="padding: 6px; color: #374151;">NPV</td>
-                            <td style="padding: 6px; text-align: right; color: #ef4444;">€${((calc.kpis.npv / 1000000) * 0.7).toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; font-weight: 600;">€${(calc.kpis.npv / 1000000).toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; color: #10b981;">€${((calc.kpis.npv / 1000000) * 1.3).toFixed(1)}M</td>
+                            <td style="padding: 6px; text-align: right; color: #ef4444;">€${((calc?.kpis?.npv ?? 0) / 1000000 * 0.7).toFixed(1)}M</td>
+                            <td style="padding: 6px; text-align: right; font-weight: 600;">€${((calc?.kpis?.npv ?? 0) / 1000000).toFixed(1)}M</td>
+                            <td style="padding: 6px; text-align: right; color: #10b981;">€${((calc?.kpis?.npv ?? 0) / 1000000 * 1.3).toFixed(1)}M</td>
                         </tr>
                     </tbody>
                 </table>
