@@ -25,8 +25,80 @@ export async function renderUebersicht() {
     const projekt = state.getProjekt(projektId);
     const artikel = state.getArtikelByProjekt(projektId);
     
-    // Calculate wirtschaftlichkeit
-    const calc = calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
+    // Calculate wirtschaftlichkeit - WITH ERROR HANDLING
+    let calc = null;
+    try {
+        calc = calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
+    } catch (error) {
+        console.warn('⚠️ Wirtschaftlichkeit calculation failed:', error);
+    }
+    
+    // If no wirtschaftlichkeit data, show placeholder
+    if (!calc || !calc.kpis || !calc.jahre || Object.keys(calc.jahre).length === 0) {
+        container.innerHTML = `
+            <div style="background: white; padding: 32px; max-width: 1200px; margin: 0 auto;">
+                
+                <!-- Header -->
+                <div style="margin-bottom: 32px; border-bottom: 3px solid #003E7E; padding-bottom: 16px;">
+                    <h2 style="margin: 0; font-size: 24px; color: #003E7E; font-weight: 600;">
+                        Executive Summary
+                    </h2>
+                    <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
+                        ${projekt.name} | Stand: ${new Date().toLocaleDateString('de-DE')}
+                    </div>
+                </div>
+                
+                <!-- Info Box -->
+                <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 32px;">⚠️</span>
+                        <div>
+                            <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px; color: #92400e;">
+                                Keine Wirtschaftlichkeitsdaten verfügbar
+                            </div>
+                            <div style="font-size: 14px; color: #78350f;">
+                                Um die Executive Summary zu generieren, müssen Sie zuerst:
+                            </div>
+                            <ul style="margin: 12px 0 0 20px; font-size: 14px; color: #78350f;">
+                                <li>Artikel mit Finanzplanungsdaten anlegen</li>
+                                <li>Projektkosten erfassen</li>
+                                <li>Wirtschaftlichkeitsberechnung durchführen</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <button onclick="window.switchProjektTab('artikel')" 
+                            style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
+                                   cursor: pointer; text-align: left; transition: all 0.2s;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📦</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Artikel anlegen</div>
+                        <div style="font-size: 12px; color: #6b7280;">Produktartikel mit Finanzplanung</div>
+                    </button>
+                    
+                    <button onclick="window.switchProjektTab('projektkosten')" 
+                            style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
+                                   cursor: pointer; text-align: left; transition: all 0.2s;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">💰</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Projektkosten</div>
+                        <div style="font-size: 12px; color: #6b7280;">Entwicklungskosten erfassen</div>
+                    </button>
+                    
+                    <button onclick="window.switchProjektTab('wirtschaftlichkeit')" 
+                            style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
+                                   cursor: pointer; text-align: left; transition: all 0.2s;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📈</div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Wirtschaftlichkeit</div>
+                        <div style="font-size: 12px; color: #6b7280;">Business Case berechnen</div>
+                    </button>
+                </div>
+                
+            </div>
+        `;
+        return;
+    }
     
     // Determine recommendation
     const recommendation = getRecommendation(calc);
@@ -443,8 +515,15 @@ function renderMiniDashboard(calc) {
 // ==========================================
 
 function getRecommendation(calc) {
-    const npv = calc.kpis.npv / 1000000;
-    const irr = calc.kpis.irr;
+    if (!calc || !calc.kpis) {
+        return {
+            status: 'HOLD',
+            reasoning: 'Keine ausreichenden Daten für Bewertung'
+        };
+    }
+    
+    const npv = (calc.kpis.npv || 0) / 1000000;
+    const irr = calc.kpis.irr || 0;
     const payback = calc.kpis.break_even_year;
     
     if (npv > 20 && irr > 20 && payback && payback <= 3) {
@@ -466,7 +545,14 @@ function getRecommendation(calc) {
 }
 
 function getProjectStatus(calc) {
-    const npv = calc.kpis.npv / 1000000;
+    if (!calc || !calc.kpis) {
+        return {
+            status: 'YELLOW',
+            reasoning: 'Keine ausreichenden Daten'
+        };
+    }
+    
+    const npv = (calc.kpis.npv || 0) / 1000000;
     const payback = calc.kpis.break_even_year;
     
     if (npv > 30 && payback && payback <= 3) {
