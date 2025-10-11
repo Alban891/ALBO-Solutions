@@ -1334,12 +1334,12 @@
                 window.state.currentArtikel = null;
                 window.state.saveState();
             }
-
+        }  // ✅ DIESE KLAMMER FEHLTE!
         else if (tabName === 'uebersicht') {
             // Import und render Übersicht (Executive Summary)
             import('./js/modules/uebersicht.js').then(module => {
                 if (module.renderUebersicht) {
-                module.renderUebersicht();
+                    module.renderUebersicht();
                 }
             }).catch(err => {
                 console.error('Failed to load uebersicht module:', err);
