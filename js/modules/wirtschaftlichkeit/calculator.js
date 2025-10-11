@@ -181,6 +181,8 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
         manufacturing_overhead,
         db2,
         db2_margin_prozent,
+        manufacturing_margin: db2,  // Alias for dashboard
+        manufacturing_margin_percent: db2_margin_prozent,  // Alias for dashboard
         development_overhead,
         db3,
         selling_overhead,
