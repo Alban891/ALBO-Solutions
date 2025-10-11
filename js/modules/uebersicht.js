@@ -493,7 +493,9 @@ function renderMiniDashboard(calc) {
                     <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
                         Umsatz-Entwicklung
                     </div>
-                    <canvas id="mini-chart-revenue" width="200" height="80"></canvas>
+                    <div style="position: relative; height: 120px;">
+                        <canvas id="mini-chart-revenue"></canvas>
+                    </div>
                 </div>
                 
                 <!-- DB-Entwicklung -->
@@ -501,7 +503,9 @@ function renderMiniDashboard(calc) {
                     <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
                         Deckungsbeitrag 3
                     </div>
-                    <canvas id="mini-chart-db" width="200" height="80"></canvas>
+                    <div style="position: relative; height: 120px;">
+                        <canvas id="mini-chart-db"></canvas>
+                    </div>
                 </div>
                 
                 <!-- Break-Even -->
@@ -509,7 +513,9 @@ function renderMiniDashboard(calc) {
                     <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
                         Kumulierter DB3
                     </div>
-                    <canvas id="mini-chart-cumulative" width="200" height="80"></canvas>
+                    <div style="position: relative; height: 120px;">
+                        <canvas id="mini-chart-cumulative"></canvas>
+                    </div>
                 </div>
                 
             </div>
@@ -682,7 +688,8 @@ function initializeMiniCharts(calc) {
 function getMiniChartOptions(unit) {
     return {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,  // ✅ CHANGED: true statt false
+        aspectRatio: 2.5,            // ✅ NEW: Breite/Höhe Verhältnis
         plugins: {
             legend: { display: false },
             tooltip: {
@@ -700,7 +707,11 @@ function getMiniChartOptions(unit) {
             y: {
                 display: true,
                 grid: { color: '#f3f4f6' },
-                ticks: { font: { size: 9 }, color: '#6b7280' }
+                ticks: { 
+                    font: { size: 9 }, 
+                    color: '#6b7280',
+                    maxTicksLimit: 5  // ✅ NEW: Begrenzt Y-Achsen Ticks
+                }
             }
         }
     };
