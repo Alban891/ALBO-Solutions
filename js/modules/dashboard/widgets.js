@@ -29,10 +29,16 @@ export function renderProjektkostenKPI(data) {
     // Get projekt from state
     const projekt = state.getProjekt(projektId);
     
-    if (!projekt || !projekt.kostenWerte) {
-        console.warn('⚠️ No kostenWerte in projekt - using fallback');
-        // Fallback to data-processor if kostenWerte unavailable
-        const total = data?.projektkostenData?.total || 0;
+    // Initialize kostenWerte if it doesn't exist yet
+    if (projekt && !projekt.kostenWerte) {
+        console.log('⚠️ Initializing kostenWerte (was undefined)');
+        projekt.kostenWerte = {};
+        state.setProjekt(projektId, projekt);
+    }
+    
+    if (!projekt || !projekt.kostenWerte || Object.keys(projekt.kostenWerte).length === 0) {
+        console.warn('⚠️ No kostenWerte data yet - using fallback (0)');
+        // Show 0 if no data yet
         return `
             <div style="
                 border: 3px solid #3b82f6;
@@ -43,7 +49,7 @@ export function renderProjektkostenKPI(data) {
                 width: 80%;
             ">
                 <div style="font-size: 36px; font-weight: bold; color: #1e40af;">
-                    ${total.toFixed(1)}
+                    0.0
                 </div>
                 <div style="font-size: 12px; color: #3b82f6; margin-top: 4px;">
                     Mio. € kumuliert
@@ -60,10 +66,12 @@ export function renderProjektkostenKPI(data) {
     
     blockIds.forEach(blockId => {
         const blockData = projekt.kostenWerte[blockId];
-        Object.entries(blockData).forEach(([jahr, value]) => {
-            const numValue = parseFloat(value) || 0;
-            total += numValue;
-        });
+        if (blockData) {
+            Object.entries(blockData).forEach(([jahr, value]) => {
+                const numValue = parseFloat(value) || 0;
+                total += numValue;
+            });
+        }
     });
     
     console.log(`✅ Total from projekt.kostenWerte: ${total.toLocaleString('de-DE')}€ = ${(total/1000000).toFixed(2)} Mio.`);
