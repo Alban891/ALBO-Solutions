@@ -14,7 +14,7 @@ import * as helpers from '../../helpers.js';
 /**
  * Render Projektkosten KPI Box
  * Large blue box showing cumulative project costs
- * READS DIRECTLY FROM STATE - bypasses data-processor!
+ * READS DIRECTLY FROM STATE - correct structure!
  */
 export function renderProjektkostenKPI(data) {
     console.log('📦 renderProjektkostenKPI called');
@@ -26,33 +26,47 @@ export function renderProjektkostenKPI(data) {
         return '<div style="color: var(--gray); text-align: center;">Kein Projekt</div>';
     }
     
-    // DIRECT STATE ACCESS - using imported state module!
-    let total = 0;
+    // Get projekt from state
+    const projekt = state.getProjekt(projektId);
     
-    if (state.projektKostenData) {
-        const allBlocks = Object.values(state.projektKostenData);
-        const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
-        
-        console.log(`✅ Found ${projektBlocks.length} cost blocks for projekt ${projektId}`);
-        
-        // Sum ALL years from ALL blocks
-        projektBlocks.forEach(block => {
-            if (block.kostenWerte) {
-                Object.values(block.kostenWerte).forEach(value => {
-                    const numValue = parseFloat(value) || 0;
-                    total += numValue;
-                });
-            }
-        });
-        
-        console.log(`✅ Total from STATE: ${total.toLocaleString('de-DE')}€ = ${(total/1000000).toFixed(2)} Mio.`);
-    } else {
-        console.warn('⚠️ No projektKostenData in state - using fallback');
-        // Fallback to data-processor if state unavailable
-        if (data?.projektkostenData?.total) {
-            total = data.projektkostenData.total * 1000000; // Convert from Mio to €
-        }
+    if (!projekt || !projekt.kostenWerte) {
+        console.warn('⚠️ No kostenWerte in projekt - using fallback');
+        // Fallback to data-processor if kostenWerte unavailable
+        const total = data?.projektkostenData?.total || 0;
+        return `
+            <div style="
+                border: 3px solid #3b82f6;
+                border-radius: 8px;
+                padding: 20px;
+                background: #eff6ff;
+                text-align: center;
+                width: 80%;
+            ">
+                <div style="font-size: 36px; font-weight: bold; color: #1e40af;">
+                    ${total.toFixed(1)}
+                </div>
+                <div style="font-size: 12px; color: #3b82f6; margin-top: 4px;">
+                    Mio. € kumuliert
+                </div>
+            </div>
+        `;
     }
+    
+    // Calculate total from projekt.kostenWerte
+    let total = 0;
+    const blockIds = Object.keys(projekt.kostenWerte);
+    
+    console.log(`✅ Found ${blockIds.length} cost blocks in projekt.kostenWerte`);
+    
+    blockIds.forEach(blockId => {
+        const blockData = projekt.kostenWerte[blockId];
+        Object.entries(blockData).forEach(([jahr, value]) => {
+            const numValue = parseFloat(value) || 0;
+            total += numValue;
+        });
+    });
+    
+    console.log(`✅ Total from projekt.kostenWerte: ${total.toLocaleString('de-DE')}€ = ${(total/1000000).toFixed(2)} Mio.`);
     
     const totalMio = total / 1000000;
     
