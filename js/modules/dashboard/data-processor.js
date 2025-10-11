@@ -125,6 +125,41 @@ function extractDB2Data(result, jahre) {
  * Aggregates all overhead categories
  */
 function extractProjektkostenData(result, jahre) {
+    // Get projekt ID from result metadata
+    const projektId = result.metadata?.projekt_id;
+    
+    if (projektId) {
+        // Try to get costs directly from state (matches Projektkosten tab)
+        const projektKosten = Object.values(state.projektKostenData || {})
+            .filter(k => k.projektId === projektId);
+        
+        if (projektKosten.length > 0) {
+            // Calculate costs per year from state
+            const values = jahre.map(jahr => {
+                let yearTotal = 0;
+                projektKosten.forEach(block => {
+                    const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
+                    const jahrKey = `jahr_${jahrIndex}`;
+                    if (block.kostenWerte && block.kostenWerte[jahrKey]) {
+                        yearTotal += parseFloat(block.kostenWerte[jahrKey]) || 0;
+                    }
+                });
+                return yearTotal / 1000000; // Convert to Mio. €
+            });
+            
+            const total = values.reduce((sum, val) => sum + val, 0);
+            
+            return {
+                labels: jahre,
+                values,
+                total,
+                unit: 'Mio. €',
+                color: '#9ca3af'
+            };
+        }
+    }
+    
+    // FALLBACK: Use calculator overhead values
     const values = jahre.map(jahr => {
         const year = result.jahre[jahr];
         return (
