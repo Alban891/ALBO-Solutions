@@ -127,11 +127,15 @@ function extractDB2Data(result, jahre) {
 function extractProjektkostenData(result, jahre) {
     // Get projekt ID from result metadata
     const projektId = result.metadata?.projekt_id;
+    console.log('🔍 Extracting Projektkosten for:', projektId);
     
-    if (projektId) {
+    if (projektId && window.state?.projektKostenData) {
         // Try to get costs directly from state (matches Projektkosten tab)
-        const projektKosten = Object.values(state.projektKostenData || {})
-            .filter(k => k.projektId === projektId);
+        const allKosten = Object.values(window.state.projektKostenData);
+        console.log('📦 All projektKostenData entries:', allKosten.length);
+        
+        const projektKosten = allKosten.filter(k => k.projektId === projektId);
+        console.log('✅ Filtered for this projekt:', projektKosten.length, 'blocks');
         
         if (projektKosten.length > 0) {
             // Calculate costs per year from state
@@ -140,14 +144,18 @@ function extractProjektkostenData(result, jahre) {
                 projektKosten.forEach(block => {
                     const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
                     const jahrKey = `jahr_${jahrIndex}`;
-                    if (block.kostenWerte && block.kostenWerte[jahrKey]) {
-                        yearTotal += parseFloat(block.kostenWerte[jahrKey]) || 0;
+                    const value = parseFloat(block.kostenWerte?.[jahrKey]) || 0;
+                    yearTotal += value;
+                    if (value > 0) {
+                        console.log(`  ${block.name} [${jahrKey}]: ${value}€`);
                     }
                 });
+                console.log(`💰 ${jahr} total from state: ${yearTotal}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
                 return yearTotal / 1000000; // Convert to Mio. €
             });
             
             const total = values.reduce((sum, val) => sum + val, 0);
+            console.log(`✅ Total Projektkosten from STATE: ${total.toFixed(2)} Mio.`);
             
             return {
                 labels: jahre,
@@ -156,23 +164,31 @@ function extractProjektkostenData(result, jahre) {
                 unit: 'Mio. €',
                 color: '#9ca3af'
             };
+        } else {
+            console.warn('⚠️ No projektKosten found in state, using calculator fallback');
         }
+    } else {
+        console.warn('⚠️ Missing projektId or state.projektKostenData, using calculator fallback');
     }
     
     // FALLBACK: Use calculator overhead values
+    console.log('📊 Using CALCULATOR overhead values as fallback');
     const values = jahre.map(jahr => {
         const year = result.jahre[jahr];
-        return (
+        const total = (
             (year.development_overhead || 0) +
             (year.selling_overhead || 0) +
             (year.marketing_overhead || 0) +
             (year.distribution_overhead || 0) +
             (year.administration_overhead || 0)
         ) / 1000000;
+        console.log(`  ${jahr} (calculator): ${total.toFixed(2)} Mio.`);
+        return total;
     });
     
     // Calculate cumulative total
     const total = values.reduce((sum, val) => sum + val, 0);
+    console.log(`✅ Total Projektkosten from CALCULATOR: ${total.toFixed(2)} Mio.`);
     
     return {
         labels: jahre,
