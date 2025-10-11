@@ -2,6 +2,8 @@
  * CFO Dashboard - Data Processor
  * Transforms raw calculator results into chart-ready data
  * Enterprise-grade data pipeline with validation
+ * 
+ * FIXED VERSION: Reads Projektkosten directly from State (not Calculator)
  */
 
 import { state } from '../../state.js';
@@ -43,12 +45,15 @@ export function processDataForDashboard(projektId) {
             umsatzData: extractUmsatzData(calculationResult, jahre),
             absatzData: extractAbsatzData(artikelListe, jahre),
             db2Data: extractDB2Data(calculationResult, jahre),
-            projektkostenData: extractProjektkostenData(calculationResult, jahre),
+            projektkostenData: extractProjektkostenDataFromState(projektId, jahre, calculationResult),  // NEW: Use state
             db3JahrData: extractDB3JahrData(calculationResult, jahre),
             db3KumuliertData: extractDB3KumuliertData(calculationResult, jahre),
             
             // KPI data
             kpis: extractKPIs(calculationResult),
+            
+            // Widget data
+            projekteTableData: extractProjekteTableData(projektId),
             
             // Metadata
             lastUpdate: new Date(),
@@ -80,122 +85,133 @@ function extractUmsatzData(result, jahre) {
 
 /**
  * Extract Absatz (Volume) data
- * Aggregate all articles, convert to Tausend
+ * Aggregates volumes from all articles
  */
 function extractAbsatzData(artikelListe, jahre) {
-    const values = jahre.map(jahr => {
-        let totalVolume = 0;
-        artikelListe.forEach(artikel => {
-            const yearNum = parseInt(jahr);
-            totalVolume += artikel.volumes?.[yearNum] || 0;
-        });
-        return totalVolume / 1000; // Convert to Tsd
-    });
-    
     return {
         labels: jahre,
-        values,
-        unit: 'Tsd. Stück',
+        values: jahre.map(jahr => {
+            const yearNum = parseInt(jahr);
+            let totalVolume = 0;
+            
+            artikelListe.forEach(artikel => {
+                // Try different data structures
+                if (artikel.volumes && artikel.volumes[yearNum]) {
+                    totalVolume += artikel.volumes[yearNum];
+                } else if (artikel.mengen && artikel.mengen[jahr]) {
+                    totalVolume += artikel.mengen[jahr];
+                } else {
+                    const jahrIndex = yearNum - 2024;
+                    const jahrKey = `jahr_${jahrIndex}`;
+                    if (artikel[jahrKey] && artikel[jahrKey].menge) {
+                        totalVolume += artikel[jahrKey].menge;
+                    }
+                }
+            });
+            
+            return totalVolume / 1000; // Convert to thousands
+        }),
+        unit: 'Tausend Stück',
         color: '#9ca3af'
     };
 }
 
 /**
  * Extract DB2 (Manufacturing Margin) data
- * Includes both absolute and percentage values for dual-axis chart
+ * Includes both absolute values and percentage
  */
 function extractDB2Data(result, jahre) {
     return {
         labels: jahre,
-        absolute: jahre.map(jahr => (result.jahre[jahr].manufacturing_margin || 0) / 1000000),
-        percent: jahre.map(jahr => result.jahre[jahr].manufacturing_margin_percent || 0),
-        unit: {
-            absolute: 'Mio. €',
-            percent: '%'
-        },
+        absolute: jahre.map(jahr => (result.jahre[jahr].db2 || result.jahre[jahr].manufacturing_margin || 0) / 1000000),
+        percent: jahre.map(jahr => result.jahre[jahr].db2_margin_prozent || result.jahre[jahr].manufacturing_margin_percent || 0),
+        unit: 'Mio. €',
         colors: {
-            bar: '#9ca3af',
+            bars: '#9ca3af',
             line: '#374151'
         }
     };
 }
 
 /**
- * Extract Projektkosten (Project Costs) data
- * Aggregates all overhead categories
+ * Extract Projektkosten directly from State
+ * Matches the Projektkosten tab exactly!
+ * 
+ * @param {string} projektId - Project ID
+ * @param {string[]} jahre - Years array
+ * @param {Object} calculationResult - Fallback if state unavailable
+ * @returns {Object} Projektkosten data
  */
-function extractProjektkostenData(result, jahre) {
-    // Get projekt ID from result metadata
-    const projektId = result.metadata?.projekt_id;
-    console.log('🔍 Extracting Projektkosten for:', projektId);
+function extractProjektkostenDataFromState(projektId, jahre, calculationResult) {
+    console.log('💰 Extracting Projektkosten from STATE for projekt:', projektId);
     
-    if (projektId && window.state?.projektKostenData) {
-        // Try to get costs directly from state (matches Projektkosten tab)
-        const allKosten = Object.values(window.state.projektKostenData);
-        console.log('📦 All projektKostenData entries:', allKosten.length);
+    // Try to get costs from State (primary source - matches Projektkosten tab)
+    if (state.projektKostenData) {
+        const allBlocks = Object.values(state.projektKostenData);
+        const projektBlocks = allBlocks.filter(block => block.projektId === projektId);
         
-        const projektKosten = allKosten.filter(k => k.projektId === projektId);
-        console.log('✅ Filtered for this projekt:', projektKosten.length, 'blocks');
+        console.log(`  Found ${projektBlocks.length} cost blocks in state`);
         
-        if (projektKosten.length > 0) {
-            // Calculate costs per year from state
+        if (projektBlocks.length > 0) {
+            // Calculate per year from state
             const values = jahre.map(jahr => {
+                const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
+                const jahrKey = `jahr_${jahrIndex}`;
+                
                 let yearTotal = 0;
-                projektKosten.forEach(block => {
-                    const jahrIndex = parseInt(jahr) - 2024; // 2025 = jahr_1
-                    const jahrKey = `jahr_${jahrIndex}`;
+                projektBlocks.forEach(block => {
                     const value = parseFloat(block.kostenWerte?.[jahrKey]) || 0;
                     yearTotal += value;
-                    if (value > 0) {
-                        console.log(`  ${block.name} [${jahrKey}]: ${value}€`);
-                    }
                 });
-                console.log(`💰 ${jahr} total from state: ${yearTotal}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
-                return yearTotal / 1000000; // Convert to Mio. €
+                
+                const mio = yearTotal / 1000000;
+                console.log(`  ${jahr}: ${yearTotal.toLocaleString('de-DE')}€ = ${mio.toFixed(2)} Mio.`);
+                return mio;
             });
             
             const total = values.reduce((sum, val) => sum + val, 0);
-            console.log(`✅ Total Projektkosten from STATE: ${total.toFixed(2)} Mio.`);
+            console.log(`✅ Total from STATE: ${total.toFixed(2)} Mio. €`);
             
             return {
                 labels: jahre,
                 values,
                 total,
                 unit: 'Mio. €',
-                color: '#9ca3af'
+                color: '#9ca3af',
+                source: 'state'
             };
-        } else {
-            console.warn('⚠️ No projektKosten found in state, using calculator fallback');
         }
-    } else {
-        console.warn('⚠️ Missing projektId or state.projektKostenData, using calculator fallback');
     }
     
-    // FALLBACK: Use calculator overhead values
-    console.log('📊 Using CALCULATOR overhead values as fallback');
+    // FALLBACK: Use calculator (if state unavailable)
+    console.warn('⚠️ Using calculator fallback for Projektkosten');
+    return extractProjektkostenDataFromCalculator(calculationResult, jahre);
+}
+
+/**
+ * Extract Projektkosten from Calculator (fallback)
+ */
+function extractProjektkostenDataFromCalculator(result, jahre) {
     const values = jahre.map(jahr => {
         const year = result.jahre[jahr];
-        const total = (
+        return (
             (year.development_overhead || 0) +
             (year.selling_overhead || 0) +
             (year.marketing_overhead || 0) +
             (year.distribution_overhead || 0) +
             (year.administration_overhead || 0)
         ) / 1000000;
-        console.log(`  ${jahr} (calculator): ${total.toFixed(2)} Mio.`);
-        return total;
     });
     
-    // Calculate cumulative total
     const total = values.reduce((sum, val) => sum + val, 0);
-    console.log(`✅ Total Projektkosten from CALCULATOR: ${total.toFixed(2)} Mio.`);
     
     return {
         labels: jahre,
         values,
         total,
         unit: 'Mio. €',
-        color: '#9ca3af'
+        color: '#9ca3af',
+        source: 'calculator'
     };
 }
 
@@ -234,12 +250,8 @@ function extractDB3KumuliertData(result, jahre) {
     };
 }
 
-// ==========================================
-// KPI EXTRACTORS
-// ==========================================
-
 /**
- * Extract all KPIs for dashboard widgets
+ * Extract KPIs (NPV, IRR, Break-Even, etc.)
  */
 function extractKPIs(result) {
     return {
@@ -250,6 +262,26 @@ function extractKPIs(result) {
         avgEbitMargin: result.kpis.avg_ebit_margin || 0,
         totalRevenue: result.totals.sales_revenue || 0,
         totalEbit: result.totals.ebit || 0
+    };
+}
+
+/**
+ * Extract Projekte Table Data
+ * Shows cost blocks for the project
+ */
+function extractProjekteTableData(projektId) {
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) return null;
+    
+    // Get cost blocks
+    const kostenBloecke = Object.values(state.projektKostenData || {})
+        .filter(k => k.projektId === projektId)
+        .slice(0, 5); // Max 5 for space
+    
+    return {
+        projektName: projekt.name,
+        kostenBloecke,
+        artikelCount: state.getArtikelByProjekt(projektId).length
     };
 }
 
@@ -280,81 +312,17 @@ export function validateDashboardData(data) {
     // Check for zero revenue
     const totalRevenue = data.umsatzData?.values.reduce((sum, v) => sum + v, 0) || 0;
     if (totalRevenue === 0) {
-        warnings.push('Kein Umsatz vorhanden - prüfen Sie Artikel-Daten');
+        warnings.push('Kein Umsatz - prüfen Sie Artikel-Daten');
     }
     
-    // Check for invalid KPIs
-    if (data.kpis?.irr && (data.kpis.irr < -100 || data.kpis.irr > 1000)) {
-        warnings.push('IRR außerhalb plausibler Grenzen');
+    // Check projektkosten source
+    if (data.projektkostenData?.source === 'calculator') {
+        warnings.push('Projektkosten aus Calculator - möglicherweise nicht exakt');
     }
     
     return {
         isValid: errors.length === 0,
-        hasWarnings: warnings.length > 0,
-        errors,
-        warnings
+        warnings,
+        errors
     };
 }
-
-// ==========================================
-// EXPORT HELPERS
-// ==========================================
-
-/**
- * Prepare data for Excel export
- * 
- * @param {Object} data - Dashboard data
- * @returns {Object} Excel-ready data
- */
-export function prepareExportData(data) {
-    return {
-        summary: {
-            projekt: data.projektName,
-            lastUpdate: data.lastUpdate.toISOString(),
-            jahre: data.jahre,
-            totalRevenue: data.kpis.totalRevenue,
-            totalEbit: data.kpis.totalEbit,
-            breakEven: data.kpis.breakEven,
-            npv: data.kpis.npv,
-            irr: data.kpis.irr
-        },
-        
-        umsatz: {
-            jahre: data.umsatzData.labels,
-            werte: data.umsatzData.values
-        },
-        
-        absatz: {
-            jahre: data.absatzData.labels,
-            werte: data.absatzData.values
-        },
-        
-        db2: {
-            jahre: data.db2Data.labels,
-            absolute: data.db2Data.absolute,
-            prozent: data.db2Data.percent
-        },
-        
-        projektkosten: {
-            jahre: data.projektkostenData.labels,
-            werte: data.projektkostenData.values,
-            gesamt: data.projektkostenData.total
-        },
-        
-        db3: {
-            jahre: data.db3JahrData.labels,
-            jahr: data.db3JahrData.values,
-            kumuliert: data.db3KumuliertData.values
-        }
-    };
-}
-
-// ==========================================
-// EXPORT
-// ==========================================
-
-export default {
-    processDataForDashboard,
-    validateDashboardData,
-    prepareExportData
-};
