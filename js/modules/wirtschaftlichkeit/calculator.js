@@ -29,7 +29,8 @@ import {
  * @example
  * const result = calculateProjektWirtschaftlichkeit('projekt-123', {
  *   wacc: 0.10,
- *   validateInputs: true
+ *   validateInputs: true,
+ *   filteredArtikel: [artikel1, artikel2]  // Optional: pre-filtered list
  * });
  * console.log(result.kpis.ebit_margin);
  */
@@ -38,7 +39,8 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
         includeKI = true,
         validateInputs = true,
         wacc = CALCULATION_CONSTANTS.DEFAULT_WACC,
-        aggregated = false
+        aggregated = false,
+        filteredArtikel = null  // NEW: Accept pre-filtered article list
     } = options;
     
     try {
@@ -48,7 +50,9 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
             throw new Error(`Projekt ${projektId} nicht gefunden`);
         }
         
-        const artikelListe = state.getArtikelByProjekt(projektId);
+        // Use filtered articles if provided, otherwise get all
+        const artikelListe = filteredArtikel || state.getArtikelByProjekt(projektId);
+        
         if (!artikelListe || artikelListe.length === 0) {
             return createEmptyResult(projektId, 'Keine Artikel vorhanden');
         }
@@ -205,10 +209,14 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
  * @private
  */
 function calculateSalesRevenue(artikelListe, jahr) {
-    return artikelListe.reduce((sum, artikel) => {
+    console.log(`💰 Calculating sales for ${jahr} with ${artikelListe.length} articles`);
+    
+    const total = artikelListe.reduce((sum, artikel) => {
         // PRIMARY: Calculate from volumes * prices (your current structure)
         const menge = getArtikelValueForYear(artikel, 'menge', jahr);
         const preis = getArtikelValueForYear(artikel, 'preis', jahr);
+        
+        console.log(`  - ${artikel.name}: menge=${menge}, preis=${preis}, revenue=${menge * preis}`);
         
         if (menge > 0 && preis > 0) {
             return sum + (menge * preis);
@@ -217,17 +225,23 @@ function calculateSalesRevenue(artikelListe, jahr) {
         // FALLBACK 1: Direct umsatz field per year (e.g., umsatz_2025)
         const umsatzField = `umsatz_${jahr}`;
         if (artikel[umsatzField] !== undefined) {
+            console.log(`  - ${artikel.name}: using ${umsatzField}=${artikel[umsatzField]}`);
             return sum + (parseFloat(artikel[umsatzField]) || 0);
         }
         
         // FALLBACK 2: jahr_X structure with umsatz
         const jahrIndex = parseInt(jahr) - 2024;  // 2025 = jahr_1
         if (artikel[`jahr_${jahrIndex}`] && artikel[`jahr_${jahrIndex}`].umsatz !== undefined) {
+            console.log(`  - ${artikel.name}: using jahr_${jahrIndex}.umsatz`);
             return sum + (parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0);
         }
         
+        console.log(`  - ${artikel.name}: NO DATA for ${jahr}`);
         return sum;
     }, 0);
+    
+    console.log(`💰 Total sales for ${jahr}: ${total}`);
+    return total;
 }
 
 /**
@@ -319,12 +333,25 @@ function getHKAufteilung(artikel) {
 function getArtikelValueForYear(artikel, field, jahr) {
     const yearNum = parseInt(jahr);
     
+    // Debug: Log artikel structure
+    if (field === 'menge') {
+        console.log(`🔍 Getting ${field} for ${artikel.name} in ${jahr}`);
+        console.log('   volumes:', artikel.volumes);
+        console.log('   prices:', artikel.prices);
+        console.log('   mengen:', artikel.mengen);
+        console.log('   preise:', artikel.preise);
+    }
+    
     // PRIMARY: volumes/prices structure (your current structure)
     if (field === 'menge' && artikel.volumes && artikel.volumes[yearNum] !== undefined) {
-        return parseFloat(artikel.volumes[yearNum]) || 0;
+        const val = parseFloat(artikel.volumes[yearNum]) || 0;
+        console.log(`   ✓ Found in volumes[${yearNum}]: ${val}`);
+        return val;
     }
     if (field === 'preis' && artikel.prices && artikel.prices[yearNum] !== undefined) {
-        return parseFloat(artikel.prices[yearNum]) || 0;
+        const val = parseFloat(artikel.prices[yearNum]) || 0;
+        console.log(`   ✓ Found in prices[${yearNum}]: ${val}`);
+        return val;
     }
     
     // ALTERNATIVE: mengen/preise structure
@@ -348,6 +375,7 @@ function getArtikelValueForYear(artikel, field, jahr) {
         return parseFloat(artikel.preis) || 0;
     }
     
+    console.log(`   ✗ No data found for ${field} in ${jahr}`);
     return 0;
 }
 
