@@ -1,11 +1,13 @@
 /**
- * ALBO Solutions - Portfolio Cockpit Module
- * Senior Controller Dashboard: Portfolio Overview with Drill-Down
+ * ALBO Solutions - Portfolio Cockpit Module (Standalone)
+ * Senior Controller Dashboard: Portfolio Overview without Charts
  * Horváth & Partners Style
+ * 
+ * Shows: Portfolio KPIs + Project Table + Drill-Down to Details
+ * Charts are in individual project detail pages
  */
 
 import { state } from '../state.js';
-import * as charts from '../charts.js';
 
 // ==========================================
 // STATE
@@ -31,11 +33,11 @@ export function renderCockpit() {
     // Render Projekt Selector
     renderProjektSelector();
     
-    // Render Charts (Portfolio or Projekt)
+    // Render Content (Portfolio Table or Projekt Detail)
     if (currentView === 'portfolio') {
-        renderPortfolioCharts();
+        renderPortfolioTable();
     } else {
-        renderProjektCharts(selectedProjektId);
+        renderProjektDetail(selectedProjektId);
     }
 }
 
@@ -57,8 +59,7 @@ function calculatePortfolioKPIs() {
             avgIRR: 0,
             totalRevenue: 0,
             avgMargin: 0,
-            riskProjects: 0,
-            criticalProjects: 0
+            riskProjects: 0
         };
     }
     
@@ -90,27 +91,22 @@ function calculatePortfolioKPIs() {
         avgIRR: avgIRR,
         totalRevenue: totalRevenue / 1000000, // Convert to M€
         avgMargin: avgMargin,
-        riskProjects: projects.filter(p => p.status === 'On Hold').length,
-        criticalProjects: 0 // TODO: Define criteria
+        riskProjects: projects.filter(p => p.status === 'On Hold').length
     };
 }
 
 /**
  * Helper function to calculate projekt wirtschaftlichkeit
- * (Import from wirtschaftlichkeit module or inline calculation)
  */
 function calculateProjektWirtschaftlichkeit(projektId) {
     try {
-        // Get projekt and artikel
         const projekt = state.getProjekt(projektId);
         if (!projekt) return null;
         
         const artikel = state.getArtikelByProjekt(projektId);
         if (!artikel || artikel.length === 0) return null;
         
-        // Simple NPV calculation (placeholder)
-        // In production, import from wirtschaftlichkeit/calculator.js
-        const wacc = 0.08;
+        // Simple NPV calculation
         const jahre = {};
         let totalRevenue = 0;
         
@@ -206,14 +202,14 @@ function renderPortfolioKPIs() {
             </div>
         </div>
 
-        <!-- Margin -->
+        <!-- Status -->
         <div class="metric-card">
-            <div class="metric-icon">💎</div>
+            <div class="metric-icon">🎯</div>
             <div class="metric-content">
-                <div class="metric-label">Ø EBIT-Marge</div>
-                <div class="metric-value">${kpis.avgMargin.toFixed(1)}%</div>
-                <div class="metric-change ${kpis.avgMargin > 25 ? 'positive' : 'neutral'}">
-                    ${kpis.avgMargin > 25 ? 'Exzellent' : 'Solide'}
+                <div class="metric-label">Status</div>
+                <div class="metric-value">${kpis.activeProjects}/${kpis.totalProjects}</div>
+                <div class="metric-change ${kpis.riskProjects > 0 ? 'warning' : 'positive'}">
+                    ${kpis.riskProjects > 0 ? `${kpis.riskProjects} Risiko` : 'Alle on Track'}
                 </div>
             </div>
         </div>
@@ -228,8 +224,8 @@ function renderPortfolioKPIs() {
  * Render Project Selector Dropdown
  */
 function renderProjektSelector() {
-    const controlPanel = document.querySelector('.control-panel');
-    if (!controlPanel) return;
+    const dashboardMain = document.querySelector('.dashboard-main');
+    if (!dashboardMain) return;
     
     const projects = state.getAllProjekte();
     
@@ -242,7 +238,7 @@ function renderProjektSelector() {
                         🎯 Projekt-Ansicht
                     </h3>
                     <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">
-                        Wähle ein Projekt für detaillierte Charts oder zeige das gesamte Portfolio
+                        Wähle ein Projekt für Details oder zeige das gesamte Portfolio
                     </p>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center;">
@@ -251,7 +247,7 @@ function renderProjektSelector() {
                             style="padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 6px; 
                                    font-size: 14px; font-weight: 500; cursor: pointer; min-width: 250px;
                                    background: white;">
-                        <option value="portfolio">📊 Gesamtes Portfolio</option>
+                        <option value="portfolio">📊 Portfolio-Übersicht</option>
                         ${projects.map(p => `
                             <option value="${p.id}" ${selectedProjektId === p.id ? 'selected' : ''}>
                                 ${getProjectIcon(p)} ${p.name}
@@ -272,17 +268,17 @@ function renderProjektSelector() {
             ${currentView === 'projekt' && selectedProjektId ? `
                 <div style="padding: 12px; background: #f0f9ff; border-radius: 6px; border-left: 3px solid #3b82f6;">
                     <div style="font-size: 12px; color: #1e40af; font-weight: 600;">
-                        📌 Projekt-Fokus: ${getProjectName(selectedProjektId)}
+                        📌 Projekt-Detail: ${getProjectName(selectedProjektId)}
                     </div>
                     <div style="font-size: 11px; color: #3b82f6; margin-top: 4px;">
-                        Die Charts zeigen nur Daten für dieses spezifische Projekt
+                        Details und Executive Summary für dieses Projekt
                     </div>
                 </div>
             ` : ''}
         </div>
     `;
     
-    // Insert before control panel
+    // Insert or update selector
     const existing = document.getElementById('cockpit-projekt-selector-container');
     if (existing) {
         existing.innerHTML = selectorHTML;
@@ -290,9 +286,253 @@ function renderProjektSelector() {
         const container = document.createElement('div');
         container.id = 'cockpit-projekt-selector-container';
         container.innerHTML = selectorHTML;
-        controlPanel.parentNode.insertBefore(container, controlPanel);
+        
+        // Insert after metrics-grid
+        const metricsGrid = document.querySelector('.metrics-grid');
+        if (metricsGrid) {
+            metricsGrid.parentNode.insertBefore(container, metricsGrid.nextSibling);
+        } else {
+            dashboardMain.insertBefore(container, dashboardMain.firstChild);
+        }
     }
 }
+
+// ==========================================
+// PORTFOLIO TABLE
+// ==========================================
+
+/**
+ * Render Portfolio Overview Table
+ */
+function renderPortfolioTable() {
+    const projects = state.getAllProjekte();
+    
+    const tableHTML = `
+        <div id="cockpit-content-area" style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div>
+                    <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">
+                        Portfolio-Übersicht
+                    </h2>
+                    <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">
+                        Alle Projekte im Überblick - Klicke für Details
+                    </p>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Projekt</th>
+                            <th>Division</th>
+                            <th>Start</th>
+                            <th>NPV</th>
+                            <th>IRR</th>
+                            <th>Revenue</th>
+                            <th>Marge</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${projects.map(p => {
+                            const calc = calculateProjektWirtschaftlichkeit(p.id);
+                            const npv = calc?.kpis?.npv || 0;
+                            const irr = calc?.kpis?.irr || 0;
+                            const revenue = calc?.totals?.sales_revenue || 0;
+                            const margin = calc?.kpis?.avg_ebit_margin || 0;
+                            
+                            return `
+                                <tr style="cursor: pointer;" onclick="window.cockpitModule.onProjektSelect('${p.id}')">
+                                    <td>
+                                        <span class="status-badge status-${p.status?.toLowerCase().replace(' ', '-')}">
+                                            ${getProjectIcon(p)} ${p.status}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong style="color: #111827;">${p.name}</strong>
+                                    </td>
+                                    <td style="color: #6b7280;">${p.division || 'R&D'}</td>
+                                    <td style="color: #6b7280;">${p.startDate || '2025'}</td>
+                                    <td>
+                                        <strong style="color: ${npv > 0 ? '#10b981' : '#ef4444'};">
+                                            ${(npv / 1000000).toFixed(1)} M€
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <strong style="color: ${irr > 15 ? '#10b981' : '#6b7280'};">
+                                            ${irr.toFixed(1)}%
+                                        </strong>
+                                    </td>
+                                    <td style="color: #6b7280;">
+                                        ${(revenue / 1000000).toFixed(1)} M€
+                                    </td>
+                                    <td style="color: #6b7280;">
+                                        ${margin.toFixed(1)}%
+                                    </td>
+                                    <td>
+                                        <button onclick="event.stopPropagation(); window.cockpitModule.onProjektSelect('${p.id}')"
+                                                class="btn btn-primary btn-sm">
+                                            Details →
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    // Insert or update table
+    const existing = document.getElementById('cockpit-content-area');
+    if (existing) {
+        existing.outerHTML = tableHTML;
+    } else {
+        const container = document.getElementById('cockpit-projekt-selector-container');
+        if (container) {
+            container.insertAdjacentHTML('afterend', tableHTML);
+        }
+    }
+}
+
+// ==========================================
+// PROJECT DETAIL
+// ==========================================
+
+/**
+ * Render Individual Project Detail
+ */
+function renderProjektDetail(projektId) {
+    const projekt = state.getProjekt(projektId);
+    if (!projekt) {
+        console.error('Projekt not found:', projektId);
+        return;
+    }
+    
+    const calc = calculateProjektWirtschaftlichkeit(projektId);
+    const artikel = state.getArtikelByProjekt(projektId);
+    
+    const detailHTML = `
+        <div id="cockpit-content-area" style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <!-- Header -->
+            <div style="margin-bottom: 32px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                    <span style="font-size: 32px;">${getProjectIcon(projekt)}</span>
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #111827;">
+                        ${projekt.name}
+                    </h2>
+                    <span class="status-badge status-${projekt.status?.toLowerCase().replace(' ', '-')}">
+                        ${projekt.status}
+                    </span>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                    ${projekt.division || 'R&D'} • Start: ${projekt.startDate || '2025'}
+                </p>
+            </div>
+            
+            <!-- KPIs Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 32px;">
+                <div style="padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #10b981;">
+                    <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
+                        NPV
+                    </div>
+                    <div style="font-size: 24px; font-weight: 700; color: ${calc?.kpis?.npv > 0 ? '#10b981' : '#ef4444'};">
+                        ${((calc?.kpis?.npv || 0) / 1000000).toFixed(1)} M€
+                    </div>
+                </div>
+                
+                <div style="padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                    <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
+                        IRR
+                    </div>
+                    <div style="font-size: 24px; font-weight: 700; color: #3b82f6;">
+                        ${(calc?.kpis?.irr || 0).toFixed(1)}%
+                    </div>
+                </div>
+                
+                <div style="padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                    <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
+                        Total Revenue
+                    </div>
+                    <div style="font-size: 24px; font-weight: 700; color: #f59e0b;">
+                        ${((calc?.totals?.sales_revenue || 0) / 1000000).toFixed(1)} M€
+                    </div>
+                </div>
+                
+                <div style="padding: 20px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #8b5cf6;">
+                    <div style="font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
+                        Ø EBIT-Marge
+                    </div>
+                    <div style="font-size: 24px; font-weight: 700; color: #8b5cf6;">
+                        ${(calc?.kpis?.avg_ebit_margin || 0).toFixed(1)}%
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Artikel Section -->
+            <div style="margin-bottom: 32px;">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px;">
+                    Artikel in diesem Projekt (${artikel?.length || 0})
+                </h3>
+                
+                ${artikel && artikel.length > 0 ? `
+                    <div style="display: grid; gap: 12px;">
+                        ${artikel.map(art => `
+                            <div style="padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #2563eb;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">
+                                            ${art.name || 'Artikel'}
+                                        </div>
+                                        <div style="font-size: 13px; color: #6b7280;">
+                                            HK: ${art.hk || 0}€ • VK: ${art.vk || 0}€
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 13px; color: #6b7280;">Status</div>
+                                        <div style="font-weight: 600; color: #10b981;">Aktiv</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div style="padding: 32px; text-align: center; color: #6b7280; background: #f9fafb; border-radius: 8px;">
+                        Keine Artikel zugeordnet
+                    </div>
+                `}
+            </div>
+            
+            <!-- Actions -->
+            <div style="display: flex; gap: 12px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                <button onclick="window.projekte.openProjektDetail('${projektId}')" class="btn btn-primary">
+                    Vollständige Details öffnen →
+                </button>
+                <button onclick="window.cockpitModule.resetToPortfolio()" class="btn btn-secondary">
+                    ← Zurück zu Portfolio
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Insert or update detail
+    const existing = document.getElementById('cockpit-content-area');
+    if (existing) {
+        existing.outerHTML = detailHTML;
+    } else {
+        const container = document.getElementById('cockpit-projekt-selector-container');
+        if (container) {
+            container.insertAdjacentHTML('afterend', detailHTML);
+        }
+    }
+}
+
+// ==========================================
+// INTERACTION HANDLERS
+// ==========================================
 
 /**
  * Handle projekt selection
@@ -308,7 +548,7 @@ export function onProjektSelect(value) {
         
         // Re-render
         renderProjektSelector();
-        renderProjektCharts(value);
+        renderProjektDetail(value);
     }
 }
 
@@ -323,156 +563,7 @@ export function resetToPortfolio() {
     
     // Re-render
     renderProjektSelector();
-    renderPortfolioCharts();
-}
-
-// ==========================================
-// CHARTS
-// ==========================================
-
-/**
- * Render Portfolio Charts (aggregated)
- */
-function renderPortfolioCharts() {
-    console.log('📊 Rendering Portfolio Charts...');
-    
-    const projects = state.getAllProjekte();
-    const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-    
-    // Aggregate data from all projects
-    const portfolioData = {
-        umsatz: years.map(() => 0),
-        absatz: years.map(() => 0),
-        db2: years.map(() => 0),
-        db2Percent: years.map(() => 0),
-        projektkosten: years.map(() => 0),
-        db3Jahr: years.map(() => 0),
-        db3Kumuliert: []
-    };
-    
-    // Sum up all projects
-    projects.forEach(projekt => {
-        const artikel = state.getArtikelByProjekt(projekt.id);
-        
-        artikel.forEach(art => {
-            years.forEach((year, index) => {
-                const volume = art.volumes?.[year] || 0;
-                const price = art.prices?.[year] || 0;
-                const hk = art.hk || 0;
-                
-                const revenue = (volume * price) / 1000; // k€
-                const costs = (volume * hk) / 1000; // k€
-                
-                portfolioData.umsatz[index] += revenue;
-                portfolioData.absatz[index] += volume / 1000; // Tsd.
-                portfolioData.db2[index] += (revenue - costs);
-            });
-        });
-    });
-    
-    // Calculate DB2 percent
-    portfolioData.db2Percent = portfolioData.umsatz.map((u, i) => 
-        u > 0 ? (portfolioData.db2[i] / u * 100) : 0
-    );
-    
-    // Calculate DB3 (assuming 2.5k€ projektkosten per year)
-    portfolioData.db3Jahr = portfolioData.db2.map(db2 => db2 - 2.5);
-    
-    // Calculate cumulative
-    let cumulative = 0;
-    portfolioData.db3Kumuliert = portfolioData.db3Jahr.map(db3 => {
-        cumulative += db3;
-        return cumulative;
-    });
-    
-    // Update charts
-    charts.updateAllCharts();
-    
-    // Override with portfolio data
-    updateChartWithData('umsatz-chart', portfolioData.umsatz, 'Portfolio Umsatz');
-    updateChartWithData('absatz-chart', portfolioData.absatz, 'Portfolio Absatz');
-    updateChartWithData('db2-chart', portfolioData.db2, 'Portfolio DB2');
-    updateChartWithData('projektkosten-chart', portfolioData.projektkosten.map(() => 2.5), 'Projektkosten');
-    updateChartWithData('db3-jahr-chart', portfolioData.db3Jahr, 'Portfolio DB3');
-    updateChartWithData('db3-kumuliert-chart', portfolioData.db3Kumuliert, 'Portfolio DB3 Kumuliert');
-}
-
-/**
- * Render Project-Specific Charts
- */
-function renderProjektCharts(projektId) {
-    console.log('📊 Rendering Charts for Projekt:', projektId);
-    
-    const projekt = state.getProjekt(projektId);
-    if (!projekt) {
-        console.error('Projekt not found:', projektId);
-        return;
-    }
-    
-    const artikel = state.getArtikelByProjekt(projektId);
-    const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-    
-    // Calculate projekt-specific data
-    const projektData = {
-        umsatz: years.map(() => 0),
-        absatz: years.map(() => 0),
-        db2: years.map(() => 0),
-        db2Percent: years.map(() => 0),
-        projektkosten: years.map(() => 2.5),
-        db3Jahr: years.map(() => 0),
-        db3Kumuliert: []
-    };
-    
-    // Calculate from artikel
-    artikel.forEach(art => {
-        years.forEach((year, index) => {
-            const volume = art.volumes?.[year] || 0;
-            const price = art.prices?.[year] || 0;
-            const hk = art.hk || 0;
-            
-            const revenue = (volume * price) / 1000; // k€
-            const costs = (volume * hk) / 1000; // k€
-            
-            projektData.umsatz[index] += revenue;
-            projektData.absatz[index] += volume / 1000; // Tsd.
-            projektData.db2[index] += (revenue - costs);
-        });
-    });
-    
-    // Calculate DB2 percent
-    projektData.db2Percent = projektData.umsatz.map((u, i) => 
-        u > 0 ? (projektData.db2[i] / u * 100) : 0
-    );
-    
-    // Calculate DB3
-    projektData.db3Jahr = projektData.db2.map((db2, i) => db2 - projektData.projektkosten[i]);
-    
-    // Calculate cumulative
-    let cumulative = 0;
-    projektData.db3Kumuliert = projektData.db3Jahr.map(db3 => {
-        cumulative += db3;
-        return cumulative;
-    });
-    
-    // Update charts with projekt data
-    updateChartWithData('umsatz-chart', projektData.umsatz, `${projekt.name} - Umsatz`);
-    updateChartWithData('absatz-chart', projektData.absatz, `${projekt.name} - Absatz`);
-    updateChartWithData('db2-chart', projektData.db2, `${projekt.name} - DB2`);
-    updateChartWithData('projektkosten-chart', projektData.projektkosten, 'Projektkosten');
-    updateChartWithData('db3-jahr-chart', projektData.db3Jahr, `${projekt.name} - DB3`);
-    updateChartWithData('db3-kumuliert-chart', projektData.db3Kumuliert, `${projekt.name} - DB3 Kumuliert`);
-}
-
-/**
- * Update chart with new data
- */
-function updateChartWithData(chartId, data, label) {
-    const chart = charts.getChart(chartId.replace('-chart', 'Chart'));
-    if (!chart) return;
-    
-    chart.data.datasets[0].data = data;
-    chart.data.datasets[0].label = label;
-    chart.update('none');
+    renderPortfolioTable();
 }
 
 // ==========================================
