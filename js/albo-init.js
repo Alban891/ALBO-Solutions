@@ -1,13 +1,13 @@
 /**
- * ALBO System - Chat-Only Version
- * All feedback goes to Chat Tab
- * Simple & Clean
+ * ALBO System - Production Version
+ * Uses existing AI infrastructure (claude-service.js)
+ * Graceful fallback to basic analysis if AI unavailable
  */
 
 (function() {
     'use strict';
 
-    console.log('🤖 ALBO System (Chat-Only) initializing...');
+    console.log('🤖 ALBO System initializing...');
 
     // ═══════════════════════════════════════════════════════
     // CHECK DEPENDENCIES
@@ -23,7 +23,7 @@
         return;
     }
 
-    console.log('✅ Dependencies ready');
+    console.log('✅ Core dependencies ready');
 
     // ═══════════════════════════════════════════════════════
     // ALBO SYSTEM CLASS
@@ -34,20 +34,27 @@
             this.state = window.state;
             this.helpers = window.helpers;
             this.isInitialized = false;
+            this.claudeService = null;
+            this.aiAvailable = false;
         }
 
         // ═══════════════════════════════════════════════════════
         // INITIALIZATION
         // ═══════════════════════════════════════════════════════
 
-        init() {
+        async init() {
             if (this.isInitialized) return;
 
             console.log('🚀 Starting ALBO initialization...');
 
             try {
+                // Try to load AI modules
+                await this._loadAIModules();
+                
+                // Setup event listeners
                 this._setupEventListeners();
-                this._hideUnusedTabs();
+                
+                // Show welcome
                 this._showWelcomeMessage();
                 
                 this.isInitialized = true;
@@ -55,42 +62,38 @@
 
             } catch (error) {
                 console.error('❌ ALBO init failed:', error);
+                this._chat('⚠️ ALBO läuft im Basic-Modus (ohne KI).');
             }
         }
 
         // ═══════════════════════════════════════════════════════
-        // HIDE UNUSED TABS
+        // LOAD AI MODULES
         // ═══════════════════════════════════════════════════════
 
-        _hideUnusedTabs() {
-            // Hide Analysis and Metrics tabs
-            const tabs = document.querySelectorAll('.albo-tab');
-            tabs.forEach(tab => {
-                const text = tab.textContent.trim();
-                if (text.includes('Analysis') || text.includes('Metrics')) {
-                    tab.style.display = 'none';
+        async _loadAIModules() {
+            try {
+                console.log('📦 Loading Claude Service...');
+
+                // Import ClaudeService
+                const { ClaudeService } = await import('./modules/ai/services/claude-service.js');
+                
+                // Create instance
+                this.claudeService = new ClaudeService();
+                
+                // Initialize (health check)
+                this.aiAvailable = await this.claudeService.initialize();
+                
+                if (this.aiAvailable) {
+                    console.log('✅ Claude AI available');
+                } else {
+                    console.warn('⚠️ Claude AI unavailable (API key missing?)');
                 }
-            });
 
-            // Auto-switch to Chat
-            const chatTab = document.querySelector('.albo-tab:not([style*="display: none"])');
-            if (chatTab) {
-                chatTab.classList.add('active');
+            } catch (error) {
+                console.warn('⚠️ AI modules not loaded:', error.message);
+                console.log('ℹ️ Running in basic mode (calculations only)');
+                this.aiAvailable = false;
             }
-
-            // Show only chat content
-            const chatContent = document.getElementById('albo-tab-chat');
-            if (chatContent) {
-                chatContent.classList.add('active');
-            }
-
-            // Hide other content
-            const analysisContent = document.getElementById('albo-tab-analysis');
-            const metricsContent = document.getElementById('albo-tab-metrics');
-            if (analysisContent) analysisContent.classList.remove('active');
-            if (metricsContent) metricsContent.classList.remove('active');
-
-            console.log('✅ Unused tabs hidden');
         }
 
         // ═══════════════════════════════════════════════════════
@@ -100,54 +103,54 @@
         _setupEventListeners() {
             console.log('📡 Setting up event listeners...');
 
-            // 1. Projekt Created
+            // Projekt Created
             document.addEventListener('projekt-created', (e) => {
                 const name = e.detail.projekt?.project_name || e.detail.projekt?.name || 'Projekt';
                 this._chat(`✅ Projekt "${name}" wurde erfolgreich erstellt!`);
             });
 
-            // 2. Projekt Updated
+            // Projekt Updated
             document.addEventListener('projekt-updated', (e) => {
                 const name = e.detail.projekt?.project_name || e.detail.projekt?.name || 'Projekt';
                 this._chat(`📝 Projekt "${name}" wurde aktualisiert.`);
             });
 
-            // 3. Projekt Deleted
+            // Projekt Deleted
             document.addEventListener('projekt-deleted', (e) => {
                 const name = e.detail.projektName || 'Projekt';
                 this._chat(`🗑️ Projekt "${name}" wurde gelöscht.`);
             });
 
-            // 4. Artikel Saved
+            // Artikel Saved
             document.addEventListener('artikel-saved', (e) => {
                 const name = e.detail.artikel?.name || 'Artikel';
                 this._chat(`💾 Artikel "${name}" wurde gespeichert.`);
             });
 
-            // 5. Artikel Updated
+            // Artikel Updated
             document.addEventListener('artikel-updated', (e) => {
                 const name = e.detail.artikel?.name || 'Artikel';
                 this._chat(`📝 Artikel "${name}" wurde aktualisiert.`);
             });
 
-            // 6. Basisannahmen Complete
+            // Basisannahmen Complete
             document.addEventListener('basisannahmen-complete', (e) => {
                 const artikel = e.detail.artikel;
                 if (artikel) {
-                    this._analyzeAndChat(artikel);
+                    this._analyzeArtikel(artikel);
                 }
             });
 
-            // 7. Modelle Berechnet
+            // Modelle Berechnet
             document.addEventListener('modelle-berechnet', (e) => {
                 const artikel = e.detail.artikel;
                 if (artikel) {
-                    this._chat(`📊 Modelle wurden berechnet! Analysiere...`);
-                    setTimeout(() => this._analyzeAndChat(artikel), 500);
+                    this._chat(`📊 Modelle wurden berechnet!`);
+                    setTimeout(() => this._analyzeArtikel(artikel), 500);
                 }
             });
 
-            // 8. Tab Changed
+            // Tab Changed
             document.addEventListener('tab-changed', (e) => {
                 console.log('📑 Tab changed:', e.detail.tab);
             });
@@ -156,10 +159,10 @@
         }
 
         // ═══════════════════════════════════════════════════════
-        // ANALYSIS & CHAT
+        // ANALYSIS
         // ═══════════════════════════════════════════════════════
 
-        _analyzeAndChat(artikel) {
+        async _analyzeArtikel(artikel) {
             try {
                 const menge = parseFloat(artikel.start_menge) || 0;
                 const preis = parseFloat(artikel.start_preis) || 0;
@@ -170,53 +173,213 @@
                     return;
                 }
 
-                // Calculate DB1
+                // Calculate basic metrics
                 const umsatz = menge * preis;
                 const kosten = menge * hk;
+                const db1 = umsatz - kosten;
                 const db1Prozent = ((preis - hk) / preis) * 100;
 
-                console.log('📊 Analysis:', { menge, preis, hk, db1Prozent });
+                console.log('📊 Metrics:', { menge, preis, hk, db1Prozent });
 
-                // Generate message based on DB1
-                let message = '';
-                let emoji = '';
-
-                if (db1Prozent > 50) {
-                    emoji = '🎉';
-                    message = `Exzellent! DB1 Marge von ${db1Prozent.toFixed(1)}% ist sehr stark. Umsatz: ${this.helpers.formatCurrency(umsatz)}`;
-                } else if (db1Prozent > 30) {
-                    emoji = '✅';
-                    message = `Gut! DB1 Marge von ${db1Prozent.toFixed(1)}% ist solide. Umsatz: ${this.helpers.formatCurrency(umsatz)}`;
-                } else if (db1Prozent > 15) {
-                    emoji = '⚠️';
-                    message = `OK. DB1 Marge von ${db1Prozent.toFixed(1)}% - könnte besser sein. Umsatz: ${this.helpers.formatCurrency(umsatz)}`;
+                // Use AI if available, otherwise basic analysis
+                if (this.aiAvailable && this.claudeService) {
+                    await this._analyzeWithClaude(artikel, { umsatz, kosten, db1, db1Prozent });
                 } else {
-                    emoji = '🔴';
-                    message = `Kritisch! DB1 Marge von ${db1Prozent.toFixed(1)}% ist zu niedrig. Umsatz: ${this.helpers.formatCurrency(umsatz)}. Preiserhöhung oder Kostensenkung erforderlich.`;
-                }
-
-                this._chat(`${emoji} ${message}`);
-
-                // Additional insights
-                if (umsatz < 50000) {
-                    this._chat(`💡 Tipp: Mit ${this.helpers.formatCurrency(umsatz)} Umsatz ist das Volumen noch gering. Skalierungspotenzial prüfen!`);
-                }
-
-                if (db1Prozent < 30) {
-                    const targetPreis = hk / (1 - 0.30);
-                    const preisErhoehung = ((targetPreis - preis) / preis * 100).toFixed(1);
-                    this._chat(`💡 Tipp: Für 30% DB1 bräuchtest du einen Preis von ${this.helpers.formatCurrency(targetPreis)} (+${preisErhoehung}%)`);
+                    this._analyzeBasic(artikel, { umsatz, kosten, db1, db1Prozent });
                 }
 
             } catch (error) {
                 console.error('❌ Analysis failed:', error);
-                this._chat('❌ Analyse fehlgeschlagen. Bitte Console prüfen (F12).');
+                this._chat('❌ Analyse fehlgeschlagen. Siehe Console (F12).');
             }
         }
 
         // ═══════════════════════════════════════════════════════
-        // CHAT HELPER
+        // AI ANALYSIS (Claude)
         // ═══════════════════════════════════════════════════════
+
+        async _analyzeWithClaude(artikel, metrics) {
+            try {
+                this._chat('🤖 Analysiere mit Claude AI...');
+
+                // Build system prompt
+                const systemPrompt = `Du bist ALBO, ein Senior Controller mit 15+ Jahren Erfahrung.
+
+ANALYSE-FOKUS:
+1. Wirtschaftlichkeit (DB1, Marge, Volumen)
+2. Markt-Fit (Strategie, Pricing)
+3. Risiken & Chancen
+4. Quick Wins
+
+OUTPUT-FORMAT (JSON):
+{
+  "status": "good"|"warning"|"critical",
+  "hauptbewertung": "Ein Satz Zusammenfassung",
+  "findings": [
+    {
+      "severity": "critical"|"warning"|"info",
+      "title": "Kurzer Titel",
+      "message": "Detaillierte Erklärung",
+      "recommendation": "Konkrete Handlung"
+    }
+  ],
+  "quick_wins": ["Maßnahme 1", "Maßnahme 2"]
+}
+
+WICHTIG: Antworte NUR mit validem JSON, keine Markdown-Blöcke!`;
+
+                // Build user prompt
+                const userPrompt = `Analysiere diesen Business Case:
+
+ARTIKEL: ${artikel.name || 'Unbekannt'}
+- Typ: ${artikel.typ || '-'}
+- Kategorie: ${artikel.kategorie || '-'}
+- Geschäftsmodell: ${artikel.geschaeftsmodell || '-'}
+- Strategie: ${artikel.strategie || '-'}
+- Zielmarkt: ${artikel.zielmarkt || '-'}
+
+FINANZ-PARAMETER (Jahr 1):
+- Menge: ${artikel.start_menge || 0} Stück
+- Preis: ${artikel.start_preis || 0}€
+- HK: ${artikel.start_hk || 0}€
+- Zeithorizont: ${artikel.zeithorizont || 5} Jahre
+
+BERECHNETE WERTE:
+- Umsatz: ${this.helpers.formatCurrency(metrics.umsatz)}
+- Kosten: ${this.helpers.formatCurrency(metrics.kosten)}
+- DB1: ${this.helpers.formatCurrency(metrics.db1)}
+- DB1%: ${metrics.db1Prozent.toFixed(1)}%
+
+Führe eine vollständige Bewertung durch und gib JSON zurück.`;
+
+                // Call Claude Service
+                const response = await this.claudeService.query(
+                    userPrompt,
+                    { systemPrompt: systemPrompt },
+                    { max_tokens: 2000, temperature: 0.7 }
+                );
+
+                if (!response.success) {
+                    throw new Error(response.error || 'Claude API failed');
+                }
+
+                console.log('📥 Raw Claude Response:', response.content);
+
+                // Parse JSON response
+                let analysis;
+                try {
+                    // Remove markdown code blocks if present
+                    let cleanContent = response.content.trim();
+                    cleanContent = cleanContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+                    
+                    analysis = JSON.parse(cleanContent);
+                } catch (parseError) {
+                    console.error('❌ JSON Parse Error:', parseError);
+                    // Fallback: Show raw response
+                    this._chat(`🤖 ${response.content}`);
+                    return;
+                }
+
+                console.log('✅ Parsed Analysis:', analysis);
+
+                // Display results
+                this._displayAnalysis(analysis, metrics);
+
+                // Log cost
+                if (response.metadata?.cost) {
+                    console.log(`💰 Cost: $${response.metadata.cost.toFixed(4)}`);
+                }
+
+            } catch (error) {
+                console.error('❌ Claude Analysis failed:', error);
+                this._chat('⚠️ KI-Analyse fehlgeschlagen, nutze Basic-Analyse...');
+                this._analyzeBasic(artikel, metrics);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // DISPLAY ANALYSIS RESULTS
+        // ═══════════════════════════════════════════════════════
+
+        _displayAnalysis(analysis, metrics) {
+            // Main assessment
+            const statusEmoji = this._getStatusEmoji(analysis.status);
+            this._chat(`${statusEmoji} ${analysis.hauptbewertung}`);
+
+            // Findings
+            if (analysis.findings && analysis.findings.length > 0) {
+                analysis.findings.forEach(finding => {
+                    const emoji = finding.severity === 'critical' ? '🔴' : 
+                                 finding.severity === 'warning' ? '⚠️' : 'ℹ️';
+                    this._chat(`${emoji} ${finding.title}`);
+                    if (finding.message) {
+                        this._chat(`   ${finding.message}`);
+                    }
+                    if (finding.recommendation) {
+                        this._chat(`   💡 ${finding.recommendation}`);
+                    }
+                });
+            }
+
+            // Quick Wins
+            if (analysis.quick_wins && analysis.quick_wins.length > 0) {
+                this._chat('⚡ Quick Wins:');
+                analysis.quick_wins.forEach(win => {
+                    this._chat(`  • ${win}`);
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // BASIC ANALYSIS (Fallback)
+        // ═══════════════════════════════════════════════════════
+
+        _analyzeBasic(artikel, metrics) {
+            const { umsatz, kosten, db1Prozent } = metrics;
+
+            let emoji = '';
+            let message = '';
+
+            if (db1Prozent > 50) {
+                emoji = '🎉';
+                message = `Exzellent! DB1 Marge von ${db1Prozent.toFixed(1)}% ist sehr stark.`;
+            } else if (db1Prozent > 30) {
+                emoji = '✅';
+                message = `Gut! DB1 Marge von ${db1Prozent.toFixed(1)}% ist solide.`;
+            } else if (db1Prozent > 15) {
+                emoji = '⚠️';
+                message = `OK. DB1 Marge von ${db1Prozent.toFixed(1)}% - Potenzial vorhanden.`;
+            } else {
+                emoji = '🔴';
+                message = `Kritisch! DB1 Marge von ${db1Prozent.toFixed(1)}% ist zu niedrig.`;
+            }
+
+            this._chat(`${emoji} ${message}`);
+            this._chat(`📊 Umsatz: ${this.helpers.formatCurrency(umsatz)}`);
+
+            // Tips
+            if (umsatz < 50000) {
+                this._chat(`💡 Geringes Volumen - Skalierung prüfen!`);
+            }
+
+            if (db1Prozent < 30) {
+                const targetPreis = artikel.start_hk / 0.7;
+                this._chat(`💡 Für 30% DB1: Preis auf ${this.helpers.formatCurrency(targetPreis)} erhöhen`);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // HELPERS
+        // ═══════════════════════════════════════════════════════
+
+        _getStatusEmoji(status) {
+            switch(status) {
+                case 'good': return '✅';
+                case 'warning': return '⚠️';
+                case 'critical': return '🔴';
+                default: return '📊';
+            }
+        }
 
         _chat(text) {
             const container = document.getElementById('albo-chat-messages');
@@ -237,18 +400,22 @@
 
         _showWelcomeMessage() {
             this._chat('👋 Hi! Ich bin ALBO, dein KI-Controller.');
-            this._chat('💡 Ich beobachte deine Projekte und Artikel und gebe dir automatisch Feedback!');
-            this._chat('🚀 Erstelle ein Projekt oder bearbeite einen Artikel - ich melde mich sofort.');
+            
+            if (this.aiAvailable) {
+                this._chat('🤖 Claude AI aktiv - ich nutze intelligente Analysen!');
+            } else {
+                this._chat('📊 Basic-Modus aktiv. Für KI-Features: API Keys in Vercel prüfen.');
+            }
+            
+            this._chat('💡 Erstelle ein Projekt oder bearbeite einen Artikel - ich melde mich sofort!');
         }
-
-        // ═══════════════════════════════════════════════════════
-        // PUBLIC API
-        // ═══════════════════════════════════════════════════════
 
         getStatus() {
             return {
                 initialized: this.isInitialized,
-                version: 'Chat-Only 1.0'
+                aiAvailable: this.aiAvailable,
+                claudeService: !!this.claudeService,
+                version: '2.0 Production'
             };
         }
     }
@@ -267,6 +434,6 @@
         alboSystem.init();
     }
 
-    console.log('✅ ALBO System loaded');
+    console.log('✅ ALBO System module loaded');
 
 })();
