@@ -70,10 +70,59 @@
             <!-- ========================================== -->
             <!-- TAB 1: COCKPIT (Portfolio Overview) -->
             <!-- ========================================== -->
-            <div class="cockpit-welcome">Herzlich Willkommen...</div>
-            <div class="portfolio-kpis">...</div>
-            <div class="bcg-matrix-container">...</div>
-            <div class="strategic-recommendations">...</div>
+            <div id="tab-cockpit" class="tab-content active">
+    
+    <!-- Welcome Header -->
+    <div class="cockpit-welcome" style="
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    ">
+        <h1 style="margin: 0 0 12px 0; font-size: 32px; font-weight: 700;">
+            Herzlich Willkommen zur KI-gestützten Portfolio-Entscheidungsunterstützung
+        </h1>
+        <p style="margin: 0; font-size: 16px; opacity: 0.95; line-height: 1.6;">
+            Strategisches Portfolio-Management mit BCG-Matrix und datengetriebenen Handlungsempfehlungen nach Horváth & Partners Methodik
+        </p>
+    </div>
+
+    <!-- Portfolio KPIs -->
+    <div class="portfolio-kpis" style="
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 32px;
+    ">
+        <!-- KPI Cards werden hier von cockpit.js eingefügt -->
+    </div>
+
+    <!-- BCG Matrix -->
+    <div class="bcg-matrix-container" style="
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 32px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        position: relative;
+        height: 600px;
+    ">
+        <canvas id="bcg-chart"></canvas>
+    </div>
+
+    <!-- Strategic Recommendations -->
+    <div class="strategic-recommendations" style="
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    ">
+        <!-- Recommendations werden hier von cockpit.js eingefügt -->
+    </div>
+
+</div>
 
             <!-- ========================================== -->
             <!-- TAB 2: PROJEKTE -->
