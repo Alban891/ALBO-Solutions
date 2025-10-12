@@ -1346,6 +1346,15 @@
             content.classList.remove('active');
         });
 
+        // 🆕 ALBO Event: Tab gewechselt
+        document.dispatchEvent(new CustomEvent('tab-changed', {
+            detail: {
+                tab: tabName,
+                projekt: window.cfoDashboard.currentProjekt,
+                artikel: window.cfoDashboard.currentArtikel
+            }
+        }));
+
         // Activate target tab
         const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
         const targetContent = document.getElementById(`projekt-tab-${tabName}`);
@@ -1748,6 +1757,9 @@
 
     console.log('✅ ALBO Sidebar functions loaded');
     </script>
+
+    <!-- ALBO System -->
+    <script type="module" src="js/albo-init.js"></script>
 
 </body>
 </html>
