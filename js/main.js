@@ -2,6 +2,8 @@
  * CFO Dashboard - Main Application Controller
  * Orchestrates initialization, event handling, and navigation
  * Enterprise entry point with proper error handling
+ * 
+ * FIXED: Now imports and uses cockpit.js
  */
 
 import CONFIG from './config.js';
@@ -9,6 +11,7 @@ import { state } from './state.js';
 import * as helpers from './helpers.js';
 import * as api from './api.js';
 import * as charts from './charts.js';
+import * as cockpit from './modules/cockpit.js'; // ← COCKPIT IMPORT HINZUGEFÜGT!
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel.js';
 import * as projektkosten from './modules/projektkosten.js';
@@ -59,6 +62,7 @@ async function initializeApplication() {
     window.projekte = projekte;
     window.artikel = artikel;
     window.projektkosten = projektkosten;
+    window.cockpitModule = cockpit; // ← COCKPIT GLOBAL!
     window.renderProjektOverview = projekte.renderProjektOverview;
     window.updateProjektStats = projekte.updateProjektStats;
 
@@ -284,7 +288,7 @@ async function restoreDeepNavigation() {
 
 /**
  * Load initial data from database
- * FIXED: Restore deep navigation after data load
+ * FIXED: Render cockpit after data load
  */
 async function loadInitialData() {
   try {
@@ -309,11 +313,18 @@ async function loadInitialData() {
     charts.updateAllCharts();
 
     // ==========================================
-    // CRITICAL: Restore deep navigation state
+    // CRITICAL: Render cockpit or restore navigation
     // ==========================================
     const currentTab = state.currentTab || 'cockpit';
     
-    if (currentTab === 'projekte') {
+    if (currentTab === 'cockpit') {
+      // ✅ RENDER COCKPIT!
+      console.log('📊 Rendering cockpit after data load...');
+      setTimeout(() => {
+        cockpit.renderCockpit();
+      }, 100);
+      
+    } else if (currentTab === 'projekte') {
       // Check if we need to restore deep navigation (user was in a projekt)
       if (state.currentProjekt) {
         console.log('🔄 User was in projekt detail - calling restoreDeepNavigation...');
@@ -335,7 +346,7 @@ async function loadInitialData() {
         }
       }
     } else {
-      console.log(`ℹ️ Not on projekte tab (current: ${currentTab}) - skipping projekt render`);
+      console.log(`ℹ️ Not on cockpit or projekte tab (current: ${currentTab})`);
     }
 
   } catch (error) {
@@ -403,8 +414,16 @@ window.switchTab = function(tabName) {
   if (targetButton) targetButton.classList.add('active');
   if (targetContent) targetContent.classList.add('active');
 
-  // Reset views when switching tabs
-  if (tabName === 'projekte') {
+  // Handle tab-specific rendering
+  if (tabName === 'cockpit') {
+    // ✅ RENDER COCKPIT!
+    console.log('📊 Rendering cockpit...');
+    setTimeout(() => {
+      cockpit.renderCockpit();
+    }, 100);
+    
+  } else if (tabName === 'projekte') {
+    // Reset views when switching to projekte
     const projektOverview = document.getElementById('projekt-overview');
     const artikelOverview = document.getElementById('artikel-overview');
     
@@ -664,7 +683,7 @@ function initializeAI() {
   window.cfoDashboard.aiController.addAIMessage({
     level: 'success',
     title: 'KI-Controller aktiviert',
-    text: 'System bereit. Business Case geladen.',
+    text: 'System bereit. Portfolio geladen.',
     timestamp: 'System-Start'
   });
 
@@ -676,10 +695,9 @@ function initializeAI() {
  */
 function startAIInsightsTimer() {
   const insights = [
-    { title: 'Markt-Insight', text: 'DB2-Marge liegt über Benchmark.', level: 'insight' },
-    { title: 'Risiko-Hinweis', text: 'CAPEX-Auslastung bei 89%.', level: 'risk' },
-    { title: 'Optimierung', text: 'Mengenmodell für Artikel X prüfen.', level: 'info' },
-    { title: 'Performance', text: 'Projekt Y hat Payback erreicht.', level: 'success' }
+    { title: 'Portfolio-Insight', text: 'Durchschnittlicher NPV über Benchmark.', level: 'insight' },
+    { title: 'Projekt-Status', text: '5 von 8 Projekten aktiv.', level: 'info' },
+    { title: 'Performance', text: 'Portfolio-NPV bei 127M€.', level: 'success' }
   ];
 
   setInterval(() => {
@@ -760,6 +778,7 @@ window.cfoDashboardMain = {
   helpers,
   api,
   charts,
+  cockpit, // ← COCKPIT EXPORT!
   saveNavigationState,
   showErrorNotification,
   formatCurrency,
