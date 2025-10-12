@@ -360,6 +360,14 @@ window.saveArtikelChanges = async function() {
 
       // Update charts
       charts.updateAllCharts();
+
+      // 🆕 ALBO Event: Artikel gespeichert
+      document.dispatchEvent(new CustomEvent('artikel-saved', {
+        detail: {
+          artikel: updatedArtikel,
+          artikelId: artikelId
+        }
+      }));
   
       // Show success message
       if (window.cfoDashboard.aiController) {
@@ -631,6 +639,18 @@ window.updateErsteZeile = function() {
     hkInput.readOnly = true;
     hkInput.style.background = '#f9fafb';
   }
+  // 🆕 ALBO Event: Basisannahmen komplett (wenn alle 3 Werte > 0)
+  if (startMenge > 0 && startPreis > 0 && startHK > 0) {
+    document.dispatchEvent(new CustomEvent('basisannahmen-complete', {
+      detail: {
+        menge: startMenge,
+        preis: startPreis,
+        hk: startHK,
+        artikel: window.cfoDashboard.currentArtikel,
+        projekt: window.cfoDashboard.currentProjekt
+      }
+    }));
+  }
 }
 
 /**
@@ -783,6 +803,23 @@ window.berechneModelle = function() {
   }
   
   console.log('✅ Modelle berechnet (Jahr 1 = Startwerte, ab Jahr 2 = Modelle)');
+  
+  // 🆕 ALBO Event: Modelle berechnet
+  document.dispatchEvent(new CustomEvent('modelle-berechnet', {
+    detail: {
+      artikel: window.cfoDashboard.currentArtikel,
+      projekt: window.cfoDashboard.currentProjekt,
+      mengenModell: mengenModell,
+      preisModell: preisModell,
+      kostenModell: kostenModell,
+      zeitraum: zeitraum,
+      startwerte: {
+        menge: startMenge,
+        preis: startPreis,
+        hk: startHK
+      }
+    }
+  }));
 }
 
 /**
