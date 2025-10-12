@@ -14,12 +14,39 @@
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- ALBO FLOATING ICON -->
-    <!-- ========================================== -->
-    <div id="albo-icon" class="albo-floating-icon idle">
-        <div class="albo-letter">A</div>
+   <!-- ========================================== -->
+<!-- ALBO FLOATING COMPANION -->
+<!-- ========================================== -->
+<div id="albo-companion" class="albo-companion idle">
+    <div class="albo-core">
+        <span class="albo-letter">A</span>
     </div>
+    <div class="albo-glow"></div>
+</div>
+
+<!-- ALBO ANALYSIS PANEL (Hidden by default) -->
+<div id="albo-panel" class="albo-panel">
+    <div class="albo-panel-header">
+        <div class="panel-title">
+            <span class="panel-icon">🤖</span>
+            <span>ALBO CRITICAL ANALYSIS</span>
+        </div>
+        <button class="panel-close" onclick="closeAlboPanel()">✕</button>
+    </div>
+    
+    <div class="albo-panel-body">
+        <div id="albo-analysis-content">
+            <!-- Content wird dynamisch geladen -->
+            <div class="analysis-loading">
+                <div class="loading-spinner"></div>
+                <p>Analysiere Business Case...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ALBO Overlay (für Panel Background) -->
+<div id="albo-overlay" class="albo-overlay" onclick="closeAlboPanel()"></div>
 
     <!-- ========================================== -->
     <!-- HEADER -->
@@ -2081,6 +2108,111 @@
             window.AIChat.init();
         }
         
+    })();
+    </script>
+    <script>
+    // ========================================
+    // ALBO FLOATING COMPANION
+    // ========================================
+
+    (function() {
+      'use strict';
+      
+      const albo = {
+        companion: null,
+        panel: null,
+        overlay: null,
+        lastX: 0,
+        lastY: 0,
+        targetX: 0,
+        targetY: 0,
+        
+        init: function() {
+          this.companion = document.getElementById('albo-companion');
+          this.panel = document.getElementById('albo-panel');
+          this.overlay = document.getElementById('albo-overlay');
+          
+          if (!this.companion) return;
+          
+          // Track mouse movement
+          document.addEventListener('mousemove', (e) => this.updatePosition(e));
+          
+          // Click handler
+          this.companion.querySelector('.albo-core').addEventListener('click', () => this.openPanel());
+          
+          // Start animation loop
+          this.animate();
+          
+          console.log('✅ ALBO Companion initialized');
+        },
+        
+        updatePosition: function(e) {
+          this.targetX = e.clientX + 20; // Offset from cursor
+          this.targetY = e.clientY + 20;
+        },
+        
+        animate: function() {
+          // Smooth following (lerp)
+          this.lastX += (this.targetX - this.lastX) * 0.15;
+          this.lastY += (this.targetY - this.lastY) * 0.15;
+          
+          if (this.companion) {
+            this.companion.style.left = this.lastX + 'px';
+            this.companion.style.top = this.lastY + 'px';
+          }
+          
+          requestAnimationFrame(() => this.animate());
+        },
+        
+        openPanel: function() {
+          console.log('🤖 Opening ALBO Panel...');
+          
+          // Show overlay and panel
+          this.overlay.classList.add('active');
+          this.panel.classList.add('active');
+          
+          // Load analysis
+          this.loadAnalysis();
+        },
+        
+        loadAnalysis: async function() {
+          const content = document.getElementById('albo-analysis-content');
+          
+          // Simulate loading for now
+          setTimeout(() => {
+            content.innerHTML = `
+              <div style="padding: 20px; text-align: center;">
+                <h3 style="color: #1e3a8a; margin-bottom: 16px;">🎯 Business Case Analysis</h3>
+                <p style="color: #6b7280; margin-bottom: 20px;">
+                  ALBO AI Controller ist bereit. Die Analyse-Engine wird in der nächsten Phase integriert.
+                </p>
+                <div style="padding: 16px; background: #f3f4f6; border-radius: 8px; text-align: left;">
+                  <p style="margin-bottom: 8px;"><strong>Nächste Schritte:</strong></p>
+                  <ul style="margin-left: 20px; color: #4b5563;">
+                    <li>Claude API Integration</li>
+                    <li>Context Detection</li>
+                    <li>Critical Analysis Engine</li>
+                  </ul>
+                </div>
+              </div>
+            `;
+          }, 1500);
+        }
+      };
+      
+      // Close panel function (global)
+      window.closeAlboPanel = function() {
+        albo.overlay.classList.remove('active');
+        albo.panel.classList.remove('active');
+      };
+      
+      // Initialize when DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => albo.init());
+      } else {
+        albo.init();
+      }
+      
     })();
     </script>
 
