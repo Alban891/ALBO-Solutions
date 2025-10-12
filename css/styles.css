@@ -1746,7 +1746,7 @@ body {
 /* ========================================== */
 
 .sidebar {
-  width: 320px;
+  width: 420x;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   border-left: 1px solid var(--border);
   display: flex;
