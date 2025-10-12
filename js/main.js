@@ -309,9 +309,6 @@ async function loadInitialData() {
 
     console.log('✅ Initial data loaded');
 
-    // Update charts with loaded data
-    charts.updateAllCharts();
-
     // ==========================================
     // CRITICAL: Render cockpit or restore navigation
     // ==========================================
