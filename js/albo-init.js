@@ -925,6 +925,9 @@ class ALBOSystem {
 
 export const alboSystem = new ALBOSystem();
 
+// 🆕 CRITICAL: Make globally accessible
+window.alboSystem = alboSystem;
+
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
