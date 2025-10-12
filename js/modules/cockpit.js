@@ -1,20 +1,14 @@
 /**
  * ALBO Solutions - Portfolio Cockpit Module
- * Senior Controller Dashboard with Chart Integration
- * Horváth & Partners Style
+ * Horváth & Partners Style BCG Portfolio Management
  * 
- * Uses charts.js to display portfolio/project data
+ * Features:
+ * - BCG Matrix (Bubble Chart)
+ * - Portfolio KPIs
+ * - Strategic Recommendations
  */
 
 import { state } from '../state.js';
-import * as charts from '../charts.js';
-
-// ==========================================
-// STATE
-// ==========================================
-
-let currentView = 'portfolio'; // 'portfolio' | 'projekt'
-let selectedProjektId = null;
 
 // ==========================================
 // MAIN RENDER FUNCTION
@@ -25,20 +19,16 @@ let selectedProjektId = null;
  * @public
  */
 export function renderCockpit() {
-    console.log('📊 Rendering Portfolio Cockpit...');
+    console.log('📊 Rendering Horváth Portfolio Cockpit...');
     
-    // Render Portfolio KPIs
+    // 1. Render Portfolio KPIs
     renderPortfolioKPIs();
     
-    // Render Projekt Selector
-    renderProjektSelector();
+    // 2. Render BCG Matrix
+    renderBCGMatrix();
     
-    // Render Charts (Portfolio or Projekt)
-    if (currentView === 'portfolio') {
-        renderPortfolioCharts();
-    } else {
-        renderProjektCharts(selectedProjektId);
-    }
+    // 3. Render Strategic Recommendations
+    renderStrategicRecommendations();
 }
 
 // ==========================================
@@ -55,103 +45,42 @@ function calculatePortfolioKPIs() {
         return {
             totalProjects: 0,
             activeProjects: 0,
-            totalNPV: 0,
-            avgIRR: 0,
             totalRevenue: 0,
-            avgMargin: 0,
+            avgDB3: 0,
             riskProjects: 0
         };
     }
     
-    // Calculate aggregated KPIs
-    const totalNPV = projects.reduce((sum, p) => {
-        const calc = calculateProjektWirtschaftlichkeit(p.id);
-        return sum + (calc?.kpis?.npv || 0);
-    }, 0);
+    let totalRevenue = 0;
+    let totalDB3 = 0;
     
-    const totalRevenue = projects.reduce((sum, p) => {
-        const calc = calculateProjektWirtschaftlichkeit(p.id);
-        return sum + (calc?.totals?.sales_revenue || 0);
-    }, 0);
-    
-    const avgIRR = projects.reduce((sum, p) => {
-        const calc = calculateProjektWirtschaftlichkeit(p.id);
-        return sum + (calc?.kpis?.irr || 0);
-    }, 0) / (projects.length || 1);
-    
-    const avgMargin = projects.reduce((sum, p) => {
-        const calc = calculateProjektWirtschaftlichkeit(p.id);
-        return sum + (calc?.kpis?.avg_ebit_margin || 0);
-    }, 0) / (projects.length || 1);
-    
-    return {
-        totalProjects: projects.length,
-        activeProjects: projects.filter(p => p.status === 'Aktiv').length,
-        totalNPV: totalNPV / 1000000, // Convert to M€
-        avgIRR: avgIRR,
-        totalRevenue: totalRevenue / 1000000, // Convert to M€
-        avgMargin: avgMargin,
-        riskProjects: projects.filter(p => p.status === 'On Hold').length
-    };
-}
-
-/**
- * Helper function to calculate projekt wirtschaftlichkeit
- */
-function calculateProjektWirtschaftlichkeit(projektId) {
-    try {
-        const projekt = state.getProjekt(projektId);
-        if (!projekt) return null;
+    projects.forEach(projekt => {
+        const artikel = state.getArtikelByProjekt(projekt.id);
         
-        const artikel = state.getArtikelByProjekt(projektId);
-        if (!artikel || artikel.length === 0) return null;
-        
-        const jahre = {};
-        let totalRevenue = 0;
-        
-        // Calculate per year
-        for (let year = 2025; year <= 2031; year++) {
-            let yearRevenue = 0;
-            let yearCosts = 0;
-            
-            artikel.forEach(art => {
+        artikel.forEach(art => {
+            for (let year = 2025; year <= 2031; year++) {
                 const volume = art.volumes?.[year] || 0;
                 const price = art.prices?.[year] || 0;
                 const hk = art.hk || 0;
                 
-                yearRevenue += volume * price;
-                yearCosts += volume * hk;
-            });
-            
-            jahre[year] = {
-                sales_revenue: yearRevenue,
-                db3: yearRevenue - yearCosts
-            };
-            
-            totalRevenue += yearRevenue;
-        }
-        
-        // Simple NPV
-        const npv = Object.values(jahre).reduce((sum, j) => sum + j.db3, 0);
-        const irr = npv > 0 ? 15 : 0;
-        const avgMargin = totalRevenue > 0 ? (npv / totalRevenue * 100) : 0;
-        
-        return {
-            kpis: {
-                npv: npv,
-                irr: irr,
-                avg_ebit_margin: avgMargin
-            },
-            totals: {
-                sales_revenue: totalRevenue
-            },
-            jahre: jahre
-        };
-        
-    } catch (error) {
-        console.error('Error calculating wirtschaftlichkeit:', error);
-        return null;
-    }
+                const revenue = volume * price;
+                const costs = volume * hk;
+                
+                totalRevenue += revenue;
+                totalDB3 += (revenue - costs);
+            }
+        });
+    });
+    
+    const avgDB3Percent = totalRevenue > 0 ? (totalDB3 / totalRevenue * 100) : 0;
+    
+    return {
+        totalProjects: projects.length,
+        activeProjects: projects.filter(p => p.status === 'Aktiv').length,
+        totalRevenue: totalRevenue / 1000000, // Convert to M€
+        avgDB3: avgDB3Percent,
+        riskProjects: projects.filter(p => p.status === 'On Hold').length
+    };
 }
 
 /**
@@ -160,329 +89,459 @@ function calculateProjektWirtschaftlichkeit(projektId) {
 function renderPortfolioKPIs() {
     const kpis = calculatePortfolioKPIs();
     
-    const metricsGrid = document.querySelector('.metrics-grid');
-    if (!metricsGrid) return;
-    
-    metricsGrid.innerHTML = `
-        <!-- NPV -->
-        <div class="metric-card">
-            <div class="metric-icon">💰</div>
-            <div class="metric-content">
-                <div class="metric-label">Portfolio NPV</div>
-                <div class="metric-value">${kpis.totalNPV.toFixed(1)} M€</div>
-                <div class="metric-change positive">
-                    ${kpis.totalProjects} Projekte
-                </div>
-            </div>
-        </div>
-
-        <!-- IRR -->
-        <div class="metric-card">
-            <div class="metric-icon">📈</div>
-            <div class="metric-content">
-                <div class="metric-label">Ø IRR</div>
-                <div class="metric-value">${kpis.avgIRR.toFixed(1)}%</div>
-                <div class="metric-change ${kpis.avgIRR > 15 ? 'positive' : 'neutral'}">
-                    ${kpis.avgIRR > 15 ? 'Über Benchmark' : 'Im Zielbereich'}
-                </div>
-            </div>
-        </div>
-
-        <!-- Revenue -->
-        <div class="metric-card">
-            <div class="metric-icon">📊</div>
-            <div class="metric-content">
-                <div class="metric-label">Total Revenue</div>
-                <div class="metric-value">${kpis.totalRevenue.toFixed(1)} M€</div>
-                <div class="metric-change neutral">
-                    Portfolio 2025-2031
-                </div>
-            </div>
-        </div>
-
-        <!-- Status -->
-        <div class="metric-card">
-            <div class="metric-icon">🎯</div>
-            <div class="metric-content">
-                <div class="metric-label">Status</div>
-                <div class="metric-value">${kpis.activeProjects}/${kpis.totalProjects}</div>
-                <div class="metric-change ${kpis.riskProjects > 0 ? 'warning' : 'positive'}">
-                    ${kpis.riskProjects > 0 ? `${kpis.riskProjects} Risiko` : 'Alle on Track'}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ==========================================
-// PROJECT SELECTOR
-// ==========================================
-
-/**
- * Render Project Selector Dropdown
- */
-function renderProjektSelector() {
-    // Find control panel or create container
-    let container = document.getElementById('cockpit-projekt-selector-container');
-    
-    if (!container) {
-        const metricsGrid = document.querySelector('.metrics-grid');
-        if (!metricsGrid) return;
-        
-        container = document.createElement('div');
-        container.id = 'cockpit-projekt-selector-container';
-        metricsGrid.parentNode.insertBefore(container, metricsGrid.nextSibling);
-    }
-    
-    const projects = state.getAllProjekte();
+    const container = document.querySelector('.portfolio-kpis');
+    if (!container) return;
     
     container.innerHTML = `
-        <div style="background: white; padding: 20px; border-radius: 12px; margin: 24px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #2563eb;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #111827;">
-                        🎯 Projekt-Ansicht
-                    </h3>
-                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">
-                        Wähle ein Projekt für detaillierte Charts oder zeige das gesamte Portfolio
-                    </p>
-                </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <select id="cockpit-projekt-selector" 
-                            onchange="window.cockpitModule.onProjektSelect(this.value)"
-                            style="padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 6px; 
-                                   font-size: 14px; font-weight: 500; cursor: pointer; min-width: 250px;
-                                   background: white;">
-                        <option value="portfolio">📊 Gesamtes Portfolio</option>
-                        ${projects.map(p => `
-                            <option value="${p.id}" ${selectedProjektId === p.id ? 'selected' : ''}>
-                                ${getProjectIcon(p)} ${p.name}
-                            </option>
-                        `).join('')}
-                    </select>
-                    
-                    ${currentView === 'projekt' ? `
-                        <button onclick="window.cockpitModule.resetToPortfolio()" 
-                                class="btn btn-secondary btn-sm"
-                                style="white-space: nowrap;">
-                            ← Portfolio
-                        </button>
-                    ` : ''}
+        <div class="kpi-card">
+            <div class="kpi-icon">📁</div>
+            <div class="kpi-content">
+                <div class="kpi-value">${kpis.totalProjects}</div>
+                <div class="kpi-label">Projekte im Portfolio</div>
+                <div class="kpi-sub">${kpis.activeProjects} aktiv</div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+                <div class="kpi-value">${kpis.totalRevenue.toFixed(1)}M€</div>
+                <div class="kpi-label">Gesamt-Umsatz</div>
+                <div class="kpi-sub">Portfolio 2025-2031</div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-content">
+                <div class="kpi-value">${kpis.avgDB3.toFixed(1)}%</div>
+                <div class="kpi-label">Ø DB3-Marge</div>
+                <div class="kpi-sub ${kpis.avgDB3 > 30 ? 'positive' : 'neutral'}">
+                    ${kpis.avgDB3 > 30 ? 'Exzellent' : 'Solide'}
                 </div>
             </div>
-            
-            ${currentView === 'projekt' && selectedProjektId ? `
-                <div style="padding: 12px; background: #f0f9ff; border-radius: 6px; border-left: 3px solid #3b82f6; margin-top: 16px;">
-                    <div style="font-size: 12px; color: #1e40af; font-weight: 600;">
-                        📌 Projekt-Fokus: ${getProjectName(selectedProjektId)}
-                    </div>
-                    <div style="font-size: 11px; color: #3b82f6; margin-top: 4px;">
-                        Die Charts zeigen nur Daten für dieses spezifische Projekt
-                    </div>
+        </div>
+
+        <div class="kpi-card ${kpis.riskProjects > 0 ? 'warning' : ''}">
+            <div class="kpi-icon">${kpis.riskProjects > 0 ? '⚠️' : '✅'}</div>
+            <div class="kpi-content">
+                <div class="kpi-value">${kpis.activeProjects}/${kpis.totalProjects}</div>
+                <div class="kpi-label">Portfolio Status</div>
+                <div class="kpi-sub ${kpis.riskProjects > 0 ? 'warning' : 'positive'}">
+                    ${kpis.riskProjects > 0 ? `${kpis.riskProjects} Risiko` : 'On Track'}
                 </div>
-            ` : ''}
+            </div>
         </div>
     `;
 }
 
 // ==========================================
-// CHARTS RENDERING
+// BCG MATRIX
 // ==========================================
 
 /**
- * Render Portfolio Charts (aggregated)
+ * Calculate BCG Position for each project
  */
-function renderPortfolioCharts() {
-    console.log('📊 Rendering Portfolio Charts...');
-    
+function calculateBCGPositions() {
     const projects = state.getAllProjekte();
-    const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
     
-    // Aggregate data from all projects
-    const portfolioData = {
-        umsatz: years.map(() => 0),
-        absatz: years.map(() => 0),
-        db2: years.map(() => 0),
-        db2Percent: years.map(() => 0),
-        projektkosten: years.map(() => 2.5),
-        db3Jahr: years.map(() => 0),
-        db3Kumuliert: []
-    };
-    
-    // Sum up all projects
-    projects.forEach(projekt => {
+    return projects.map(projekt => {
         const artikel = state.getArtikelByProjekt(projekt.id);
         
+        // Calculate revenue
+        let revenue = 0;
+        let db3 = 0;
+        
         artikel.forEach(art => {
-            years.forEach((year, index) => {
+            for (let year = 2025; year <= 2031; year++) {
                 const volume = art.volumes?.[year] || 0;
                 const price = art.prices?.[year] || 0;
                 const hk = art.hk || 0;
                 
-                const revenue = (volume * price) / 1000; // k€
-                const costs = (volume * hk) / 1000; // k€
+                const yearRevenue = volume * price;
+                const yearCosts = volume * hk;
                 
-                portfolioData.umsatz[index] += revenue;
-                portfolioData.absatz[index] += volume / 1000; // Tsd.
-                portfolioData.db2[index] += (revenue - costs);
-            });
+                revenue += yearRevenue;
+                db3 += (yearRevenue - yearCosts);
+            }
         });
+        
+        const db3Margin = revenue > 0 ? (db3 / revenue * 100) : 0;
+        
+        // BCG Parameters (can be configured per project)
+        const marketGrowth = projekt.marketGrowth || getRandomGrowth();
+        const relativeMarketShare = projekt.relativeMarketShare || getRandomMarketShare();
+        
+        return {
+            id: projekt.id,
+            name: projekt.name,
+            x: relativeMarketShare,  // Relative Market Share (0-2)
+            y: marketGrowth,          // Market Growth % (0-20)
+            r: Math.sqrt(revenue) / 800, // Bubble size
+            revenue: revenue / 1000000,   // M€
+            db3Margin: db3Margin,
+            status: projekt.status,
+            quadrant: getQuadrant(relativeMarketShare, marketGrowth)
+        };
     });
-    
-    // Calculate DB2 percent
-    portfolioData.db2Percent = portfolioData.umsatz.map((u, i) => 
-        u > 0 ? (portfolioData.db2[i] / u * 100) : 0
-    );
-    
-    // Calculate DB3
-    portfolioData.db3Jahr = portfolioData.db2.map((db2, i) => db2 - portfolioData.projektkosten[i]);
-    
-    // Calculate cumulative
-    let cumulative = 0;
-    portfolioData.db3Kumuliert = portfolioData.db3Jahr.map(db3 => {
-        cumulative += db3;
-        return cumulative;
-    });
-    
-    // Update charts using charts.js API
-    charts.updateChartData('umsatzChart', portfolioData.umsatz, 'Portfolio Umsatz (k€)');
-    charts.updateChartData('absatzChart', portfolioData.absatz, 'Portfolio Absatz (Tsd.)');
-    charts.updateDB2ChartData(portfolioData.db2, portfolioData.db2Percent);
-    charts.updateChartData('projektkostenChart', portfolioData.projektkosten, 'Projektkosten (k€)');
-    charts.updateChartData('db3JahrChart', portfolioData.db3Jahr, 'Portfolio DB3 (k€)');
-    charts.updateChartData('db3KumuliertChart', portfolioData.db3Kumuliert, 'Portfolio DB3 Kumuliert (k€)');
-    
-    console.log('✅ Portfolio charts updated');
 }
 
 /**
- * Render Project-Specific Charts
+ * Get BCG Quadrant
  */
-function renderProjektCharts(projektId) {
-    console.log('📊 Rendering Charts for Projekt:', projektId);
+function getQuadrant(x, y) {
+    const isHighMarketShare = x >= 1.0;
+    const isHighGrowth = y >= 10;
     
-    const projekt = state.getProjekt(projektId);
-    if (!projekt) {
-        console.error('Projekt not found:', projektId);
+    if (isHighMarketShare && isHighGrowth) return 'star';
+    if (!isHighMarketShare && isHighGrowth) return 'question';
+    if (isHighMarketShare && !isHighGrowth) return 'cash-cow';
+    return 'dog';
+}
+
+/**
+ * Get bubble color based on DB3 margin
+ */
+function getBubbleColor(db3Margin, quadrant) {
+    // High margin
+    if (db3Margin > 30) return 'rgba(16, 185, 129, 0.8)'; // Green
+    // Medium margin
+    if (db3Margin > 15) return 'rgba(59, 130, 246, 0.8)'; // Blue
+    // Low margin
+    if (db3Margin > 0) return 'rgba(245, 158, 11, 0.8)'; // Yellow
+    // Negative margin
+    return 'rgba(239, 68, 68, 0.8)'; // Red
+}
+
+/**
+ * Render BCG Matrix (Chart.js Bubble)
+ */
+function renderBCGMatrix() {
+    const canvas = document.getElementById('bcg-chart');
+    if (!canvas) {
+        console.warn('BCG canvas not found');
         return;
     }
     
-    const artikel = state.getArtikelByProjekt(projektId);
-    const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
+    const ctx = canvas.getContext('2d');
+    const positions = calculateBCGPositions();
     
-    // Calculate projekt-specific data
-    const projektData = {
-        umsatz: years.map(() => 0),
-        absatz: years.map(() => 0),
-        db2: years.map(() => 0),
-        db2Percent: years.map(() => 0),
-        projektkosten: years.map(() => 2.5),
-        db3Jahr: years.map(() => 0),
-        db3Kumuliert: []
-    };
-    
-    // Calculate from artikel
-    artikel.forEach(art => {
-        years.forEach((year, index) => {
-            const volume = art.volumes?.[year] || 0;
-            const price = art.prices?.[year] || 0;
-            const hk = art.hk || 0;
-            
-            const revenue = (volume * price) / 1000; // k€
-            const costs = (volume * hk) / 1000; // k€
-            
-            projektData.umsatz[index] += revenue;
-            projektData.absatz[index] += volume / 1000; // Tsd.
-            projektData.db2[index] += (revenue - costs);
-        });
-    });
-    
-    // Calculate DB2 percent
-    projektData.db2Percent = projektData.umsatz.map((u, i) => 
-        u > 0 ? (projektData.db2[i] / u * 100) : 0
-    );
-    
-    // Calculate DB3
-    projektData.db3Jahr = projektData.db2.map((db2, i) => db2 - projektData.projektkosten[i]);
-    
-    // Calculate cumulative
-    let cumulative = 0;
-    projektData.db3Kumuliert = projektData.db3Jahr.map(db3 => {
-        cumulative += db3;
-        return cumulative;
-    });
-    
-    // Update charts with projekt data
-    charts.updateChartData('umsatzChart', projektData.umsatz, `${projekt.name} - Umsatz (k€)`);
-    charts.updateChartData('absatzChart', projektData.absatz, `${projekt.name} - Absatz (Tsd.)`);
-    charts.updateDB2ChartData(projektData.db2, projektData.db2Percent);
-    charts.updateChartData('projektkostenChart', projektData.projektkosten, 'Projektkosten (k€)');
-    charts.updateChartData('db3JahrChart', projektData.db3Jahr, `${projekt.name} - DB3 (k€)`);
-    charts.updateChartData('db3KumuliertChart', projektData.db3Kumuliert, `${projekt.name} - DB3 Kumuliert (k€)`);
-    
-    console.log('✅ Projekt charts updated');
-}
-
-// ==========================================
-// INTERACTION HANDLERS
-// ==========================================
-
-/**
- * Handle projekt selection
- */
-export function onProjektSelect(value) {
-    console.log('🎯 Projekt selected:', value);
-    
-    if (value === 'portfolio') {
-        resetToPortfolio();
-    } else {
-        currentView = 'projekt';
-        selectedProjektId = value;
-        
-        // Re-render
-        renderProjektSelector();
-        renderProjektCharts(value);
+    // Destroy existing chart
+    if (window.bcgChart) {
+        window.bcgChart.destroy();
     }
+    
+    // Create BCG Matrix
+    window.bcgChart = new Chart(ctx, {
+        type: 'bubble',
+        data: {
+            datasets: [{
+                label: 'Portfolio',
+                data: positions,
+                backgroundColor: positions.map(p => getBubbleColor(p.db3Margin, p.quadrant)),
+                borderColor: positions.map(p => getBubbleColor(p.db3Margin, p.quadrant).replace('0.8', '1')),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'BCG Portfolio Matrix',
+                    font: { size: 18, weight: 'bold' },
+                    padding: 20
+                },
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const point = context.raw;
+                            return [
+                                `${point.name}`,
+                                `Revenue: €${point.revenue.toFixed(1)}M`,
+                                `DB3 Marge: ${point.db3Margin.toFixed(1)}%`,
+                                `Marktanteil: ${point.x.toFixed(2)}x`,
+                                `Wachstum: ${point.y.toFixed(1)}%`,
+                                `Quadrant: ${getQuadrantName(point.quadrant)}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Relativer Marktanteil',
+                        font: { size: 14, weight: 'bold' }
+                    },
+                    min: 0,
+                    max: 2,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(1) + 'x';
+                        }
+                    },
+                    grid: {
+                        color: function(context) {
+                            return context.tick.value === 1.0 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)';
+                        },
+                        lineWidth: function(context) {
+                            return context.tick.value === 1.0 ? 2 : 1;
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Marktwachstum (%)',
+                        font: { size: 14, weight: 'bold' }
+                    },
+                    min: 0,
+                    max: 20,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    grid: {
+                        color: function(context) {
+                            return context.tick.value === 10 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)';
+                        },
+                        lineWidth: function(context) {
+                            return context.tick.value === 10 ? 2 : 1;
+                        }
+                    }
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const projektId = positions[elements[0].index].id;
+                    console.log('BCG Click: Opening projekt', projektId);
+                    if (window.openProjektDetail) {
+                        window.openProjektDetail(projektId);
+                    }
+                }
+            }
+        }
+    });
+    
+    // Add quadrant labels
+    addQuadrantLabels(canvas);
 }
 
 /**
- * Reset to portfolio view
+ * Add quadrant labels to canvas
  */
-export function resetToPortfolio() {
-    console.log('📊 Resetting to portfolio view');
+function addQuadrantLabels(canvas) {
+    const container = canvas.parentElement;
     
-    currentView = 'portfolio';
-    selectedProjektId = null;
+    // Remove existing labels
+    container.querySelectorAll('.bcg-label').forEach(el => el.remove());
     
-    // Re-render
-    renderProjektSelector();
-    renderPortfolioCharts();
+    const labels = [
+        { text: '⭐ STARS', top: '15%', left: '75%', color: '#10b981' },
+        { text: '❓ QUESTION MARKS', top: '15%', left: '25%', color: '#f59e0b' },
+        { text: '💰 CASH COWS', top: '85%', left: '75%', color: '#3b82f6' },
+        { text: '🐕 POOR DOGS', top: '85%', left: '25%', color: '#ef4444' }
+    ];
+    
+    labels.forEach(label => {
+        const div = document.createElement('div');
+        div.className = 'bcg-label';
+        div.textContent = label.text;
+        div.style.cssText = `
+            position: absolute;
+            top: ${label.top};
+            left: ${label.left};
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: 700;
+            color: ${label.color};
+            text-shadow: 0 0 4px white;
+            pointer-events: none;
+            z-index: 10;
+        `;
+        container.appendChild(div);
+    });
 }
 
-// ==========================================
-// HELPERS
-// ==========================================
-
 /**
- * Get project icon based on status
+ * Get quadrant display name
  */
-function getProjectIcon(projekt) {
-    const icons = {
-        'Aktiv': '🟢',
-        'Planung': '🔵',
-        'On Hold': '🟡',
-        'Abgeschlossen': '⚫',
-        'Konzept': '💡'
+function getQuadrantName(quadrant) {
+    const names = {
+        'star': '⭐ Stars',
+        'question': '❓ Question Marks',
+        'cash-cow': '💰 Cash Cows',
+        'dog': '🐕 Poor Dogs'
     };
-    return icons[projekt.status] || '📁';
+    return names[quadrant] || quadrant;
+}
+
+// ==========================================
+// STRATEGIC RECOMMENDATIONS
+// ==========================================
+
+/**
+ * Render Strategic Recommendations
+ */
+function renderStrategicRecommendations() {
+    const positions = calculateBCGPositions();
+    
+    // Group by quadrant
+    const byQuadrant = {
+        star: positions.filter(p => p.quadrant === 'star'),
+        question: positions.filter(p => p.quadrant === 'question'),
+        'cash-cow': positions.filter(p => p.quadrant === 'cash-cow'),
+        dog: positions.filter(p => p.quadrant === 'dog')
+    };
+    
+    const container = document.querySelector('.strategic-recommendations');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="recommendations-header">
+            <h2>📋 Strategische Handlungsempfehlungen</h2>
+            <p>BCG-basierte Portfolio-Steuerung nach Horváth-Methodik</p>
+        </div>
+
+        <div class="recommendations-grid">
+            <!-- STARS -->
+            <div class="recommendation-card star">
+                <div class="rec-header">
+                    <div class="rec-icon">⭐</div>
+                    <div>
+                        <h3>STARS → Investieren & Ausbauen</h3>
+                        <div class="rec-count">${byQuadrant.star.length} Projekte</div>
+                    </div>
+                </div>
+                <div class="rec-content">
+                    ${byQuadrant.star.length > 0 ? `
+                        <div class="rec-projects">
+                            ${byQuadrant.star.map(p => `
+                                <div class="rec-project">
+                                    <strong>${p.name}</strong>
+                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="rec-action">
+                            <strong>💡 Empfehlung:</strong> Marktführerschaft verteidigen durch kontinuierliche Innovation und Skalierung
+                        </div>
+                    ` : `
+                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
+                    `}
+                </div>
+            </div>
+
+            <!-- QUESTION MARKS -->
+            <div class="recommendation-card question">
+                <div class="rec-header">
+                    <div class="rec-icon">❓</div>
+                    <div>
+                        <h3>QUESTION MARKS → Prüfen & Entscheiden</h3>
+                        <div class="rec-count">${byQuadrant.question.length} Projekte</div>
+                    </div>
+                </div>
+                <div class="rec-content">
+                    ${byQuadrant.question.length > 0 ? `
+                        <div class="rec-projects">
+                            ${byQuadrant.question.map(p => `
+                                <div class="rec-project">
+                                    <strong>${p.name}</strong>
+                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="rec-action">
+                            <strong>💡 Empfehlung:</strong> Go/No-Go Entscheidung treffen - entweder massiv investieren oder divest
+                        </div>
+                    ` : `
+                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
+                    `}
+                </div>
+            </div>
+
+            <!-- CASH COWS -->
+            <div class="recommendation-card cash-cow">
+                <div class="rec-header">
+                    <div class="rec-icon">💰</div>
+                    <div>
+                        <h3>CASH COWS → Abschöpfen</h3>
+                        <div class="rec-count">${byQuadrant['cash-cow'].length} Projekte</div>
+                    </div>
+                </div>
+                <div class="rec-content">
+                    ${byQuadrant['cash-cow'].length > 0 ? `
+                        <div class="rec-projects">
+                            ${byQuadrant['cash-cow'].map(p => `
+                                <div class="rec-project">
+                                    <strong>${p.name}</strong>
+                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="rec-action">
+                            <strong>💡 Empfehlung:</strong> Cashflows nutzen um Stars zu finanzieren, keine großen Neuinvestitionen
+                        </div>
+                    ` : `
+                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
+                    `}
+                </div>
+            </div>
+
+            <!-- POOR DOGS -->
+            <div class="recommendation-card dog">
+                <div class="rec-header">
+                    <div class="rec-icon">🐕</div>
+                    <div>
+                        <h3>POOR DOGS → Divest oder Restrukturieren</h3>
+                        <div class="rec-count">${byQuadrant.dog.length} Projekte</div>
+                    </div>
+                </div>
+                <div class="rec-content">
+                    ${byQuadrant.dog.length > 0 ? `
+                        <div class="rec-projects">
+                            ${byQuadrant.dog.map(p => `
+                                <div class="rec-project warning">
+                                    <strong>${p.name}</strong>
+                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="rec-action warning">
+                            <strong>⚠️ Empfehlung:</strong> Exit-Strategie entwickeln oder fundamentale Restrukturierung prüfen
+                        </div>
+                    ` : `
+                        <div class="rec-empty positive">Keine Projekte in diesem Quadranten - Portfolio ist gesund!</div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
+
+/**
+ * Get random market growth (for demo)
+ */
+function getRandomGrowth() {
+    return 3 + Math.random() * 15; // 3-18%
 }
 
 /**
- * Get project name by ID
+ * Get random market share (for demo)
  */
-function getProjectName(projektId) {
-    const projekt = state.getProjekt(projektId);
-    return projekt ? projekt.name : 'Unbekannt';
+function getRandomMarketShare() {
+    return 0.3 + Math.random() * 1.5; // 0.3-1.8x
 }
 
 // ==========================================
@@ -490,7 +549,5 @@ function getProjectName(projektId) {
 // ==========================================
 
 export default {
-    renderCockpit,
-    onProjektSelect,
-    resetToPortfolio
+    renderCockpit
 };
