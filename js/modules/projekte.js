@@ -654,6 +654,14 @@ window.createProjekt = async function() {
       // Show success message
       alert(`✅ Projekt "${projektData.name}" erfolgreich erstellt!`);
 
+      // 🆕 ALBO Event: Projekt erstellt
+      document.dispatchEvent(new CustomEvent('projekt-created', {
+        detail: {
+          projekt: saved,
+          projektId: `projekt-db-${saved.id}`
+        }
+      }));
+
       // AI Feedback
       if (window.cfoDashboard.aiController) {
         window.cfoDashboard.aiController.addAIMessage({
@@ -809,6 +817,14 @@ window.updateProjekt = async function(projektId) {
       // Re-render list
       renderProjektOverview();
 
+      // 🆕 ALBO Event: Projekt aktualisiert
+      document.dispatchEvent(new CustomEvent('projekt-updated', {
+        detail: {
+          projektId: projektId,
+          updates: updates
+        }
+      }));
+
       // AI Feedback
       if (window.cfoDashboard.aiController) {
         window.cfoDashboard.aiController.addAIMessage({
@@ -897,6 +913,14 @@ window.confirmDeleteProjekt = async function(projektId) {
 
     // Re-render list
     renderProjektOverview();
+
+    // 🆕 ALBO Event: Projekt gelöscht
+    document.dispatchEvent(new CustomEvent('projekt-deleted', {
+      detail: {
+        projektId: projektId,
+        projektName: projektName
+      }
+    }));
 
     // AI Feedback
     if (window.cfoDashboard.aiController) {
