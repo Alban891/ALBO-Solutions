@@ -167,27 +167,55 @@ class ALBOSystem {
      * @private
      */
     _setupEventListeners() {
+        // 🆕 Listen for projekt created
+        document.addEventListener('projekt-created', (e) => {
+            console.log('🆕 Event triggered: projekt-created', e.detail);
+            this._handleProjektCreated(e.detail);
+        });
+        
+        // 🆕 Listen for projekt updated
+        document.addEventListener('projekt-updated', (e) => {
+            console.log('🆕 Event triggered: projekt-updated', e.detail);
+            this._handleProjektUpdate(e.detail);
+        });
+        
+        // 🆕 Listen for projekt deleted
+        document.addEventListener('projekt-deleted', (e) => {
+            console.log('🆕 Event triggered: projekt-deleted', e.detail);
+            this._handleProjektDeleted(e.detail);
+        });
+        
         // Listen for artikel changes
         document.addEventListener('artikel-updated', (e) => {
+            console.log('🆕 Event triggered: artikel-updated', e.detail);
             this._handleArtikelUpdate(e.detail);
         });
         
         // Listen for artikel saved
         document.addEventListener('artikel-saved', (e) => {
+            console.log('🆕 Event triggered: artikel-saved', e.detail);
             this._handleArtikelSaved(e.detail);
-        });
-        
-        // Listen for projekt changes
-        document.addEventListener('projekt-updated', (e) => {
-            this._handleProjektUpdate(e.detail);
         });
         
         // Listen for tab changes in main app
         document.addEventListener('tab-changed', (e) => {
+            console.log('🆕 Event triggered: tab-changed', e.detail);
             this._handleMainTabChange(e.detail);
         });
         
-        console.log('✅ Event listeners set up');
+        // 🆕 Listen for basisannahmen complete
+        document.addEventListener('basisannahmen-complete', (e) => {
+            console.log('🆕 Event triggered: basisannahmen-complete', e.detail);
+            this._handleBasisannahmenComplete(e.detail);
+        });
+        
+        // 🆕 Listen for modelle berechnet
+        document.addEventListener('modelle-berechnet', (e) => {
+            console.log('🆕 Event triggered: modelle-berechnet', e.detail);
+            this._handleModelleBerechnet(e.detail);
+        });
+        
+        console.log('✅ Event listeners registered');
     }
     
     /**
@@ -502,6 +530,66 @@ class ALBOSystem {
                 this.engine.setContext(artikel, this.currentProjekt);
             }
         }
+    }
+
+    /**
+     * Handle projekt created
+     * @private
+     */
+    _handleProjektCreated(data) {
+        console.log('✅ Projekt created:', data.projekt);
+        this.currentProjekt = data.projekt;
+        
+        // Optional: Show notification in sidebar
+        this._addChatMessage('assistant', `✅ Projekt "${data.projekt.project_name}" wurde erfolgreich erstellt!`);
+    }
+    
+    /**
+     * Handle projekt deleted
+     * @private
+     */
+    _handleProjektDeleted(data) {
+        console.log('🗑️ Projekt deleted:', data.projektName);
+        
+        // Clear current projekt if it was deleted
+        if (this.currentProjekt?.id === data.projektId) {
+            this.currentProjekt = null;
+        }
+        
+        // Optional: Show notification
+        this._addChatMessage('assistant', `🗑️ Projekt "${data.projektName}" wurde gelöscht.`);
+    }
+    
+    /**
+     * Handle basisannahmen complete
+     * @private
+     */
+    async _handleBasisannahmenComplete(data) {
+        console.log('✅ Basisannahmen komplett:', data);
+        
+        // Run quick check
+        const artikel = this._getCurrentArtikel();
+        const projekt = this._getCurrentProjekt();
+        
+        if (artikel && projekt) {
+            const quickResults = this.engine.quickAnalysis(artikel, projekt);
+            this._displayQuickResults(quickResults);
+            
+            // Show in chat
+            const db1 = quickResults.metrics?.db1?.percent || 0;
+            this._addChatMessage('assistant', `💡 Quick Check: DB1 Marge ${db1.toFixed(1)}% - Sieht ${db1 > 30 ? 'sehr gut' : db1 > 20 ? 'gut' : 'kritisch'} aus!`);
+        }
+    }
+    
+    /**
+     * Handle modelle berechnet
+     * @private
+     */
+    async _handleModelleBerechnet(data) {
+        console.log('📊 Modelle berechnet:', data);
+        
+        // Auto-run full analysis
+        await this._runFullAnalysis();
     }
     
     // ═══════════════════════════════════════════════════════
