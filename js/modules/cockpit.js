@@ -1,12 +1,11 @@
 /**
  * ALBO Solutions - Portfolio Cockpit Module
- * Horváth & Partners Style - Division-Based Portfolio Overview
+ * KOMPAKTES DESIGN - Horváth Style
  * 
- * NEW CONCEPT:
- * - 7 Divisions Overview
- * - Projects grouped by Division
- * - Portfolio KPIs
- * - NO BCG Matrix (too academic for CFO cockpit)
+ * REDESIGN:
+ * - Kompakte KPI-Bar (eine Zeile)
+ * - Divisionen als Table
+ * - Projekte als expandierbare Rows
  */
 
 import { state } from '../state.js';
@@ -30,27 +29,63 @@ const DIVISIONS = [
 // MAIN RENDER FUNCTION
 // ==========================================
 
-/**
- * Render Portfolio Cockpit - Horvath Style
- * @public
- */
 export function renderCockpit() {
-    console.log('📊 Rendering Horváth Portfolio Cockpit (Division View)...');
+    console.log('📊 Rendering Compact Cockpit...');
     
-    // 1. Render Portfolio-Level KPIs
-    renderPortfolioKPIs();
-    
-    // 2. Render Division Overview with Projects
-    renderDivisionOverview();
+    renderCompactHeader();
+    renderDivisionTable();
+    renderPortfolioSummary();
 }
 
 // ==========================================
-// PORTFOLIO KPIs
+// COMPACT HEADER WITH KPI BAR
 // ==========================================
 
-/**
- * Calculate Portfolio-Level KPIs
- */
+function renderCompactHeader() {
+    const kpis = calculatePortfolioKPIs();
+    
+    const container = document.querySelector('.portfolio-kpis');
+    if (!container) return;
+    
+    container.innerHTML = 
+        '<div class="compact-cockpit-header">' +
+            '<div class="compact-title">' +
+                '<h1>📊 Portfolio Cockpit</h1>' +
+            '</div>' +
+            '<div class="compact-kpi-bar">' +
+                '<div class="compact-kpi">' +
+                    '<span class="compact-kpi-label">Projekte</span>' +
+                    '<span class="compact-kpi-value">' + kpis.totalProjects + '</span>' +
+                    '<span class="compact-kpi-sub">(' + kpis.activeProjects + ' aktiv)</span>' +
+                '</div>' +
+                '<div class="compact-kpi-divider"></div>' +
+                '<div class="compact-kpi">' +
+                    '<span class="compact-kpi-label">Umsatz</span>' +
+                    '<span class="compact-kpi-value">' + helpers.formatCurrency(kpis.totalRevenue * 1000000) + '</span>' +
+                '</div>' +
+                '<div class="compact-kpi-divider"></div>' +
+                '<div class="compact-kpi">' +
+                    '<span class="compact-kpi-label">NPV</span>' +
+                    '<span class="compact-kpi-value ' + (kpis.totalNPV > 0 ? 'positive' : 'negative') + '">' +
+                        helpers.formatCurrency(kpis.totalNPV * 1000000) +
+                    '</span>' +
+                '</div>' +
+                '<div class="compact-kpi-divider"></div>' +
+                '<div class="compact-kpi">' +
+                    '<span class="compact-kpi-label">Ø DB3</span>' +
+                    '<span class="compact-kpi-value ' + (kpis.avgDB3 > 30 ? 'positive' : 'neutral') + '">' +
+                        helpers.formatPercentage(kpis.avgDB3) +
+                    '</span>' +
+                '</div>' +
+                '<div class="compact-kpi-divider"></div>' +
+                '<div class="compact-kpi">' +
+                    '<span class="compact-kpi-label">Payback</span>' +
+                    '<span class="compact-kpi-value">' + kpis.avgPayback.toFixed(1) + 'J</span>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+}
+
 function calculatePortfolioKPIs() {
     const projects = state.getAllProjekte();
     
@@ -94,10 +129,7 @@ function calculatePortfolioKPIs() {
         totalRevenue += projektRevenue;
         totalDB3 += projektDB3;
         
-        // NPV & Payback (simplified - should come from projekt data)
-        if (projekt.npv) {
-            totalNPV += projekt.npv;
-        }
+        if (projekt.npv) totalNPV += projekt.npv;
         if (projekt.payback) {
             totalPayback += projekt.payback;
             projectsWithPayback++;
@@ -110,100 +142,123 @@ function calculatePortfolioKPIs() {
     return {
         totalProjects: projects.length,
         activeProjects: projects.filter(function(p) { return p.status === 'Aktiv'; }).length,
-        totalRevenue: totalRevenue / 1000000, // M€
-        totalNPV: totalNPV / 1000000, // M€
+        totalRevenue: totalRevenue / 1000000,
+        totalNPV: totalNPV / 1000000,
         avgDB3: avgDB3Percent,
         avgPayback: avgPaybackYears
     };
 }
 
-/**
- * Render Portfolio KPI Cards
- */
-function renderPortfolioKPIs() {
-    const kpis = calculatePortfolioKPIs();
+// ==========================================
+// DIVISION TABLE
+// ==========================================
+
+function renderDivisionTable() {
+    const projectsByDivision = getProjectsByDivision();
     
-    const container = document.querySelector('.portfolio-kpis');
+    const container = document.querySelector('.bcg-matrix-container');
     if (!container) return;
     
-    container.innerHTML = 
-        '<div class="cockpit-header">' +
-            '<div class="cockpit-title">' +
-                '<h1>📊 Portfolio Cockpit</h1>' +
-                '<p>Divisionen-Übersicht & Projekt-Portfolio</p>' +
-            '</div>' +
-        '</div>' +
+    container.innerHTML = '';
+    container.className = 'compact-division-container';
+    
+    let html = '<table class="division-table">' +
+        '<thead>' +
+            '<tr>' +
+                '<th>Division</th>' +
+                '<th>Projekte</th>' +
+                '<th>Umsatz</th>' +
+                '<th>DB3</th>' +
+                '<th></th>' +
+            '</tr>' +
+        '</thead>' +
+        '<tbody>';
+    
+    DIVISIONS.forEach(function(divisionName) {
+        const projects = projectsByDivision[divisionName] || [];
+        const kpis = calculateDivisionKPIs(projects);
+        const icon = getDivisionIcon(divisionName);
+        const color = getDivisionColor(divisionName);
+        const divId = 'div-' + divisionName.replace(/\s+/g, '-');
         
-        '<div class="kpi-grid">' +
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">Projekte</div>' +
-                '<div class="kpi-value">' + kpis.totalProjects + '</div>' +
-                '<div class="kpi-sub positive">' + kpis.activeProjects + ' aktiv</div>' +
-            '</div>' +
-
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">Gesamt-Umsatz</div>' +
-                '<div class="kpi-value">' + helpers.formatCurrency(kpis.totalRevenue * 1000000) + '</div>' +
-                '<div class="kpi-sub">Portfolio 2025-2031</div>' +
-            '</div>' +
-
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">NPV (9 Jahre)</div>' +
-                '<div class="kpi-value ' + (kpis.totalNPV > 0 ? 'positive' : 'negative') + '">' +
-                    helpers.formatCurrency(kpis.totalNPV * 1000000) +
-                '</div>' +
-                '<div class="kpi-sub">Barwert gesamt</div>' +
-            '</div>' +
-
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">Ø DB3-Marge</div>' +
-                '<div class="kpi-value ' + (kpis.avgDB3 > 30 ? 'positive' : 'neutral') + '">' +
-                    helpers.formatPercentage(kpis.avgDB3) +
-                '</div>' +
-                '<div class="kpi-sub ' + (kpis.avgDB3 > 30 ? 'positive' : '') + '">' +
-                    (kpis.avgDB3 > 30 ? 'Exzellent' : 'Solide') +
-                '</div>' +
-            '</div>' +
-
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">Ø Payback</div>' +
-                '<div class="kpi-value ' + (kpis.avgPayback < 3 ? 'positive' : 'neutral') + '">' +
-                    kpis.avgPayback.toFixed(1) + 'J' +
-                '</div>' +
-                '<div class="kpi-sub">Jahre bis Break-Even</div>' +
-            '</div>' +
-
-            '<div class="kpi-card">' +
-                '<div class="kpi-label">Divisionen</div>' +
-                '<div class="kpi-value">' + DIVISIONS.length + '</div>' +
-                '<div class="kpi-sub">Geschäftsbereiche</div>' +
-            '</div>' +
-        '</div>';
+        html += '<tr class="division-row" onclick="toggleDivisionRow(\'' + divisionName + '\')">' +
+            '<td>' +
+                '<span class="division-icon">' + icon + '</span>' +
+                '<strong style="color: ' + color + ';">' + divisionName + '</strong>' +
+            '</td>' +
+            '<td>' +
+                '<span class="badge">' + kpis.count + '</span>' +
+                '<span class="badge-active">' + kpis.activeCount + ' aktiv</span>' +
+            '</td>' +
+            '<td><strong>' + helpers.formatCurrency(kpis.revenue * 1000000) + '</strong></td>' +
+            '<td><span class="' + (kpis.db3Margin > 30 ? 'positive' : 'neutral') + '">' +
+                helpers.formatPercentage(kpis.db3Margin) +
+            '</span></td>' +
+            '<td class="toggle-cell">' +
+                '<span class="toggle-arrow">▼</span>' +
+            '</td>' +
+        '</tr>';
+        
+        html += '<tr class="project-rows" id="' + divId + '" style="display: none;">' +
+            '<td colspan="5">';
+        
+        if (projects.length > 0) {
+            html += '<table class="project-subtable">' +
+                '<tr>' +
+                    '<th>Projekt</th>' +
+                    '<th>Owner</th>' +
+                    '<th>Status</th>' +
+                    '<th>Umsatz</th>' +
+                    '<th>DB3</th>' +
+                    '<th></th>' +
+                '</tr>';
+            
+            projects.forEach(function(projekt) {
+                const projektKPIs = calculateProjectKPIs(projekt);
+                const statusClass = 'status-' + (projekt.status || 'unbekannt').toLowerCase().replace(/\s+/g, '-');
+                
+                html += '<tr class="project-subrow" onclick="openProjektDetail(\'' + projekt.id + '\')">' +
+                    '<td>→ ' + helpers.escapeHtml(projekt.name) + '</td>' +
+                    '<td>' + helpers.escapeHtml(projekt.owner || '-') + '</td>' +
+                    '<td><span class="status-badge ' + statusClass + '">' +
+                        helpers.escapeHtml(projekt.status || 'Unbekannt') +
+                    '</span></td>' +
+                    '<td>' + helpers.formatCurrency(projektKPIs.revenue) + '</td>' +
+                    '<td><span class="' + (projektKPIs.db3Margin > 30 ? 'positive' : 'neutral') + '">' +
+                        helpers.formatPercentage(projektKPIs.db3Margin) +
+                    '</span></td>' +
+                    '<td>' +
+                        '<button class="btn-icon" onclick="event.stopPropagation(); openProjektDetail(\'' + projekt.id + '\')" title="Öffnen">👁️</button>' +
+                    '</td>' +
+                '</tr>';
+            });
+            
+            html += '</table>';
+        } else {
+            html += '<div class="no-projects-compact">Keine Projekte</div>';
+        }
+        
+        html += '</td></tr>';
+    });
+    
+    html += '</tbody></table>';
+    
+    container.innerHTML = html;
 }
 
-// ==========================================
-// DIVISION OVERVIEW
-// ==========================================
-
-/**
- * Get projects grouped by division
- */
 function getProjectsByDivision() {
     const projects = state.getAllProjekte();
     const grouped = {};
     
-    // Initialize all divisions
     DIVISIONS.forEach(function(div) {
         grouped[div] = [];
     });
     
-    // Group projects by division
     projects.forEach(function(projekt) {
-        const division = projekt.division || 'Services'; // Default fallback
+        const division = projekt.division || 'Services';
         if (grouped[division]) {
             grouped[division].push(projekt);
         } else {
-            // If division not in predefined list, add to Services
             grouped['Services'].push(projekt);
         }
     });
@@ -211,17 +266,9 @@ function getProjectsByDivision() {
     return grouped;
 }
 
-/**
- * Calculate division-level KPIs
- */
 function calculateDivisionKPIs(projects) {
     if (!projects || projects.length === 0) {
-        return {
-            count: 0,
-            revenue: 0,
-            db3Margin: 0,
-            status: 'empty'
-        };
+        return { count: 0, activeCount: 0, revenue: 0, db3Margin: 0 };
     }
     
     let totalRevenue = 0;
@@ -232,7 +279,6 @@ function calculateDivisionKPIs(projects) {
         if (projekt.status === 'Aktiv') activeCount++;
         
         const artikel = state.getArtikelByProjekt(projekt.id);
-        
         artikel.forEach(function(art) {
             for (let year = 2025; year <= 2031; year++) {
                 const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
@@ -254,222 +300,72 @@ function calculateDivisionKPIs(projects) {
         count: projects.length,
         activeCount: activeCount,
         revenue: totalRevenue / 1000000,
-        db3Margin: db3Margin,
-        status: activeCount > 0 ? 'active' : 'inactive'
+        db3Margin: db3Margin
     };
 }
 
-/**
- * Render Division Overview with Projects
- */
-function renderDivisionOverview() {
-    const projectsByDivision = getProjectsByDivision();
+function calculateProjectKPIs(projekt) {
+    const artikel = state.getArtikelByProjekt(projekt.id);
     
-    const container = document.querySelector('.bcg-matrix-container');
-    if (!container) return;
+    let revenue = 0;
+    let db3 = 0;
     
-    // Clear BCG matrix (not needed anymore)
-    container.innerHTML = '';
-    container.className = 'division-overview-container';
-    
-    let html = '<div class="division-overview">' +
-        '<div class="division-header">' +
-            '<h2>Divisionen & Projekte</h2>' +
-            '<p>Portfolio nach Geschäftsbereichen</p>' +
-        '</div>';
-    
-    DIVISIONS.forEach(function(divisionName) {
-        const projects = projectsByDivision[divisionName] || [];
-        const kpis = calculateDivisionKPIs(projects);
-        
-        const icon = getDivisionIcon(divisionName);
-        const color = getDivisionColor(divisionName);
-        const divId = 'division-' + divisionName.replace(/\s+/g, '-');
-        
-        html += '<div class="division-card" style="border-left: 4px solid ' + color + ';">' +
-            '<div class="division-card-header" onclick="toggleDivision(\'' + divisionName + '\')">' +
-                '<div class="division-info">' +
-                    '<div class="division-name">' +
-                        '<span class="division-icon">' + icon + '</span>' +
-                        '<h3>' + divisionName + '</h3>' +
-                    '</div>' +
-                    '<div class="division-meta">' +
-                        '<span class="division-count">' + kpis.count + ' Projekt' + (kpis.count !== 1 ? 'e' : '') + '</span>' +
-                        '<span class="division-badge ' + kpis.status + '">' +
-                            kpis.activeCount + ' aktiv' +
-                        '</span>' +
-                    '</div>' +
-                '</div>' +
-                
-                '<div class="division-kpis">' +
-                    '<div class="division-kpi">' +
-                        '<div class="division-kpi-label">Umsatz</div>' +
-                        '<div class="division-kpi-value">' + helpers.formatCurrency(kpis.revenue * 1000000) + '</div>' +
-                    '</div>' +
-                    '<div class="division-kpi">' +
-                        '<div class="division-kpi-label">DB3-Marge</div>' +
-                        '<div class="division-kpi-value ' + (kpis.db3Margin > 30 ? 'positive' : 'neutral') + '">' +
-                            helpers.formatPercentage(kpis.db3Margin) +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-                
-                '<div class="division-toggle">' +
-                    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">' +
-                        '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>' +
-                    '</svg>' +
-                '</div>' +
-            '</div>' +
+    artikel.forEach(function(art) {
+        for (let year = 2025; year <= 2031; year++) {
+            const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
+            const price = art.prices && art.prices[year] ? art.prices[year] : 0;
+            const hk = art.hk || 0;
             
-            '<div class="division-projects" id="' + divId + '" style="display: none;">';
-        
-        if (projects.length > 0) {
-            html += renderProjectTable(projects);
-        } else {
-            html += '<div class="no-projects">' +
-                '<span class="no-projects-icon">📭</span>' +
-                '<p>Keine Projekte in dieser Division</p>' +
-            '</div>';
+            const yearRevenue = volume * price;
+            const yearCosts = volume * hk;
+            
+            revenue += yearRevenue;
+            db3 += (yearRevenue - yearCosts);
         }
-        
-        html += '</div>' + '</div>';
     });
     
-    html += '</div>';
-    container.innerHTML = html;
+    const db3Margin = revenue > 0 ? (db3 / revenue * 100) : 0;
     
-    // Add strategic recommendations below
-    renderStrategicSummary();
+    return { revenue: revenue, db3Margin: db3Margin };
 }
 
-/**
- * Render project table for a division
- */
-function renderProjectTable(projects) {
-    let html = '<table class="division-project-table">' +
-        '<thead>' +
-            '<tr>' +
-                '<th>Projekt</th>' +
-                '<th>Owner</th>' +
-                '<th>Start</th>' +
-                '<th>Status</th>' +
-                '<th>Umsatz</th>' +
-                '<th>DB3</th>' +
-                '<th>Aktionen</th>' +
-            '</tr>' +
-        '</thead>' +
-        '<tbody>';
-    
-    projects.forEach(function(projekt) {
-        const artikel = state.getArtikelByProjekt(projekt.id);
-        
-        let revenue = 0;
-        let db3 = 0;
-        
-        artikel.forEach(function(art) {
-            for (let year = 2025; year <= 2031; year++) {
-                const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
-                const price = art.prices && art.prices[year] ? art.prices[year] : 0;
-                const hk = art.hk || 0;
-                
-                const yearRevenue = volume * price;
-                const yearCosts = volume * hk;
-                
-                revenue += yearRevenue;
-                db3 += (yearRevenue - yearCosts);
-            }
-        });
-        
-        const db3Margin = revenue > 0 ? (db3 / revenue * 100) : 0;
-        const statusClass = 'status-' + (projekt.status || 'unbekannt').toLowerCase().replace(/\s+/g, '-');
-        
-        html += '<tr class="division-project-row" onclick="openProjektDetail(\'' + projekt.id + '\')">' +
-            '<td><strong>' + helpers.escapeHtml(projekt.name) + '</strong></td>' +
-            '<td>' + helpers.escapeHtml(projekt.owner || '-') + '</td>' +
-            '<td>' + helpers.formatDateSafe(projekt.startDate) + '</td>' +
-            '<td><span class="status-badge ' + statusClass + '">' +
-                helpers.escapeHtml(projekt.status || 'Unbekannt') +
-            '</span></td>' +
-            '<td>' + helpers.formatCurrency(revenue) + '</td>' +
-            '<td><span class="' + (db3Margin > 30 ? 'positive' : 'neutral') + '">' +
-                helpers.formatPercentage(db3Margin) +
-            '</span></td>' +
-            '<td>' +
-                '<button class="btn-icon" onclick="event.stopPropagation(); openProjektDetail(\'' + projekt.id + '\')" title="Öffnen">👁️</button>' +
-            '</td>' +
-        '</tr>';
-    });
-    
-    html += '</tbody></table>';
-    
-    return html;
-}
+// ==========================================
+// PORTFOLIO SUMMARY
+// ==========================================
 
-/**
- * Render strategic summary at the bottom
- */
-function renderStrategicSummary() {
+function renderPortfolioSummary() {
     const container = document.querySelector('.strategic-recommendations');
     if (!container) return;
     
     const projects = state.getAllProjekte();
     const activeProjects = projects.filter(function(p) { return p.status === 'Aktiv'; });
     const onHoldProjects = projects.filter(function(p) { return p.status === 'On Hold'; });
-    const completedProjects = projects.filter(function(p) { return p.status === 'Abgeschlossen'; });
     
-    let html = '<div class="strategic-summary">' +
-        '<h2>📊 Portfolio Status</h2>' +
-        '<div class="summary-grid">' +
-            '<div class="summary-card positive">' +
-                '<div class="summary-icon">✅</div>' +
-                '<div class="summary-content">' +
-                    '<div class="summary-value">' + activeProjects.length + '</div>' +
-                    '<div class="summary-label">Aktive Projekte</div>' +
-                    '<div class="summary-desc">In Execution</div>' +
-                '</div>' +
-            '</div>';
-
-    if (onHoldProjects.length > 0) {
-        html += '<div class="summary-card warning">' +
-            '<div class="summary-icon">⚠️</div>' +
-            '<div class="summary-content">' +
-                '<div class="summary-value">' + onHoldProjects.length + '</div>' +
-                '<div class="summary-label">On Hold</div>' +
-                '<div class="summary-desc">Entscheidung erforderlich</div>' +
+    container.innerHTML = 
+        '<div class="portfolio-status-bar">' +
+            '<div class="status-item positive">' +
+                '<span class="status-icon">✅</span>' +
+                '<span class="status-value">' + activeProjects.length + '</span>' +
+                '<span class="status-label">Aktiv</span>' +
+            '</div>' +
+            (onHoldProjects.length > 0 ? 
+                '<div class="status-item warning">' +
+                    '<span class="status-icon">⚠️</span>' +
+                    '<span class="status-value">' + onHoldProjects.length + '</span>' +
+                    '<span class="status-label">On Hold</span>' +
+                '</div>' : '') +
+            '<div class="status-item info">' +
+                '<span class="status-icon">📊</span>' +
+                '<span class="status-value">' + DIVISIONS.length + '</span>' +
+                '<span class="status-label">Divisionen</span>' +
             '</div>' +
         '</div>';
-    }
-
-    html += '<div class="summary-card neutral">' +
-                '<div class="summary-icon">🏁</div>' +
-                '<div class="summary-content">' +
-                    '<div class="summary-value">' + completedProjects.length + '</div>' +
-                    '<div class="summary-label">Abgeschlossen</div>' +
-                    '<div class="summary-desc">Erfolgreich</div>' +
-                '</div>' +
-            '</div>' +
-
-            '<div class="summary-card info">' +
-                '<div class="summary-icon">📈</div>' +
-                '<div class="summary-content">' +
-                    '<div class="summary-value">' + DIVISIONS.length + '</div>' +
-                    '<div class="summary-label">Divisionen</div>' +
-                    '<div class="summary-desc">Geschäftsbereiche</div>' +
-                '</div>' +
-            '</div>' +
-        '</div>' +
-    '</div>';
-    
-    container.innerHTML = html;
 }
 
 // ==========================================
 // HELPER FUNCTIONS
 // ==========================================
 
-/**
- * Get icon for division
- */
 function getDivisionIcon(division) {
     const icons = {
         'Automotive': '🚗',
@@ -483,9 +379,6 @@ function getDivisionIcon(division) {
     return icons[division] || '📁';
 }
 
-/**
- * Get color for division
- */
 function getDivisionColor(division) {
     const colors = {
         'Automotive': '#3b82f6',
@@ -499,29 +392,21 @@ function getDivisionColor(division) {
     return colors[division] || '#64748b';
 }
 
-/**
- * Toggle division expansion
- */
-window.toggleDivision = function(divisionName) {
-    const id = 'division-' + divisionName.replace(/\s+/g, '-');
+window.toggleDivisionRow = function(divisionName) {
+    const id = 'div-' + divisionName.replace(/\s+/g, '-');
     const element = document.getElementById(id);
     
     if (!element) return;
     
     const isVisible = element.style.display !== 'none';
-    element.style.display = isVisible ? 'none' : 'block';
+    element.style.display = isVisible ? 'none' : 'table-row';
     
-    // Rotate arrow
-    const card = element.closest('.division-card');
-    const toggle = card.querySelector('.division-toggle');
-    if (toggle) {
-        toggle.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    const row = element.previousElementSibling;
+    const arrow = row.querySelector('.toggle-arrow');
+    if (arrow) {
+        arrow.textContent = isVisible ? '▼' : '▲';
     }
 };
-
-// ==========================================
-// EXPORTS
-// ==========================================
 
 export default {
     renderCockpit
