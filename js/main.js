@@ -49,14 +49,14 @@ async function initializeApplication() {
     // Step 1: Restore previous state FIRST (before any UI changes)
     const stateRestored = state.restoreState();
     
-    // ✅ FIX: Apply tab IMMER, nicht nur wenn restored!
+    // ✅ FIX: Apply tab IMMER - auch beim ersten Besuch!
     if (stateRestored) {
       console.log('✅ Previous state restored');
       applyRestoredTab();
     } else {
       console.log('ℹ️ No previous state - using default (cockpit)');
       state.currentTab = 'cockpit';
-      applyRestoredTab(); // ← FIX: Auch beim ersten Besuch aufrufen!
+      applyRestoredTab(); // ← CRITICAL FIX!
     }
 
     // Step 2: Make modules globally available
