@@ -1,34 +1,47 @@
 /**
  * ALBO Solutions - Portfolio Cockpit Module
- * Horváth & Partners Style BCG Portfolio Management
+ * Horváth & Partners Style - Division-Based Portfolio Overview
  * 
- * Features:
- * - BCG Matrix (Bubble Chart)
+ * NEW CONCEPT:
+ * - 7 Divisions Overview
+ * - Projects grouped by Division
  * - Portfolio KPIs
- * - Strategic Recommendations
+ * - NO BCG Matrix (too academic for CFO cockpit)
  */
 
 import { state } from '../state.js';
+import * as helpers from '../helpers.js';
+
+// ==========================================
+// CONFIGURATION
+// ==========================================
+
+const DIVISIONS = [
+    'Automotive',
+    'Industrial',
+    'Healthcare',
+    'Energy',
+    'Consumer Goods',
+    'Technology',
+    'Services'
+];
 
 // ==========================================
 // MAIN RENDER FUNCTION
 // ==========================================
 
 /**
- * Render Portfolio Cockpit
+ * Render Portfolio Cockpit - Horvath Style
  * @public
  */
 export function renderCockpit() {
-    console.log('📊 Rendering Horváth Portfolio Cockpit...');
+    console.log('📊 Rendering Horváth Portfolio Cockpit (Division View)...');
     
-    // 1. Render Portfolio KPIs
+    // 1. Render Portfolio-Level KPIs
     renderPortfolioKPIs();
     
-    // 2. Render BCG Matrix
-    renderBCGMatrix();
-    
-    // 3. Render Strategic Recommendations
-    renderStrategicRecommendations();
+    // 2. Render Division Overview with Projects
+    renderDivisionOverview();
 }
 
 // ==========================================
@@ -46,40 +59,61 @@ function calculatePortfolioKPIs() {
             totalProjects: 0,
             activeProjects: 0,
             totalRevenue: 0,
+            totalNPV: 0,
             avgDB3: 0,
-            riskProjects: 0
+            avgPayback: 0
         };
     }
     
     let totalRevenue = 0;
     let totalDB3 = 0;
+    let totalNPV = 0;
+    let totalPayback = 0;
+    let projectsWithPayback = 0;
     
-    projects.forEach(projekt => {
+    projects.forEach(function(projekt) {
         const artikel = state.getArtikelByProjekt(projekt.id);
         
-        artikel.forEach(art => {
+        let projektRevenue = 0;
+        let projektDB3 = 0;
+        
+        artikel.forEach(function(art) {
             for (let year = 2025; year <= 2031; year++) {
-                const volume = art.volumes?.[year] || 0;
-                const price = art.prices?.[year] || 0;
+                const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
+                const price = art.prices && art.prices[year] ? art.prices[year] : 0;
                 const hk = art.hk || 0;
                 
                 const revenue = volume * price;
                 const costs = volume * hk;
                 
-                totalRevenue += revenue;
-                totalDB3 += (revenue - costs);
+                projektRevenue += revenue;
+                projektDB3 += (revenue - costs);
             }
         });
+        
+        totalRevenue += projektRevenue;
+        totalDB3 += projektDB3;
+        
+        // NPV & Payback (simplified - should come from projekt data)
+        if (projekt.npv) {
+            totalNPV += projekt.npv;
+        }
+        if (projekt.payback) {
+            totalPayback += projekt.payback;
+            projectsWithPayback++;
+        }
     });
     
     const avgDB3Percent = totalRevenue > 0 ? (totalDB3 / totalRevenue * 100) : 0;
+    const avgPaybackYears = projectsWithPayback > 0 ? (totalPayback / projectsWithPayback) : 0;
     
     return {
         totalProjects: projects.length,
-        activeProjects: projects.filter(p => p.status === 'Aktiv').length,
-        totalRevenue: totalRevenue / 1000000, // Convert to M€
+        activeProjects: projects.filter(function(p) { return p.status === 'Aktiv'; }).length,
+        totalRevenue: totalRevenue / 1000000, // M€
+        totalNPV: totalNPV / 1000000, // M€
         avgDB3: avgDB3Percent,
-        riskProjects: projects.filter(p => p.status === 'On Hold').length
+        avgPayback: avgPaybackYears
     };
 }
 
@@ -92,70 +126,250 @@ function renderPortfolioKPIs() {
     const container = document.querySelector('.portfolio-kpis');
     if (!container) return;
     
-    container.innerHTML = `
-        <div class="kpi-card">
-            <div class="kpi-icon">📁</div>
-            <div class="kpi-content">
-                <div class="kpi-value">${kpis.totalProjects}</div>
-                <div class="kpi-label">Projekte im Portfolio</div>
-                <div class="kpi-sub">${kpis.activeProjects} aktiv</div>
-            </div>
-        </div>
+    container.innerHTML = 
+        '<div class="cockpit-header">' +
+            '<div class="cockpit-title">' +
+                '<h1>📊 Portfolio Cockpit</h1>' +
+                '<p>Divisionen-Übersicht & Projekt-Portfolio</p>' +
+            '</div>' +
+        '</div>' +
+        
+        '<div class="kpi-grid">' +
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">Projekte</div>' +
+                '<div class="kpi-value">' + kpis.totalProjects + '</div>' +
+                '<div class="kpi-sub positive">' + kpis.activeProjects + ' aktiv</div>' +
+            '</div>' +
 
-        <div class="kpi-card">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-content">
-                <div class="kpi-value">${kpis.totalRevenue.toFixed(1)}M€</div>
-                <div class="kpi-label">Gesamt-Umsatz</div>
-                <div class="kpi-sub">Portfolio 2025-2031</div>
-            </div>
-        </div>
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">Gesamt-Umsatz</div>' +
+                '<div class="kpi-value">' + helpers.formatCurrency(kpis.totalRevenue * 1000000) + '</div>' +
+                '<div class="kpi-sub">Portfolio 2025-2031</div>' +
+            '</div>' +
 
-        <div class="kpi-card">
-            <div class="kpi-icon">📊</div>
-            <div class="kpi-content">
-                <div class="kpi-value">${kpis.avgDB3.toFixed(1)}%</div>
-                <div class="kpi-label">Ø DB3-Marge</div>
-                <div class="kpi-sub ${kpis.avgDB3 > 30 ? 'positive' : 'neutral'}">
-                    ${kpis.avgDB3 > 30 ? 'Exzellent' : 'Solide'}
-                </div>
-            </div>
-        </div>
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">NPV (9 Jahre)</div>' +
+                '<div class="kpi-value ' + (kpis.totalNPV > 0 ? 'positive' : 'negative') + '">' +
+                    helpers.formatCurrency(kpis.totalNPV * 1000000) +
+                '</div>' +
+                '<div class="kpi-sub">Barwert gesamt</div>' +
+            '</div>' +
 
-        <div class="kpi-card ${kpis.riskProjects > 0 ? 'warning' : ''}">
-            <div class="kpi-icon">${kpis.riskProjects > 0 ? '⚠️' : '✅'}</div>
-            <div class="kpi-content">
-                <div class="kpi-value">${kpis.activeProjects}/${kpis.totalProjects}</div>
-                <div class="kpi-label">Portfolio Status</div>
-                <div class="kpi-sub ${kpis.riskProjects > 0 ? 'warning' : 'positive'}">
-                    ${kpis.riskProjects > 0 ? `${kpis.riskProjects} Risiko` : 'On Track'}
-                </div>
-            </div>
-        </div>
-    `;
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">Ø DB3-Marge</div>' +
+                '<div class="kpi-value ' + (kpis.avgDB3 > 30 ? 'positive' : 'neutral') + '">' +
+                    helpers.formatPercentage(kpis.avgDB3) +
+                '</div>' +
+                '<div class="kpi-sub ' + (kpis.avgDB3 > 30 ? 'positive' : '') + '">' +
+                    (kpis.avgDB3 > 30 ? 'Exzellent' : 'Solide') +
+                '</div>' +
+            '</div>' +
+
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">Ø Payback</div>' +
+                '<div class="kpi-value ' + (kpis.avgPayback < 3 ? 'positive' : 'neutral') + '">' +
+                    kpis.avgPayback.toFixed(1) + 'J' +
+                '</div>' +
+                '<div class="kpi-sub">Jahre bis Break-Even</div>' +
+            '</div>' +
+
+            '<div class="kpi-card">' +
+                '<div class="kpi-label">Divisionen</div>' +
+                '<div class="kpi-value">' + DIVISIONS.length + '</div>' +
+                '<div class="kpi-sub">Geschäftsbereiche</div>' +
+            '</div>' +
+        '</div>';
 }
 
 // ==========================================
-// BCG MATRIX
+// DIVISION OVERVIEW
 // ==========================================
 
 /**
- * Calculate BCG Position for each project
+ * Get projects grouped by division
  */
-function calculateBCGPositions() {
+function getProjectsByDivision() {
     const projects = state.getAllProjekte();
+    const grouped = {};
     
-    return projects.map(projekt => {
+    // Initialize all divisions
+    DIVISIONS.forEach(function(div) {
+        grouped[div] = [];
+    });
+    
+    // Group projects by division
+    projects.forEach(function(projekt) {
+        const division = projekt.division || 'Services'; // Default fallback
+        if (grouped[division]) {
+            grouped[division].push(projekt);
+        } else {
+            // If division not in predefined list, add to Services
+            grouped['Services'].push(projekt);
+        }
+    });
+    
+    return grouped;
+}
+
+/**
+ * Calculate division-level KPIs
+ */
+function calculateDivisionKPIs(projects) {
+    if (!projects || projects.length === 0) {
+        return {
+            count: 0,
+            revenue: 0,
+            db3Margin: 0,
+            status: 'empty'
+        };
+    }
+    
+    let totalRevenue = 0;
+    let totalDB3 = 0;
+    let activeCount = 0;
+    
+    projects.forEach(function(projekt) {
+        if (projekt.status === 'Aktiv') activeCount++;
+        
         const artikel = state.getArtikelByProjekt(projekt.id);
         
-        // Calculate revenue
+        artikel.forEach(function(art) {
+            for (let year = 2025; year <= 2031; year++) {
+                const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
+                const price = art.prices && art.prices[year] ? art.prices[year] : 0;
+                const hk = art.hk || 0;
+                
+                const revenue = volume * price;
+                const costs = volume * hk;
+                
+                totalRevenue += revenue;
+                totalDB3 += (revenue - costs);
+            }
+        });
+    });
+    
+    const db3Margin = totalRevenue > 0 ? (totalDB3 / totalRevenue * 100) : 0;
+    
+    return {
+        count: projects.length,
+        activeCount: activeCount,
+        revenue: totalRevenue / 1000000,
+        db3Margin: db3Margin,
+        status: activeCount > 0 ? 'active' : 'inactive'
+    };
+}
+
+/**
+ * Render Division Overview with Projects
+ */
+function renderDivisionOverview() {
+    const projectsByDivision = getProjectsByDivision();
+    
+    const container = document.querySelector('.bcg-matrix-container');
+    if (!container) return;
+    
+    // Clear BCG matrix (not needed anymore)
+    container.innerHTML = '';
+    container.className = 'division-overview-container';
+    
+    let html = '<div class="division-overview">' +
+        '<div class="division-header">' +
+            '<h2>Divisionen & Projekte</h2>' +
+            '<p>Portfolio nach Geschäftsbereichen</p>' +
+        '</div>';
+    
+    DIVISIONS.forEach(function(divisionName) {
+        const projects = projectsByDivision[divisionName] || [];
+        const kpis = calculateDivisionKPIs(projects);
+        
+        const icon = getDivisionIcon(divisionName);
+        const color = getDivisionColor(divisionName);
+        const divId = 'division-' + divisionName.replace(/\s+/g, '-');
+        
+        html += '<div class="division-card" style="border-left: 4px solid ' + color + ';">' +
+            '<div class="division-card-header" onclick="toggleDivision(\'' + divisionName + '\')">' +
+                '<div class="division-info">' +
+                    '<div class="division-name">' +
+                        '<span class="division-icon">' + icon + '</span>' +
+                        '<h3>' + divisionName + '</h3>' +
+                    '</div>' +
+                    '<div class="division-meta">' +
+                        '<span class="division-count">' + kpis.count + ' Projekt' + (kpis.count !== 1 ? 'e' : '') + '</span>' +
+                        '<span class="division-badge ' + kpis.status + '">' +
+                            kpis.activeCount + ' aktiv' +
+                        '</span>' +
+                    '</div>' +
+                '</div>' +
+                
+                '<div class="division-kpis">' +
+                    '<div class="division-kpi">' +
+                        '<div class="division-kpi-label">Umsatz</div>' +
+                        '<div class="division-kpi-value">' + helpers.formatCurrency(kpis.revenue * 1000000) + '</div>' +
+                    '</div>' +
+                    '<div class="division-kpi">' +
+                        '<div class="division-kpi-label">DB3-Marge</div>' +
+                        '<div class="division-kpi-value ' + (kpis.db3Margin > 30 ? 'positive' : 'neutral') + '">' +
+                            helpers.formatPercentage(kpis.db3Margin) +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                
+                '<div class="division-toggle">' +
+                    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">' +
+                        '<path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>' +
+                    '</svg>' +
+                '</div>' +
+            '</div>' +
+            
+            '<div class="division-projects" id="' + divId + '" style="display: none;">';
+        
+        if (projects.length > 0) {
+            html += renderProjectTable(projects);
+        } else {
+            html += '<div class="no-projects">' +
+                '<span class="no-projects-icon">📭</span>' +
+                '<p>Keine Projekte in dieser Division</p>' +
+            '</div>';
+        }
+        
+        html += '</div>' + '</div>';
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Add strategic recommendations below
+    renderStrategicSummary();
+}
+
+/**
+ * Render project table for a division
+ */
+function renderProjectTable(projects) {
+    let html = '<table class="division-project-table">' +
+        '<thead>' +
+            '<tr>' +
+                '<th>Projekt</th>' +
+                '<th>Owner</th>' +
+                '<th>Start</th>' +
+                '<th>Status</th>' +
+                '<th>Umsatz</th>' +
+                '<th>DB3</th>' +
+                '<th>Aktionen</th>' +
+            '</tr>' +
+        '</thead>' +
+        '<tbody>';
+    
+    projects.forEach(function(projekt) {
+        const artikel = state.getArtikelByProjekt(projekt.id);
+        
         let revenue = 0;
         let db3 = 0;
         
-        artikel.forEach(art => {
+        artikel.forEach(function(art) {
             for (let year = 2025; year <= 2031; year++) {
-                const volume = art.volumes?.[year] || 0;
-                const price = art.prices?.[year] || 0;
+                const volume = art.volumes && art.volumes[year] ? art.volumes[year] : 0;
+                const price = art.prices && art.prices[year] ? art.prices[year] : 0;
                 const hk = art.hk || 0;
                 
                 const yearRevenue = volume * price;
@@ -167,363 +381,86 @@ function calculateBCGPositions() {
         });
         
         const db3Margin = revenue > 0 ? (db3 / revenue * 100) : 0;
+        const statusClass = 'status-' + (projekt.status || 'unbekannt').toLowerCase().replace(/\s+/g, '-');
         
-        // BCG Parameters (can be configured per project)
-        const marketGrowth = projekt.marketGrowth || getRandomGrowth();
-        const relativeMarketShare = projekt.relativeMarketShare || getRandomMarketShare();
-        
-        return {
-            id: projekt.id,
-            name: projekt.name,
-            x: relativeMarketShare,  // Relative Market Share (0-2)
-            y: marketGrowth,          // Market Growth % (0-20)
-            r: Math.sqrt(revenue) / 800, // Bubble size
-            revenue: revenue / 1000000,   // M€
-            db3Margin: db3Margin,
-            status: projekt.status,
-            quadrant: getQuadrant(relativeMarketShare, marketGrowth)
-        };
-    });
-}
-
-/**
- * Get BCG Quadrant
- */
-function getQuadrant(x, y) {
-    const isHighMarketShare = x >= 1.0;
-    const isHighGrowth = y >= 10;
-    
-    if (isHighMarketShare && isHighGrowth) return 'star';
-    if (!isHighMarketShare && isHighGrowth) return 'question';
-    if (isHighMarketShare && !isHighGrowth) return 'cash-cow';
-    return 'dog';
-}
-
-/**
- * Get bubble color based on DB3 margin
- */
-function getBubbleColor(db3Margin, quadrant) {
-    // High margin
-    if (db3Margin > 30) return 'rgba(16, 185, 129, 0.8)'; // Green
-    // Medium margin
-    if (db3Margin > 15) return 'rgba(59, 130, 246, 0.8)'; // Blue
-    // Low margin
-    if (db3Margin > 0) return 'rgba(245, 158, 11, 0.8)'; // Yellow
-    // Negative margin
-    return 'rgba(239, 68, 68, 0.8)'; // Red
-}
-
-/**
- * Render BCG Matrix (Chart.js Bubble)
- */
-function renderBCGMatrix() {
-    const canvas = document.getElementById('bcg-chart');
-    if (!canvas) {
-        console.warn('BCG canvas not found');
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    const positions = calculateBCGPositions();
-    
-    // Destroy existing chart
-    if (window.bcgChart) {
-        window.bcgChart.destroy();
-    }
-    
-    // Create BCG Matrix
-    window.bcgChart = new Chart(ctx, {
-        type: 'bubble',
-        data: {
-            datasets: [{
-                label: 'Portfolio',
-                data: positions,
-                backgroundColor: positions.map(p => getBubbleColor(p.db3Margin, p.quadrant)),
-                borderColor: positions.map(p => getBubbleColor(p.db3Margin, p.quadrant).replace('0.8', '1')),
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'BCG Portfolio Matrix',
-                    font: { size: 18, weight: 'bold' },
-                    padding: 20
-                },
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const point = context.raw;
-                            return [
-                                `${point.name}`,
-                                `Revenue: €${point.revenue.toFixed(1)}M`,
-                                `DB3 Marge: ${point.db3Margin.toFixed(1)}%`,
-                                `Marktanteil: ${point.x.toFixed(2)}x`,
-                                `Wachstum: ${point.y.toFixed(1)}%`,
-                                `Quadrant: ${getQuadrantName(point.quadrant)}`
-                            ];
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Relativer Marktanteil',
-                        font: { size: 14, weight: 'bold' }
-                    },
-                    min: 0,
-                    max: 2,
-                    ticks: {
-                        callback: function(value) {
-                            return value.toFixed(1) + 'x';
-                        }
-                    },
-                    grid: {
-                        color: function(context) {
-                            return context.tick.value === 1.0 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)';
-                        },
-                        lineWidth: function(context) {
-                            return context.tick.value === 1.0 ? 2 : 1;
-                        }
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Marktwachstum (%)',
-                        font: { size: 14, weight: 'bold' }
-                    },
-                    min: 0,
-                    max: 20,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                    },
-                    grid: {
-                        color: function(context) {
-                            return context.tick.value === 10 ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)';
-                        },
-                        lineWidth: function(context) {
-                            return context.tick.value === 10 ? 2 : 1;
-                        }
-                    }
-                }
-            },
-            onClick: (event, elements) => {
-                if (elements.length > 0) {
-                    const projektId = positions[elements[0].index].id;
-                    console.log('BCG Click: Opening projekt', projektId);
-                    if (window.openProjektDetail) {
-                        window.openProjektDetail(projektId);
-                    }
-                }
-            }
-        }
+        html += '<tr class="division-project-row" onclick="openProjektDetail(\'' + projekt.id + '\')">' +
+            '<td><strong>' + helpers.escapeHtml(projekt.name) + '</strong></td>' +
+            '<td>' + helpers.escapeHtml(projekt.owner || '-') + '</td>' +
+            '<td>' + helpers.formatDateSafe(projekt.startDate) + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' +
+                helpers.escapeHtml(projekt.status || 'Unbekannt') +
+            '</span></td>' +
+            '<td>' + helpers.formatCurrency(revenue) + '</td>' +
+            '<td><span class="' + (db3Margin > 30 ? 'positive' : 'neutral') + '">' +
+                helpers.formatPercentage(db3Margin) +
+            '</span></td>' +
+            '<td>' +
+                '<button class="btn-icon" onclick="event.stopPropagation(); openProjektDetail(\'' + projekt.id + '\')" title="Öffnen">👁️</button>' +
+            '</td>' +
+        '</tr>';
     });
     
-    // Add quadrant labels
-    addQuadrantLabels(canvas);
+    html += '</tbody></table>';
+    
+    return html;
 }
 
 /**
- * Add quadrant labels to canvas
+ * Render strategic summary at the bottom
  */
-function addQuadrantLabels(canvas) {
-    const container = canvas.parentElement;
-    
-    // Remove existing labels
-    container.querySelectorAll('.bcg-label').forEach(el => el.remove());
-    
-    const labels = [
-        { text: '⭐ STARS', top: '15%', left: '75%', color: '#10b981' },
-        { text: '❓ QUESTION MARKS', top: '15%', left: '25%', color: '#f59e0b' },
-        { text: '💰 CASH COWS', top: '85%', left: '75%', color: '#3b82f6' },
-        { text: '🐕 POOR DOGS', top: '85%', left: '25%', color: '#ef4444' }
-    ];
-    
-    labels.forEach(label => {
-        const div = document.createElement('div');
-        div.className = 'bcg-label';
-        div.textContent = label.text;
-        div.style.cssText = `
-            position: absolute;
-            top: ${label.top};
-            left: ${label.left};
-            transform: translate(-50%, -50%);
-            font-size: 14px;
-            font-weight: 700;
-            color: ${label.color};
-            text-shadow: 0 0 4px white;
-            pointer-events: none;
-            z-index: 10;
-        `;
-        container.appendChild(div);
-    });
-}
-
-/**
- * Get quadrant display name
- */
-function getQuadrantName(quadrant) {
-    const names = {
-        'star': '⭐ Stars',
-        'question': '❓ Question Marks',
-        'cash-cow': '💰 Cash Cows',
-        'dog': '🐕 Poor Dogs'
-    };
-    return names[quadrant] || quadrant;
-}
-
-// ==========================================
-// STRATEGIC RECOMMENDATIONS
-// ==========================================
-
-/**
- * Render Strategic Recommendations
- */
-function renderStrategicRecommendations() {
-    const positions = calculateBCGPositions();
-    
-    // Group by quadrant
-    const byQuadrant = {
-        star: positions.filter(p => p.quadrant === 'star'),
-        question: positions.filter(p => p.quadrant === 'question'),
-        'cash-cow': positions.filter(p => p.quadrant === 'cash-cow'),
-        dog: positions.filter(p => p.quadrant === 'dog')
-    };
-    
+function renderStrategicSummary() {
     const container = document.querySelector('.strategic-recommendations');
     if (!container) return;
     
-    container.innerHTML = `
-        <div class="recommendations-header">
-            <h2>📋 Strategische Handlungsempfehlungen</h2>
-            <p>BCG-basierte Portfolio-Steuerung nach Horváth-Methodik</p>
-        </div>
+    const projects = state.getAllProjekte();
+    const activeProjects = projects.filter(function(p) { return p.status === 'Aktiv'; });
+    const onHoldProjects = projects.filter(function(p) { return p.status === 'On Hold'; });
+    const completedProjects = projects.filter(function(p) { return p.status === 'Abgeschlossen'; });
+    
+    let html = '<div class="strategic-summary">' +
+        '<h2>📊 Portfolio Status</h2>' +
+        '<div class="summary-grid">' +
+            '<div class="summary-card positive">' +
+                '<div class="summary-icon">✅</div>' +
+                '<div class="summary-content">' +
+                    '<div class="summary-value">' + activeProjects.length + '</div>' +
+                    '<div class="summary-label">Aktive Projekte</div>' +
+                    '<div class="summary-desc">In Execution</div>' +
+                '</div>' +
+            '</div>';
 
-        <div class="recommendations-grid">
-            <!-- STARS -->
-            <div class="recommendation-card star">
-                <div class="rec-header">
-                    <div class="rec-icon">⭐</div>
-                    <div>
-                        <h3>STARS → Investieren & Ausbauen</h3>
-                        <div class="rec-count">${byQuadrant.star.length} Projekte</div>
-                    </div>
-                </div>
-                <div class="rec-content">
-                    ${byQuadrant.star.length > 0 ? `
-                        <div class="rec-projects">
-                            ${byQuadrant.star.map(p => `
-                                <div class="rec-project">
-                                    <strong>${p.name}</strong>
-                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="rec-action">
-                            <strong>💡 Empfehlung:</strong> Marktführerschaft verteidigen durch kontinuierliche Innovation und Skalierung
-                        </div>
-                    ` : `
-                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
-                    `}
-                </div>
-            </div>
+    if (onHoldProjects.length > 0) {
+        html += '<div class="summary-card warning">' +
+            '<div class="summary-icon">⚠️</div>' +
+            '<div class="summary-content">' +
+                '<div class="summary-value">' + onHoldProjects.length + '</div>' +
+                '<div class="summary-label">On Hold</div>' +
+                '<div class="summary-desc">Entscheidung erforderlich</div>' +
+            '</div>' +
+        '</div>';
+    }
 
-            <!-- QUESTION MARKS -->
-            <div class="recommendation-card question">
-                <div class="rec-header">
-                    <div class="rec-icon">❓</div>
-                    <div>
-                        <h3>QUESTION MARKS → Prüfen & Entscheiden</h3>
-                        <div class="rec-count">${byQuadrant.question.length} Projekte</div>
-                    </div>
-                </div>
-                <div class="rec-content">
-                    ${byQuadrant.question.length > 0 ? `
-                        <div class="rec-projects">
-                            ${byQuadrant.question.map(p => `
-                                <div class="rec-project">
-                                    <strong>${p.name}</strong>
-                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="rec-action">
-                            <strong>💡 Empfehlung:</strong> Go/No-Go Entscheidung treffen - entweder massiv investieren oder divest
-                        </div>
-                    ` : `
-                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
-                    `}
-                </div>
-            </div>
+    html += '<div class="summary-card neutral">' +
+                '<div class="summary-icon">🏁</div>' +
+                '<div class="summary-content">' +
+                    '<div class="summary-value">' + completedProjects.length + '</div>' +
+                    '<div class="summary-label">Abgeschlossen</div>' +
+                    '<div class="summary-desc">Erfolgreich</div>' +
+                '</div>' +
+            '</div>' +
 
-            <!-- CASH COWS -->
-            <div class="recommendation-card cash-cow">
-                <div class="rec-header">
-                    <div class="rec-icon">💰</div>
-                    <div>
-                        <h3>CASH COWS → Abschöpfen</h3>
-                        <div class="rec-count">${byQuadrant['cash-cow'].length} Projekte</div>
-                    </div>
-                </div>
-                <div class="rec-content">
-                    ${byQuadrant['cash-cow'].length > 0 ? `
-                        <div class="rec-projects">
-                            ${byQuadrant['cash-cow'].map(p => `
-                                <div class="rec-project">
-                                    <strong>${p.name}</strong>
-                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="rec-action">
-                            <strong>💡 Empfehlung:</strong> Cashflows nutzen um Stars zu finanzieren, keine großen Neuinvestitionen
-                        </div>
-                    ` : `
-                        <div class="rec-empty">Keine Projekte in diesem Quadranten</div>
-                    `}
-                </div>
-            </div>
-
-            <!-- POOR DOGS -->
-            <div class="recommendation-card dog">
-                <div class="rec-header">
-                    <div class="rec-icon">🐕</div>
-                    <div>
-                        <h3>POOR DOGS → Divest oder Restrukturieren</h3>
-                        <div class="rec-count">${byQuadrant.dog.length} Projekte</div>
-                    </div>
-                </div>
-                <div class="rec-content">
-                    ${byQuadrant.dog.length > 0 ? `
-                        <div class="rec-projects">
-                            ${byQuadrant.dog.map(p => `
-                                <div class="rec-project warning">
-                                    <strong>${p.name}</strong>
-                                    <span>€${p.revenue.toFixed(1)}M • ${p.db3Margin.toFixed(1)}% DB3</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div class="rec-action warning">
-                            <strong>⚠️ Empfehlung:</strong> Exit-Strategie entwickeln oder fundamentale Restrukturierung prüfen
-                        </div>
-                    ` : `
-                        <div class="rec-empty positive">Keine Projekte in diesem Quadranten - Portfolio ist gesund!</div>
-                    `}
-                </div>
-            </div>
-        </div>
-    `;
+            '<div class="summary-card info">' +
+                '<div class="summary-icon">📈</div>' +
+                '<div class="summary-content">' +
+                    '<div class="summary-value">' + DIVISIONS.length + '</div>' +
+                    '<div class="summary-label">Divisionen</div>' +
+                    '<div class="summary-desc">Geschäftsbereiche</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+    
+    container.innerHTML = html;
 }
 
 // ==========================================
@@ -531,18 +468,56 @@ function renderStrategicRecommendations() {
 // ==========================================
 
 /**
- * Get random market growth (for demo)
+ * Get icon for division
  */
-function getRandomGrowth() {
-    return 3 + Math.random() * 15; // 3-18%
+function getDivisionIcon(division) {
+    const icons = {
+        'Automotive': '🚗',
+        'Industrial': '🏭',
+        'Healthcare': '🏥',
+        'Energy': '⚡',
+        'Consumer Goods': '🛒',
+        'Technology': '💻',
+        'Services': '🔧'
+    };
+    return icons[division] || '📁';
 }
 
 /**
- * Get random market share (for demo)
+ * Get color for division
  */
-function getRandomMarketShare() {
-    return 0.3 + Math.random() * 1.5; // 0.3-1.8x
+function getDivisionColor(division) {
+    const colors = {
+        'Automotive': '#3b82f6',
+        'Industrial': '#8b5cf6',
+        'Healthcare': '#ec4899',
+        'Energy': '#f59e0b',
+        'Consumer Goods': '#10b981',
+        'Technology': '#6366f1',
+        'Services': '#14b8a6'
+    };
+    return colors[division] || '#64748b';
 }
+
+/**
+ * Toggle division expansion
+ */
+window.toggleDivision = function(divisionName) {
+    const id = 'division-' + divisionName.replace(/\s+/g, '-');
+    const element = document.getElementById(id);
+    
+    if (!element) return;
+    
+    const isVisible = element.style.display !== 'none';
+    element.style.display = isVisible ? 'none' : 'block';
+    
+    // Rotate arrow
+    const card = element.closest('.division-card');
+    const toggle = card.querySelector('.division-toggle');
+    if (toggle) {
+        toggle.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+};
 
 // ==========================================
 // EXPORTS
