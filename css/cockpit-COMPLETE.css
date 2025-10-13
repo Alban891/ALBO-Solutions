@@ -1,302 +1,105 @@
 /* ==========================================
-   COCKPIT - DIVISION-BASED LAYOUT
-   Horváth & Partners Style
-   VOLLSTÄNDIG & GETESTET
+   COMPACT COCKPIT DESIGN
+   Horváth Style - Professional & Clean
    ========================================== */
 
 /* ==========================================
-   1. COCKPIT HEADER & TITLE
+   1. COMPACT HEADER
    ========================================== */
 
-.cockpit-header {
-    margin-bottom: 24px;
-    padding: 0;
-}
-
-.cockpit-title h1 {
-    font-size: 28px;
-    color: #1e3a8a;
-    margin: 0 0 4px 0;
-    font-weight: 700;
-}
-
-.cockpit-title p {
-    font-size: 14px;
-    color: #64748b;
-    margin: 0;
-}
-
-/* ==========================================
-   2. KPI GRID
-   ========================================== */
-
-.kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-}
-
-.kpi-card {
+.compact-cockpit-header {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 20px;
-    transition: all 0.2s ease;
+    padding: 20px 24px;
+    margin-bottom: 24px;
 }
 
-.kpi-card:hover {
-    border-color: #3b82f6;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-    transform: translateY(-2px);
+.compact-title h1 {
+    font-size: 24px;
+    color: #1e3a8a;
+    margin: 0 0 16px 0;
+    font-weight: 700;
 }
 
-.kpi-label {
+/* ==========================================
+   2. COMPACT KPI BAR (One Line!)
+   ========================================== */
+
+.compact-kpi-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.compact-kpi {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.compact-kpi-label {
     font-size: 12px;
     color: #64748b;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
 }
 
-.kpi-value {
-    font-size: 32px;
+.compact-kpi-value {
+    font-size: 20px;
     font-weight: 700;
     color: #1e3a8a;
-    line-height: 1;
-    margin-bottom: 4px;
 }
 
-.kpi-value.positive {
+.compact-kpi-value.positive {
     color: #10b981;
 }
 
-.kpi-value.negative {
+.compact-kpi-value.negative {
     color: #ef4444;
 }
 
-.kpi-value.neutral {
+.compact-kpi-value.neutral {
     color: #3b82f6;
 }
 
-.kpi-sub {
-    font-size: 13px;
+.compact-kpi-sub {
+    font-size: 12px;
     color: #64748b;
 }
 
-.kpi-sub.positive {
-    color: #10b981;
-    font-weight: 600;
-}
-
-.kpi-sub.warning {
-    color: #f59e0b;
-    font-weight: 600;
+.compact-kpi-divider {
+    width: 1px;
+    height: 24px;
+    background: #e2e8f0;
 }
 
 /* ==========================================
-   3. DIVISION OVERVIEW CONTAINER
+   3. DIVISION TABLE
    ========================================== */
 
-.division-overview-container {
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin-bottom: 32px;
-}
-
-.division-overview {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.division-header {
-    margin-bottom: 16px;
-}
-
-.division-header h2 {
-    font-size: 24px;
-    color: #1e3a8a;
-    margin: 0 0 4px 0;
-    font-weight: 700;
-}
-
-.division-header p {
-    font-size: 14px;
-    color: #64748b;
-    margin: 0;
-}
-
-/* ==========================================
-   4. DIVISION CARDS
-   ========================================== */
-
-.division-card {
+.compact-division-container {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     overflow: hidden;
-    transition: all 0.2s ease;
+    margin-bottom: 24px;
 }
 
-.division-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.division-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.division-card-header:hover {
-    background: #f8fafc;
-}
-
-.division-info {
-    flex: 1;
-}
-
-.division-name {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-.division-icon {
-    font-size: 24px;
-}
-
-.division-name h3 {
-    font-size: 18px;
-    color: #1e3a8a;
-    margin: 0;
-    font-weight: 700;
-}
-
-.division-meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.division-count {
-    font-size: 14px;
-    color: #64748b;
-}
-
-.division-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.division-badge.active {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.division-badge.inactive {
-    background: #f1f5f9;
-    color: #64748b;
-}
-
-/* ==========================================
-   5. DIVISION KPIs
-   ========================================== */
-
-.division-kpis {
-    display: flex;
-    gap: 24px;
-    margin-right: 24px;
-}
-
-.division-kpi {
-    text-align: right;
-}
-
-.division-kpi-label {
-    font-size: 11px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.division-kpi-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1e3a8a;
-}
-
-.division-kpi-value.positive {
-    color: #10b981;
-}
-
-.division-kpi-value.neutral {
-    color: #3b82f6;
-}
-
-/* ==========================================
-   6. DIVISION TOGGLE ARROW
-   ========================================== */
-
-.division-toggle {
-    color: #64748b;
-    transition: transform 0.3s ease;
-}
-
-/* ==========================================
-   7. DIVISION PROJECTS
-   ========================================== */
-
-.division-projects {
-    padding: 0 20px 20px 20px;
-    border-top: 1px solid #f1f5f9;
-}
-
-.no-projects {
-    text-align: center;
-    padding: 40px 20px;
-    color: #94a3b8;
-}
-
-.no-projects-icon {
-    font-size: 48px;
-    display: block;
-    margin-bottom: 12px;
-}
-
-.no-projects p {
-    font-size: 14px;
-    margin: 0;
-}
-
-/* ==========================================
-   8. PROJECT TABLE
-   ========================================== */
-
-.division-project-table {
+.division-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 16px;
 }
 
-.division-project-table thead {
+.division-table thead {
     background: #f8fafc;
 }
 
-.division-project-table th {
+.division-table thead th {
     text-align: left;
-    padding: 12px;
-    font-size: 12px;
+    padding: 12px 16px;
+    font-size: 11px;
     color: #64748b;
     font-weight: 600;
     text-transform: uppercase;
@@ -304,29 +107,121 @@
     border-bottom: 2px solid #e2e8f0;
 }
 
-.division-project-table td {
-    padding: 12px;
-    font-size: 14px;
-    color: #334155;
+.division-row {
+    cursor: pointer;
+    transition: background 0.2s ease;
     border-bottom: 1px solid #f1f5f9;
 }
 
-.division-project-row {
+.division-row:hover {
+    background: #f8fafc;
+}
+
+.division-row td {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #334155;
+}
+
+.division-icon {
+    font-size: 20px;
+    margin-right: 8px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-right: 8px;
+}
+
+.badge-active {
+    font-size: 12px;
+    color: #10b981;
+    font-weight: 600;
+}
+
+.toggle-cell {
+    text-align: right;
+    width: 40px;
+}
+
+.toggle-arrow {
+    color: #94a3b8;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+/* ==========================================
+   4. PROJECT SUBTABLE
+   ========================================== */
+
+.project-rows {
+    background: #fafbfc;
+}
+
+.project-rows td {
+    padding: 0 !important;
+}
+
+.project-subtable {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.project-subtable tr th {
+    text-align: left;
+    padding: 10px 16px 10px 40px;
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.project-subrow {
     cursor: pointer;
     transition: background 0.2s ease;
 }
 
-.division-project-row:hover {
-    background: #f8fafc;
+.project-subrow:hover {
+    background: #ffffff;
+}
+
+.project-subrow td {
+    padding: 10px 16px 10px 40px;
+    font-size: 13px;
+    color: #475569;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.project-subrow td:first-child {
+    color: #334155;
+    font-weight: 500;
+}
+
+.no-projects-compact {
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
 }
 
 /* ==========================================
-   9. STATUS BADGES
+   5. STATUS BADGES
    ========================================== */
 
 .status-badge {
     display: inline-block;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
@@ -352,19 +247,20 @@
     color: #475569;
 }
 
-.status-badge.status-undefined {
+.status-badge.status-undefined,
+.status-badge.status-unbekannt {
     background: #f1f5f9;
     color: #64748b;
 }
 
 /* ==========================================
-   10. BUTTON ICONS
+   6. BUTTONS
    ========================================== */
 
 .btn-icon {
     background: transparent;
     border: none;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
     padding: 4px 8px;
     transition: all 0.2s ease;
@@ -377,186 +273,114 @@
 }
 
 /* ==========================================
-   11. STRATEGIC SUMMARY
+   7. PORTFOLIO STATUS BAR
    ========================================== */
 
-.strategic-summary {
+.portfolio-status-bar {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 24px;
-    margin-top: 32px;
+    padding: 16px 24px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
 }
 
-.strategic-summary h2 {
-    font-size: 20px;
-    color: #1e3a8a;
-    margin: 0 0 20px 0;
-    font-weight: 700;
-}
-
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-}
-
-.summary-card {
+.status-item {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
+    gap: 12px;
 }
 
-.summary-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.status-icon {
+    font-size: 24px;
 }
 
-.summary-card.positive {
-    border-left: 4px solid #10b981;
-    background: #f0fdf4;
-}
-
-.summary-card.warning {
-    border-left: 4px solid #f59e0b;
-    background: #fffbeb;
-}
-
-.summary-card.neutral {
-    border-left: 4px solid #3b82f6;
-    background: #eff6ff;
-}
-
-.summary-card.info {
-    border-left: 4px solid #6366f1;
-    background: #eef2ff;
-}
-
-.summary-icon {
-    font-size: 32px;
-}
-
-.summary-content {
-    flex: 1;
-}
-
-.summary-value {
-    font-size: 28px;
+.status-value {
+    font-size: 24px;
     font-weight: 700;
     color: #1e3a8a;
-    line-height: 1;
-    margin-bottom: 4px;
 }
 
-.summary-label {
+.status-label {
     font-size: 13px;
-    color: #475569;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-
-.summary-desc {
-    font-size: 12px;
     color: #64748b;
 }
 
-/* ==========================================
-   12. UTILITY CLASSES
-   ========================================== */
-
-.positive {
+.status-item.positive .status-value {
     color: #10b981;
 }
 
-.negative {
-    color: #ef4444;
-}
-
-.neutral {
-    color: #3b82f6;
-}
-
-.warning {
+.status-item.warning .status-value {
     color: #f59e0b;
 }
 
+.status-item.info .status-value {
+    color: #3b82f6;
+}
+
 /* ==========================================
-   13. RESPONSIVE DESIGN
+   8. UTILITY CLASSES
+   ========================================== */
+
+.positive {
+    color: #10b981 !important;
+}
+
+.negative {
+    color: #ef4444 !important;
+}
+
+.neutral {
+    color: #3b82f6 !important;
+}
+
+/* ==========================================
+   9. RESPONSIVE
    ========================================== */
 
 @media (max-width: 1200px) {
-    .division-kpis {
-        flex-direction: column;
-        gap: 8px;
+    .compact-kpi-bar {
+        flex-wrap: wrap;
     }
     
-    .division-kpi {
-        text-align: left;
+    .compact-kpi-divider {
+        display: none;
     }
 }
 
 @media (max-width: 768px) {
-    .cockpit-title h1 {
-        font-size: 24px;
+    .compact-title h1 {
+        font-size: 20px;
     }
     
-    .kpi-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-    
-    .kpi-value {
-        font-size: 24px;
-    }
-    
-    .division-card-header {
+    .compact-kpi-bar {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
     }
     
-    .division-kpis {
-        width: 100%;
-        flex-direction: row;
-        justify-content: space-between;
-    }
-    
-    .division-project-table {
-        font-size: 12px;
-    }
-    
-    .division-project-table th,
-    .division-project-table td {
-        padding: 8px;
-    }
-    
-    /* Hide less important columns on mobile */
-    .division-project-table th:nth-child(3),
-    .division-project-table td:nth-child(3),
-    .division-project-table th:nth-child(5),
-    .division-project-table td:nth-child(5) {
+    .division-table thead th:nth-child(2),
+    .division-row td:nth-child(2),
+    .project-subtable th:nth-child(3),
+    .project-subrow td:nth-child(3) {
         display: none;
+    }
+    
+    .portfolio-status-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
     }
 }
 
 /* ==========================================
-   14. OVERRIDE OLD STYLES
+   10. HIDE OLD STYLES
    ========================================== */
 
-/* Hide old cockpit welcome banner */
-.cockpit-welcome {
-    display: none !important;
-}
-
-/* Hide old BCG chart */
-#bcg-chart {
-    display: none !important;
-}
-
-/* Hide old recommendation grid */
-.recommendations-grid {
+.cockpit-welcome,
+.kpi-grid,
+.division-overview-container,
+.strategic-summary {
     display: none !important;
 }
