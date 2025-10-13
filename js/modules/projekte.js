@@ -515,33 +515,32 @@ window.openCreateProjektModal = function() {
           </div>
           
           <div class="form-group">
-          <label>Division *</label>
-          <select id="new-projekt-division" onchange="window.checkCustomDivision(this)">
-            <option value="Entwicklung">Entwicklung</option>
-            <option value="Produktion">Produktion</option>
-            <option value="Vertrieb">Vertrieb</option>
-            <option value="Service">Service</option>
-            <option value="Innovation">Innovation</option>
-            <option value="consulting">Consulting</option>
-            <option value="automation">Automation</option>
-            <option value="digitalization">Digitalization</option>
-            <option value="custom">➕ Andere (manuell eingeben)...</option>
-          </select>
-          <input type="text" id="new-projekt-division-custom" 
-                placeholder="Division eingeben..." 
-                style="display: none; margin-top: 8px; width: 100%; padding: 8px; 
-                        border: 1px solid var(--border); border-radius: 4px;">
-        </div>
-            
-            <div class="form-group">
-              <label>Status</label>
-              <select id="new-projekt-status">
-                <option value="Planung">Planung</option>
-                <option value="Aktiv" selected>Aktiv</option>
-                <option value="On Hold">On Hold</option>
-                <option value="Abgeschlossen">Abgeschlossen</option>
-              </select>
-            </div>
+            <label>Division *</label>
+            <select id="new-projekt-division" onchange="window.checkCustomDivision(this)">
+              <option value="Entwicklung">Entwicklung</option>
+              <option value="Produktion">Produktion</option>
+              <option value="Vertrieb">Vertrieb</option>
+              <option value="Service">Service</option>
+              <option value="Innovation">Innovation</option>
+              <option value="consulting">Consulting</option>
+              <option value="automation">Automation</option>
+              <option value="digitalization">Digitalization</option>
+              <option value="custom">➕ Andere (manuell eingeben)...</option>
+            </select>
+            <input type="text" id="new-projekt-division-custom" 
+                  placeholder="Division eingeben..." 
+                  style="display: none; margin-top: 8px; width: 100%; padding: 8px; 
+                          border: 1px solid var(--border); border-radius: 4px;">
+          </div>
+              
+          <div class="form-group">
+            <label>Status</label>
+            <select id="new-projekt-status">
+              <option value="Planung">Planung</option>
+              <option value="Aktiv" selected>Aktiv</option>
+              <option value="On Hold">On Hold</option>
+              <option value="Abgeschlossen">Abgeschlossen</option>
+            </select>
           </div>
           
           <div class="form-group">
