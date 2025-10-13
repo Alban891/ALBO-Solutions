@@ -3,7 +3,7 @@
  * Orchestrates initialization, event handling, and navigation
  * Enterprise entry point with proper error handling
  * 
- * FIXED: Now imports and uses cockpit.js
+ * FIXED: Tab wird jetzt auch beim ersten Besuch korrekt aktiviert
  */
 
 import CONFIG from './config.js';
@@ -11,7 +11,7 @@ import { state } from './state.js';
 import * as helpers from './helpers.js';
 import * as api from './api.js';
 import * as charts from './charts.js';
-import * as cockpit from './modules/cockpit.js'; // ← COCKPIT IMPORT HINZUGEFÜGT!
+import * as cockpit from './modules/cockpit.js';
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel.js';
 import * as projektkosten from './modules/projektkosten.js';
@@ -48,21 +48,22 @@ async function initializeApplication() {
   try {
     // Step 1: Restore previous state FIRST (before any UI changes)
     const stateRestored = state.restoreState();
+    
+    // ✅ FIX: Apply tab IMMER, nicht nur wenn restored!
     if (stateRestored) {
       console.log('✅ Previous state restored');
-      // CRITICAL: Apply restored tab IMMEDIATELY
       applyRestoredTab();
     } else {
       console.log('ℹ️ No previous state - using default (cockpit)');
-      // Ensure cockpit is active by default
       state.currentTab = 'cockpit';
+      applyRestoredTab(); // ← FIX: Auch beim ersten Besuch aufrufen!
     }
 
     // Step 2: Make modules globally available
     window.projekte = projekte;
     window.artikel = artikel;
     window.projektkosten = projektkosten;
-    window.cockpitModule = cockpit; // ← COCKPIT GLOBAL!
+    window.cockpitModule = cockpit;
     window.renderProjektOverview = projekte.renderProjektOverview;
     window.updateProjektStats = projekte.updateProjektStats;
 
@@ -103,7 +104,7 @@ async function initializeApplication() {
 function applyRestoredTab() {
   const targetTab = state.currentTab || 'cockpit';
   
-  console.log('🔄 Applying restored tab:', targetTab);
+  console.log('🔄 Applying tab:', targetTab);
 
   // Map old tab names to new names
   const tabMapping = {
@@ -130,11 +131,15 @@ function applyRestoredTab() {
   if (targetButton) {
     targetButton.classList.add('active');
     console.log('✅ Tab button activated:', mappedTab);
+  } else {
+    console.error('❌ Tab button not found:', mappedTab);
   }
   
   if (targetContent) {
     targetContent.classList.add('active');
     console.log('✅ Tab content activated:', mappedTab);
+  } else {
+    console.error('❌ Tab content not found:', mappedTab);
   }
 }
 
@@ -775,7 +780,7 @@ window.cfoDashboardMain = {
   helpers,
   api,
   charts,
-  cockpit, // ← COCKPIT EXPORT!
+  cockpit,
   saveNavigationState,
   showErrorNotification,
   formatCurrency,
