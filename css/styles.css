@@ -263,6 +263,7 @@ body {
   overflow: hidden;
   max-width: 100%;
   min-height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
+  gap: 0 !important; /* ✅ NEU: Kein Gap zwischen Main und Sidebar */
 }
 
 .dashboard-content {
@@ -276,6 +277,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-xl);
+  padding-right: 0 !important; /* ✅ NEU: Kein Padding rechts */
   background: var(--background-alt);
 }
 
@@ -1310,17 +1312,22 @@ body {
   z-index: 998;
   height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
+  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
+  padding-top: 0 !important; /* ✅ NEU: Kein Padding nach oben */
 }
 
 .ai-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 24px 20px;
   color: white;
-  border-radius: 0;
+  border-radius: 0; /* ✅ Keine runden Ecken oben */
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   position: relative;
   overflow: hidden;
   border-bottom: none;
+  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
+  border-top-left-radius: 0 !important; /* ✅ NEU: Kantig oben links */
+  border-top-right-radius: 0 !important; /* ✅ NEU: Kantig oben rechts */
 }
 
 .ai-header::before {
