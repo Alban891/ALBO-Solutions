@@ -354,7 +354,10 @@ window.toggleDivision = function(divisionClass) {
     }
 };
 
-// Export
+// Export with alias
+export const renderCockpit = renderPortfolioCockpit;
+
 export default {
-    renderPortfolioCockpit
+    renderPortfolioCockpit,
+    renderCockpit
 };
