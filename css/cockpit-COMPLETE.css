@@ -1,90 +1,103 @@
-/* ==========================================
-   COMPACT COCKPIT DESIGN
-   Horváth Style - Professional & Clean
-   ========================================== */
+/**
+ * CFO DASHBOARD - COCKPIT COMPLETE STYLES
+ * Professional Portfolio Overview with Division Analytics
+ * Version 3.0 - Compact & Powerful Design
+ */
 
-/* ==========================================
-   1. COMPACT HEADER
-   ========================================== */
+/* ========================================== */
+/* PORTFOLIO COCKPIT - MAIN CONTAINER */
+/* ========================================== */
 
-.compact-cockpit-header {
+.portfolio-cockpit {
     background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 32px;
 }
 
-.compact-title h1 {
-    font-size: 24px;
-    color: #1e3a8a;
-    margin: 0 0 16px 0;
-    font-weight: 700;
-}
+/* ========================================== */
+/* COCKPIT HEADER WITH KPIs */
+/* ========================================== */
 
-/* ==========================================
-   2. COMPACT KPI BAR (One Line!)
-   ========================================== */
-
-.compact-kpi-bar {
+.cockpit-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    padding: 32px 40px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 12px 0;
-    border-top: 1px solid #f1f5f9;
+    justify-content: space-between;
 }
 
-.compact-kpi {
+.cockpit-title {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    align-items: center;
+    gap: 16px;
 }
 
-.compact-kpi-label {
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 600;
+.cockpit-title-icon {
+    font-size: 36px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
-.compact-kpi-value {
-    font-size: 20px;
+.cockpit-title h2 {
+    font-size: 28px;
     font-weight: 700;
-    color: #1e3a8a;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.5px;
 }
 
-.compact-kpi-value.positive {
+.cockpit-kpis {
+    display: flex;
+    gap: 48px;
+    align-items: center;
+}
+
+.cockpit-kpi {
+    text-align: center;
+}
+
+.cockpit-kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.cockpit-kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* KPI Colors */
+.cockpit-kpi.kpi-projects .cockpit-kpi-value {
+    color: #ffffff;
+}
+
+.cockpit-kpi.kpi-revenue .cockpit-kpi-value {
     color: #10b981;
 }
 
-.compact-kpi-value.negative {
-    color: #ef4444;
+.cockpit-kpi.kpi-costs .cockpit-kpi-value {
+    color: #f59e0b;
 }
 
-.compact-kpi-value.neutral {
-    color: #3b82f6;
+.cockpit-kpi.kpi-db2 .cockpit-kpi-value {
+    color: #60a5fa;
 }
 
-.compact-kpi-sub {
-    font-size: 12px;
-    color: #64748b;
-}
+/* ========================================== */
+/* DIVISION TABLE - COMPACT & PROFESSIONAL */
+/* ========================================== */
 
-.compact-kpi-divider {
-    width: 1px;
-    height: 24px;
-    background: #e2e8f0;
-}
-
-/* ==========================================
-   3. DIVISION TABLE
-   ========================================== */
-
-.compact-division-container {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 24px;
+.division-table-container {
+    padding: 0;
 }
 
 .division-table {
@@ -92,295 +105,374 @@
     border-collapse: collapse;
 }
 
+/* Table Header */
 .division-table thead {
     background: #f8fafc;
-}
-
-.division-table thead th {
-    text-align: left;
-    padding: 12px 16px;
-    font-size: 11px;
-    color: #64748b;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     border-bottom: 2px solid #e2e8f0;
 }
 
-.division-row {
-    cursor: pointer;
-    transition: background 0.2s ease;
-    border-bottom: 1px solid #f1f5f9;
+.division-table th {
+    padding: 14px 24px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #64748b;
 }
 
-.division-row:hover {
+.division-table th:first-child {
+    padding-left: 40px;
+}
+
+.division-table th:last-child {
+    padding-right: 40px;
+}
+
+.division-table th.text-center {
+    text-align: center;
+}
+
+.division-table th.text-right {
+    text-align: right;
+}
+
+/* Table Body */
+.division-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease;
+}
+
+.division-table tbody tr:hover {
     background: #f8fafc;
 }
 
-.division-row td {
-    padding: 14px 16px;
+.division-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.division-table td {
+    padding: 16px 24px;
     font-size: 14px;
-    color: #334155;
+    color: #1e293b;
 }
 
-.division-icon {
-    font-size: 20px;
-    margin-right: 8px;
+.division-table td:first-child {
+    padding-left: 40px;
 }
 
-.badge {
-    display: inline-block;
-    padding: 3px 8px;
-    background: #f1f5f9;
-    border-radius: 4px;
-    font-size: 12px;
+.division-table td:last-child {
+    padding-right: 40px;
+}
+
+/* Division Name Column - NO ICONS, COMPACT */
+.division-name {
     font-weight: 600;
-    color: #475569;
-    margin-right: 8px;
+    font-size: 15px;
+    color: #1e3a8a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.badge-active {
+.division-name::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+/* Division Colors */
+.division-automotive { color: #ef4444; }
+.division-industrial { color: #f59e0b; }
+.division-healthcare { color: #ec4899; }
+.division-energy { color: #eab308; }
+.division-consumer { color: #06b6d4; }
+.division-technology { color: #3b82f6; }
+.division-services { color: #8b5cf6; }
+
+/* Project Count */
+.project-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.project-count-total {
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.project-count-active {
     font-size: 12px;
     color: #10b981;
     font-weight: 600;
 }
 
-.toggle-cell {
+/* Revenue Display */
+.revenue-value {
+    font-weight: 700;
+    font-size: 15px;
+    color: #1e293b;
     text-align: right;
-    width: 40px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.toggle-arrow {
-    color: #94a3b8;
-    font-size: 12px;
-    transition: transform 0.2s ease;
+/* DB2 Display */
+.db2-value {
+    font-weight: 700;
+    font-size: 15px;
+    text-align: right;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* ==========================================
-   4. PROJECT SUBTABLE
-   ========================================== */
-
-.project-rows {
-    background: #fafbfc;
+.db2-positive {
+    color: #10b981;
 }
 
-.project-rows td {
-    padding: 0 !important;
+.db2-negative {
+    color: #ef4444;
 }
 
-.project-subtable {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0;
-}
-
-.project-subtable tr th {
-    text-align: left;
-    padding: 10px 16px 10px 40px;
-    font-size: 11px;
-    color: #64748b;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: #f1f5f9;
-    border-top: 1px solid #e2e8f0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.project-subrow {
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.project-subrow:hover {
-    background: #ffffff;
-}
-
-.project-subrow td {
-    padding: 10px 16px 10px 40px;
-    font-size: 13px;
-    color: #475569;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.project-subrow td:first-child {
-    color: #334155;
-    font-weight: 500;
-}
-
-.no-projects-compact {
-    padding: 24px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-}
-
-/* ==========================================
-   5. STATUS BADGES
-   ========================================== */
-
-.status-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.status-badge.status-aktiv {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.status-on-hold {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.status-badge.status-abgeschlossen {
-    background: #e0e7ff;
-    color: #3730a3;
-}
-
-.status-badge.status-geplant {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-.status-badge.status-undefined,
-.status-badge.status-unbekannt {
-    background: #f1f5f9;
+.db2-neutral {
     color: #64748b;
 }
 
-/* ==========================================
-   6. BUTTONS
-   ========================================== */
-
-.btn-icon {
+/* Expand Button */
+.expand-button {
     background: transparent;
     border: none;
-    font-size: 14px;
+    color: #64748b;
+    font-size: 18px;
     cursor: pointer;
     padding: 4px 8px;
-    transition: all 0.2s ease;
-}
-
-.btn-icon:hover {
-    background: #f1f5f9;
     border-radius: 4px;
-    transform: scale(1.1);
-}
-
-/* ==========================================
-   7. PORTFOLIO STATUS BAR
-   ========================================== */
-
-.portfolio-status-bar {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px 24px;
-    display: flex;
-    gap: 32px;
-    align-items: center;
-}
-
-.status-item {
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
 }
 
-.status-icon {
-    font-size: 24px;
-}
-
-.status-value {
-    font-size: 24px;
-    font-weight: 700;
+.expand-button:hover {
+    background: #f1f5f9;
     color: #1e3a8a;
 }
 
-.status-label {
-    font-size: 13px;
-    color: #64748b;
+.expand-button.expanded {
+    transform: rotate(180deg);
+    color: #1e3a8a;
 }
 
-.status-item.positive .status-value {
+/* ========================================== */
+/* EXPANDED PROJECTS LIST */
+/* ========================================== */
+
+.division-projects {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.division-projects td {
+    padding: 0 !important;
+}
+
+.projects-list {
+    padding: 12px 40px 12px 56px;
+}
+
+.project-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+
+.project-item:hover {
+    border-color: #1e3a8a;
+    box-shadow: 0 2px 4px rgba(30, 58, 138, 0.1);
+    transform: translateX(4px);
+}
+
+.project-item:last-child {
+    margin-bottom: 0;
+}
+
+.project-item-name {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.project-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+}
+
+.project-item-revenue {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.project-item-status {
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-aktiv {
+    background: rgba(16, 185, 129, 0.1);
     color: #10b981;
 }
 
-.status-item.warning .status-value {
-    color: #f59e0b;
-}
-
-.status-item.info .status-value {
+.status-planung {
+    background: rgba(59, 130, 246, 0.1);
     color: #3b82f6;
 }
 
-/* ==========================================
-   8. UTILITY CLASSES
-   ========================================== */
-
-.positive {
-    color: #10b981 !important;
+.status-on-hold {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
 }
 
-.negative {
-    color: #ef4444 !important;
+/* ========================================== */
+/* TOTALS ROW */
+/* ========================================== */
+
+.totals-row {
+    background: #f8fafc !important;
+    border-top: 3px solid #1e3a8a !important;
+    font-weight: 700 !important;
 }
 
-.neutral {
-    color: #3b82f6 !important;
+.totals-row td {
+    padding: 20px 24px !important;
+    font-size: 15px !important;
 }
 
-/* ==========================================
-   9. RESPONSIVE
-   ========================================== */
+.totals-row .division-name {
+    color: #1e3a8a;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.totals-row .division-name::before {
+    display: none;
+}
+
+.totals-row .project-count-total {
+    font-size: 20px;
+}
+
+.totals-row .revenue-value,
+.totals-row .db2-value {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+/* ========================================== */
+/* EMPTY STATE */
+/* ========================================== */
+
+.cockpit-empty {
+    padding: 60px 40px;
+    text-align: center;
+}
+
+.cockpit-empty-icon {
+    font-size: 64px;
+    opacity: 0.3;
+    margin-bottom: 20px;
+}
+
+.cockpit-empty h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.cockpit-empty p {
+    font-size: 14px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* ========================================== */
+/* RESPONSIVE */
+/* ========================================== */
 
 @media (max-width: 1200px) {
-    .compact-kpi-bar {
-        flex-wrap: wrap;
+    .cockpit-kpis {
+        gap: 32px;
     }
     
-    .compact-kpi-divider {
-        display: none;
+    .cockpit-kpi-value {
+        font-size: 28px;
     }
 }
 
 @media (max-width: 768px) {
-    .compact-title h1 {
-        font-size: 20px;
-    }
-    
-    .compact-kpi-bar {
+    .cockpit-header {
         flex-direction: column;
+        gap: 24px;
         align-items: flex-start;
-        gap: 12px;
     }
     
-    .division-table thead th:nth-child(2),
-    .division-row td:nth-child(2),
-    .project-subtable th:nth-child(3),
-    .project-subrow td:nth-child(3) {
-        display: none;
-    }
-    
-    .portfolio-status-bar {
-        flex-direction: column;
-        align-items: flex-start;
+    .cockpit-kpis {
+        width: 100%;
+        justify-content: space-between;
         gap: 16px;
+    }
+    
+    .cockpit-kpi-value {
+        font-size: 24px;
+    }
+    
+    .division-table th,
+    .division-table td {
+        padding: 12px 16px;
+    }
+    
+    .division-table th:first-child,
+    .division-table td:first-child {
+        padding-left: 20px;
+    }
+    
+    .division-table th:last-child,
+    .division-table td:last-child {
+        padding-right: 20px;
     }
 }
 
-/* ==========================================
-   10. HIDE OLD STYLES
-   ========================================== */
+/* ========================================== */
+/* ANIMATIONS */
+/* ========================================== */
 
-.cockpit-welcome,
-.kpi-grid,
-.division-overview-container,
-.strategic-summary {
-    display: none !important;
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+.division-projects {
+    animation: slideDown 0.3s ease;
 }
