@@ -1314,27 +1314,28 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: fixed; /* ✅ FIXED - bleibt beim Scrollen */
-  top: 60px; /* ✅ Direkt unter Header */
-  right: 0; /* ✅ Rechts fixiert */
-  z-index: 1030; /* ✅ HÖHER als Navigation (1020) */
-  height: calc(100vh - 60px); /* ✅ Volle Höhe minus Header */
+  position: fixed;
+  top: 0; /* ✅ GEÄNDERT: Top des Viewports */
+  right: 0;
+  z-index: 1010; /* ✅ GEÄNDERT: UNTER Header (1020) */
+  height: 100vh; /* ✅ GEÄNDERT: Volle Viewport-Höhe */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
-  overflow-y: auto; /* ✅ NEU: Scrollbar wenn nötig */
+  overflow-y: auto;
+  padding-top: 60px; /* ✅ NEU: Padding oben = Header-Höhe */
 }
 
 .ai-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   padding: 24px 20px;
   color: white;
-  border-radius: 0; /* ✅ Keine runden Ecken oben */
+  border-radius: 0;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  position: relative;
+  position: sticky; /* ✅ NEU: Sticky innerhalb Sidebar */
+  top: 0; /* ✅ NEU: Bleibt oben beim Scrollen */
   overflow: hidden;
   border-bottom: none;
-  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
-  border-top-left-radius: 0 !important; /* ✅ NEU: Kantig oben links */
-  border-top-right-radius: 0 !important; /* ✅ NEU: Kantig oben rechts */
+  z-index: 1; /* ✅ NEU: Über Content in Sidebar */
+  margin-top: -60px; /* ✅ NEU: Negiert das padding-top */
 }
 
 .ai-header::before {
