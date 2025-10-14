@@ -226,8 +226,10 @@ body {
   display: flex;
   gap: var(--spacing-sm);
   position: sticky;
-  top: 60px; /* ✅ ANGEPASST von 73px auf 60px */
+  top: 60px;
   z-index: 1020;
+  max-width: calc(100% - 420px); /* ✅ NEU: Navigation endet vor Sidebar (420px = Sidebar-Breite) */
+  width: 100%; /* ✅ NEU */
 }
 
 .tab-btn {
