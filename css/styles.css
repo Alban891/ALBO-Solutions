@@ -228,8 +228,10 @@ body {
   position: sticky;
   top: 60px;
   z-index: 1020;
-  max-width: calc(100% - 420px); /* ✅ NEU: Navigation endet vor Sidebar (420px = Sidebar-Breite) */
-  width: 100%; /* ✅ NEU */
+  max-width: calc(100% - 420px); /* ✅ Navigation endet vor Sidebar */
+  width: 100%;
+  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
+  margin-bottom: 0 !important; /* ✅ NEU: Kein Abstand nach unten */
 }
 
 .tab-btn {
@@ -280,8 +282,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  padding-right: 0 !important; /* ✅ KEIN PADDING RECHTS */
-  margin-right: 0 !important; /* ✅ KEIN MARGIN RECHTS */
+  padding-right: var(--spacing-xl); /* ✅ Normales Padding */
+  margin-right: 420px; /* ✅ NEU: Platz für Sidebar */
   background: var(--background-alt);
 }
 
@@ -1312,12 +1314,13 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: relative; /* ✅ ZURÜCK zu relative */
-  z-index: 998;
-  height: calc(100vh - 120px);
+  position: fixed; /* ✅ FIXED - bleibt beim Scrollen */
+  top: 60px; /* ✅ Direkt unter Header */
+  right: 0; /* ✅ Rechts fixiert */
+  z-index: 1030; /* ✅ HÖHER als Navigation (1020) */
+  height: calc(100vh - 60px); /* ✅ Volle Höhe minus Header */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
-  margin-top: 0 !important; /* ✅ BLEIBT */
-  padding-top: 0 !important; /* ✅ BLEIBT */
+  overflow-y: auto; /* ✅ NEU: Scrollbar wenn nötig */
 }
 
 .ai-header {
