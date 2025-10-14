@@ -1330,16 +1330,6 @@ body {
   border-top-right-radius: 0 !important; /* ✅ NEU: Kantig oben rechts */
 }
 
-/* ALBO Panel - Kein Abstand nach oben */
-.albo-monitor-feed {
-  margin-top: 0 !important;
-  padding-top: 0 !important;
-}
-
-.albo-chat-messages {
-  padding-top: 0 !important;
-}
-
 .ai-header::before {
   content: '';
   position: absolute;
