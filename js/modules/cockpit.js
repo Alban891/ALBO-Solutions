@@ -142,34 +142,30 @@ function groupByDivision(projekte) {
 /**
  * Render cockpit header with KPIs
  */
+/**
+ * Render cockpit header with KPIs
+ */
 function renderCockpitHeader(kpis) {
     return `
-        <div class="cockpit-header">
-            <div class="cockpit-title">
-                <div class="cockpit-title-icon">📊</div>
-                <h2>Portfolio Cockpit</h2>
+        <div class="cockpit-kpis-only">
+            <div class="cockpit-kpi kpi-projects">
+                <div class="cockpit-kpi-value">${kpis.projects}</div>
+                <div class="cockpit-kpi-label">Projekte</div>
             </div>
             
-            <div class="cockpit-kpis">
-                <div class="cockpit-kpi kpi-projects">
-                    <div class="cockpit-kpi-value">${kpis.projects}</div>
-                    <div class="cockpit-kpi-label">Projekte</div>
-                </div>
-                
-                <div class="cockpit-kpi kpi-revenue">
-                    <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.revenue)}</div>
-                    <div class="cockpit-kpi-label">Umsatz (Plan)</div>
-                </div>
-                
-                <div class="cockpit-kpi kpi-costs">
-                    <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.costs)}</div>
-                    <div class="cockpit-kpi-label">Projektkosten</div>
-                </div>
-                
-                <div class="cockpit-kpi kpi-db2">
-                    <div class="cockpit-kpi-value">${helpers.formatPercentage(kpis.db2Percent)}</div>
-                    <div class="cockpit-kpi-label">Ø DB2</div>
-                </div>
+            <div class="cockpit-kpi kpi-revenue">
+                <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.revenue)}</div>
+                <div class="cockpit-kpi-label">Umsatz (Plan)</div>
+            </div>
+            
+            <div class="cockpit-kpi kpi-costs">
+                <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.costs)}</div>
+                <div class="cockpit-kpi-label">Projektkosten</div>
+            </div>
+            
+            <div class="cockpit-kpi kpi-db2">
+                <div class="cockpit-kpi-value">${helpers.formatPercentage(kpis.db2Percent)}</div>
+                <div class="cockpit-kpi-label">Ø DB2</div>
             </div>
         </div>
     `;
