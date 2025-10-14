@@ -1308,12 +1308,12 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: relative;
+  position: fixed; /* ✅ GEÄNDERT: relative → fixed */
+  top: 108px; /* ✅ NEU: Direkt unter Navigation (60px Header + 48px Nav) */
+  right: 0; /* ✅ NEU: Rechts fixiert */
   z-index: 998;
-  height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
+  height: calc(100vh - 108px); /* ✅ GEÄNDERT: -120px → -108px */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
-  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
-  padding-top: 0 !important; /* ✅ NEU: Kein Padding nach oben */
 }
 
 .ai-header {
