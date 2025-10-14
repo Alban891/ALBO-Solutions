@@ -10,6 +10,19 @@ import * as helpers from './helpers.js';
 window.dashboardCharts = window.dashboardCharts || {};
 
 /**
+ * Initialize charts module on application start
+ */
+export function initializeCharts() {
+    console.log('📊 Initializing charts module...');
+    
+    // Initialize empty chart storage
+    window.dashboardCharts = {};
+    
+    console.log('✅ Charts module ready');
+    return true;
+}
+
+/**
  * Update all charts after data changes
  * Called when artikel/projekt is saved
  */
