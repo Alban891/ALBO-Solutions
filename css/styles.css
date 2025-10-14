@@ -262,8 +262,9 @@ body {
   flex: 1;
   overflow: hidden;
   max-width: 100%;
-  min-height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
-  gap: 0 !important; /* ✅ NEU: Kein Gap zwischen Main und Sidebar */
+  min-height: calc(100vh - 120px);
+  gap: 0 !important; /* ✅ KEIN GAP */
+  align-items: flex-start; /* ✅ BEIDE OBEN AUSRICHTEN */
 }
 
 .dashboard-content {
@@ -277,7 +278,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  padding-right: 0 !important; /* ✅ NEU: Kein Padding rechts */
+  padding-right: 0 !important; /* ✅ KEIN PADDING RECHTS */
+  margin-right: 0 !important; /* ✅ KEIN MARGIN RECHTS */
   background: var(--background-alt);
 }
 
@@ -1308,12 +1310,12 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: fixed; /* ✅ GEÄNDERT: relative → fixed */
-  top: 108px; /* ✅ NEU: Direkt unter Navigation (60px Header + 48px Nav) */
-  right: 0; /* ✅ NEU: Rechts fixiert */
+  position: relative; /* ✅ ZURÜCK zu relative */
   z-index: 998;
-  height: calc(100vh - 108px); /* ✅ GEÄNDERT: -120px → -108px */
+  height: calc(100vh - 120px);
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
+  margin-top: 0 !important; /* ✅ BLEIBT */
+  padding-top: 0 !important; /* ✅ BLEIBT */
 }
 
 .ai-header {
