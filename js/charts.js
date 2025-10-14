@@ -173,9 +173,27 @@ export function destroyAllCharts() {
     window.dashboardCharts = {};
 }
 
-// Export default
+/**
+ * Resize all charts (called on window resize)
+ */
+export function resizeAllCharts() {
+    if (window.dashboardCharts) {
+        Object.values(window.dashboardCharts).forEach(chartInstance => {
+            if (chartInstance && typeof chartInstance.resize === 'function') {
+                try {
+                    chartInstance.resize();
+                } catch (e) {
+                    console.warn('Failed to resize chart:', e);
+                }
+            }
+        });
+    }
+}
+
 export default {
+    initializeCharts,
     updateAllCharts,
     initChart,
-    destroyAllCharts
+    destroyAllCharts,
+    resizeAllCharts
 };
