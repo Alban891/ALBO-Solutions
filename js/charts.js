@@ -1,503 +1,168 @@
 /**
- * CFO Dashboard - Chart Management
- * Enterprise Chart.js wrapper with performance optimization
- * Provides API for cockpit.js to render portfolio/project charts
+ * CFO Dashboard - Charts Module
+ * Manages all Chart.js instances and data visualization
  */
 
-import CONFIG from './config.js';
 import { state } from './state.js';
+import * as helpers from './helpers.js';
 
-// ==========================================
-// CHART INSTANCES REGISTRY
-// ==========================================
-
-const chartRegistry = {
-  umsatzChart: null,
-  absatzChart: null,
-  db2Chart: null,
-  projektkostenChart: null,
-  db3JahrChart: null,
-  db3KumuliertChart: null
-};
-
-// ==========================================
-// INITIALIZATION
-// ==========================================
+// Store chart instances globally
+window.dashboardCharts = window.dashboardCharts || {};
 
 /**
- * Initialize all dashboard charts
- * @returns {Promise<boolean>} Success status
+ * Update all charts after data changes
+ * Called when artikel/projekt is saved
  */
-export async function initializeCharts() {
-  try {
-    console.log('🎨 Initializing charts...');
-
-    // Wait for Chart.js library
-    if (typeof Chart === 'undefined') {
-      console.error('❌ Chart.js library not loaded');
-      return false;
-    }
-
-    // Set global Chart.js defaults
-    Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-    Chart.defaults.color = '#6b7280';
-
-    // Initialize each chart
-    initUmsatzChart();
-    initAbsatzChart();
-    initDB2Chart();
-    initProjektkostenChart();
-    initDB3JahrChart();
-    initDB3KumuliertChart();
-
-    console.log('✅ All charts initialized');
-    return true;
-
-  } catch (error) {
-    console.error('❌ Chart initialization failed:', error);
-    return false;
-  }
-}
-
-// ==========================================
-// INDIVIDUAL CHART INITIALIZERS
-// ==========================================
-
-/**
- * Initialize Umsatz (Revenue) Chart
- */
-function initUmsatzChart() {
-  const ctx = document.getElementById('umsatz-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ umsatz-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.umsatzChart) {
-    chartRegistry.umsatzChart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.umsatzChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [{
-        label: 'Umsatz (k€)',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        backgroundColor: '#2563eb',
-        borderColor: '#2563eb',
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return context.parsed.y.toFixed(1) + ' k€';
-            }
-          }
+export function updateAllCharts() {
+    console.log('📊 Updating all charts...');
+    
+    try {
+        // Recalculate portfolio metrics
+        const projekte = state.getAllProjekte();
+        
+        let totalNPV = 0;
+        let totalRevenue = 0;
+        let totalDB2 = 0;
+        let projektCount = projekte.length;
+        
+        // Calculate totals from all projects
+        projekte.forEach(projekt => {
+            const artikel = state.getArtikelByProjekt(projekt.id);
+            
+            artikel.forEach(art => {
+                // Calculate revenue for each year
+                Object.keys(art.volumes || {}).forEach(year => {
+                    const volume = art.volumes[year] || 0;
+                    const price = art.prices[year] || 0;
+                    const hk = art.hk || 0;
+                    
+                    const revenue = (volume * price) / 1000; // Convert to k€
+                    const costs = (volume * hk) / 1000;
+                    const db2 = revenue - costs;
+                    
+                    totalRevenue += revenue;
+                    totalDB2 += db2;
+                });
+            });
+        });
+        
+        // Calculate NPV (simplified - without discounting for now)
+        totalNPV = totalDB2;
+        
+        // Calculate average margin
+        const avgMargin = totalRevenue > 0 ? (totalDB2 / totalRevenue) * 100 : 0;
+        
+        // Calculate payback (simplified)
+        const payback = totalRevenue > 0 ? (totalRevenue / (totalRevenue / 5)) : 0;
+        
+        // Update header stats
+        updateHeaderStats({
+            npv: totalNPV,
+            payback: payback,
+            revenue: totalRevenue,
+            margin: avgMargin
+        });
+        
+        // Update Chart.js instances if they exist
+        if (window.dashboardCharts) {
+            Object.values(window.dashboardCharts).forEach(chartInstance => {
+                if (chartInstance && typeof chartInstance.update === 'function') {
+                    try {
+                        chartInstance.update();
+                    } catch (e) {
+                        console.warn('Failed to update chart:', e);
+                    }
+                }
+            });
         }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return value + ' k€';
-            }
-          }
-        }
-      }
+        
+        console.log('✅ Charts updated', {
+            totalNPV: helpers.formatRevenue(totalNPV),
+            totalRevenue: helpers.formatRevenue(totalRevenue),
+            avgMargin: helpers.formatPercentage(avgMargin),
+            projektCount: projektCount
+        });
+        
+    } catch (error) {
+        console.error('❌ Error updating charts:', error);
     }
-  });
 }
 
 /**
- * Initialize Absatz (Volume) Chart
+ * Update header statistics
  */
-function initAbsatzChart() {
-  const ctx = document.getElementById('absatz-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ absatz-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.absatzChart) {
-    chartRegistry.absatzChart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.absatzChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [{
-        label: 'Absatz (Tsd. Stück)',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        backgroundColor: '#6b7280',
-        borderColor: '#4b5563',
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return value.toFixed(1) + ' k';
-            }
-          }
-        }
-      }
+function updateHeaderStats(stats) {
+    const npvEl = document.getElementById('npv-value');
+    const paybackEl = document.getElementById('payback-value');
+    const revenueEl = document.getElementById('revenue-value');
+    const marginEl = document.getElementById('margin-value');
+    
+    if (npvEl) {
+        npvEl.textContent = formatHeaderValue(stats.npv, 'M€');
     }
-  });
-}
-
-/**
- * Initialize DB2 (Margin) Chart - Dual Axis
- */
-function initDB2Chart() {
-  const ctx = document.getElementById('db2-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ db2-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.db2Chart) {
-    chartRegistry.db2Chart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.db2Chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [
-        {
-          label: 'DB2 (k€)',
-          data: [0, 0, 0, 0, 0, 0, 0],
-          backgroundColor: '#6b7280',
-          borderColor: '#4b5563',
-          borderWidth: 1,
-          borderRadius: 4,
-          yAxisID: 'y'
-        },
-        {
-          label: 'DB2 Marge (%)',
-          data: [0, 0, 0, 0, 0, 0, 0],
-          type: 'line',
-          borderColor: '#4b5563',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 4,
-          pointBackgroundColor: '#4b5563',
-          yAxisID: 'y1'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return value + ' k€';
-            }
-          }
-        },
-        y1: {
-          type: 'linear',
-          display: true,
-          position: 'right',
-          beginAtZero: true,
-          max: 50,
-          ticks: {
-            callback: function(value) {
-              return value + '%';
-            }
-          },
-          grid: {
-            drawOnChartArea: false
-          }
-        }
-      }
+    
+    if (paybackEl) {
+        paybackEl.textContent = stats.payback.toFixed(1) + 'J';
     }
-  });
-}
-
-/**
- * Initialize Projektkosten Chart
- */
-function initProjektkostenChart() {
-  const ctx = document.getElementById('projektkosten-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ projektkosten-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.projektkostenChart) {
-    chartRegistry.projektkostenChart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.projektkostenChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [{
-        label: 'Projektkosten (k€)',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        backgroundColor: '#f59e0b',
-        borderColor: '#f59e0b',
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: function(value) {
-              return value + ' k€';
-            }
-          }
-        }
-      }
+    
+    if (revenueEl) {
+        revenueEl.textContent = formatHeaderValue(stats.revenue, 'M€');
     }
-  });
-}
-
-/**
- * Initialize DB3 Jahreswerte Chart
- */
-function initDB3JahrChart() {
-  const ctx = document.getElementById('db3-jahr-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ db3-jahr-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.db3JahrChart) {
-    chartRegistry.db3JahrChart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.db3JahrChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [{
-        label: 'DB3 (k€)',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        backgroundColor: function(context) {
-          const value = context.parsed?.y || 0;
-          return value < 0 ? '#ef4444' : '#10b981';
-        },
-        borderColor: '#4b5563',
-        borderWidth: 1,
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: false,
-          ticks: {
-            callback: function(value) {
-              return value + ' k€';
-            }
-          }
-        }
-      }
+    
+    if (marginEl) {
+        marginEl.textContent = Math.round(stats.margin) + '%';
     }
-  });
 }
 
 /**
- * Initialize DB3 Kumuliert Chart
+ * Format value for header display
  */
-function initDB3KumuliertChart() {
-  const ctx = document.getElementById('db3-kumuliert-chart')?.getContext('2d');
-  if (!ctx) {
-    console.warn('⚠️ db3-kumuliert-chart element not found');
-    return;
-  }
-
-  if (chartRegistry.db3KumuliertChart) {
-    chartRegistry.db3KumuliertChart.destroy();
-  }
-
-  const years = [2025, 2026, 2027, 2028, 2029, 2030, 2031];
-
-  chartRegistry.db3KumuliertChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: years.map(y => y.toString()),
-      datasets: [{
-        label: 'DB3 Kumuliert (k€)',
-        data: [0, 0, 0, 0, 0, 0, 0],
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#10b981',
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: false,
-          ticks: {
-            callback: function(value) {
-              return value + ' k€';
-            }
-          }
-        }
-      }
+function formatHeaderValue(value, unit) {
+    if (value >= 1000) {
+        return '+' + (value / 1000).toFixed(1) + unit;
     }
-  });
-}
-
-// ==========================================
-// CHART UPDATE API (for cockpit.js)
-// ==========================================
-
-/**
- * Update specific chart with custom data
- * Used by cockpit.js for portfolio/project specific updates
- * @param {string} chartName - Name of chart (e.g., 'umsatzChart')
- * @param {Array} data - Array of data values
- * @param {string} label - Optional label for dataset
- */
-export function updateChartData(chartName, data, label) {
-  const chart = chartRegistry[chartName];
-  if (!chart) {
-    console.warn(`⚠️ Chart ${chartName} not found`);
-    return;
-  }
-
-  chart.data.datasets[0].data = data;
-  if (label) {
-    chart.data.datasets[0].label = label;
-  }
-  chart.update('none'); // No animation for performance
+    return '+' + value.toFixed(1) + unit;
 }
 
 /**
- * Update DB2 Chart (dual axis - special case)
+ * Initialize a Chart.js chart
  */
-export function updateDB2ChartData(dataAbsolute, dataPercent) {
-  const chart = chartRegistry.db2Chart;
-  if (!chart) {
-    console.warn('⚠️ db2Chart not found');
-    return;
-  }
-
-  chart.data.datasets[0].data = dataAbsolute;
-  chart.data.datasets[1].data = dataPercent;
-  chart.update('none');
-}
-
-// ==========================================
-// CHART UTILITIES
-// ==========================================
-
-/**
- * Get specific chart instance
- * @param {string} chartName - Chart name (e.g., 'umsatzChart')
- * @returns {Chart|null} Chart instance
- */
-export function getChart(chartName) {
-  return chartRegistry[chartName] || null;
-}
-
-/**
- * Check if charts are initialized
- * @returns {boolean} Initialization status
- */
-export function areChartsInitialized() {
-  return Object.values(chartRegistry).some(chart => chart !== null);
-}
-
-/**
- * Resize all charts (for responsive behavior)
- */
-export function resizeAllCharts() {
-  Object.values(chartRegistry).forEach(chart => {
-    if (chart) {
-      chart.resize();
+export function initChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.warn('Canvas not found:', canvasId);
+        return null;
     }
-  });
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (window.dashboardCharts[canvasId]) {
+        window.dashboardCharts[canvasId].destroy();
+    }
+    
+    // Create new chart
+    const chart = new Chart(ctx, config);
+    window.dashboardCharts[canvasId] = chart;
+    
+    return chart;
 }
 
 /**
- * Destroy all charts (cleanup)
+ * Destroy all charts
  */
 export function destroyAllCharts() {
-  Object.keys(chartRegistry).forEach(key => {
-    if (chartRegistry[key]) {
-      chartRegistry[key].destroy();
-      chartRegistry[key] = null;
-    }
-  });
-  
-  console.log('🧹 All charts destroyed');
+    Object.values(window.dashboardCharts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
+        }
+    });
+    window.dashboardCharts = {};
 }
 
-// ==========================================
-// EXPORTS
-// ==========================================
-
+// Export default
 export default {
-  initializeCharts,
-  updateChartData,
-  updateDB2ChartData,
-  getChart,
-  areChartsInitialized,
-  resizeAllCharts,
-  destroyAllCharts
+    updateAllCharts,
+    initChart,
+    destroyAllCharts
 };
