@@ -4,6 +4,57 @@
  * Version 3.0 - Compact & Powerful Design
  */
 
+ /* ========================================== */
+/* KPIs ONLY - NO BLUE HEADER */
+/* ========================================== */
+
+.cockpit-kpis-only {
+    display: flex;
+    gap: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 40px;
+    background: white;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.cockpit-kpis-only .cockpit-kpi {
+    text-align: center;
+}
+
+.cockpit-kpis-only .cockpit-kpi-value {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.cockpit-kpis-only .cockpit-kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #64748b;
+}
+
+/* KPI Colors - Clean Version */
+.cockpit-kpis-only .kpi-projects .cockpit-kpi-value {
+    color: #1e3a8a;
+}
+
+.cockpit-kpis-only .kpi-revenue .cockpit-kpi-value {
+    color: #10b981;
+}
+
+.cockpit-kpis-only .kpi-costs .cockpit-kpi-value {
+    color: #f59e0b;
+}
+
+.cockpit-kpis-only .kpi-db2 .cockpit-kpi-value {
+    color: #3b82f6;
+}
+
 /* ========================================== */
 /* PORTFOLIO COCKPIT - MAIN CONTAINER */
 /* ========================================== */
