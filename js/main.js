@@ -228,18 +228,17 @@ async function initializeApplication() {
     startAIInsightsTimer();
 
     // ==========================================
-    // Step 9: Tutorial starten wenn Erstnutzer
+    // Step 9: Tutorial-Willkommens-Banner anzeigen (wenn Erstnutzer)
     // ==========================================
     console.log('9️⃣ Checking tutorial state...');
     const hasCompletedTutorial = state.tutorialState?.completed?.length > 0;
     const tutorialDismissed = state.tutorialState?.dismissed;
     
     if (!hasCompletedTutorial && !tutorialDismissed) {
-      // Warte bis UI fertig geladen ist
+      // Zeige Willkommens-Banner mit Tutorial-Option
       setTimeout(() => {
-        console.log('🎓 Starting tutorial for first-time user...');
-        tutorialController.start();
-      }, 1500); // 1.5 Sekunden Verzögerung
+        showWelcomeBanner();
+      }, 1000);
     } else {
       console.log('ℹ️ Tutorial already completed or dismissed');
     }
@@ -807,6 +806,129 @@ export function formatPercentage(value) {
     maximumFractionDigits: 1
   }).format(value / 100);
 }
+
+// ==========================================
+// WELCOME BANNER (First-Time User)
+// ==========================================
+
+/**
+ * Show welcome banner with tutorial option
+ */
+function showWelcomeBanner() {
+  const banner = document.createElement('div');
+  banner.id = 'welcome-banner';
+  banner.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    z-index: 10001;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+  `;
+  
+  banner.innerHTML = `
+    <div style="font-size: 64px; margin-bottom: 20px; animation: wave 2s infinite;">
+      👋
+    </div>
+    <h2 style="font-size: 28px; font-weight: 700; margin-bottom: 16px; line-height: 1.3;">
+      Willkommen im CFO Dashboard!
+    </h2>
+    <p style="font-size: 16px; margin-bottom: 32px; opacity: 0.95; line-height: 1.6;">
+      Möchtest du eine <strong>geführte Tour</strong> machen oder direkt loslegen?
+    </p>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button onclick="startTutorialFromBanner()" style="
+        width: 100%;
+        padding: 16px 24px;
+        background: white;
+        color: #1e40af;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        🎓 Geführtes Tutorial starten
+      </button>
+      
+      <button onclick="dismissWelcomeBanner()" style="
+        width: 100%;
+        padding: 16px 24px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+        📁 Direkt loslegen
+      </button>
+    </div>
+    
+    <p style="font-size: 12px; margin-top: 20px; opacity: 0.7;">
+      Du kannst das Tutorial jederzeit über den Button rechts oben starten.
+    </p>
+  `;
+  
+  // Create backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'welcome-backdrop';
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+  `;
+  
+  document.body.appendChild(backdrop);
+  document.body.appendChild(banner);
+}
+
+/**
+ * Start tutorial from welcome banner
+ */
+window.startTutorialFromBanner = function() {
+  // Remove banner
+  document.getElementById('welcome-banner')?.remove();
+  document.getElementById('welcome-backdrop')?.remove();
+  
+  // Start tutorial
+  tutorialController.start();
+};
+
+/**
+ * Dismiss welcome banner (user wants to work freely)
+ */
+window.dismissWelcomeBanner = function() {
+  // Remove banner
+  document.getElementById('welcome-banner')?.remove();
+  document.getElementById('welcome-backdrop')?.remove();
+  
+  // Mark as dismissed
+  state.tutorialState = {
+    active: false,
+    step: 0,
+    completed: [],
+    dismissed: true
+  };
+  state.saveState();
+  
+  console.log('ℹ️ User dismissed welcome banner - can work freely');
+};
 
 // ==========================================
 // AUTO-INITIALIZATION
