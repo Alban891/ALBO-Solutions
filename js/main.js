@@ -323,7 +323,11 @@ async function loadInitialData() {
       // ✅ RENDER COCKPIT!
       console.log('📊 Rendering cockpit after data load...');
       setTimeout(() => {
-        cockpit.renderCockpit();
+        if (cockpit && typeof cockpit.renderCockpit === 'function') {
+          cockpit.renderCockpit();
+        } else {
+          console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
+        }
       }, 100);
       
     } else if (currentTab === 'projekte') {
@@ -421,7 +425,11 @@ window.switchTab = function(tabName) {
     // ✅ RENDER COCKPIT!
     console.log('📊 Rendering cockpit...');
     setTimeout(() => {
-      cockpit.renderCockpit();
+      if (cockpit && typeof cockpit.renderCockpit === 'function') {
+        cockpit.renderCockpit();
+      } else {
+        console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
+      }
     }, 100);
     
   } else if (tabName === 'projekte') {
