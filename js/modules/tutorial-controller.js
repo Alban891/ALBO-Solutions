@@ -168,11 +168,54 @@ class TutorialController {
     };
     state.saveState();
     
+    // ✅ STEP 1: Show welcome message in ALBO sidebar
+    this.showAlboWelcome();
+    
+    // ✅ STEP 2: Switch to Projekte tab after 2 seconds
+    setTimeout(() => {
+      if (window.switchTab) {
+        window.switchTab('projekte');
+      }
+    }, 2000);
+    
     // Setup event listeners
     this.setupEventListeners();
     
-    // Show first step
-    setTimeout(() => this.showStep(1), 500);
+    // ✅ STEP 3: Show first step (highlight button) after 3 seconds
+    setTimeout(() => this.showStep(1), 3000);
+  }
+
+  /**
+   * Show welcome message in ALBO sidebar
+   */
+  showAlboWelcome() {
+    // Add welcome message to ALBO chat
+    const messagesContainer = document.getElementById('albo-chat-messages');
+    if (!messagesContainer) {
+      console.warn('ALBO chat messages container not found');
+      return;
+    }
+    
+    const welcomeMsg = document.createElement('div');
+    welcomeMsg.className = 'albo-chat-message assistant tutorial-welcome';
+    welcomeMsg.innerHTML = `
+      <div style="padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                  border-radius: 12px; color: white; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px; animation: wave 2s infinite;">👋</div>
+        <div style="font-size: 20px; font-weight: 700; margin-bottom: 12px;">
+          Herzlich Willkommen!
+        </div>
+        <div style="font-size: 14px; line-height: 1.6; opacity: 0.95;">
+          Lass uns gemeinsam dein erstes Projekt anlegen.<br>
+          Ich zeige dir Schritt für Schritt, wie es geht!
+        </div>
+      </div>
+    `;
+    
+    messagesContainer.appendChild(welcomeMsg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    console.log('✅ ALBO welcome message shown');
   }
 
   stop() {
