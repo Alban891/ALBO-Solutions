@@ -3,8 +3,9 @@
  * Orchestrates initialization, event handling, and navigation
  * Enterprise entry point with proper error handling
  * 
- * Version: 3.0 - October 2025
+ * Version: 3.1 - October 2025
  * Features: Tutorial System, Deep Navigation Restore, AI Controller
+ * FIXED: Export conflicts, function hoisting, state references
  */
 
 import CONFIG from './config.js';
@@ -34,6 +35,128 @@ window.cfoDashboard = {
   
   // AI Controller (will be initialized later)
   aiController: null
+};
+
+// ==========================================
+// GLOBAL FUNCTIONS (Exposed for HTML onclick)
+// ⚠️ MUST BE DEFINED BEFORE INITIALIZATION
+// ==========================================
+
+/**
+ * Switch main tab
+ */
+window.switchTab = function(tabName) {
+  // Check if already on this tab
+  const currentTab = state.currentTab;
+  if (currentTab === tabName) {
+    console.log('ℹ️ Already on tab:', tabName);
+    return; // ✓ EXIT EARLY - no need to switch
+  }
+
+  console.log('📑 Switching to tab:', tabName);
+
+  // Update UI
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+
+  const targetButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+  const targetContent = document.getElementById(`tab-${tabName}`);
+
+  if (targetButton) targetButton.classList.add('active');
+  if (targetContent) targetContent.classList.add('active');
+
+  // Handle tab-specific rendering
+  if (tabName === 'cockpit') {
+    // ✅ RENDER COCKPIT!
+    console.log('📊 Rendering cockpit...');
+    setTimeout(() => {
+      if (cockpit && typeof cockpit.renderCockpit === 'function') {
+        cockpit.renderCockpit();
+      } else {
+        console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
+      }
+    }, 100);
+    
+  } else if (tabName === 'projekte') {
+    // Reset views when switching to projekte
+    const projektOverview = document.getElementById('projekt-overview');
+    const artikelOverview = document.getElementById('artikel-overview');
+    
+    if (projektOverview) projektOverview.style.display = 'block';
+    if (artikelOverview) artikelOverview.style.display = 'none';
+    
+    window.cfoDashboard.currentProjekt = null;
+    window.cfoDashboard.currentArtikel = null;
+    
+    // ✓ Render projekt overview (only if switching TO projekte)
+    if (window.renderProjektOverview) {
+      window.renderProjektOverview();
+    }
+    if (window.updateProjektStats) {
+      window.updateProjektStats();
+    }
+  }
+
+  // Save state
+  state.currentTab = tabName;
+  saveNavigationState();
+
+  // AI Feedback
+  if (window.cfoDashboard.aiController) {
+    window.cfoDashboard.aiController.addAIMessage({
+      level: 'info',
+      title: '📑 Tab gewechselt',
+      text: `Ansicht "${getTabDisplayName(tabName)}" aktiviert.`,
+      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+    });
+  }
+};
+
+/**
+ * Adjust dashboard assumptions (sliders)
+ */
+window.adjustAssumption = function(type, value) {
+  console.log(`🎚️ Adjusting ${type} to ${value}`);
+
+  switch(type) {
+    case 'market':
+      state.currentValues.marketVolume = value;
+      helpers.setInputValue('market-value', value + '%');
+      break;
+      
+    case 'price':
+      state.currentValues.pricePremium = value;
+      const priceDiff = value - 100;
+      helpers.setInputValue('price-value', (priceDiff >= 0 ? '+' : '') + priceDiff + '%');
+      break;
+      
+    case 'capex':
+      state.currentValues.capexRisk = value;
+      const capexText = value > 110 ? 'Überschreitung' : value < 90 ? 'Einsparung' : 'Plan';
+      helpers.setInputValue('capex-value', capexText);
+      break;
+  }
+
+  // Update all charts with new values
+  charts.updateAllCharts();
+
+  // Save state
+  state.saveState();
+
+  // AI Feedback
+  if (window.cfoDashboard.aiController) {
+    window.cfoDashboard.aiController.addAIMessage({
+      level: 'info',
+      title: '📊 Dashboard aktualisiert',
+      text: `${type === 'market' ? 'Marktvolumen' : type === 'price' ? 'Preis-Premium' : 'CAPEX-Risiko'} angepasst auf ${value}%`,
+      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+    });
+  }
 };
 
 // ==========================================
@@ -433,127 +556,6 @@ function getCurrentActiveTab() {
 }
 
 // ==========================================
-// GLOBAL FUNCTIONS (Exposed for HTML onclick)
-// ==========================================
-
-/**
- * Switch main tab
- */
-window.switchTab = function(tabName) {
-  // Check if already on this tab
-  const currentTab = state.currentTab;
-  if (currentTab === tabName) {
-    console.log('ℹ️ Already on tab:', tabName);
-    return; // ✓ EXIT EARLY - no need to switch
-  }
-
-  console.log('📑 Switching to tab:', tabName);
-
-  // Update UI
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-
-  const targetButton = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
-  const targetContent = document.getElementById(`tab-${tabName}`);
-
-  if (targetButton) targetButton.classList.add('active');
-  if (targetContent) targetContent.classList.add('active');
-
-  // Handle tab-specific rendering
-  if (tabName === 'cockpit') {
-    // ✅ RENDER COCKPIT!
-    console.log('📊 Rendering cockpit...');
-    setTimeout(() => {
-      if (cockpit && typeof cockpit.renderCockpit === 'function') {
-        cockpit.renderCockpit();
-      } else {
-        console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
-      }
-    }, 100);
-    
-  } else if (tabName === 'projekte') {
-    // Reset views when switching to projekte
-    const projektOverview = document.getElementById('projekt-overview');
-    const artikelOverview = document.getElementById('artikel-overview');
-    
-    if (projektOverview) projektOverview.style.display = 'block';
-    if (artikelOverview) artikelOverview.style.display = 'none';
-    
-    window.cfoDashboard.currentProjekt = null;
-    window.cfoDashboard.currentArtikel = null;
-    
-    // ✓ Render projekt overview (only if switching TO projekte)
-    if (window.renderProjektOverview) {
-      window.renderProjektOverview();
-    }
-    if (window.updateProjektStats) {
-      window.updateProjektStats();
-    }
-  }
-
-  // Save state
-  state.currentTab = tabName;
-  saveNavigationState();
-
-  // AI Feedback
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'info',
-      title: '📑 Tab gewechselt',
-      text: `Ansicht "${getTabDisplayName(tabName)}" aktiviert.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-};
-
-/**
- * Adjust dashboard assumptions (sliders)
- */
-window.adjustAssumption = function(type, value) {
-  console.log(`🎚️ Adjusting ${type} to ${value}`);
-
-  switch(type) {
-    case 'market':
-      state.currentValues.marketVolume = value;
-      helpers.setInputValue('market-value', value + '%');
-      break;
-      
-    case 'price':
-      state.currentValues.pricePremium = value;
-      const priceDiff = value - 100;
-      helpers.setInputValue('price-value', (priceDiff >= 0 ? '+' : '') + priceDiff + '%');
-      break;
-      
-    case 'capex':
-      state.currentValues.capexRisk = value;
-      const capexText = value > 110 ? 'Überschreitung' : value < 90 ? 'Einsparung' : 'Plan';
-      helpers.setInputValue('capex-value', capexText);
-      break;
-  }
-
-  // Update all charts with new values
-  charts.updateAllCharts();
-
-  // Save state
-  state.saveState();
-
-  // AI Feedback
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'info',
-      title: '📊 Dashboard aktualisiert',
-      text: `${type === 'market' ? 'Marktvolumen' : type === 'price' ? 'Preis-Premium' : 'CAPEX-Risiko'} angepasst auf ${value}%`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-};
-
-// ==========================================
 // LOADING & ERROR UI
 // ==========================================
 
@@ -843,7 +845,6 @@ window.cfoDashboardMain = {
 
 export {
   initializeApplication,
-  saveNavigationState,
   showErrorNotification,
 };
 
