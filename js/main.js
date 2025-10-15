@@ -3,7 +3,8 @@
  * Orchestrates initialization, event handling, and navigation
  * Enterprise entry point with proper error handling
  * 
- * FIXED: Tab wird jetzt auch beim ersten Besuch korrekt aktiviert
+ * Version: 3.0 - October 2025
+ * Features: Tutorial System, Deep Navigation Restore, AI Controller
  */
 
 import CONFIG from './config.js';
@@ -15,6 +16,7 @@ import * as cockpit from './modules/cockpit.js';
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel.js';
 import * as projektkosten from './modules/projektkosten.js';
+import tutorialController from './modules/tutorial-controller.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -46,20 +48,23 @@ async function initializeApplication() {
   console.log('🚀 CFO Dashboard initializing...');
   
   try {
+    // ==========================================
     // Step 1: Restore previous state FIRST (before any UI changes)
+    // ==========================================
     const stateRestored = state.restoreState();
     
-    // ✅ FIX: Apply tab IMMER - auch beim ersten Besuch!
     if (stateRestored) {
       console.log('✅ Previous state restored');
       applyRestoredTab();
     } else {
       console.log('ℹ️ No previous state - using default (cockpit)');
       state.currentTab = 'cockpit';
-      applyRestoredTab(); // ← CRITICAL FIX!
+      applyRestoredTab();
     }
 
+    // ==========================================
     // Step 2: Make modules globally available
+    // ==========================================
     window.projekte = projekte;
     window.artikel = artikel;
     window.projektkosten = projektkosten;
@@ -67,13 +72,19 @@ async function initializeApplication() {
     window.renderProjektOverview = projekte.renderProjektOverview;
     window.updateProjektStats = projekte.updateProjektStats;
 
+    // ==========================================
     // Step 3: Initialize Charts
+    // ==========================================
     await charts.initializeCharts();
 
+    // ==========================================
     // Step 4: Initialize AI Controller
+    // ==========================================
     initializeAI();
 
+    // ==========================================
     // Step 5: Initialize Supabase
+    // ==========================================
     const supabaseReady = await api.initializeSupabase();
     
     if (supabaseReady) {
@@ -83,11 +94,32 @@ async function initializeApplication() {
       console.warn('⚠️ Running in offline mode');
     }
 
+    // ==========================================
     // Step 7: Setup event listeners
+    // ==========================================
     setupEventListeners();
 
+    // ==========================================
     // Step 8: Start AI insights timer
+    // ==========================================
     startAIInsightsTimer();
+
+    // ==========================================
+    // Step 9: Tutorial starten wenn Erstnutzer
+    // ==========================================
+    console.log('9️⃣ Checking tutorial state...');
+    const hasCompletedTutorial = state.tutorialState?.completed?.length > 0;
+    const tutorialDismissed = state.tutorialState?.dismissed;
+    
+    if (!hasCompletedTutorial && !tutorialDismissed) {
+      // Warte bis UI fertig geladen ist
+      setTimeout(() => {
+        console.log('🎓 Starting tutorial for first-time user...');
+        tutorialController.start();
+      }, 1500); // 1.5 Sekunden Verzögerung
+    } else {
+      console.log('ℹ️ Tutorial already completed or dismissed');
+    }
 
     console.log('✅ CFO Dashboard ready!');
 
@@ -96,6 +128,10 @@ async function initializeApplication() {
     showErrorNotification('Anwendung konnte nicht gestartet werden. Bitte Seite neu laden.');
   }
 }
+
+// ==========================================
+// TAB STATE RESTORATION
+// ==========================================
 
 /**
  * Apply restored tab state immediately (before any rendering)
@@ -142,6 +178,85 @@ function applyRestoredTab() {
     console.error('❌ Tab content not found:', mappedTab);
   }
 }
+
+// ==========================================
+// DATA LOADING
+// ==========================================
+
+/**
+ * Load initial data from database
+ * FIXED: Render cockpit after data load
+ */
+async function loadInitialData() {
+  try {
+    // Show loading indicator
+    showLoadingIndicator();
+
+    // Load projects
+    console.log('📦 Loading projects...');
+    await api.loadProjects();
+
+    // Load articles for each project
+    const projekte = state.getAllProjekte();
+    console.log(`📊 Found ${projekte.length} projects to load articles for`);
+    
+    for (const projekt of projekte) {
+      await api.loadArticles(projekt.id);
+    }
+
+    console.log('✅ Initial data loaded');
+
+    // ==========================================
+    // CRITICAL: Render cockpit or restore navigation
+    // ==========================================
+    const currentTab = state.currentTab || 'cockpit';
+    
+    if (currentTab === 'cockpit') {
+      // ✅ RENDER COCKPIT!
+      console.log('📊 Rendering cockpit after data load...');
+      setTimeout(() => {
+        if (cockpit && typeof cockpit.renderCockpit === 'function') {
+          cockpit.renderCockpit();
+        } else {
+          console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
+        }
+      }, 100);
+      
+    } else if (currentTab === 'projekte') {
+      // Check if we need to restore deep navigation (user was in a projekt)
+      if (state.currentProjekt) {
+        console.log('🔄 User was in projekt detail - calling restoreDeepNavigation...');
+        console.log('   → Projekt:', state.currentProjekt);
+        console.log('   → Tab:', state.currentProjektTab);
+        
+        // ✓✓✓ Restore the exact state ✓✓✓
+        await restoreDeepNavigation();
+        
+      } else {
+        console.log('📋 User was in projekt overview - rendering overview...');
+        
+        // User was on overview - just render the list
+        if (window.renderProjektOverview) {
+          window.renderProjektOverview();
+        }
+        if (window.updateProjektStats) {
+          window.updateProjektStats();
+        }
+      }
+    } else {
+      console.log(`ℹ️ Not on cockpit or projekte tab (current: ${currentTab})`);
+    }
+
+  } catch (error) {
+    console.error('❌ Failed to load initial data:', error);
+  } finally {
+    hideLoadingIndicator();
+  }
+}
+
+// ==========================================
+// DEEP NAVIGATION RESTORATION
+// ==========================================
 
 /**
  * Restore COMPLETE deep navigation state
@@ -289,77 +404,6 @@ async function restoreDeepNavigation() {
   }
   
   console.log('✅ COMPLETE navigation state restored');
-}
-
-/**
- * Load initial data from database
- * FIXED: Render cockpit after data load
- */
-async function loadInitialData() {
-  try {
-    // Show loading indicator
-    showLoadingIndicator();
-
-    // Load projects
-    console.log('📦 Loading projects...');
-    await api.loadProjects();
-
-    // Load articles for each project
-    const projekte = state.getAllProjekte();
-    console.log(`📊 Found ${projekte.length} projects to load articles for`);
-    
-    for (const projekt of projekte) {
-      await api.loadArticles(projekt.id);
-    }
-
-    console.log('✅ Initial data loaded');
-
-    // ==========================================
-    // CRITICAL: Render cockpit or restore navigation
-    // ==========================================
-    const currentTab = state.currentTab || 'cockpit';
-    
-    if (currentTab === 'cockpit') {
-      // ✅ RENDER COCKPIT!
-      console.log('📊 Rendering cockpit after data load...');
-      setTimeout(() => {
-        if (cockpit && typeof cockpit.renderCockpit === 'function') {
-          cockpit.renderCockpit();
-        } else {
-          console.error('❌ cockpit.renderCockpit is not a function!', cockpit);
-        }
-      }, 100);
-      
-    } else if (currentTab === 'projekte') {
-      // Check if we need to restore deep navigation (user was in a projekt)
-      if (state.currentProjekt) {
-        console.log('🔄 User was in projekt detail - calling restoreDeepNavigation...');
-        console.log('   → Projekt:', state.currentProjekt);
-        console.log('   → Tab:', state.currentProjektTab);
-        
-        // ✓✓✓ Restore the exact state ✓✓✓
-        await restoreDeepNavigation();
-        
-      } else {
-        console.log('📋 User was in projekt overview - rendering overview...');
-        
-        // User was on overview - just render the list
-        if (window.renderProjektOverview) {
-          window.renderProjektOverview();
-        }
-        if (window.updateProjektStats) {
-          window.updateProjektStats();
-        }
-      }
-    } else {
-      console.log(`ℹ️ Not on cockpit or projekte tab (current: ${currentTab})`);
-    }
-
-  } catch (error) {
-    console.error('❌ Failed to load initial data:', error);
-  } finally {
-    hideLoadingIndicator();
-  }
 }
 
 // ==========================================
@@ -763,15 +807,6 @@ export function formatPercentage(value) {
 }
 
 // ==========================================
-// EXPORTS
-// ==========================================
-
-export {
-  initializeApplication,
-  showErrorNotification,
-};
-
-// ==========================================
 // AUTO-INITIALIZATION
 // ==========================================
 
@@ -781,6 +816,13 @@ if (document.readyState === 'loading') {
 } else {
   initializeApplication();
 }
+
+// ==========================================
+// GLOBAL EXPORTS
+// ==========================================
+
+// Tutorial Controller global verfügbar machen
+window.tutorialController = tutorialController;
 
 // Export to window for debugging
 window.cfoDashboardMain = {
@@ -793,6 +835,16 @@ window.cfoDashboardMain = {
   showErrorNotification,
   formatCurrency,
   formatPercentage
+};
+
+// ==========================================
+// EXPORTS FOR MODULES
+// ==========================================
+
+export {
+  initializeApplication,
+  saveNavigationState,
+  showErrorNotification,
 };
 
 console.log('📦 Main module loaded');
