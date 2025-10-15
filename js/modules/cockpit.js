@@ -1,1153 +1,357 @@
 /**
- * CFO Dashboard - Projekte Module
- * Complete project lifecycle: Create, Read, Update, Delete, Render
- * Enterprise-grade with filtering, sorting, and bulk operations
- * NOW WITH: Liste, Karten, and Kompakt views
+ * CFO Dashboard - Cockpit Module
+ * Portfolio Analytics by Division
+ * Version 3.0 - Compact & Professional
  */
 
 import { state } from '../state.js';
 import * as helpers from '../helpers.js';
-import * as api from '../api.js';
-import { renderArtikelListByProjekt } from './artikel.js';
-
-// ==========================================
-// VIEW STATE
-// ==========================================
-
-let currentView = 'liste'; // 'liste', 'karten', 'kompakt'
-
-// ==========================================
-// PROJECT RENDERING - MAIN DISPATCHER
-// ==========================================
 
 /**
- * Render project overview based on current view
+ * Render complete portfolio cockpit
  */
-export function renderProjektOverview() {
-  console.log('📊 Rendering project overview - View:', currentView);
-
-  const projekte = state.getAllProjekte();
-
-  if (projekte.length === 0) {
-    renderEmptyState();
-    updateProjektStats();
-    return;
-  }
-
-  // Dispatch to appropriate renderer
-  switch(currentView) {
-    case 'karten':
-      renderKartenView(projekte);
-      break;
-    case 'kompakt':
-      renderKompaktView(projekte);
-      break;
-    case 'liste':
-    default:
-      renderListeView(projekte);
-      break;
-  }
-
-  updateProjektStats();
-}
-
-// ==========================================
-// LISTE VIEW (Original Table)
-// ==========================================
-
-/**
- * Render liste view (table)
- */
-function renderListeView(projekte) {
-  const container = document.getElementById('projekt-list-container');
-  if (!container) {
-    console.error('projekt-list-container not found');
-    return;
-  }
-
-  const tableHTML = `
-    <table class="data-table" id="projekt-table">
-      <thead>
-        <tr>
-          <th style="width: 40px;">
-            <input type="checkbox" id="select-all-projects" onchange="toggleAllProjects(this)">
-          </th>
-          <th>PROJEKT</th>
-          <th>DIVISION</th>
-          <th>OWNER</th>
-          <th>START</th>
-          <th>END</th>
-          <th>STATUS</th>
-          <th style="width: 100px;">AKTIONEN</th>
-        </tr>
-      </thead>
-      <tbody id="projekt-list-tbody">
-        ${projekte.map(projekt => {
-          const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
-
-          return `
-            <tr class="projekt-row" data-projekt-id="${projekt.id}">
-              <td>
-                <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
-                       onchange="updateBulkActions()">
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 16px;">📁</span>
-                  <div>
-                    <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
-                         onclick="openProjektDetail('${projekt.id}')">
-                      ${helpers.escapeHtml(projekt.name)}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.division || '-')}</td>
-              <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.owner || '-')}</td>
-              <td style="color: var(--text-secondary); font-size: 12px;">
-                ${projekt.startDatum ? projekt.startDatum : '-'}
-              </td>
-              <td style="color: var(--text-secondary); font-size: 12px;">
-                ${projekt.endDatum ? projekt.endDatum : '-'}
-              </td>
-              <td>
-                <span class="status-badge status-${statusClass}">
-                  ${helpers.escapeHtml(projekt.status || 'aktiv')}
-                </span>
-              </td>
-              <td>
-                <div class="action-buttons">
-                  <button class="btn-icon" onclick="openProjektDetail('${projekt.id}')" title="Öffnen">
-                    👁️
-                  </button>
-                  <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
-                    🗑️
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
-
-  container.innerHTML = tableHTML;
-}
-
-// ==========================================
-// KARTEN VIEW (Card Grid)
-// ==========================================
-
-/**
- * Render karten view (cards)
- */
-function renderKartenView(projekte) {
-  const container = document.getElementById('projekt-list-container');
-  if (!container) {
-    console.error('projekt-list-container not found');
-    return;
-  }
-
-  const cardsHTML = `
-    <div class="projekt-karten-grid">
-      ${projekte.map(projekt => renderProjektCard(projekt)).join('')}
-    </div>
-  `;
-
-  container.innerHTML = cardsHTML;
-}
-
-/**
- * Render single project card
- */
-function renderProjektCard(projekt) {
-  const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
-  const artikelCount = projekt.artikel?.length || 0;
-
-  return `
-    <div class="projekt-card" data-projekt-id="${projekt.id}">
-      <div class="projekt-card-header">
-        <div class="projekt-card-checkbox">
-          <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
-                 onchange="updateBulkActions()">
+export function renderPortfolioCockpit() {
+    console.log('📊 Rendering Portfolio Cockpit...');
+    
+    const container = document.querySelector('#tab-cockpit');
+    if (!container) {
+        console.error('Cockpit container not found');
+        return;
+    }
+    
+    // Get all projects
+    const projekte = state.getAllProjekte();
+    
+    if (projekte.length === 0) {
+        container.innerHTML = renderEmptyState();
+        return;
+    }
+    
+    // Calculate KPIs
+    const kpis = calculatePortfolioKPIs(projekte);
+    
+    // Group by division
+    const divisions = groupByDivision(projekte);
+    
+    // Render HTML
+    container.innerHTML = `
+        <div class="portfolio-cockpit">
+            ${renderCockpitHeader(kpis)}
+            ${renderDivisionTable(divisions, kpis)}
         </div>
-        <div class="projekt-card-icon">📁</div>
-        <div class="projekt-card-status">
-          <span class="status-badge status-${statusClass}">
-            ${helpers.escapeHtml(projekt.status || 'aktiv')}
-          </span>
-        </div>
-      </div>
-      
-      <div class="projekt-card-body" onclick="openProjektDetail('${projekt.id}')">
-        <h3 class="projekt-card-title">${helpers.escapeHtml(projekt.name)}</h3>
+    `;
+    
+    console.log('✅ Cockpit rendered', kpis);
+}
+
+/**
+ * Calculate portfolio-wide KPIs
+ */
+function calculatePortfolioKPIs(projekte) {
+    let totalProjects = projekte.length;
+    let totalRevenue = 0;
+    let totalCosts = 0;
+    let totalDB2 = 0;
+    
+    projekte.forEach(projekt => {
+        const artikel = state.getArtikelByProjekt(projekt.id);
         
-        <div class="projekt-card-info">
-          <div class="projekt-card-info-item">
-            <span class="info-label">Division:</span>
-            <span class="info-value">${helpers.escapeHtml(projekt.division || '-')}</span>
-          </div>
-          <div class="projekt-card-info-item">
-            <span class="info-label">Owner:</span>
-            <span class="info-value">${helpers.escapeHtml(projekt.owner || '-')}</span>
-          </div>
-          <div class="projekt-card-info-item">
-            <span class="info-label">Zeitraum:</span>
-            <span class="info-value">${projekt.startDatum || '-'} bis ${projekt.endDatum || '-'}</span>
-          </div>
-          <div class="projekt-card-info-item">
-            <span class="info-label">Artikel:</span>
-            <span class="info-value">${artikelCount} Artikel</span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="projekt-card-footer">
-        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektDetail('${projekt.id}')">
-          👁️ Öffnen
-        </button>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProjekt('${projekt.id}')">
-          🗑️ Löschen
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// KOMPAKT VIEW (Compact List)
-// ==========================================
-
-/**
- * Render kompakt view (compact list)
- */
-function renderKompaktView(projekte) {
-  const container = document.getElementById('projekt-list-container');
-  if (!container) {
-    console.error('projekt-list-container not found');
-    return;
-  }
-
-  const kompaktHTML = `
-    <div class="projekt-kompakt-list">
-      ${projekte.map(projekt => renderProjektKompakt(projekt)).join('')}
-    </div>
-  `;
-
-  container.innerHTML = kompaktHTML;
+        // Calculate artikel revenue & costs
+        artikel.forEach(art => {
+            Object.keys(art.volumes || {}).forEach(year => {
+                const volume = art.volumes[year] || 0;
+                const price = art.prices[year] || 0;
+                const hk = art.hk || 0;
+                
+                const revenue = (volume * price) / 1000; // k€
+                const costs = (volume * hk) / 1000;
+                
+                totalRevenue += revenue;
+                totalCosts += costs;
+            });
+        });
+    });
+    
+    totalDB2 = totalRevenue - totalCosts;
+    
+    // Calculate DB2 percentage
+    const db2Percent = totalRevenue > 0 ? (totalDB2 / totalRevenue) * 100 : 0;
+    
+    return {
+        projects: totalProjects,
+        revenue: totalRevenue,
+        costs: totalCosts,
+        db2: totalDB2,
+        db2Percent: db2Percent
+    };
 }
 
 /**
- * Render single compact project item
+ * Group projects by division
  */
-function renderProjektKompakt(projekt) {
-  const statusClass = (projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-');
-  const artikelCount = projekt.artikel?.length || 0;
-
-  return `
-    <div class="projekt-kompakt-item" data-projekt-id="${projekt.id}">
-      <div class="kompakt-checkbox">
-        <input type="checkbox" class="projekt-checkbox" value="${projekt.id}" 
-               onchange="updateBulkActions()">
-      </div>
-      
-      <div class="kompakt-icon">📁</div>
-      
-      <div class="kompakt-main" onclick="openProjektDetail('${projekt.id}')">
-        <div class="kompakt-title">${helpers.escapeHtml(projekt.name)}</div>
-        <div class="kompakt-meta">
-          ${helpers.escapeHtml(projekt.division || '-')} • 
-          ${helpers.escapeHtml(projekt.owner || '-')} • 
-          ${artikelCount} Artikel
-        </div>
-      </div>
-      
-      <div class="kompakt-status">
-        <span class="status-badge status-${statusClass}">
-          ${helpers.escapeHtml(projekt.status || 'aktiv')}
-        </span>
-      </div>
-      
-      <div class="kompakt-actions">
-        <button class="btn-icon" onclick="openProjektDetail('${projekt.id}')" title="Öffnen">
-          👁️
-        </button>
-        <button class="btn-icon btn-danger" onclick="deleteProjekt('${projekt.id}')" title="Löschen">
-          🗑️
-        </button>
-      </div>
-    </div>
-  `;
+function groupByDivision(projekte) {
+    const divisions = {};
+    
+    projekte.forEach(projekt => {
+        const division = projekt.division || 'Sonstige';
+        
+        if (!divisions[division]) {
+            divisions[division] = {
+                name: division,
+                projects: [],
+                revenue: 0,
+                costs: 0,
+                db2: 0
+            };
+        }
+        
+        // Calculate projekt metrics
+        const artikel = state.getArtikelByProjekt(projekt.id);
+        let projektRevenue = 0;
+        let projektCosts = 0;
+        
+        artikel.forEach(art => {
+            Object.keys(art.volumes || {}).forEach(year => {
+                const volume = art.volumes[year] || 0;
+                const price = art.prices[year] || 0;
+                const hk = art.hk || 0;
+                
+                const revenue = (volume * price) / 1000;
+                const costs = (volume * hk) / 1000;
+                
+                projektRevenue += revenue;
+                projektCosts += costs;
+            });
+        });
+        
+        divisions[division].projects.push({
+            ...projekt,
+            revenue: projektRevenue,
+            costs: projektCosts,
+            db2: projektRevenue - projektCosts
+        });
+        
+        divisions[division].revenue += projektRevenue;
+        divisions[division].costs += projektCosts;
+        divisions[division].db2 += (projektRevenue - projektCosts);
+    });
+    
+    return divisions;
 }
 
-// ==========================================
-// EMPTY STATE
-// ==========================================
+/**
+ * Render cockpit header with KPIs
+ */
+
+function renderCockpitHeader(kpis) {
+    return `
+        <div class="cockpit-kpis-only">
+            <div class="cockpit-kpi">
+                <div class="cockpit-kpi-label">PROJEKTE</div>
+                <div class="cockpit-kpi-value">${kpis.projects}</div>
+            </div>
+            
+            <div class="cockpit-kpi">
+                <div class="cockpit-kpi-label">UMSATZ (PLAN)</div>
+                <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.revenue)}</div>
+            </div>
+            
+            <div class="cockpit-kpi">
+                <div class="cockpit-kpi-label">PROJEKTKOSTEN</div>
+                <div class="cockpit-kpi-value">${helpers.formatRevenue(kpis.costs)}</div>
+            </div>
+            
+            <div class="cockpit-kpi">
+                <div class="cockpit-kpi-label">Ø DB2</div>
+                <div class="cockpit-kpi-value">${helpers.formatPercentage(kpis.db2Percent)}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render division table
+ */
+function renderDivisionTable(divisions, totals) {
+    const divisionNames = Object.keys(divisions).sort();
+    
+    return `
+        <div class="division-table-container">
+            <table class="division-table">
+                <thead>
+                    <tr>
+                        <th>DIVISION</th>
+                        <th class="text-center">PROJEKTE</th>
+                        <th class="text-right">UMSATZ</th>
+                        <th class="text-right">DB2</th>
+                        <th style="width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${divisionNames.map(name => renderDivisionRow(divisions[name])).join('')}
+                    ${renderTotalsRow(totals)}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+/**
+ * Render single division row
+ */
+function renderDivisionRow(division) {
+    const divisionClass = getDivisionClass(division.name);
+    const aktiveProjekte = division.projects.filter(p => 
+        (p.status || 'aktiv').toLowerCase() === 'aktiv'
+    ).length;
+    
+    const db2Percent = division.revenue > 0 ? (division.db2 / division.revenue) * 100 : 0;
+    const db2Class = division.db2 > 0 ? 'db2-positive' : 
+                     division.db2 < 0 ? 'db2-negative' : 'db2-neutral';
+    
+    const rowId = `division-row-${divisionClass}`;
+    
+    return `
+        <tr data-division="${divisionClass}">
+            <td>
+                <div class="division-name ${divisionClass}">
+                    ${helpers.escapeHtml(division.name)}
+                </div>
+            </td>
+            <td class="text-center">
+                <div class="project-count">
+                    <span class="project-count-total">${division.projects.length}</span>
+                    <span class="project-count-active">${aktiveProjekte} aktiv</span>
+                </div>
+            </td>
+            <td class="text-right">
+                <div class="revenue-value">${helpers.formatRevenue(division.revenue)}</div>
+            </td>
+            <td class="text-right">
+                <div class="db2-value ${db2Class}">${helpers.formatPercentage(db2Percent)}</div>
+            </td>
+            <td class="text-center">
+                <button class="expand-button" onclick="toggleDivision('${divisionClass}')">
+                    ▼
+                </button>
+            </td>
+        </tr>
+        <tr id="${rowId}" class="division-projects" style="display: none;">
+            <td colspan="5">
+                ${renderProjectsList(division.projects)}
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Render projects list for expanded division
+ */
+function renderProjectsList(projects) {
+    return `
+        <div class="projects-list">
+            ${projects.map(projekt => `
+                <div class="project-item">
+                    <div class="project-item-name">${helpers.escapeHtml(projekt.name)}</div>
+                    <div class="project-item-meta">
+                        <div class="project-item-revenue">${helpers.formatRevenue(projekt.revenue)}</div>
+                        <div class="project-item-status status-${(projekt.status || 'aktiv').toLowerCase().replace(/\s/g, '-')}">
+                            ${helpers.escapeHtml(projekt.status || 'aktiv')}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render totals row
+ */
+function renderTotalsRow(totals) {
+    const db2Class = totals.db2 > 0 ? 'db2-positive' : 
+                     totals.db2 < 0 ? 'db2-negative' : 'db2-neutral';
+    
+    return `
+        <tr class="totals-row">
+            <td>
+                <div class="division-name">GESAMT</div>
+            </td>
+            <td class="text-center">
+                <div class="project-count">
+                    <span class="project-count-total">${totals.projects}</span>
+                </div>
+            </td>
+            <td class="text-right">
+                <div class="revenue-value">${helpers.formatRevenue(totals.revenue)}</div>
+            </td>
+            <td class="text-right">
+                <div class="db2-value ${db2Class}">${helpers.formatPercentage(totals.db2Percent)}</div>
+            </td>
+            <td></td>
+        </tr>
+    `;
+}
 
 /**
  * Render empty state
  */
 function renderEmptyState() {
-  const container = document.getElementById('projekt-list-container');
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th style="width: 40px;"></th>
-            <th>PROJEKT</th>
-            <th>DIVISION</th>
-            <th>OWNER</th>
-            <th>START</th>
-            <th>END</th>
-            <th>STATUS</th>
-            <th style="width: 100px;">AKTIONEN</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-tertiary);">
-              <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">📁</div>
-              <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
-                Noch keine Projekte vorhanden
-              </div>
-              <div style="font-size: 14px;">
-                Erstelle dein erstes Projekt
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
+    return `
+        <div class="portfolio-cockpit">
+            <div class="cockpit-header">
+                <div class="cockpit-title">
+                    <div class="cockpit-title-icon">📊</div>
+                    <h2>Portfolio Cockpit</h2>
+                </div>
+            </div>
+            <div class="cockpit-empty">
+                <div class="cockpit-empty-icon">📊</div>
+                <h3>Noch keine Projekte vorhanden</h3>
+                <p>Erstelle dein erstes Projekt um das Portfolio-Cockpit zu nutzen</p>
+            </div>
+        </div>
+    `;
 }
 
-// ==========================================
-// VIEW SWITCHING
-// ==========================================
-
 /**
- * Switch project view (called from index.html)
+ * Get CSS class for division
  */
-window.switchProjectView = function(viewType) {
-  console.log('🔄 Switching project view to:', viewType);
-
-  currentView = viewType;
-  
-  // ✓ CRITICAL: Save list view preference
-  state.projektListView = viewType;
-  state.saveState();
-
-  // Update button states
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  const activeBtn = document.querySelector(`.view-btn[data-view="${viewType}"]`);
-  if (activeBtn) {
-    activeBtn.classList.add('active');
-  }
-
-  // Re-render with new view
-  renderProjektOverview();
-
-  // AI Feedback
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'info',
-      title: '👁️ Ansicht gewechselt',
-      text: `${viewType.charAt(0).toUpperCase() + viewType.slice(1)}-Ansicht aktiviert.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-};
-
-// ==========================================
-// PROJECT STATISTICS
-// ==========================================
-
-/**
- * Update project statistics
- */
-export function updateProjektStats() {
-  const projekte = state.getAllProjekte();
-
-  const total = projekte.length;
-  const aktiv = projekte.filter(p => p.status?.toLowerCase() === 'aktiv').length;
-  const onHold = projekte.filter(p => p.status?.toLowerCase().includes('hold')).length;
-  const abgeschlossen = projekte.filter(p => p.status?.toLowerCase() === 'abgeschlossen').length;
-
-  // Update UI
-  helpers.setInputValue('stat-total-projects', total);
-  helpers.setInputValue('stat-active-projects', aktiv);
-  helpers.setInputValue('stat-onhold-projects', onHold);
-  helpers.setInputValue('stat-completed-projects', abgeschlossen);
-
-  console.log('📈 Project stats updated:', { total, aktiv, onHold, abgeschlossen });
+function getDivisionClass(divisionName) {
+    const normalized = divisionName.toLowerCase()
+        .replace(/ä/g, 'ae')
+        .replace(/ö/g, 'oe')
+        .replace(/ü/g, 'ue')
+        .replace(/ß/g, 'ss')
+        .replace(/[^a-z0-9]/g, '-');
+    
+    return `division-${normalized}`;
 }
 
-// ==========================================
-// PROJECT NAVIGATION
-// ==========================================
-
 /**
- * Open projekt artikel view
+ * Toggle division expansion
  */
-window.openProjektArtikel = async function(projektId) {
-  const projekt = state.getProjekt(projektId);
-  if (!projekt) {
-    console.error('Projekt not found:', projektId);
-    return;
-  }
-
-  console.log('📂 Opening projekt:', projekt.name);
-
-  // Set current projekt
-  window.cfoDashboard.currentProjekt = projektId;
-  state.currentProjekt = projektId;
-
-  // Load artikel for this projekt
-  await api.loadArticles(projektId);
-
-  // Switch to artikel view
-  const projektOverview = document.getElementById('projekt-overview');
-  const artikelOverview = document.getElementById('artikel-overview');
-
-  if (projektOverview) projektOverview.style.display = 'none';
-  if (artikelOverview) artikelOverview.style.display = 'block';
-
-  // Update breadcrumb/title
-  const projektTitle = document.getElementById('current-projekt-name');
-  if (projektTitle) {
-    projektTitle.textContent = projekt.name;
-  }
-
-  // Render artikel list
-  renderArtikelListByProjekt();
-
-  // Save navigation state
-  if (window.saveNavigationState) {
-    window.saveNavigationState();
-  }
-
-  // AI Feedback
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'info',
-      title: '📂 Projekt geöffnet',
-      text: `"${projekt.name}" - ${projekt.artikel?.length || 0} Artikel geladen.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-};
-
-/**
- * Go back to projekt overview
- */
-window.backToProjektOverview = function() {
-    console.log('🔙 Back to projekt overview');
-
-    const projektOverview = document.getElementById('projekt-overview');
-    const projektDetail = document.getElementById('projekt-detail-view');
-    const artikelOverview = document.getElementById('artikel-overview');
-    const artikelDetail = document.getElementById('artikel-detail-view');
-
-    // Show only projekt overview
-    if (projektOverview) projektOverview.style.display = 'block';
-    if (projektDetail) projektDetail.style.display = 'none';
-    if (artikelOverview) artikelOverview.style.display = 'none';
-    if (artikelDetail) artikelDetail.style.display = 'none';
-
-    // ✓ CRITICAL: Clear ALL deep navigation state
-    window.cfoDashboard.currentProjekt = null;
-    window.cfoDashboard.currentArtikel = null;
+window.toggleDivision = function(divisionClass) {
+    const row = document.getElementById(`division-row-${divisionClass}`);
+    const button = document.querySelector(`[data-division="${divisionClass}"] .expand-button`);
     
-    window.state.currentProjekt = null;
-    window.state.projektViewMode = 'overview';
-    window.state.currentProjektTab = null;
-    window.state.currentArtikel = null;
-    window.state.artikelViewMode = 'list';
-    window.state.artikelDetailScroll = 0;
-    window.state.saveState();
+    if (!row || !button) return;
     
-    console.log('💾 Cleared all navigation state - back to overview');
-
-    // Re-render projekt list
-    if (window.renderProjektOverview) {
-        window.renderProjektOverview();
-    }
-    if (window.updateProjektStats) {
-        window.updateProjektStats();
-    }
-};
-
-// ==========================================
-// PROJECT CREATE
-// ==========================================
-
-/**
- * Open create projekt modal
- */
-window.openCreateProjektModal = function() {
-  console.log('➕ Opening create projekt modal');
-
-  const modalHTML = `
-    <div id="create-projekt-modal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>📁 Neues Projekt erstellen</h2>
-          <button class="btn-close" onclick="closeCreateProjektModal()">✕</button>
-        </div>
-        
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Projektname *</label>
-            <input type="text" id="new-projekt-name" placeholder="z.B. Smart Home Platform" required>
-          </div>
-          
-          <div class="form-group">
-            <label>Beschreibung</label>
-            <textarea id="new-projekt-beschreibung" rows="3" 
-                      placeholder="Kurze Projektbeschreibung..."></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>Division *</label>
-            <select id="new-projekt-division" onchange="window.checkCustomDivision(this)">
-              <option value="Entwicklung">Entwicklung</option>
-              <option value="Produktion">Produktion</option>
-              <option value="Vertrieb">Vertrieb</option>
-              <option value="Service">Service</option>
-              <option value="Innovation">Innovation</option>
-              <option value="Consulting">Consulting</option>
-              <option value="Automation">Automation</option>
-              <option value="Digitalization">Digitalization</option>
-              <option value="custom">➕ Andere (manuell eingeben)...</option>
-            </select>
-            <input type="text" id="new-projekt-division-custom" 
-                  placeholder="Division eingeben..." 
-                  style="display: none; margin-top: 8px; width: 100%; padding: 8px; 
-                          border: 1px solid var(--border); border-radius: 4px;">
-          </div>
-              
-          <div class="form-group">
-            <label>Status</label>
-            <select id="new-projekt-status">
-              <option value="Planung">Planung</option>
-              <option value="Aktiv" selected>Aktiv</option>
-              <option value="On Hold">On Hold</option>
-              <option value="Abgeschlossen">Abgeschlossen</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label>Projektleiter</label>
-            <input type="text" id="new-projekt-owner" placeholder="z.B. Max Mustermann">
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Startdatum</label>
-              <input type="month" id="new-projekt-start" value="${helpers.getCurrentDate().substring(0, 7)}">
-            </div>
-            
-            <div class="form-group">
-              <label>Enddatum</label>
-              <input type="month" id="new-projekt-end">
-            </div>
-          </div>
-        </div>
-        
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeCreateProjektModal()">
-            Abbrechen
-          </button>
-          <button class="btn btn-primary" onclick="createProjekt()">
-            ✅ Projekt erstellen
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-  // Focus name input
-  setTimeout(() => {
-    const nameInput = document.getElementById('new-projekt-name');
-    if (nameInput) nameInput.focus();
-  }, 100);
-};
-
-/**
- * Close create projekt modal
- */
-window.closeCreateProjektModal = function() {
-  const modal = document.getElementById('create-projekt-modal');
-  if (modal) modal.remove();
-};
-
-/**
- * Create new projekt
- */
-window.createProjekt = async function() {
-  console.log('🚀 CREATE PROJEKT CALLED');
-
-  try {
-    // Step 1: Collect form data
-    console.log('📝 Step 1: Collecting form data...');
+    const isVisible = row.style.display !== 'none';
     
-    const projektData = {
-      name: helpers.getInputValue('new-projekt-name'),
-      beschreibung: helpers.getInputValue('new-projekt-beschreibung'),
-      division: helpers.getInputValue('new-projekt-division', 'new-projekt-division-custom'),
-      status: helpers.getInputValue('new-projekt-status'),
-      owner: helpers.getInputValue('new-projekt-owner'),
-      startDatum: helpers.getInputValue('new-projekt-start'),
-      endDatum: helpers.getInputValue('new-projekt-end')
-    };
-
-    console.log('📊 Collected data:', projektData);
-
-    // Step 2: Validate
-    console.log('✔️ Step 2: Validating...');
-    
-    if (!projektData.name || projektData.name.trim() === '') {
-      console.error('❌ Validation failed: Name is empty');
-      alert('Bitte Projektname eingeben!');
-      return;
-    }
-
-    console.log('✅ Validation passed');
-
-    // Step 3: Check Supabase
-    console.log('🔌 Step 3: Checking Supabase connection...');
-    
-    if (!window.supabaseClient) {
-      console.error('❌ Supabase not initialized!');
-      alert('Datenbankverbindung nicht verfügbar. Bitte Seite neu laden.');
-      return;
-    }
-
-    console.log('✅ Supabase is ready');
-
-    // Step 4: Save to database
-    console.log('💾 Step 4: Saving to database...');
-    
-    const saved = await api.saveProject(projektData);
-
-    console.log('💾 Save result:', saved);
-
-    if (saved) {
-      console.log('✅ PROJECT SUCCESSFULLY CREATED!');
-
-      // Close modal
-      closeCreateProjektModal();
-
-      // Re-render list
-      renderProjektOverview();
-
-      // Show success message
-      alert(`✅ Projekt "${projektData.name}" erfolgreich erstellt!`);
-
-      // 🆕 ALBO Event: Projekt erstellt
-      document.dispatchEvent(new CustomEvent('projekt-created', {
-        detail: {
-          projekt: saved,
-          projektId: `projekt-db-${saved.id}`
-        }
-      }));
-
-      // AI Feedback
-      if (window.cfoDashboard.aiController) {
-        window.cfoDashboard.aiController.addAIMessage({
-          level: 'success',
-          title: '✅ Projekt erstellt',
-          text: `"${projektData.name}" wurde erfolgreich angelegt.`,
-          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-        });
-      }
+    if (isVisible) {
+        row.style.display = 'none';
+        button.classList.remove('expanded');
     } else {
-      console.error('❌ Save returned null/false');
-      alert('❌ Fehler beim Speichern. Bitte Console prüfen (F12).');
+        row.style.display = 'table-row';
+        button.classList.add('expanded');
     }
-
-  } catch (error) {
-    console.error('❌ CREATE FAILED WITH ERROR:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack
-    });
-    alert('❌ Fehler beim Erstellen:\n\n' + error.message + '\n\nBitte Console prüfen (F12).');
-  }
 };
 
-// ==========================================
-// PROJECT EDIT
-// ==========================================
-
-/**
- * Edit projekt
- */
-window.editProjekt = function(projektId) {
-  const projekt = state.getProjekt(projektId);
-  if (!projekt) return;
-
-  console.log('✏️ Editing projekt:', projekt.name);
-
-  const modalHTML = `
-    <div id="edit-projekt-modal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>✏️ Projekt bearbeiten</h2>
-          <button class="btn-close" onclick="closeEditProjektModal()">✕</button>
-        </div>
-        
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Projektname *</label>
-            <input type="text" id="edit-projekt-name" value="${helpers.escapeHtml(projekt.name)}" required>
-          </div>
-          
-          <div class="form-group">
-            <label>Beschreibung</label>
-            <textarea id="edit-projekt-beschreibung" rows="3">${helpers.escapeHtml(projekt.beschreibung || '')}</textarea>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Business Unit</label>
-              <select id="edit-projekt-division">
-                <option value="Entwicklung" ${projekt.division === 'Entwicklung' ? 'selected' : ''}>Entwicklung</option>
-                <option value="Produktion" ${projekt.division === 'Produktion' ? 'selected' : ''}>Produktion</option>
-                <option value="Vertrieb" ${projekt.division === 'Vertrieb' ? 'selected' : ''}>Vertrieb</option>
-                <option value="Service" ${projekt.division === 'Service' ? 'selected' : ''}>Service</option>
-                <option value="Innovation" ${projekt.division === 'Innovation' ? 'selected' : ''}>Innovation</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label>Status</label>
-              <select id="edit-projekt-status">
-                <option value="Planung" ${projekt.status === 'Planung' ? 'selected' : ''}>Planung</option>
-                <option value="Aktiv" ${projekt.status === 'Aktiv' ? 'selected' : ''}>Aktiv</option>
-                <option value="On Hold" ${projekt.status === 'On Hold' ? 'selected' : ''}>On Hold</option>
-                <option value="Abgeschlossen" ${projekt.status === 'Abgeschlossen' ? 'selected' : ''}>Abgeschlossen</option>
-              </select>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Projektleiter</label>
-            <input type="text" id="edit-projekt-owner" value="${helpers.escapeHtml(projekt.owner || '')}">
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Startdatum</label>
-              <input type="month" id="edit-projekt-start" value="${projekt.startDatum || ''}">
-            </div>
-            
-            <div class="form-group">
-              <label>Enddatum</label>
-              <input type="month" id="edit-projekt-end" value="${projekt.endDatum || ''}">
-            </div>
-          </div>
-        </div>
-        
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeEditProjektModal()">
-            Abbrechen
-          </button>
-          <button class="btn btn-primary" onclick="updateProjekt('${projektId}')">
-            ✅ Speichern
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-};
-
-/**
- * Close edit modal
- */
-window.closeEditProjektModal = function() {
-  const modal = document.getElementById('edit-projekt-modal');
-  if (modal) modal.remove();
-};
-
-/**
- * Update projekt
- */
-window.updateProjekt = async function(projektId) {
-  console.log('💾 Updating projekt:', projektId);
-
-  try {
-    const updates = {
-      name: helpers.getInputValue('edit-projekt-name'),
-      beschreibung: helpers.getInputValue('edit-projekt-beschreibung'),
-      division: helpers.getInputValue('edit-projekt-division'),
-      status: helpers.getInputValue('edit-projekt-status'),
-      owner: helpers.getInputValue('edit-projekt-owner'),
-      startDatum: helpers.getInputValue('edit-projekt-start'),
-      endDatum: helpers.getInputValue('edit-projekt-end')
-    };
-
-    // Validate
-    if (!updates.name || updates.name.trim() === '') {
-      alert('Bitte Projektname eingeben!');
-      return;
-    }
-
-    // Update in database
-    const success = await api.updateProject(projektId, updates);
-
-    if (success) {
-      console.log('✅ Projekt updated');
-
-      // Close modal
-      closeEditProjektModal();
-
-      // Re-render list
-      renderProjektOverview();
-
-      // 🆕 ALBO Event: Projekt aktualisiert
-      document.dispatchEvent(new CustomEvent('projekt-updated', {
-        detail: {
-          projektId: projektId,
-          updates: updates
-        }
-      }));
-
-      // AI Feedback
-      if (window.cfoDashboard.aiController) {
-        window.cfoDashboard.aiController.addAIMessage({
-          level: 'success',
-          title: '✅ Projekt aktualisiert',
-          text: `"${updates.name}" wurde gespeichert.`,
-          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-        });
-      }
-    }
-
-  } catch (error) {
-    console.error('❌ Update failed:', error);
-    alert('Fehler beim Speichern: ' + error.message);
-  }
-};
-
-// ==========================================
-// PROJECT DELETE
-// ==========================================
-
-/**
- * Delete projekt with confirmation
- */
-window.deleteProjekt = function(projektId) {
-  const projekt = state.getProjekt(projektId);
-  if (!projekt) return;
-
-  const artikelCount = projekt.artikel?.length || 0;
-
-  const modalHTML = `
-    <div id="delete-projekt-modal" class="modal">
-      <div class="modal-content" style="max-width: 450px;">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-          <div style="font-size: 32px;">⚠️</div>
-          <h2 style="margin: 0; color: var(--danger);">Projekt löschen?</h2>
-        </div>
-        
-        <p style="margin: 0 0 16px 0;">
-          Möchten Sie <strong>"${helpers.escapeHtml(projekt.name)}"</strong> wirklich löschen?
-        </p>
-        
-        ${artikelCount > 0 ? `
-          <div style="background: #fef2f2; border-left: 3px solid var(--danger); 
-               padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--danger); margin-bottom: 4px;">
-              ⚠️ Achtung
-            </div>
-            <div style="font-size: 12px;">
-              Alle zugehörigen Artikel (${artikelCount}) werden ebenfalls gelöscht.
-            </div>
-          </div>
-        ` : ''}
-        
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button class="btn btn-secondary" onclick="closeDeleteProjektModal()">
-            Abbrechen
-          </button>
-          <button class="btn btn-danger" onclick="confirmDeleteProjekt('${projektId}')">
-            Endgültig löschen
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-};
-
-/**
- * Confirm projekt deletion
- */
-window.confirmDeleteProjekt = async function(projektId) {
-  console.log('🗑️ Deleting projekt:', projektId);
-
-  const projekt = state.getProjekt(projektId);
-  const projektName = projekt?.name || 'Projekt';
-
-  const success = await api.deleteProject(projektId);
-
-  if (success) {
-    console.log('✅ Projekt deleted');
-
-    // Close modal
-    closeDeleteProjektModal();
-
-    // Re-render list
-    renderProjektOverview();
-
-    // 🆕 ALBO Event: Projekt gelöscht
-    document.dispatchEvent(new CustomEvent('projekt-deleted', {
-      detail: {
-        projektId: projektId,
-        projektName: projektName
-      }
-    }));
-
-    // AI Feedback
-    if (window.cfoDashboard.aiController) {
-      window.cfoDashboard.aiController.addAIMessage({
-        level: 'info',
-        title: '🗑️ Projekt gelöscht',
-        text: `"${projektName}" wurde erfolgreich entfernt.`,
-        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-      });
-    }
-  }
-};
-
-/**
- * Close delete modal
- */
-window.closeDeleteProjektModal = function() {
-  const modal = document.getElementById('delete-projekt-modal');
-  if (modal) modal.remove();
-};
-
-// ==========================================
-// FILTERING & SORTING
-// ==========================================
-
-/**
- * Filter projects
- */
-window.filterProjekte = function() {
-  const searchTerm = helpers.getInputValue('projekt-search').toLowerCase();
-  const statusFilter = helpers.getInputValue('projekt-filter-status');
-
-  const rows = document.querySelectorAll('.projekt-row, .projekt-card, .projekt-kompakt-item');
-
-  rows.forEach(row => {
-    const projektId = row.dataset.projektId;
-    const projekt = state.getProjekt(projektId);
-
-    if (!projekt) {
-      row.style.display = 'none';
-      return;
-    }
-
-    // Search filter
-    const nameMatch = projekt.name?.toLowerCase().includes(searchTerm);
-    const ownerMatch = projekt.owner?.toLowerCase().includes(searchTerm);
-    const divisionMatch = projekt.division?.toLowerCase().includes(searchTerm);
-
-    const searchMatch = searchTerm === '' || nameMatch || ownerMatch || divisionMatch;
-
-    // Status filter
-    const projektStatus = projekt.status?.toLowerCase().replace(/\s/g, '-') || 'aktiv';
-    const statusMatch = statusFilter === 'alle' || projektStatus === statusFilter;
-
-    // Show/hide row
-    row.style.display = (searchMatch && statusMatch) ? '' : 'none';
-  });
-
-  updateFilteredStats();
-};
-
-/**
- * Sort projects
- */
-window.sortProjekte = function() {
-  const sortBy = helpers.getInputValue('projekt-sort');
-  
-  // Get all projekte and sort
-  const projekte = state.getAllProjekte();
-  
-  projekte.sort((a, b) => {
-    switch(sortBy) {
-      case 'name':
-        return (a.name || '').localeCompare(b.name || '');
-      case 'start':
-        return new Date(a.startDatum || '2099-12-31') - new Date(b.startDatum || '2099-12-31');
-      case 'status':
-        return (a.status || '').localeCompare(b.status || '');
-      case 'owner':
-        return (a.owner || '').localeCompare(b.owner || '');
-      default:
-        return 0;
-    }
-  });
-
-  // Re-render with sorted data
-  renderProjektOverview();
-};
-
-/**
- * Update filtered stats
- */
-function updateFilteredStats() {
-  const visibleItems = document.querySelectorAll('.projekt-row:not([style*="display: none"]), .projekt-card:not([style*="display: none"]), .projekt-kompakt-item:not([style*="display: none"])');
-
-  let aktiv = 0, onHold = 0, abgeschlossen = 0;
-
-  visibleItems.forEach(item => {
-    const projekt = state.getProjekt(item.dataset.projektId);
-    if (!projekt) return;
-
-    const status = projekt.status?.toLowerCase() || '';
-    if (status === 'aktiv') aktiv++;
-    else if (status.includes('hold')) onHold++;
-    else if (status === 'abgeschlossen') abgeschlossen++;
-  });
-
-  const total = visibleItems.length;
-
-  // Update stats
-  helpers.setInputValue('stat-total-projects', total);
-  helpers.setInputValue('stat-active-projects', aktiv);
-  helpers.setInputValue('stat-onhold-projects', onHold);
-  helpers.setInputValue('stat-completed-projects', abgeschlossen);
-}
-
-// ==========================================
-// BULK ACTIONS
-// ==========================================
-
-/**
- * Toggle all projekt checkboxes
- */
-window.toggleAllProjects = function(checkbox) {
-  const checkboxes = document.querySelectorAll('.projekt-checkbox');
-  checkboxes.forEach(cb => {
-    cb.checked = checkbox.checked;
-  });
-  updateBulkActions();
-};
-
-/**
- * Update bulk actions bar
- */
-window.updateBulkActions = function() {
-  const checkedBoxes = document.querySelectorAll('.projekt-checkbox:checked');
-  const bulkBar = document.getElementById('bulk-actions-bar');
-
-  if (bulkBar) {
-    bulkBar.style.display = checkedBoxes.length > 0 ? 'flex' : 'none';
-
-    const countElement = document.getElementById('bulk-count');
-    if (countElement) {
-      countElement.textContent = checkedBoxes.length;
-    }
-  }
-};
-
-/**
- * Bulk status change
- */
-window.bulkStatusChange = async function() {
-  const newStatus = helpers.getInputValue('bulk-status-change');
-  if (!newStatus) {
-    alert('Bitte Status auswählen!');
-    return;
-  }
-
-  const checkedBoxes = document.querySelectorAll('.projekt-checkbox:checked');
-  const projektIds = Array.from(checkedBoxes).map(cb => cb.value);
-
-  if (projektIds.length === 0) return;
-
-  console.log(`🔄 Bulk updating ${projektIds.length} projects to status: ${newStatus}`);
-
-  const updatedCount = await api.updateMultipleProjectsStatus(projektIds, newStatus);
-
-  // Reset checkboxes
-  checkedBoxes.forEach(cb => cb.checked = false);
-  const selectAll = document.getElementById('select-all-projects');
-  if (selectAll) selectAll.checked = false;
-
-  // Re-render
-  renderProjektOverview();
-  updateBulkActions();
-
-  // AI Feedback
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'success',
-      title: '✅ Status aktualisiert',
-      text: `${updatedCount} Projekt(e) auf "${newStatus}" gesetzt.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-};
-
-/**
- * Bulk delete projects
- */
-window.bulkDeleteProjekte = function() {
-  const checkedBoxes = document.querySelectorAll('.projekt-checkbox:checked');
-  const projektIds = Array.from(checkedBoxes).map(cb => cb.value);
-
-  if (projektIds.length === 0) return;
-
-  const confirmed = confirm(`${projektIds.length} Projekte wirklich löschen?\n\nAlle zugehörigen Artikel werden ebenfalls gelöscht.`);
-  if (!confirmed) return;
-
-  console.log(`🗑️ Bulk deleting ${projektIds.length} projects`);
-
-  api.deleteMultipleProjects(projektIds).then(deletedCount => {
-    // Reset checkboxes
-    checkedBoxes.forEach(cb => cb.checked = false);
-    const selectAll = document.getElementById('select-all-projects');
-    if (selectAll) selectAll.checked = false;
-
-    // Re-render
-    renderProjektOverview();
-    updateBulkActions();
-
-    // AI Feedback
-    if (window.cfoDashboard.aiController) {
-      window.cfoDashboard.aiController.addAIMessage({
-        level: 'info',
-        title: '🗑️ Projekte gelöscht',
-        text: `${deletedCount} Projekt(e) erfolgreich entfernt.`,
-        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-      });
-    }
-  });
-};
-
-// ==========================================
-// EXPORTS
-// ==========================================
+// Export with alias
+export const renderCockpit = renderPortfolioCockpit;
 
 export default {
-  renderProjektOverview,
-  updateProjektStats
+    renderPortfolioCockpit,
+    renderCockpit
 };
