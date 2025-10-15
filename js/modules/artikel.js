@@ -1063,6 +1063,11 @@ window.createNewArtikel = function() {
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
   
+  // ✅ TUTORIAL EVENT: Artikel-Modal opened
+  document.dispatchEvent(new CustomEvent('artikel-modal-opened', {
+    detail: { type: 'artikel-create' }
+  }));
+  
   // Focus auf Name-Feld
   setTimeout(() => {
     document.getElementById('quick-artikel-name')?.focus();
@@ -1117,6 +1122,14 @@ window.saveQuickArtikel = async function() {
       
       // Close modal
       closeArtikelQuickCreate();
+
+      // ✅ TUTORIAL EVENT: Artikel created
+      document.dispatchEvent(new CustomEvent('artikel-created', {
+        detail: {
+          artikel: saved,
+          artikelId: `artikel-db-${saved.id}`
+        }
+      }));
       
       // WICHTIG: Lade Artikel neu aus der Datenbank
       await api.loadArticles(projektId);
