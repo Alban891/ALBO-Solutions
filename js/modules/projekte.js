@@ -522,9 +522,9 @@ window.openCreateProjektModal = function() {
               <option value="Vertrieb">Vertrieb</option>
               <option value="Service">Service</option>
               <option value="Innovation">Innovation</option>
-              <option value="consulting">Consulting</option>
-              <option value="automation">Automation</option>
-              <option value="digitalization">Digitalization</option>
+              <option value="Consulting">Consulting</option>
+              <option value="Automation">Automation</option>
+              <option value="Digitalization">Digitalization</option>
               <option value="custom">➕ Andere (manuell eingeben)...</option>
             </select>
             <input type="text" id="new-projekt-division-custom" 
@@ -574,6 +574,11 @@ window.openCreateProjektModal = function() {
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  // ✅ TUTORIAL EVENT: Modal opened
+  document.dispatchEvent(new CustomEvent('modal-opened', {
+    detail: { type: 'projekt-create' }
+  }));
 
   // Focus name input
   setTimeout(() => {
