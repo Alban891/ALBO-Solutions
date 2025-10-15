@@ -180,6 +180,19 @@
 </head>
 <body>
 
+    <!-- ✅ Tutorial Button (Fixed Position, immer sichtbar) -->
+    <button onclick="window.tutorialController.start()" 
+            style="position: fixed; top: 20px; right: 20px; 
+                   padding: 10px 20px; background: #10b981; color: white; 
+                   border: none; border-radius: 8px; cursor: pointer; 
+                   font-weight: 600; z-index: 9999; 
+                   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                   transition: all 0.2s ease;"
+            onmouseover="this.style.transform='scale(1.05)'" 
+            onmouseout="this.style.transform='scale(1)'">
+      🎓 Tutorial
+    </button>
+
     <!-- ========================================== -->
     <!-- HEADER -->
     <!-- ========================================== -->
