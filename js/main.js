@@ -228,20 +228,12 @@ async function initializeApplication() {
     startAIInsightsTimer();
 
     // ==========================================
-    // Step 9: Tutorial-Willkommens-Banner anzeigen (wenn Erstnutzer)
+    // Step 9: Tutorial verfügbar machen (NUR über Button)
     // ==========================================
-    console.log('9️⃣ Checking tutorial state...');
-    const hasCompletedTutorial = state.tutorialState?.completed?.length > 0;
-    const tutorialDismissed = state.tutorialState?.dismissed;
+    console.log('9️⃣ Tutorial ready - kann über Button gestartet werden');
     
-    if (!hasCompletedTutorial && !tutorialDismissed) {
-      // Zeige Willkommens-Banner mit Tutorial-Option
-      setTimeout(() => {
-        showWelcomeBanner();
-      }, 1000);
-    } else {
-      console.log('ℹ️ Tutorial already completed or dismissed');
-    }
+    // Tutorial wird NICHT automatisch gestartet
+    // User kann es über den Button rechts oben starten
 
     console.log('✅ CFO Dashboard ready!');
 
