@@ -757,19 +757,24 @@
                         </div>
 
                         <!-- RECHTE SPALTE: Markt & Strategie -->
-                        <div class="form-section">
-                            <h3>🎯 Markt & Strategie</h3>
-
-                            <div class="form-group">
-                                <label>Geschäftsmodell</label>
-                                <select id="geschaeftsmodell">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="einmalverkauf">Einmalverkauf</option>
-                                    <option value="subscription">Subscription</option>
-                                    <option value="freemium">Freemium</option>
-                                    <option value="lizenz">Lizenzmodell</option>
-                                </select>
+                        <div class="form-group">
+                            <label>Geschäftsmodell</label>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input type="text" id="geschaeftsmodell-display" 
+                                    readonly 
+                                    placeholder="Noch nicht definiert..."
+                                    style="flex: 1; background: #f8fafc; cursor: pointer;"
+                                    onclick="window.openGeschaeftsmodellDesignerForCurrentArtikel()">
+                                <button type="button" class="btn btn-primary" 
+                                        onclick="window.openGeschaeftsmodellDesignerForCurrentArtikel()"
+                                        style="padding: 10px 20px; white-space: nowrap;">
+                                🎯 Designer öffnen
+                                </button>
                             </div>
+                            <div id="geschaeftsmodell-summary" style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+                                <!-- Summary will be shown here -->
+                            </div>
+                        </div>
 
                             <div class="form-group">
                                 <label>Zielmarkt</label>
