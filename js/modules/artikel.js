@@ -8,6 +8,7 @@ import { state } from '../state.js';
 import * as helpers from '../helpers.js';
 import * as api from '../api.js';
 import * as charts from '../charts.js';
+import geschaeftsmodellDesigner from './geschaeftsmodell-designer.js';
 
 // ==========================================
 // ARTIKEL RENDERING
@@ -278,6 +279,9 @@ function loadArtikelIntoForm(artikel) {
   // Load year data into table
   loadYearDataIntoTable(artikel);
 
+  // Update Geschaeftsmodell display
+  updateGeschaeftsmodellDisplay(artikel);
+
   console.log('✅ Artikel loaded into form');
 }
 
@@ -311,6 +315,48 @@ function loadYearDataIntoTable(artikel) {
   }
 
   console.log('✅ Year data loaded into table');
+}
+
+/**
+ * Open Geschaeftsmodell Designer for current artikel
+ */
+window.openGeschaeftsmodellDesignerForCurrentArtikel = function() {
+  const artikelId = window.cfoDashboard.currentArtikel;
+  if (!artikelId) {
+    alert('Bitte zuerst Artikel speichern!');
+    return;
+  }
+  
+  geschaeftsmodellDesigner.openGeschaeftsmodellDesigner(artikelId);
+};
+
+/**
+ * Update Geschaeftsmodell display in form
+ */
+function updateGeschaeftsmodellDisplay(artikel) {
+  const displayInput = document.getElementById('geschaeftsmodell-display');
+  const summaryDiv = document.getElementById('geschaeftsmodell-summary');
+  
+  if (!displayInput || !summaryDiv) return;
+  
+  if (!artikel.geschaeftsmodell || !artikel.geschaeftsmodell.komponenten || artikel.geschaeftsmodell.komponenten.length === 0) {
+    displayInput.value = 'Noch nicht definiert...';
+    summaryDiv.innerHTML = '';
+    return;
+  }
+  
+  const gm = artikel.geschaeftsmodell;
+  displayInput.value = `${gm.typ.charAt(0).toUpperCase() + gm.typ.slice(1)} (${gm.komponenten.length} Komponenten)`;
+  
+  // Summary
+  const einmalig = gm.komponenten.filter(k => k.typ === 'einmalig').length;
+  const wiederkehrend = gm.komponenten.filter(k => k.typ === 'wiederkehrend').length;
+  
+  summaryDiv.innerHTML = `
+    ${einmalig > 0 ? `✓ ${einmalig} Einmal-Komponente${einmalig > 1 ? 'n' : ''}` : ''}
+    ${einmalig > 0 && wiederkehrend > 0 ? ' • ' : ''}
+    ${wiederkehrend > 0 ? `✓ ${wiederkehrend} ARR-Komponente${wiederkehrend > 1 ? 'n' : ''}` : ''}
+  `;
 }
 
 // ==========================================
