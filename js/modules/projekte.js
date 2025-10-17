@@ -396,53 +396,80 @@
   /**
    * Open projekt artikel view
    */
-  window.openProjektArtikel = async function(projektId) {
-    const projekt = state.getProjekt(projektId);
-    if (!projekt) {
-      console.error('Projekt not found:', projektId);
-      return;
-    }
+window.openProjektDetail = async function(projektId) {
+  console.log('📂 Opening projekt detail:', projektId);
+  
+  const projekt = state.getProjekt(projektId);
+  if (!projekt) {
+    console.error('Projekt not found:', projektId);
+    return;
+  }
 
-    console.log('📂 Opening projekt:', projekt.name);
+  console.log('📂 Opening projekt:', projekt.name);
 
-    // Set current projekt
-    window.cfoDashboard.currentProjekt = projektId;
-    state.currentProjekt = projektId;
+  // Set current projekt
+  window.cfoDashboard.currentProjekt = projektId;
+  state.currentProjekt = projektId;
+  state.projektViewMode = 'detail';  // 🆕 NEU HINZUGEFÜGT
 
-    // Load artikel for this projekt
-    await api.loadArticles(projektId);
+  // Load artikel for this projekt
+  await api.loadArticles(projektId);
 
-    // Switch to artikel view
-    const projektOverview = document.getElementById('projekt-overview');
-    const artikelOverview = document.getElementById('artikel-overview');
+  // 🔴 KRITISCHE ÄNDERUNG START
+  // ERST: Alle anderen Haupt-Tabs ausblenden
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.style.display = 'none';
+    content.classList.remove('active');
+  });
+  
+  // DANN: Nur den Projekte-Tab zeigen
+  const projekteTab = document.getElementById('tab-projekte');
+  if (projekteTab) {
+    projekteTab.style.display = 'block';
+    projekteTab.classList.add('active');
+  }
+  
+  // Tab-Button aktivieren (falls nicht schon aktiv)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  const projekteBtn = document.querySelector('[onclick="switchTab(\'projekte\')"]');
+  if (projekteBtn) {
+    projekteBtn.classList.add('active');
+  }
+  // 🔴 KRITISCHE ÄNDERUNG ENDE
+  
+  // INNERHALB des Projekte-Tabs: projekt-overview ausblenden, artikel-overview zeigen
+  const projektOverview = document.getElementById('projekt-overview');
+  const artikelOverview = document.getElementById('artikel-overview');
+  
+  if (projektOverview) projektOverview.style.display = 'none';
+  if (artikelOverview) artikelOverview.style.display = 'block';
 
-    if (projektOverview) projektOverview.style.display = 'none';
-    if (artikelOverview) artikelOverview.style.display = 'block';
+  // Update breadcrumb/title
+  const projektTitle = document.getElementById('current-projekt-name');
+  if (projektTitle) {
+    projektTitle.textContent = projekt.name;
+  }
 
-    // Update breadcrumb/title
-    const projektTitle = document.getElementById('current-projekt-name');
-    if (projektTitle) {
-      projektTitle.textContent = projekt.name;
-    }
+  // Render artikel list
+  renderArtikelListByProjekt();  // 🆕 Kein "if" mehr nötig
 
-    // Render artikel list
-    renderArtikelListByProjekt();
+  // Save navigation state
+  if (window.saveNavigationState) {
+    window.saveNavigationState();
+  }
 
-    // Save navigation state
-    if (window.saveNavigationState) {
-      window.saveNavigationState();
-    }
-
-    // AI Feedback
-    if (window.cfoDashboard.aiController) {
-      window.cfoDashboard.aiController.addAIMessage({
-        level: 'info',
-        title: '📂 Projekt geöffnet',
-        text: `"${projekt.name}" - ${projekt.artikel?.length || 0} Artikel geladen.`,
-        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-      });
-    }
-  };
+  // AI Feedback
+  if (window.cfoDashboard.aiController) {
+    window.cfoDashboard.aiController.addAIMessage({
+      level: 'info',
+      title: '📂 Projekt geöffnet',
+      text: `"${projekt.name}" - ${projekt.artikel?.length || 0} Artikel geladen.`,
+      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+    });
+  }
+};
 
   /**
    * Go back to projekt overview
