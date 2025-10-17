@@ -4,7 +4,7 @@
  * Enterprise entry point with proper error handling
  * 
  * Version: 3.1 - October 2025
- * Features: Tutorial System, Deep Navigation Restore, AI Controller
+ * Features: Deep Navigation Restore, AI Controller
  * FIXED: Export conflicts, function hoisting, state references
  */
 
@@ -17,7 +17,6 @@ import * as cockpit from './modules/cockpit.js';
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel.js';
 import * as projektkosten from './modules/projektkosten.js';
-import tutorialController from './modules/tutorial-controller.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -226,14 +225,6 @@ async function initializeApplication() {
     // Step 8: Start AI insights timer
     // ==========================================
     startAIInsightsTimer();
-
-    // ==========================================
-    // Step 9: Tutorial verfügbar machen (NUR über Button)
-    // ==========================================
-    console.log('9️⃣ Tutorial ready - kann über Button gestartet werden');
-    
-    // Tutorial wird NICHT automatisch gestartet
-    // User kann es über den Button rechts oben starten
 
     console.log('✅ CFO Dashboard ready!');
 
@@ -813,9 +804,6 @@ if (document.readyState === 'loading') {
 // ==========================================
 // GLOBAL EXPORTS
 // ==========================================
-
-// Tutorial Controller global verfügbar machen
-window.tutorialController = tutorialController;
 
 // Export to window for debugging
 window.cfoDashboardMain = {
