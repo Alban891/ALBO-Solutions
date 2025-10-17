@@ -45,6 +45,13 @@ window.cfoDashboard = {
  * Switch main tab
  */
 window.switchTab = function(tabName) {
+  // CRITICAL FIX: Hide artikel-detail-view on ANY tab switch
+  const artikelDetail = document.getElementById('artikel-detail-view');
+  if (artikelDetail) {
+    artikelDetail.style.display = 'none';
+    console.log('🔧 FIX: Artikel-detail hidden on tab switch to:', tabName);
+  }
+
   // Check if already on this tab
   const currentTab = state.currentTab;
   if (currentTab === tabName) {
@@ -182,6 +189,14 @@ async function initializeApplication() {
       console.log('ℹ️ No previous state - using default (cockpit)');
       state.currentTab = 'cockpit';
       applyRestoredTab();
+    }
+
+    // CRITICAL FIX: Force hide artikel-detail-view on startup
+    const artikelDetailView = document.getElementById('artikel-detail-view');
+    if (artikelDetailView) {
+        artikelDetailView.style.display = 'none';
+        artikelDetailView.style.visibility = 'hidden';
+        console.log('🔧 FIX: Artikel-detail-view forced hidden on startup');
     }
 
     // ==========================================
