@@ -1601,5 +1601,37 @@
 
     </script>
 
+    <!-- FIX: Verschiebe Finanz-Parameter in den richtigen Container -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔧 FIX: Suche falsch platzierte Finanz-Parameter Section...');
+        
+        // Finde das falsch platzierte Element
+        const finanzSection = Array.from(document.querySelectorAll('#tab-projekte > *'))
+            .find(el => el.textContent.includes('Finanz-Parameter & Entwicklungsmodelle'));
+        
+        // Finde den richtigen Container (artikel-detail-view)
+        const artikelDetailView = document.getElementById('artikel-detail-view');
+        
+        if (finanzSection && artikelDetailView) {
+            // Verschiebe es in den richtigen Container
+            artikelDetailView.appendChild(finanzSection);
+            console.log('✅ FIX ERFOLREICH: Finanz-Parameter Section verschoben nach artikel-detail-view');
+            
+            // Initial verstecken (zur Sicherheit)
+            if (!window.cfoDashboard?.currentArtikel) {
+                finanzSection.style.display = 'none';
+            }
+        } else {
+            if (!finanzSection) {
+                console.log('ℹ️ Finanz-Parameter Section nicht gefunden - kein Problem');
+            }
+            if (!artikelDetailView) {
+                console.error('❌ artikel-detail-view nicht gefunden!');
+            }
+        }
+    });
+    </script>
+
 </body>
 </html>
