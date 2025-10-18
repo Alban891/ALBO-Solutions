@@ -50,3 +50,7 @@ export {
   renderSection7,
   renderSection8
 };
+
+// Export additional functions from sections
+export { addCustomStream } from './section-5.js';
+export { addFeature } from './section-7.js';
