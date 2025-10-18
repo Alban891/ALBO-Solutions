@@ -413,19 +413,22 @@
                     <!-- TAB-NAVIGATION INNERHALB PROJEKT -->
                     <div class="detail-tabs">
                         <button class="detail-tab" onclick="switchProjektTab('uebersicht')">
-                            📋 Übersicht
+                            Übersicht
                         </button>
                         <button class="detail-tab active" onclick="switchProjektTab('artikel')">
-                            📦 Artikel
+                            Artikel
+                        </button>
+                        <button class="detail-tab" onclick="switchProjektTab('geschaeftsmodell')">
+                            Geschäftsmodell
                         </button>
                         <button class="detail-tab" onclick="switchProjektTab('projektkosten')">
-                            💰 Projektkosten
+                            Projektkosten
                         </button>
                         <button class="detail-tab" onclick="switchProjektTab('wirtschaftlichkeit')">
-                            📈 Wirtschaftlichkeit
+                            Wirtschaftlichkeit
                         </button>
                         <button class="detail-tab" onclick="switchProjektTab('dashboard')">
-                            📊 Dashboard
+                            Dashboard
                         </button>
                     </div>
 
@@ -477,6 +480,13 @@
                             <div class="kosten-total-value" id="total-projektkosten">0€</div>
                         </div>
 
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- PROJEKT TAB: GESCHÄFTSMODELL (NEU!) -->
+                    <!-- ========================================== -->
+                    <div id="projekt-tab-geschaeftsmodell" class="projekt-tab-content">
+                        <!-- Wird von geschaeftsmodell.js gefüllt -->
                     </div>
 
                     <!-- ========================================== -->
@@ -1364,7 +1374,7 @@
                 window.state.currentArtikel = null;
                 window.state.saveState();
             }
-        }  // ✅ DIESE KLAMMER FEHLTE!
+        }
         else if (tabName === 'uebersicht') {
             // Import und render Übersicht (Executive Summary)
             import('./js/modules/uebersicht.js').then(module => {
@@ -1374,6 +1384,16 @@
             }).catch(err => {
                 console.error('Failed to load uebersicht module:', err);
             });        
+        }
+        else if (tabName === 'geschaeftsmodell') {
+            // Import und render Geschäftsmodell
+            import('./js/modules/geschaeftsmodell.js').then(module => {
+                if (module.renderGeschaeftsmodell) {
+                    module.renderGeschaeftsmodell();
+                }
+            }).catch(err => {
+                console.error('Failed to load geschaeftsmodell module:', err);
+            });
         }
         else if (tabName === 'projektkosten') {
             // Import und render Projektkosten
