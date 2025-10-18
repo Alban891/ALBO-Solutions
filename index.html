@@ -1602,36 +1602,67 @@
     </script>
 
     <!-- FIX: Verschiebe Finanz-Parameter in den richtigen Container -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🔧 FIX: Suche falsch platzierte Finanz-Parameter Section...');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 FIX: Suche falsch platzierte Finanz-Parameter Section...');
+    
+    // Finde das falsch platzierte Element
+    const finanzSection = Array.from(document.querySelectorAll('#tab-projekte > *'))
+        .find(el => {
+            // Nur direct children, nicht artikel-detail-view selbst
+            return el.textContent.includes('Finanz-Parameter & Entwicklungsmodelle') && 
+                   el.id !== 'artikel-detail-view' &&
+                   el.id !== 'projekt-detail-view';
+        });
+    
+    // Finde den richtigen Container (artikel-detail-view)
+    const artikelDetailView = document.getElementById('artikel-detail-view');
+    
+    if (finanzSection && artikelDetailView) {
+        // WICHTIG: Füge am ENDE hinzu, nicht ersetzen!
+        const wrapper = document.createElement('div');
+        wrapper.id = 'finanz-parameter-wrapper';
+        wrapper.style.display = 'none'; // Initial versteckt
+        wrapper.appendChild(finanzSection);
         
-        // Finde das falsch platzierte Element
-        const finanzSection = Array.from(document.querySelectorAll('#tab-projekte > *'))
-            .find(el => el.textContent.includes('Finanz-Parameter & Entwicklungsmodelle'));
+        // Füge am Ende der artikel-detail-view hinzu
+        artikelDetailView.appendChild(wrapper);
         
-        // Finde den richtigen Container (artikel-detail-view)
-        const artikelDetailView = document.getElementById('artikel-detail-view');
+        console.log('✅ FIX: Finanz-Parameter Section verschoben (wrapped)');
         
-        if (finanzSection && artikelDetailView) {
-            // Verschiebe es in den richtigen Container
-            artikelDetailView.appendChild(finanzSection);
-            console.log('✅ FIX ERFOLREICH: Finanz-Parameter Section verschoben nach artikel-detail-view');
-            
-            // Initial verstecken (zur Sicherheit)
-            if (!window.cfoDashboard?.currentArtikel) {
-                finanzSection.style.display = 'none';
+        // Zeige/Verstecke basierend auf Artikel-Status
+        const originalOpenArtikel = window.openArtikelDetail;
+        window.openArtikelDetail = function(artikelId) {
+            console.log('🔍 Opening artikel with wrapper control...');
+            if (originalOpenArtikel) {
+                originalOpenArtikel.call(this, artikelId);
             }
-        } else {
-            if (!finanzSection) {
-                console.log('ℹ️ Finanz-Parameter Section nicht gefunden - kein Problem');
+            // Zeige Finanz-Parameter wenn Artikel offen
+            const wrapper = document.getElementById('finanz-parameter-wrapper');
+            if (wrapper) wrapper.style.display = 'block';
+        };
+        
+        const originalCloseArtikel = window.closeArtikelDetail;
+        window.closeArtikelDetail = function() {
+            console.log('🔍 Closing artikel with wrapper control...');
+            if (originalCloseArtikel) {
+                originalCloseArtikel.call(this);
             }
-            if (!artikelDetailView) {
-                console.error('❌ artikel-detail-view nicht gefunden!');
-            }
+            // Verstecke Finanz-Parameter
+            const wrapper = document.getElementById('finanz-parameter-wrapper');
+            if (wrapper) wrapper.style.display = 'none';
+        };
+        
+    } else {
+        // Alternative: Verstecke es einfach wenn es existiert
+        if (finanzSection && !artikelDetailView) {
+            console.log('⚠️ Verstecke Finanz-Parameter Section direkt');
+            finanzSection.style.display = 'none';
+            finanzSection.id = 'orphaned-finanz-section';
         }
-    });
-    </script>
+    }
+});
+</script>
 
 </body>
 </html>
