@@ -1887,6 +1887,27 @@ body {
   }
 }
 
+/* FIX: Verstecke artikel-detail-view immer, außer wenn explizit sichtbar */
+#artikel-detail-view {
+  display: none !important;
+}
+
+/* Zeige nur wenn openArtikelDetail aufgerufen wurde */
+body.artikel-detail-open #artikel-detail-view {
+  display: block !important;
+}
+
+/* Verstecke Finanz-Parameter Sections die nicht in artikel-detail-view sind */
+.form-section:has(h3:contains("Finanz-Parameter")) {
+  display: none;
+}
+
+#artikel-detail-view .form-section {
+  display: block !important;
+}
+
+}
+
 /* ========================================== */
 /* END OF FILE */
 /* ========================================== */
