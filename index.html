@@ -1,2081 +1,417 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ALBO Solutions - Business Case Management Platform</title>
-    
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALBO Solutions – Business Case Management Platform</title>
+
+  <!-- === External Libraries === -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- === Styles === -->
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/cockpit-COMPLETE.css" />
+
+  <!-- === Modal Style (keine Änderung) === -->
+  <style>
+    .modal {
+      display: flex !important;
+      position: fixed !important;
+      z-index: 10000 !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: rgba(0, 0, 0, 0.5) !important;
+      backdrop-filter: blur(2px) !important;
+      align-items: center !important;
+      justify-content: center !important;
+      overflow-y: auto !important;
+      padding: 20px !important;
+    }
+    .modal-content {
+      background: #fff !important;
+      border-radius: 12px !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+      width: 90% !important;
+      max-width: 600px !important;
+      max-height: 90vh !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      margin: auto !important;
+      position: relative !important;
+    }
+    .modal-header,
+    .modal-footer {
+      padding: 24px !important;
+      border-bottom: 1px solid #e2e8f0 !important;
+      flex-shrink: 0 !important;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+    .btn-close {
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-close:hover {
+      background: #f1f5f9;
+      border-radius: 4px;
+      color: #1e3a8a;
+    }
+    .modal-body {
+      padding: 24px !important;
+      overflow-y: auto !important;
+      flex: 1 !important;
+      max-height: calc(90vh - 160px) !important;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- ========================================== -->
-    <!-- HEADER -->
-    <!-- ========================================== -->
-    <header class="dashboard-header">
-        <div class="header-left">
-            <h1>ALBO Solutions - Business Case Management</h1>
-            <span class="header-subtitle">KI-gestützte Echtzeit-Analyse mit intelligenten Handlungsempfehlungen</span>
-        </div>
-        <!-- RECHTS: KPIs -->
-        <div class="header-stats">
-            <div class="stat">
-                <div class="stat-value" id="npv-value">+44,7M€</div>
-                <div class="stat-label">NPV (9 JAHRE)</div>
+  <!-- === HEADER === -->
+  <header class="dashboard-header">
+    <div class="header-left">
+      <h1>ALBO Solutions – Business Case Management</h1>
+      <span class="header-subtitle">KI-gestützte Echtzeit-Analyse mit intelligenten Handlungsempfehlungen</span>
+    </div>
+    <div class="header-stats">
+      <div class="stat"><div class="stat-value" id="npv-value">+44,7 M€</div><div class="stat-label">NPV (9 Jahre)</div></div>
+      <div class="stat"><div class="stat-value" id="payback-value">3,4 J</div><div class="stat-label">PAYBACK</div></div>
+      <div class="stat"><div class="stat-value" id="revenue-value">117,8 M€</div><div class="stat-label">TOTAL REVENUE</div></div>
+      <div class="stat"><div class="stat-value" id="margin-value">34 %</div><div class="stat-label">Ø DB2-MARGE</div></div>
+    </div>
+  </header>
+
+  <!-- === NAVIGATION === -->
+  <nav class="main-navigation">
+    <button class="tab-btn active" onclick="switchTab('cockpit')">📊 Cockpit</button>
+    <button class="tab-btn" onclick="switchTab('projekte')">💼 Projekte</button>
+    <button class="tab-btn" onclick="switchTab('performance')">📈 Performance</button>
+    <button class="tab-btn" onclick="switchTab('admin')">⚙️ Admin</button>
+  </nav>
+
+  <!-- === MAIN WRAPPER === -->
+  <div class="main-content">
+    <main class="dashboard-main">
+      <!-- === TAB: COCKPIT === -->
+      <div id="tab-cockpit" class="tab-content active">
+        <div class="portfolio-kpis"></div>
+        <div class="bcg-matrix-container"></div>
+        <div class="strategic-recommendations"></div>
+      </div>
+
+      <!-- === TAB: PROJEKTE === -->
+      <div id="tab-projekte" class="tab-content">
+        <div id="projekt-overview">
+          <div class="portfolio-overview-header">
+            <div class="portfolio-label">PORTFOLIO OVERVIEW</div>
+            <div class="portfolio-stats">
+              <div class="portfolio-stat"><span id="stat-total-projects">0</span><span>PROJEKTE</span></div>
+              <div class="portfolio-stat portfolio-stat-success"><span id="stat-active-projects">0</span><span>AKTIV</span></div>
+              <div class="portfolio-stat portfolio-stat-warning"><span id="stat-onhold-projects">0</span><span>ON HOLD</span></div>
+              <div class="portfolio-stat portfolio-stat-neutral"><span id="stat-completed-projects">0</span><span>ABGESCHLOSSEN</span></div>
             </div>
-            <div class="stat">
-                <div class="stat-value" id="payback-value">3,4J</div>
-                <div class="stat-label">PAYBACK</div>
+          </div>
+
+          <div class="section-header-with-views">
+            <div class="section-title"><span class="section-icon">📁</span><h2>Projekt Portfolio</h2></div>
+            <div class="view-switcher">
+              <button class="view-btn active" data-view="liste" onclick="switchProjectView('liste')">☰ Liste</button>
+              <button class="view-btn" data-view="karten" onclick="switchProjectView('karten')">▦ Karten</button>
+              <button class="view-btn" data-view="kompakt" onclick="switchProjectView('kompakt')">≡ Kompakt</button>
             </div>
-            <div class="stat">
-                <div class="stat-value" id="revenue-value">117,8M€</div>
-                <div class="stat-label">TOTAL REVENUE</div>
+          </div>
+
+          <!-- Filter & Suchfeld -->
+          <div class="table-controls">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input id="projekt-search" type="text" placeholder="Projekte durchsuchen…" oninput="filterProjekte()" />
             </div>
-            <div class="stat">
-                <div class="stat-value" id="margin-value">34%</div>
-                <div class="stat-label">Ø DB2-MARGE</div>
+            <div class="filter-group">
+              <select id="projekt-filter-status" onchange="filterProjekte()">
+                <option value="alle">Alle Status</option>
+                <option value="aktiv">Aktiv</option>
+                <option value="planung">Planung</option>
+                <option value="on-hold">On Hold</option>
+                <option value="abgeschlossen">Abgeschlossen</option>
+              </select>
+              <select id="projekt-sort" onchange="sortProjekte()">
+                <option value="name">Sortieren: Name</option>
+                <option value="start">Sortieren: Startdatum</option>
+                <option value="status">Sortieren: Status</option>
+                <option value="owner">Sortieren: Owner</option>
+              </select>
             </div>
-        </div>
-    </header>
+          </div>
 
-    <!-- ========================================== -->
-    <!-- MAIN NAVIGATION (Horvath-Style) -->
-    <!-- ========================================== -->
-    <nav class="main-navigation">
-        <button class="tab-btn active" onclick="switchTab('cockpit')">
-            📊 Cockpit
-        </button>
-        <button class="tab-btn" onclick="switchTab('projekte')">
-            💼 Projekte
-        </button>
-        <button class="tab-btn" onclick="switchTab('performance')">
-            📈 Performance
-        </button>
-        <button class="tab-btn" onclick="switchTab('admin')">
-            ⚙️ Admin
-        </button>
-    </nav>
-
-    <!-- ========================================== -->
-    <!-- MAIN CONTENT WRAPPER -->
-    <!-- ========================================== -->
-    <div class="main-content">
-        <main class="dashboard-main">
-
-            <!-- ========================================== -->
-            <!-- TAB 1: COCKPIT (Portfolio Overview) -->
-            <!-- ========================================== -->
-            <div id="tab-cockpit" class="tab-content active">
-                
-                <!-- Slider Controls -->
-                <div class="control-panel">
-                    <h2>🎛️ Business Case Simulator</h2>
-                    <p class="control-description">Passen Sie die Annahmen an und sehen Sie die Auswirkungen in Echtzeit</p>
-
-                    <div class="sliders-grid">
-                        <!-- Market Volume Slider -->
-                        <div class="slider-control">
-                            <div class="slider-header">
-                                <label>📈 Marktvolumen</label>
-                                <span id="market-value" class="slider-value">100%</span>
-                            </div>
-                            <input type="range" id="market-slider" 
-                                   min="50" max="150" value="100" step="5"
-                                   oninput="adjustAssumption('market', this.value)"
-                                   class="slider">
-                            <div class="slider-labels">
-                                <span>50%</span>
-                                <span>100%</span>
-                                <span>150%</span>
-                            </div>
-                        </div>
-
-                        <!-- Price Premium Slider -->
-                        <div class="slider-control">
-                            <div class="slider-header">
-                                <label>💰 Preis-Premium</label>
-                                <span id="price-value" class="slider-value">+0%</span>
-                            </div>
-                            <input type="range" id="price-slider" 
-                                   min="80" max="120" value="100" step="5"
-                                   oninput="adjustAssumption('price', this.value)"
-                                   class="slider">
-                            <div class="slider-labels">
-                                <span>-20%</span>
-                                <span>±0%</span>
-                                <span>+20%</span>
-                            </div>
-                        </div>
-
-                        <!-- CAPEX Risk Slider -->
-                        <div class="slider-control">
-                            <div class="slider-header">
-                                <label>⚠️ CAPEX-Risiko</label>
-                                <span id="capex-value" class="slider-value">Plan</span>
-                            </div>
-                            <input type="range" id="capex-slider" 
-                                   min="80" max="120" value="100" step="5"
-                                   oninput="adjustAssumption('capex', this.value)"
-                                   class="slider">
-                            <div class="slider-labels">
-                                <span>-20%</span>
-                                <span>Plan</span>
-                                <span>+20%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Key Metrics -->
-                <div class="metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-icon">💰</div>
-                        <div class="metric-content">
-                            <div class="metric-label">NPV</div>
-                            <div class="metric-value">44.7 M€</div>
-                            <div class="metric-change positive">+12.3% vs Plan</div>
-                        </div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-icon">📅</div>
-                        <div class="metric-content">
-                            <div class="metric-label">Payback</div>
-                            <div class="metric-value">3.4 Jahre</div>
-                            <div class="metric-change positive">Excellent</div>
-                        </div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-icon">📊</div>
-                        <div class="metric-content">
-                            <div class="metric-label">Gesamt-Umsatz</div>
-                            <div class="metric-value">174.0 M€</div>
-                            <div class="metric-change neutral">2024-2030</div>
-                        </div>
-                    </div>
-
-                    <div class="metric-card">
-                        <div class="metric-icon">💎</div>
-                        <div class="metric-content">
-                            <div class="metric-label">DB2-Marge</div>
-                            <div class="metric-value">34%</div>
-                            <div class="metric-change positive">Über Benchmark</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Grid -->
-                <div class="charts-grid">
-                    <!-- Umsatz Chart -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>📈 Umsatzentwicklung</h3>
-                            <span class="chart-subtitle">Jährliche Erlöse in k€</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="umsatz-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Absatz Chart -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>📦 Absatzentwicklung</h3>
-                            <span class="chart-subtitle">Verkaufte Einheiten (Tsd.)</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="absatz-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- DB2 Chart -->
-                    <div class="chart-card chart-wide">
-                        <div class="chart-header">
-                            <h3>💰 DB2 & Marge</h3>
-                            <span class="chart-subtitle">Deckungsbeitrag II und Margenverlauf</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="db2-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Projektkosten Chart -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>🔧 Projektkosten</h3>
-                            <span class="chart-subtitle">Entwicklungs- und Betriebskosten</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="projektkosten-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- DB3 Jahr Chart -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>💎 DB3 Jahreswerte</h3>
-                            <span class="chart-subtitle">Deckungsbeitrag III pro Jahr</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="db3-jahr-chart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- DB3 Kumuliert Chart -->
-                    <div class="chart-card">
-                        <div class="chart-header">
-                            <h3>📈 DB3 Kumuliert</h3>
-                            <span class="chart-subtitle">Kumulierter Deckungsbeitrag</span>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="db3-kumuliert-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
+          <!-- Projekttabelle -->
+          <div id="projekt-list-container">
+            <div class="table-container">
+              <div id="projekt-loading-indicator" class="loading-indicator"><div class="spinner"></div><p>Projekte werden geladen…</p></div>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th width="40"><input type="checkbox" id="select-all-projects" onchange="toggleAllProjects(this)" /></th>
+                    <th>PROJEKT</th><th>DIVISION</th><th>OWNER</th>
+                    <th width="100">START</th><th width="100">END</th><th width="100">STATUS</th><th width="120">AKTIONEN</th>
+                  </tr>
+                </thead>
+                <tbody id="projekt-list-tbody"></tbody>
+              </table>
             </div>
+          </div>
 
-            <!-- ========================================== -->
-            <!-- TAB 2: PROJEKTE -->
-            <!-- ========================================== -->
-            <div id="tab-projekte" class="tab-content">
-                
-                <!-- ========================================== -->
-                <!-- VIEW: PROJEKT OVERVIEW (Default) -->
-                <!-- ========================================== -->
-                <div id="projekt-overview">
-                    
-                    <!-- Portfolio Overview Header (Horvath Style) -->
-                    <div class="portfolio-overview-header">
-                        <div class="portfolio-label">PORTFOLIO OVERVIEW</div>
-                        <div class="portfolio-stats">
-                            <div class="portfolio-stat">
-                                <span class="portfolio-stat-value" id="stat-total-projects">0</span>
-                                <span class="portfolio-stat-label">PROJEKTE</span>
-                            </div>
-                            <div class="portfolio-stat portfolio-stat-success">
-                                <span class="portfolio-stat-value" id="stat-active-projects">0</span>
-                                <span class="portfolio-stat-label">AKTIV</span>
-                            </div>
-                            <div class="portfolio-stat portfolio-stat-warning">
-                                <span class="portfolio-stat-value" id="stat-onhold-projects">0</span>
-                                <span class="portfolio-stat-label">ON HOLD</span>
-                            </div>
-                            <div class="portfolio-stat portfolio-stat-neutral">
-                                <span class="portfolio-stat-value" id="stat-completed-projects">0</span>
-                                <span class="portfolio-stat-label">ABGESCHLOSSEN</span>
-                            </div>
-                        </div>
-                    </div>
+          <div class="centered-action">
+            <button class="btn btn-primary" onclick="openCreateProjektModal()">➕ Neues Projekt anlegen</button>
+          </div>
 
-                    <!-- Section Header with View Switcher -->
-                    <div class="section-header-with-views">
-                        <div class="section-title">
-                            <span class="section-icon">📁</span>
-                            <h2>Projekt Portfolio</h2>
-                        </div>
-                        <div class="view-switcher">
-                            <button class="view-btn active" data-view="liste" onclick="switchProjectView('liste')">
-                                <span class="view-icon">☰</span> Liste
-                            </button>
-                            <button class="view-btn" data-view="karten" onclick="switchProjectView('karten')">
-                                <span class="view-icon">▦</span> Karten
-                            </button>
-                            <button class="view-btn" data-view="kompakt" onclick="switchProjectView('kompakt')">
-                                <span class="view-icon">≡</span> Kompakt
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Filter & Search -->
-                    <div class="table-controls">
-                        <div class="search-box">
-                            <span class="search-icon">🔍</span>
-                            <input type="text" id="projekt-search" 
-                                   placeholder="Projekte durchsuchen..." 
-                                   oninput="filterProjekte()">
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label for="projekt-filter-status" class="sr-only">Status Filter</label>
-                            <select id="projekt-filter-status" onchange="filterProjekte()" aria-label="Status Filter">
-                                <option value="alle">Alle Status</option>
-                                <option value="aktiv">Aktiv</option>
-                                <option value="planung">Planung</option>
-                                <option value="on-hold">On Hold</option>
-                                <option value="abgeschlossen">Abgeschlossen</option>
-                            </select>
-
-                            <select id="projekt-sort" onchange="sortProjekte()">
-                                <option value="name">Sortieren: Name</option>
-                                <option value="start">Sortieren: Startdatum</option>
-                                <option value="status">Sortieren: Status</option>
-                                <option value="owner">Sortieren: Owner</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Projects Table -->
-                    <div id="projekt-list-container">
-                        <div class="table-container">
-                            <!-- Loading Indicator -->
-                            <div id="projekt-loading-indicator" class="loading-indicator">
-                                <div class="spinner"></div>
-                                <p>Projekte werden geladen...</p>
-                            </div>
-
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <input type="checkbox" id="select-all-projects" 
-                                                    onchange="toggleAllProjects(this)">
-                                        </th>
-                                        <th>PROJEKT</th>
-                                        <th>DIVISION</th>
-                                        <th>OWNER</th>
-                                        <th width="100">START</th>
-                                        <th width="100">END</th>
-                                        <th width="100">STATUS</th>
-                                        <th width="120">AKTIONEN</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="projekt-list-tbody">
-                                    <!-- Projects will be rendered here by projekte.js -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Centered Create Button -->
-                    <div class="centered-action">
-                        <button class="btn btn-primary btn-large" onclick="openCreateProjektModal()">
-                            ➕ Neues Projekt anlegen
-                        </button>
-                    </div>
-
-                    <!-- Bulk Actions Bar -->
-                    <div id="bulk-actions-bar" class="bulk-actions-bar">
-                        <div class="bulk-actions-info">
-                            <span id="bulk-count">0</span> Projekte ausgewählt
-                        </div>
-                        <div class="bulk-actions-buttons">
-                            <select id="bulk-status-change">
-                                <option value="">Status ändern...</option>
-                                <option value="Planung">→ Planung</option>
-                                <option value="Aktiv">→ Aktiv</option>
-                                <option value="On Hold">→ On Hold</option>
-                                <option value="Abgeschlossen">→ Abgeschlossen</option>
-                            </select>
-                            <button class="btn btn-secondary" onclick="bulkStatusChange()">
-                                Anwenden
-                            </button>
-                            <button class="btn btn-danger" onclick="bulkDeleteProjekte()">
-                                🗑️ Löschen
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- Ende projekt-overview -->
-
-                <!-- ========================================== -->
-                <!-- VIEW: PROJEKT DETAIL (Hidden by default) -->
-                <!-- ========================================== -->
-                <div id="projekt-detail-view" style="display: none;">
-                    
-                    <!-- Breadcrumb -->
-                    <div class="breadcrumb">
-                        <button class="breadcrumb-link" onclick="backToProjektOverview()">
-                            💼 Projekte
-                        </button>
-                        <span class="breadcrumb-separator">›</span>
-                        <span id="projekt-detail-breadcrumb" class="breadcrumb-current">Projekt</span>
-                    </div>
-
-                    <!-- Header -->
-                    <div class="section-header">
-                        <h2 id="projekt-detail-title">Projekt</h2>
-                        <div class="header-actions">
-                            <button class="btn btn-secondary" onclick="backToProjektOverview()">
-                                ← Zurück
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- TAB-NAVIGATION INNERHALB PROJEKT -->
-                    <div class="detail-tabs">
-                        <button class="detail-tab" onclick="switchProjektTab('uebersicht')">
-                            📋 Übersicht
-                        </button>
-                        <button class="detail-tab active" onclick="switchProjektTab('artikel')">
-                            📦 Artikel
-                        </button>
-                        <button class="detail-tab" onclick="switchProjektTab('projektkosten')">
-                            💰 Projektkosten
-                        </button>
-                        <button class="detail-tab" onclick="switchProjektTab('wirtschaftlichkeit')">
-                            📈 Wirtschaftlichkeit
-                        </button>
-                        <button class="detail-tab" onclick="switchProjektTab('dashboard')">
-                            📊 Dashboard
-                        </button>
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: ÜBERSICHT -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-uebersicht" class="projekt-tab-content active">
-                        <!-- Wird von uebersicht.js gefüllt -->
-                    </div>
-                            
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: KOSTEN (Your existing design!) -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-projektkosten" class="projekt-tab-content">
-                        
-                        <div class="section-header">
-                            <h3>💰 Projektkosten</h3>
-                            <div class="header-actions">
-                                <button class="btn btn-secondary" onclick="generateKostenEmpfehlungen()">
-                                    🤖 KI-Empfehlungen
-                                </button>
-                                <button class="btn btn-primary" onclick="addKostenBlock()">
-                                    ➕ Kostenblock
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 24px; padding: 16px; background: var(--bg-secondary); border-left: 4px solid var(--primary); border-radius: 4px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <span style="font-size: 24px;">ℹ️</span>
-                                <div>
-                                    <div style="font-weight: 600; margin-bottom: 4px;">Projektkosten-Verwaltung</div>
-                                    <div style="font-size: 14px; color: var(--gray);">
-                                        Diese Kosten gelten für <strong>alle Artikel</strong> in diesem Projekt.
-                                        Nutzen Sie die KI-Empfehlungen für typische Kostenstrukturen.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Cost Blocks Container (from kosten.js) -->
-                        <div id="kosten-bloecke-container" class="kosten-bloecke">
-                            <!-- Cost blocks will be added here dynamically by kosten.js -->
-                        </div>
-
-                        <!-- Total -->
-                        <div class="kosten-total">
-                            <div class="kosten-total-label">Gesamte Projektkosten:</div>
-                            <div class="kosten-total-value" id="total-projektkosten">0€</div>
-                        </div>
-
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: ARTIKEL -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-artikel" class="projekt-tab-content">
-                        
-                        <!-- Header -->
-                        <div class="section-header">
-                            <div>
-                                <h3>📦 Artikel</h3>
-                                <p>Produktartikel und Services des Projekts</p>
-                            </div>
-                            <button class="btn btn-primary" onclick="createNewArtikel()">
-                                ➕ Neuer Artikel
-                            </button>
-                        </div>
-
-                        <!-- Articles Table -->
-                        <div class="table-container">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <input type="checkbox" id="select-all-artikel-projekt" 
-                                                   onchange="toggleAllArtikelProjekt(this)">
-                                        </th>
-                                        <th>Artikelname</th>
-                                        <th>Kategorie</th>
-                                        <th>Release</th>
-                                        <th>Umsatz</th>
-                                        <th>DB2 %</th>
-                                        <th>Status</th>
-                                        <th width="150">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="projekt-artikel-list-tbody">
-                                    <!-- Articles will be rendered here by artikel.js -->
-                                </tbody>
-                            </table>
-                        </div>
-
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: DASHBOARD -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-dashboard" class="projekt-tab-content">
-                        <div class="form-section">
-                            <h3>📊 Projekt-Dashboard</h3>
-                            <p style="color: var(--gray); margin-top: 8px;">
-                                Hier werden alle Charts für dieses spezifische Projekt angezeigt (Coming Soon)
-                            </p>
-                            
-                            <div class="insights-placeholder">
-                                <div class="placeholder-icon">📊</div>
-                                <h4>Charts & Analysen</h4>
-                                <p>Bald verfügbar: Projekt-spezifische Dashboards mit allen relevanten Kennzahlen und Diagrammen.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: WIRTSCHAFTLICHKEIT -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-wirtschaftlichkeit" class="projekt-tab-content">
-                        <!-- Wird von wirtschaftlichkeit.js gefüllt -->
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- PROJEKT TAB: BUSINESS CASE -->
-                    <!-- ========================================== -->
-                    <div id="projekt-tab-business-case" class="projekt-tab-content">
-                        <div class="form-section">
-                            <h3>🤖 Business Case Empfehlung</h3>
-                            <p style="color: var(--gray); margin-top: 8px;">
-                                KI-basierte Analyse und Empfehlung (Coming Soon)
-                            </p>
-                            
-                            <div class="insights-placeholder">
-                                <div class="placeholder-icon">🤖</div>
-                                <h4>KI-Analyse</h4>
-                                <p>Bald verfügbar: Automatische Business Case Bewertung, Risiko-Analyse, Benchmark-Vergleich und Go/No-Go Empfehlung.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- Ende projekt-detail-view -->
-
-                <!-- ========================================== -->
-                <!-- VIEW: ARTIKEL OVERVIEW (When projekt selected) -->
-                <!-- ========================================== -->
-                <div id="artikel-overview" style="display: none;">
-                    
-                    <!-- Breadcrumb -->
-                    <div class="breadcrumb">
-                        <button class="breadcrumb-link" onclick="backToProjektOverview()">
-                            💼 Projekte
-                        </button>
-                        <span class="breadcrumb-separator">›</span>
-                        <span id="current-projekt-name" class="breadcrumb-current">Projekt</span>
-                    </div>
-
-                    <!-- Header -->
-                    <div class="section-header">
-                        <div>
-                            <h2>📦 Artikel</h2>
-                            <p>Produktartikel und Services des Projekts</p>
-                        </div>
-                        <button class="btn btn-primary" onclick="createNewArtikel()">
-                            ➕ Neuer Artikel
-                        </button>
-                    </div>
-
-                    <!-- Articles Table -->
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th width="40">
-                                        <input type="checkbox" id="select-all-artikel" 
-                                               onchange="toggleAllArtikel(this)">
-                                    </th>
-                                    <th>Artikelname</th>
-                                    <th>Kategorie</th>
-                                    <th>Release</th>
-                                    <th>Umsatz</th>
-                                    <th>DB2 %</th>
-                                    <th>Status</th>
-                                    <th width="150">Aktionen</th>
-                                </tr>
-                            </thead>
-                            <tbody id="artikel-list-tbody">
-                                <!-- Articles will be rendered here by artikel.js -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Bulk Actions -->
-                    <div id="artikel-bulk-actions-bar" class="bulk-actions-bar">
-                        <div class="bulk-actions-info">
-                            <span id="artikel-bulk-count">0</span> Artikel ausgewählt
-                        </div>
-                        <div class="bulk-actions-buttons">
-                            <button class="btn btn-danger" onclick="bulkDeleteArtikel()">
-                                🗑️ Löschen
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-                <!-- Ende artikel-overview -->
-
-                <!-- ========================================== -->
-                <!-- VIEW: ARTIKEL DETAIL (Hidden by default) -->
-                <!-- ========================================== -->
-                <div id="artikel-detail-view" style="display: none;">
-                    
-                    <!-- Breadcrumb -->
-                    <div class="breadcrumb">
-                        <button class="breadcrumb-link" onclick="backToProjektOverview()">
-                            💼 Projekte
-                        </button>
-                        <span class="breadcrumb-separator">›</span>
-                        <span id="artikel-breadcrumb-projekt" class="breadcrumb-current">Projekt</span>
-                        <span class="breadcrumb-separator">›</span>
-                        <button class="breadcrumb-link" onclick="closeArtikelDetail()">
-                            📦 Artikel
-                        </button>
-                        <span class="breadcrumb-separator">›</span>
-                        <span id="artikel-breadcrumb-name" class="breadcrumb-current">Artikel bearbeiten</span>
-                    </div>
-
-                    <div id="artikel-update-info" style="
-                        display: none;
-                        padding: 10px 16px;
-                        background: rgba(16, 185, 129, 0.1);
-                        border-left: 3px solid var(--success);
-                        border-radius: 4px;
-                        margin-bottom: 16px;
-                        font-size: 13px;
-                        color: var(--text);
-                    ">
-                        <!-- Wird dynamisch gefüllt -->
-                    </div>
-
-                    <!-- Header mit Navigation -->
-                    <div class="section-header" style="margin-bottom: 24px;">
-                        <div style="display: flex; align-items: center; gap: 16px;">
-                            <button class="btn btn-secondary" onclick="closeArtikelDetail()" 
-                                    style="display: flex; align-items: center; gap: 8px;">
-                                ← Zurück zur Artikel-Übersicht
-                            </button>
-
-                            <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
-                                <button class="btn btn-secondary btn-sm" onclick="navigateToPreviousArtikel()" 
-                                        id="prev-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
-                                    ◀ Vorheriger
-                                </button>
-                    
-                                <div style="padding: 8px 16px; background: var(--bg-secondary); border-radius: 6px; font-size: 14px; font-weight: 500;">
-                                    Artikel <span id="artikel-position">1</span> von <span id="artikel-total">3</span>
-                                </div>
-                    
-                                <button class="btn btn-secondary btn-sm" onclick="navigateToNextArtikel()" 
-                                        id="next-artikel-btn" style="display: flex; align-items: center; gap: 4px;">
-                                    Nächster ▶
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 12px; margin-top: 16px;">
-                            <h2 id="artikel-detail-title" style="margin: 0; flex: 1;">✏️ Artikel bearbeiten</h2>
-                            <button class="btn btn-secondary" onclick="closeArtikelDetail()">
-                                Abbrechen
-                            </button>
-                            <button class="btn btn-primary" onclick="saveArtikelChanges()">
-                                💾 Speichern
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- ========================================== -->
-                    <!-- ALLE INHALTE AUF EINER SEITE (KEINE TABS!) -->
-                    <!-- ========================================== -->
-                    
-                    <!-- Basis-Informationen & Markt -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                        
-                        <!-- LINKE SPALTE: Basis-Informationen -->
-                        <div class="form-section">
-                            <h3>📝 Basis-Informationen</h3>
-                            
-                            <div class="form-group">
-                                <label>Artikelname *</label>
-                                <input type="text" id="artikel-name" 
-                                    placeholder="z.B. Smart Sensor X1" required>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Typ *</label>
-                                    <select id="artikel-typ">
-                                        <option value="">Bitte wählen...</option>
-                                        <option value="Hardware">Hardware</option>
-                                        <option value="Software">Software</option>
-                                        <option value="Service">Service</option>
-                                        <option value="Hybrid">Hybrid</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Kategorie</label>
-                                    <input type="text" id="kategorie" 
-                                        placeholder="z.B. IoT Sensor">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Beschreibung</label>
-                                <textarea id="artikel-beschreibung" rows="3" 
-                                        placeholder="Kurze Produktbeschreibung..."></textarea>
-                            </div>
-                        </div>
-
-                        <!-- RECHTE SPALTE: Markt & Strategie -->
-                        <div class="form-section">
-                            <h3>🎯 Markt & Strategie</h3>
-
-                            <div class="form-group">
-                                <label>Geschäftsmodell</label>
-                                <select id="geschaeftsmodell">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="einmalverkauf">Einmalverkauf</option>
-                                    <option value="subscription">Subscription</option>
-                                    <option value="freemium">Freemium</option>
-                                    <option value="lizenz">Lizenzmodell</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Zielmarkt</label>
-                                <input type="text" id="zielmarkt" 
-                                    placeholder="z.B. DACH Region, B2B">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Strategie</label>
-                                <select id="strategie">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="innovator">Innovator/First Mover</option>
-                                    <option value="fast-follower">Fast Follower</option>
-                                    <option value="cost-leader">Cost Leader</option>
-                                    <option value="niche">Nische/Spezialist</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Investment-Typ</label>
-                                <select id="investment-typ">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="growth">Growth</option>
-                                    <option value="efficiency">Efficiency</option>
-                                    <option value="innovation">Innovation</option>
-                                    <option value="maintenance">Maintenance</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- ========================================== -->
-                    <!-- FINANZ-PARAMETER & ENTWICKLUNGSMODELLE -->
-                    <!-- ========================================== -->
-                    <div class="form-section" style="margin-bottom: 24px;">
-                        <h3>💰 Finanz-Parameter & Entwicklungsmodelle</h3>
-                        
-                        <!-- Planungshorizont -->
-                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-                            <div style="display: grid; grid-template-columns: 250px 1fr; gap: 20px; align-items: center;">
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                                        📅 Release / Startdatum
-                                    </label>
-                                    <input type="month" id="release-datum" 
-                                        onchange="updateZeithorizont(); updateTabellenSpalten(); berechneModelle();"
-                                        style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 13px;">
-                                </div>
-                                
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 6px;">
-                                        Zeithorizont
-                                    </label>
-                                    <div class="zeitraum-selector" style="display: flex; gap: 8px;">
-                                        <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn" id="zeitraum-btn-3"
-                                                style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                                                    border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
-                                                    font-weight: 500; color: #374151;">
-                                            3 Jahre
-                                        </button>
-                                        <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active" id="zeitraum-btn-5"
-                                                style="flex: 1; padding: 10px 20px; border: 2px solid #1e3a8a; background: #1e3a8a; 
-                                                    color: white; border-radius: 6px; font-size: 13px; cursor: pointer; 
-                                                    font-weight: 600;">
-                                            5 Jahre
-                                        </button>
-                                        <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn" id="zeitraum-btn-7"
-                                                style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                                                    border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;
-                                                    font-weight: 500; color: #374151;">
-                                            7 Jahre
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Startwerte (Jahr 1) -->
-                        <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-                            <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 12px;">
-                                📊 Startwerte (Jahr 1)
-                            </div>
-
-                            <!-- Hinweis-Box -->
-                            <div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
-                                <strong>💡 Tipp:</strong> Tragen Sie hier Ihre Annahmen für das erste Jahr ein. Diese Werte dienen als Basis für die automatischen Entwicklungsmodelle.
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                                <div>
-                                    <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        MENGE (STÜCK)
-                                    </label>
-                                    <input type="text" id="start-menge" 
-                                        placeholder="z.B. 1.000"
-                                        onfocus="handleInputFocus(this)"
-                                        onblur="handleInputBlur(this, 'menge')"
-                                        onchange="updateErsteZeile();"
-                                        oninput="updateErsteZeile();"
-                                        style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
-                                                color: #6b7280;">
-                                </div>
-                                <div>
-                                    <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        PREIS (€/STÜCK)
-                                    </label>
-                                    <input type="text" id="start-preis"
-                                        placeholder="z.B. 50,00"
-                                        onfocus="handleInputFocus(this)"
-                                        onblur="handleInputBlur(this, 'preis')"
-                                        onchange="updateErsteZeile();"
-                                        oninput="updateErsteZeile();"
-                                        style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
-                                                color: #6b7280;">
-                                </div>
-                                <div>
-                                    <label style="font-size: 10px; color: #6b7280; display: block; margin-bottom: 4px; text-transform: uppercase;">
-                                        HK (€/STÜCK)
-                                    </label>
-                                    <input type="text" id="start-hk"
-                                        placeholder="z.B. 20,00"
-                                        onfocus="handleInputFocus(this)"
-                                        onblur="handleInputBlur(this, 'hk')"
-                                        onchange="updateErsteZeile();"
-                                        oninput="updateErsteZeile();"
-                                        style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px; 
-                                                font-size: 14px; text-align: center; font-weight: 600; background: white;
-                                                color: #6b7280;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Entwicklungsmodelle -->
-                        <div style="margin-bottom: 16px;">
-                            <div style="border-top: 2px solid #e5e7eb; margin: 20px 0; position: relative;">
-                                <span style="position: absolute; top: -10px; left: 20px; background: white; padding: 0 10px; font-size: 11px; font-weight: 600; color: #6b7280;">
-                                    📈 ENTWICKLUNGSMODELLE
-                                </span>
-                            </div>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                                <!-- Mengenentwicklung -->
-                                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                                    <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 12px; text-transform: uppercase;">
-                                        Mengenentwicklung
-                                    </div>
-                                    <div style="font-size: 11px;">
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="konservativ" onchange="applyModell('menge', 'konservativ')">
-                                            <span style="margin-left: 6px;">Konservativ <span style="color: #6b7280;">(+15% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="realistisch" checked onchange="applyModell('menge', 'realistisch')">
-                                            <span style="margin-left: 6px; font-weight: 600;">Realistisch <span style="color: #6b7280; font-weight: normal;">(S-Kurve)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="optimistisch" onchange="applyModell('menge', 'optimistisch')">
-                                            <span style="margin-left: 6px;">Optimistisch <span style="color: #6b7280;">(Hockey-Stick)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="mengen-modell" value="manuell" onchange="applyModell('menge', 'manuell')">
-                                            <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <!-- Preisentwicklung -->
-                                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                                    <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 12px; text-transform: uppercase;">
-                                        Preisentwicklung
-                                    </div>
-                                    <div style="font-size: 11px;">
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="konstant" checked onchange="applyModell('preis', 'konstant')">
-                                            <span style="margin-left: 6px; font-weight: 600;">Konstant <span style="color: #6b7280; font-weight: normal;">(0% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="inflation" onchange="applyModell('preis', 'inflation')">
-                                            <span style="margin-left: 6px;">Inflation <span style="color: #6b7280;">(+2% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="premium" onchange="applyModell('preis', 'premium')">
-                                            <span style="margin-left: 6px;">Premium <span style="color: #6b7280;">(+5% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="skimming" onchange="applyModell('preis', 'skimming')">
-                                            <span style="margin-left: 6px;">Skimming <span style="color: #6b7280;">(-3% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="preis-modell" value="manuell" onchange="applyModell('preis', 'manuell')">
-                                            <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <!-- Kostenentwicklung -->
-                                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px;">
-                                    <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 12px; text-transform: uppercase;">
-                                        Kostenentwicklung
-                                    </div>
-                                    <div style="font-size: 11px;">
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="konstant" onchange="applyModell('kosten', 'konstant')">
-                                            <span style="margin-left: 6px;">Konstant <span style="color: #6b7280;">(0% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="lernkurve" checked onchange="applyModell('kosten', 'lernkurve')">
-                                            <span style="margin-left: 6px; font-weight: 600;">Lernkurve <span style="color: #6b7280; font-weight: normal;">(-5% bei 2x)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="inflation" onchange="applyModell('kosten', 'inflation')">
-                                            <span style="margin-left: 6px;">Inflation <span style="color: #6b7280;">(+3% p.a.)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="skaleneffekte" onchange="applyModell('kosten', 'skaleneffekte')">
-                                            <span style="margin-left: 6px;">Skaleneffekte <span style="color: #6b7280;">(Stufen)</span></span>
-                                        </label>
-                                        <label style="display: block; padding: 6px 0; cursor: pointer;">
-                                            <input type="radio" name="kosten-modell" value="manuell" onchange="applyModell('kosten', 'manuell')">
-                                            <span style="margin-left: 6px; color: #6b7280;">Manuell</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div style="text-align: center; margin-top: 16px;">
-                                <button onclick="berechneModelle();" 
-                                        style="padding: 10px 30px; background: #1e3a8a; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
-                                    Berechnen & Vorschau aktualisieren
-                                </button>
-                                <button onclick="resetModelle()" 
-                                        style="padding: 10px 30px; background: white; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; cursor: pointer; margin-left: 12px;">
-                                    Zurücksetzen
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Ergebnis-Vorschau Tabelle -->
-                        <div style="background: white; border-radius: 6px; overflow-x: auto;">
-                            <div style="padding: 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                                <div style="font-size: 12px; font-weight: 600; color: #374151;">📊 ERGEBNIS-VORSCHAU</div>
-                            </div>
-                            <table id="vorschau-tabelle" style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                                <thead>
-                                    <tr style="background: #f8fafc;">
-                                        <th style="padding: 10px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 120px;">Parameter</th>
-                                        <th class="jahr-col jahr-1" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 100px;">
-                                            <span class="jahr-header-1">2025</span>
-                                        </th>
-                                        <th class="jahr-col jahr-2" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 100px;">
-                                            <span class="jahr-header-2">2026</span>
-                                        </th>
-                                        <th class="jahr-col jahr-3" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 100px;">
-                                            <span class="jahr-header-3">2027</span>
-                                        </th>
-                                        <th class="jahr-col jahr-4" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 100px;">
-                                            <span class="jahr-header-4">2028</span>
-                                        </th>
-                                        <th class="jahr-col jahr-5" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; width: 100px;">
-                                            <span class="jahr-header-5">2029</span>
-                                        </th>
-                                        <th class="jahr-col jahr-6" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; display: none; width: 100px;">
-                                            <span class="jahr-header-6">2030</span>
-                                        </th>
-                                        <th class="jahr-col jahr-7" style="padding: 10px; text-align: center; font-weight: 600; border-bottom: 2px solid #e5e7eb; display: none; width: 100px;">
-                                            <span class="jahr-header-7">2031</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style="padding: 10px; font-weight: 600; background: #f8fafc;">Menge (Stück)</td>
-                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="menge-jahr-1" 
-                                                onchange="formatNumberInput(this)" 
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="menge-jahr-2" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="menge-jahr-3" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="menge-jahr-4" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="menge-jahr-5" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="menge-jahr-6" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="menge-jahr-7" 
-                                                onchange="formatNumberInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                    </tr>
-                                    <tr style="background: #f8fafc;">
-                                        <td style="padding: 10px; font-weight: 600;">Preis (€/Stück)</td>
-                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="preis-jahr-1" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="preis-jahr-2" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="preis-jahr-3" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="preis-jahr-4" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="preis-jahr-5" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="preis-jahr-6" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="preis-jahr-7" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px; font-weight: 600; background: #f8fafc;">HK (€/Stück)</td>
-                                        <td class="jahr-col jahr-1" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="hk-jahr-1" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-2" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="hk-jahr-2" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-3" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="hk-jahr-3" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-4" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="hk-jahr-4" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-5" style="padding: 10px; text-align: center;">
-                                            <input type="text" id="hk-jahr-5" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-6" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="hk-jahr-6" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                        <td class="jahr-col jahr-7" style="padding: 10px; text-align: center; display: none;">
-                                            <input type="text" id="hk-jahr-7" 
-                                                onchange="formatDecimalInput(this)"
-                                                style="width: 70px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; text-align: center;">
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                   
-                <!-- Ende artikel-detail-view -->
-
+          <div id="bulk-actions-bar" class="bulk-actions-bar">
+            <div class="bulk-actions-info"><span id="bulk-count">0</span> Projekte ausgewählt</div>
+            <div class="bulk-actions-buttons">
+              <select id="bulk-status-change">
+                <option value="">Status ändern…</option>
+                <option value="Planung">→ Planung</option>
+                <option value="Aktiv">→ Aktiv</option>
+                <option value="On Hold">→ On Hold</option>
+                <option value="Abgeschlossen">→ Abgeschlossen</option>
+              </select>
+              <button class="btn btn-secondary" onclick="bulkStatusChange()">Anwenden</button>
+              <button class="btn btn-danger" onclick="bulkDeleteProjekte()">🗑️ Löschen</button>
             </div>
-            <!-- Ende tab-projekte -->
-
-            <!-- ========================================== -->
-            <!-- TAB 3: PERFORMANCE -->
-            <!-- ========================================== -->
-            <div id="tab-performance" class="tab-content">
-                
-                <div class="insights-container">
-                    <h2>📈 Performance Controlling</h2>
-                    <p>Plan-Ist-Forecast über alle Projekte (Coming Soon)</p>
-                    
-                    <div class="insights-placeholder">
-                        <div class="placeholder-icon">📊</div>
-                        <h3>In Entwicklung</h3>
-                        <p>Hier werden bald Plan-Ist-Vergleiche, Rolling Forecasts und Performance-Analysen verfügbar sein.</p>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- ========================================== -->
-            <!-- TAB 4: ADMIN -->
-            <!-- ========================================== -->
-            <div id="tab-admin" class="tab-content">
-                
-                <div class="insights-container">
-                    <h2>⚙️ Administration</h2>
-                    <p>Einstellungen und Stammdaten (Coming Soon)</p>
-                    
-                    <div class="insights-placeholder">
-                        <div class="placeholder-icon">🔧</div>
-                        <h3>In Entwicklung</h3>
-                        <p>Hier werden bald Einstellungen, Stammdaten-Verwaltung und System-Konfigurationen verfügbar sein.</p>
-                    </div>
-                </div>
-
-            </div>
-
-        </main>
-
-        <!-- ========================================== -->
-        <!-- AI SIDEBAR (Always visible) -->
-        <!-- ========================================== -->
-        <div class="sidebar">
-            <!-- AI Header -->
-            <div class="ai-header">
-                <div class="ai-status">
-                    <div class="ai-status-indicator"></div>
-                    <div>
-                        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">KI-Controller aktiv</div>
-                        <div style="font-size: 11px; opacity: 0.9;">Echtzeit-Analyse • 1.400+ Finance-Patterns • Industrie-Benchmarks</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Metrics Panel -->
-            <div class="ai-metrics-panel">
-                <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--gray); margin-bottom: 8px;">Business Case Status:</div>
-                    <div style="display: inline-block; padding: 4px 12px; background: #d1fae5; color: #065f46; border-radius: 6px; font-size: 12px; font-weight: 600;">
-                        ✓ Positiv
-                    </div>
-                </div>
-
-                <div class="ai-metric-row">
-                    <span class="ai-metric-label">Risiko-Level:</span>
-                    <span class="ai-metric-value warning">Medium (68%)</span>
-                </div>
-                <div class="ai-metric-row">
-                    <span class="ai-metric-label">Konfidenz-Score:</span>
-                    <span class="ai-metric-value">78%</span>
-                </div>
-                <div class="ai-metric-row">
-                    <span class="ai-metric-label">vs. Industrie-Benchmark:</span>
-                    <span class="ai-metric-value good">+12% besser</span>
-                </div>
-            </div>
-
-            <!-- AI Feed -->
-            <div class="ai-feed">
-                <div class="ai-feed-title">🤖 KI-Insights Feed</div>
-                <div id="ki-feed">
-                    <!-- Messages werden hier von AI Controller eingefügt -->
-                </div>
-            </div>
+          </div>
         </div>
 
-    </div> <!-- Ende main-content -->
+        <!-- === Weitere Views (Detail, Artikel, Kosten …) werden durch JS-Module geladen === -->
+        <div id="projekt-detail-view" style="display:none;"></div>
+        <div id="artikel-overview" style="display:none;"></div>
+        <div id="artikel-detail-view" style="display:none;"></div>
+      </div>
 
-    <!-- ========================================== -->
-    <!-- SCRIPTS -->
-    <!-- ========================================== -->
-    
-    <!-- Load Modules (ES6) -->
-    <script type="module">
-    // Import all modules
+      <!-- === TAB: PERFORMANCE === -->
+      <div id="tab-performance" class="tab-content">
+        <div class="insights-container">
+          <h2>📈 Performance Controlling</h2>
+          <p>Plan-Ist-Forecast über alle Projekte (Coming Soon)</p>
+          <div class="insights-placeholder">
+            <div class="placeholder-icon">📊</div>
+            <h3>In Entwicklung</h3>
+            <p>Bald verfügbar: Plan-Ist-Vergleiche, Rolling Forecasts und Performance-Analysen.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- === TAB: ADMIN === -->
+      <div id="tab-admin" class="tab-content">
+        <div class="insights-container">
+          <h2>⚙️ Administration</h2>
+          <p>Einstellungen und Stammdaten (Coming Soon)</p>
+          <div class="insights-placeholder">
+            <div class="placeholder-icon">🔧</div>
+            <h3>In Entwicklung</h3>
+            <p>Hier werden bald Einstellungen, Stammdaten-Verwaltung und System-Konfigurationen verfügbar sein.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- === ALBO-Sidebar === -->
+    <aside class="sidebar" id="albo-sidebar">
+      <div class="ai-header">
+        <div class="ai-status">
+          <div class="ai-status-indicator"></div>
+          <div>
+            <div style="font-weight:700;font-size:16px;">🤖 ALBO Senior Controller</div>
+            <div style="font-size:11px;opacity:.9;">Live Business Case Monitoring</div>
+          </div>
+        </div>
+      </div>
+      <div class="albo-monitor-feed">
+        <div class="albo-chat-messages" id="albo-chat-messages"></div>
+        <div class="albo-chat-input-wrapper">
+          <input id="albo-chat-input" class="albo-chat-input"
+                 placeholder="Frage ALBO etwas…" onkeypress="if(event.key==='Enter') sendAlboMessage()" />
+          <button class="albo-chat-send" onclick="sendAlboMessage()">→</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+    <!-- === SCRIPTS === -->
+  <script type="module">
     import './js/main.js';
     import { state } from './js/state.js';
     import * as helpers from './js/helpers.js';
     import { renderProjektOverview, updateProjektStats } from './js/modules/projekte.js';
     import { renderArtikelListByProjekt } from './js/modules/artikel.js';
-    
-    // Make modules globally available for inline handlers
+
+    // ==== DOM Ready ====
+    document.addEventListener('DOMContentLoaded', () => {
+      const artikelView = document.getElementById('artikel-detail-view');
+      if (artikelView && !window.cfoDashboard?.currentArtikel) {
+        artikelView.style.display = 'none';
+      }
+    });
+
+    // ==== Make modules globally available for inline handlers ====
     window.state = state;
     window.helpers = helpers;
     window.renderProjektOverview = renderProjektOverview;
     window.updateProjektStats = updateProjektStats;
     window.renderArtikelListByProjekt = renderArtikelListByProjekt;
 
-    // NEW: Projekt-Tab switching function
-    window.switchProjektTab = function(tabName) {
-        console.log('📑 Switching projekt tab:', tabName);
+    // =====================================================
+    // 🔹 switchProjektTab – Hauptfunktion für Tab-Steuerung
+    // =====================================================
+    window.switchProjektTab = async function (tabName) {
+      console.log('📑 Switching projekt tab:', tabName);
 
-        // Update tab buttons
-        document.querySelectorAll('.detail-tab').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Update tab contents
-        document.querySelectorAll('.projekt-tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
+      // Buttons & Content resetten
+      document.querySelectorAll('.detail-tab').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.projekt-tab-content').forEach(c => c.classList.remove('active'));
 
-        // Activate target tab
-        const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
-        const targetContent = document.getElementById(`projekt-tab-${tabName}`);
+      // Aktivieren
+      const targetButton = document.querySelector(`[onclick="switchProjektTab('${tabName}')"]`);
+      const targetContent = document.getElementById(`projekt-tab-${tabName}`);
+      if (targetButton) targetButton.classList.add('active');
+      if (targetContent) targetContent.classList.add('active');
 
-        if (targetButton) targetButton.classList.add('active');
-        if (targetContent) targetContent.classList.add('active');
+      // State speichern
+      if (window.state) {
+        state.currentProjektTab = tabName;
+        state.projektViewMode = 'detail';
+        state.saveState();
+      }
 
-        // ✓✓✓ CRITICAL: Save navigation state ✓✓✓
-        if (window.state) {
-            window.state.currentProjektTab = tabName;
-            window.state.projektViewMode = 'detail';
-            window.state.saveState();
-            console.log('💾 Saved projekt tab to state:', tabName);
-        } else {
-            console.error('❌ window.state not available!');
+      // Custom Event
+      document.dispatchEvent(new CustomEvent('tab-changed', {
+        detail: {
+          tab: tabName,
+          projekt: window.cfoDashboard?.currentProjekt,
+          artikel: window.cfoDashboard?.currentArtikel
         }
+      }));
 
-        // Special handling for different tabs
+      // Dynamisches Nachladen je Tab
+      try {
         if (tabName === 'artikel') {
-            // Render artikel list for this projekt
-            const projektId = window.cfoDashboard.currentProjekt;
-            if (projektId) {
-                const tbody = document.getElementById('projekt-artikel-list-tbody');
-                if (tbody && window.renderArtikelListByProjekt) {
-                    window.renderArtikelListByProjekt();
-                    const sourceBody = document.getElementById('artikel-list-tbody');
-                    if (sourceBody) {
-                        tbody.innerHTML = sourceBody.innerHTML;
-                    }
-                }
-            }
-            
-            // Set artikel view mode to list
-            if (window.state) {
-                window.state.artikelViewMode = 'list';
-                window.state.currentArtikel = null;
-                window.state.saveState();
-            }
-        }  // ✅ DIESE KLAMMER FEHLTE!
-        else if (tabName === 'uebersicht') {
-            // Import und render Übersicht (Executive Summary)
-            import('./js/modules/uebersicht.js').then(module => {
-                if (module.renderUebersicht) {
-                    module.renderUebersicht();
-                }
-            }).catch(err => {
-                console.error('Failed to load uebersicht module:', err);
-            });        
+          const projektId = window.cfoDashboard.currentProjekt;
+          if (projektId && window.renderArtikelListByProjekt) {
+            window.renderArtikelListByProjekt();
+          }
+        } else if (tabName === 'uebersicht') {
+          const module = await import('./js/modules/uebersicht.js');
+          module.renderUebersicht?.();
+        } else if (tabName === 'projektkosten') {
+          const module = await import('./js/modules/projektkosten.js');
+          module.renderProjektkosten?.();
+        } else if (tabName === 'wirtschaftlichkeit') {
+          const module = await import('./js/modules/wirtschaftlichkeit/wirtschaftlichkeit.js');
+          module.renderProjektWirtschaftlichkeit?.();
+        } else if (tabName === 'dashboard') {
+          const module = await import('./js/modules/dashboard/dashboard.js');
+          module.renderProjektDashboard?.();
         }
-        else if (tabName === 'projektkosten') {
-            // Import und render Projektkosten
-            import('./js/modules/projektkosten.js').then(module => {
-                if (module.renderProjektkosten) {
-                    module.renderProjektkosten();
-                }
-            }).catch(err => {
-                console.error('Failed to load projektkosten module:', err);
-            });
-        }
-        else if (tabName === 'wirtschaftlichkeit') {
-            // Import und render Wirtschaftlichkeit
-            import('./js/modules/wirtschaftlichkeit/wirtschaftlichkeit.js').then(module => {
-                if (module.renderProjektWirtschaftlichkeit) {
-                    module.renderProjektWirtschaftlichkeit();
-                }
-            }).catch(err => {
-                console.error('Failed to load wirtschaftlichkeit module:', err);
-            });
-        }
-        else if (tabName === 'dashboard') {
-            // Import und render Dashboard
-            import('./js/modules/dashboard/dashboard.js').then(module => {
-                if (module.renderProjektDashboard) {
-                    module.renderProjektDashboard();
-                }
-            }).catch(err => {
-                console.error('Failed to load dashboard module:', err);
-            });
-        }
+      } catch (err) {
+        console.error('Fehler beim Laden des Tabs:', tabName, err);
+      }
     };
 
-    // Navigate to projekt wirtschaftlichkeit from artikel
-    window.navigateToProjektWirtschaftlichkeit = function() {
-        const projektId = window.cfoDashboard.currentProjekt;
-        if (!projektId) return;
+    // =====================================================
+    // 🔹 Projekt öffnen
+    // =====================================================
+    window.openProjektDetail = function (projektId) {
+      const projekt = state.getProjekt(projektId);
+      if (!projekt) return console.error('Projekt nicht gefunden:', projektId);
 
-        // Close artikel detail if open
-        const artikelDetail = document.getElementById('artikel-detail-view');
-        if (artikelDetail) artikelDetail.style.display = 'none';
+      window.cfoDashboard.currentProjekt = projektId;
+      state.currentProjekt = projektId;
+      state.projektViewMode = 'detail';
+      state.currentProjektTab = 'uebersicht';
+      state.currentArtikel = null;
+      state.saveState();
 
-        // Hide other views
-        const projektOverview = document.getElementById('projekt-overview');
-        const artikelOverview = document.getElementById('artikel-overview');
-        
-        if (projektOverview) projektOverview.style.display = 'none';
-        if (artikelOverview) artikelOverview.style.display = 'none';
+      document.getElementById('projekt-overview').style.display = 'none';
+      document.getElementById('projekt-detail-view').style.display = 'block';
+      document.getElementById('projekt-detail-breadcrumb').textContent = projekt.name;
+      document.getElementById('projekt-detail-title').textContent = projekt.name;
 
-        // Show projekt detail
-        const projektDetail = document.getElementById('projekt-detail-view');
-        if (projektDetail) projektDetail.style.display = 'block';
-
-        // Switch to wirtschaftlichkeit tab
-        window.switchProjektTab('wirtschaftlichkeit');
+      window.switchProjektTab('uebersicht');
     };
 
-    // Open projekt detail view
-    window.openProjektDetail = function(projektId) {
-        const projekt = window.cfoDashboard.projektData[projektId] || state.getProjekt(projektId);
-        if (!projekt) {
-            console.error('Projekt not found:', projektId);
-            return;
-        }
+    // =====================================================
+    // 🔹 Artikel-Navigation (vorheriger/nächster)
+    // =====================================================
+    window.navigateToPreviousArtikel = function () {
+      const currentProjekt = window.cfoDashboard.currentProjekt;
+      const artikelListe = state.getArtikelByProjekt(currentProjekt);
+      if (!artikelListe?.length) return;
 
-        console.log('📂 Opening projekt detail:', projekt.name);
-
-        // Set current projekt
-        window.cfoDashboard.currentProjekt = projektId;
-        
-        // ✓✓✓ CRITICAL: Save complete navigation state ✓✓✓
-        if (window.state) {
-            window.state.currentProjekt = projektId;
-            window.state.projektViewMode = 'detail';
-            window.state.currentProjektTab = 'uebersicht'; // Default tab
-            window.state.currentArtikel = null;  // Clear artikel selection
-            window.state.artikelViewMode = 'list';
-            window.state.saveState();
-            console.log('💾 Saved projekt detail state');
-        }
-
-        // Hide projekt overview
-        const projektOverview = document.getElementById('projekt-overview');
-        if (projektOverview) projektOverview.style.display = 'none';
-
-        // Show projekt detail
-        const projektDetail = document.getElementById('projekt-detail-view');
-        if (projektDetail) projektDetail.style.display = 'block';
-
-        // Update breadcrumb & title
-        const breadcrumb = document.getElementById('projekt-detail-breadcrumb');
-        const title = document.getElementById('projekt-detail-title');
-        if (breadcrumb) breadcrumb.textContent = projekt.name;
-        if (title) title.textContent = projekt.name;
-
-        // NEU: Lade Projekt-Daten in Übersicht
-        const ownerEl = document.getElementById('projekt-detail-owner');
-        const statusEl = document.getElementById('projekt-detail-status');
-        const divisionEl = document.getElementById('projekt-detail-division');
-        const zeitraumEl = document.getElementById('projekt-detail-zeitraum');
-
-        if (ownerEl) ownerEl.textContent = projekt.owner || '-';
-        if (statusEl) statusEl.textContent = projekt.status || 'Aktiv';
-        if (divisionEl) divisionEl.textContent = projekt.division || '-';
-        if (zeitraumEl) {
-            const start = projekt.startDatum || '-';
-            const end = projekt.endDatum || '-';
-            zeitraumEl.textContent = `${start} - ${end}`;
-        }
-
-        // Switch to first tab
-        switchProjektTab('uebersicht');
+      const currentIndex = artikelListe.findIndex(a => a.id === window.cfoDashboard.currentArtikel);
+      if (currentIndex > 0) window.openArtikelDetail(artikelListe[currentIndex - 1].id);
     };
 
-    // ==========================================
-    // ARTIKEL NAVIGATION (Vorheriger/Nächster)
-    // ==========================================
+    window.navigateToNextArtikel = function () {
+      const currentProjekt = window.cfoDashboard.currentProjekt;
+      const artikelListe = state.getArtikelByProjekt(currentProjekt);
+      if (!artikelListe?.length) return;
 
-    /**
-     * Navigate to previous artikel
-     */
-    window.navigateToPreviousArtikel = function() {
-        const currentProjekt = window.cfoDashboard.currentProjekt;
-        const artikelListe = state.getArtikelByProjekt(currentProjekt);
-        
-        if (!artikelListe || artikelListe.length === 0) return;
-        
-        const currentArtikelId = window.cfoDashboard.currentArtikel;
-        const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
-        
-        if (currentIndex > 0) {
-            const previousArtikel = artikelListe[currentIndex - 1];
-            if (window.openArtikelDetail) {
-                window.openArtikelDetail(previousArtikel.id);
-            }
-        }
+      const currentIndex = artikelListe.findIndex(a => a.id === window.cfoDashboard.currentArtikel);
+      if (currentIndex < artikelListe.length - 1)
+        window.openArtikelDetail(artikelListe[currentIndex + 1].id);
     };
 
-    /**
-     * Navigate to next artikel
-     */
-    window.navigateToNextArtikel = function() {
-        const currentProjekt = window.cfoDashboard.currentProjekt;
-        const artikelListe = state.getArtikelByProjekt(currentProjekt);
-        
-        if (!artikelListe || artikelListe.length === 0) return;
-        
-        const currentArtikelId = window.cfoDashboard.currentArtikel;
-        const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
-        
-        if (currentIndex < artikelListe.length - 1) {
-            const nextArtikel = artikelListe[currentIndex + 1];
-            if (window.openArtikelDetail) {
-                window.openArtikelDetail(nextArtikel.id);
-            }
-        }
+    // =====================================================
+    // 🔹 Artikel-Navigation aktualisieren (Buttons, Breadcrumbs)
+    // =====================================================
+    window.updateArtikelNavigation = function () {
+      const currentProjekt = window.cfoDashboard.currentProjekt;
+      const currentArtikel = window.cfoDashboard.currentArtikel;
+      const artikelListe = state.getArtikelByProjekt(currentProjekt);
+
+      if (!artikelListe?.length) return;
+
+      const idx = artikelListe.findIndex(a => a.id === currentArtikel);
+      const artikel = artikelListe[idx];
+      if (!artikel) return;
+
+      document.getElementById('artikel-position').textContent = idx + 1;
+      document.getElementById('artikel-total').textContent = artikelListe.length;
+      document.getElementById('prev-artikel-btn').disabled = idx === 0;
+      document.getElementById('next-artikel-btn').disabled = idx === artikelListe.length - 1;
+
+      document.getElementById('artikel-breadcrumb-name').textContent = artikel.name || 'Artikel bearbeiten';
+      document.getElementById('artikel-detail-title').textContent = `✏️ ${artikel.name || 'Artikel bearbeiten'}`;
     };
 
-    /**
-     * Update navigation buttons state
-     */
-    window.updateArtikelNavigation = function() {
-        const currentProjekt = window.cfoDashboard.currentProjekt;
-        const currentArtikelId = window.cfoDashboard.currentArtikel;
-        
-        if (!currentProjekt || !currentArtikelId) {
-            console.warn('⚠️ No projekt or artikel selected');
-            return;
-        }
-        
-        // Try to get projekt
-        const projekt = state.getProjekt(currentProjekt);
-        if (!projekt) {
-            console.error('❌ Projekt not found:', currentProjekt);
-            return;
-        }
-        
-        // Get artikel list
-        const artikelListe = state.getArtikelByProjekt(currentProjekt);
-        
-        if (!artikelListe || artikelListe.length === 0) {
-            console.error('❌ No artikel found for projekt:', currentProjekt);
-            return;
-        }
-        
-        const currentIndex = artikelListe.findIndex(a => a.id === currentArtikelId);
-        const artikel = artikelListe[currentIndex];
-        
-        if (!artikel) {
-            console.error('❌ Current artikel not found in list:', currentArtikelId);
-            return;
-        }
-        
-        console.log('✅ Found artikel:', artikel.name, `(${currentIndex + 1}/${artikelListe.length})`);
-        
-        // Update position display
-        const positionEl = document.getElementById('artikel-position');
-        const totalEl = document.getElementById('artikel-total');
-        if (positionEl) positionEl.textContent = currentIndex + 1;
-        if (totalEl) totalEl.textContent = artikelListe.length;
-        
-        // Update buttons
-        const prevBtn = document.getElementById('prev-artikel-btn');
-        const nextBtn = document.getElementById('next-artikel-btn');
-        
-        if (prevBtn) {
-            prevBtn.disabled = currentIndex === 0;
-            prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
-        }
-        
-        if (nextBtn) {
-            nextBtn.disabled = currentIndex === artikelListe.length - 1;
-            nextBtn.style.opacity = currentIndex === artikelListe.length - 1 ? '0.5' : '1';
-        }
-        
-        // Update breadcrumb
-        const projektNameEl = document.getElementById('artikel-breadcrumb-projekt');
-        const artikelNameEl = document.getElementById('artikel-breadcrumb-name');
-        
-        if (projektNameEl) projektNameEl.textContent = projekt.name;
-        if (artikelNameEl) {
-            artikelNameEl.textContent = artikel.name || 'Artikel bearbeiten';
-            console.log('✅ Breadcrumb updated to:', artikel.name);
-        }
-        
-        // Update title
-        const titleEl = document.getElementById('artikel-detail-title');
-        if (titleEl) {
-            titleEl.textContent = `✏️ ${artikel.name || 'Artikel bearbeiten'}`;
-            console.log('✅ Title updated to:', artikel.name);
-        }
-    };
+    console.log('✅ ALBO index.html Scripts loaded successfully');
+  </script>
 
-    console.log('✅ All modules and navigation functions loaded');
-
-    </script>
-    
-    <!-- ========================================== -->
-    <!-- AI FLOATING CHAT BOT (IMPROVED VERSION) -->
-    <!-- ========================================== -->
-    
-    <!-- AI Floating Button -->
-    <div id="ai-button" class="ai-floating-btn">
-        🤖
-    </div>
-
-    <!-- AI Chat Window -->
-    <div id="ai-chat" class="ai-chat-window">
-        <!-- Header -->
-        <div class="ai-chat-header">
-            <div class="ai-chat-header-content">
-                <span class="ai-chat-icon">🤖</span>
-                <div>
-                    <div class="ai-chat-title">KI-Assistent</div>
-                    <div class="ai-chat-subtitle">Business Case Beratung</div>
-                </div>
-            </div>
-            <button class="ai-chat-close-btn" onclick="window.AIChat.toggle()">✕</button>
-        </div>
-        
-        <!-- Messages -->
-        <div id="ai-messages" class="ai-chat-messages">
-            <!-- Welcome Message -->
-            <div class="ai-message-wrapper">
-                <div class="ai-message ai-message-assistant">
-                    👋 Hallo! Ich bin dein KI-Assistent für Business Case Management.<br><br>
-                    Ich kann dir helfen bei:<br>
-                    • Wirtschaftlichkeits-Analysen<br>
-                    • Benchmarks & Best Practices<br>
-                    • Projekt-Bewertungen<br>
-                    • EBIT-Optimierung<br><br>
-                    <strong>Frag mich etwas!</strong>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Input -->
-        <div class="ai-chat-input-wrapper">
-            <div class="ai-chat-input-container">
-                <input 
-                    type="text" 
-                    id="ai-input" 
-                    class="ai-chat-input"
-                    placeholder="Frage stellen..."
-                    onkeypress="if(event.key==='Enter') window.AIChat.sendMessage()"
-                />
-                <button class="ai-chat-send-btn" onclick="window.AIChat.sendMessage()">→</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Chat Styles -->
-    <style>
-    /* AI Floating Button */
-    .ai-floating-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        cursor: pointer;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-        z-index: 10000;
-        transition: transform 0.2s ease;
-        border: none;
-    }
-    
-    .ai-floating-btn:hover {
-        transform: scale(1.1);
-    }
-    
-    /* AI Chat Window */
-    .ai-chat-window {
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        width: 400px;
-        height: 550px;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.2);
-        display: none;
-        flex-direction: column;
-        z-index: 9999;
-    }
-    
-    .ai-chat-window.active {
-        display: flex;
-    }
-    
-    /* Header */
-    .ai-chat-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 16px;
-        border-radius: 16px 16px 0 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .ai-chat-header-content {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .ai-chat-icon {
-        font-size: 24px;
-    }
-    
-    .ai-chat-title {
-        font-weight: 600;
-        font-size: 14px;
-    }
-    
-    .ai-chat-subtitle {
-        font-size: 11px;
-        opacity: 0.9;
-    }
-    
-    .ai-chat-close-btn {
-        background: rgba(255,255,255,0.2);
-        border: none;
-        color: white;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s;
-    }
-    
-    .ai-chat-close-btn:hover {
-        background: rgba(255,255,255,0.3);
-    }
-    
-    /* Messages */
-    .ai-chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        background: #f9fafb;
-    }
-    
-    .ai-message-wrapper {
-        margin-bottom: 12px;
-    }
-    
-    .ai-message-wrapper.user {
-        text-align: right;
-    }
-    
-    .ai-message {
-        display: inline-block;
-        padding: 12px 16px;
-        border-radius: 12px;
-        max-width: 85%;
-        font-size: 13px;
-        line-height: 1.5;
-        text-align: left;
-    }
-    
-    .ai-message-user {
-        background: #3b82f6;
-        color: white;
-    }
-    
-    .ai-message-assistant {
-        background: white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .ai-message-error {
-        background: #fee;
-        color: #c00;
-    }
-    
-    /* Input */
-    .ai-chat-input-wrapper {
-        padding: 16px;
-        border-top: 1px solid #e5e7eb;
-        background: white;
-        border-radius: 0 0 16px 16px;
-    }
-    
-    .ai-chat-input-container {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .ai-chat-input {
-        flex: 1;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 10px 12px;
-        font-size: 14px;
-        outline: none;
-    }
-    
-    .ai-chat-input:focus {
-        border-color: #667eea;
-    }
-    
-    .ai-chat-send-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
-        width: 44px;
-        height: 44px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: opacity 0.2s;
-    }
-    
-    .ai-chat-send-btn:hover {
-        opacity: 0.9;
-    }
-    
-    .ai-chat-send-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    /* Thinking Animation */
-    .thinking-indicator {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-    
-    .thinking-dot {
-        width: 8px;
-        height: 8px;
-        background: #667eea;
-        border-radius: 50%;
-        animation: thinking-bounce 1.4s infinite;
-    }
-    
-    .thinking-dot:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-    
-    .thinking-dot:nth-child(3) {
-        animation-delay: 0.4s;
-    }
-    
-    @keyframes thinking-bounce {
-        0%, 60%, 100% {
-            transform: translateY(0);
-            opacity: 0.5;
+  <!-- === Optional: Debug Observer (Finanz-Parameter Tracker) === -->
+  <script>
+    console.log('🔍 Beobachte DOM auf "Finanz-Parameter"-Sektionen …');
+    const observer = new MutationObserver(mutations => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1 && node.textContent.includes('Finanz-Parameter')) {
+            console.warn('🔴 "Finanz-Parameter"-Block erkannt:', node);
+            observer.disconnect();
+          }
         }
-        30% {
-            transform: translateY(-10px);
-            opacity: 1;
-        }
-    }
-    
-    /* Scrollbar Styling */
-    .ai-chat-messages::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .ai-chat-messages::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-    
-    .ai-chat-messages::-webkit-scrollbar-thumb {
-        background: #c7c7c7;
-        border-radius: 3px;
-    }
-    
-    .ai-chat-messages::-webkit-scrollbar-thumb:hover {
-        background: #a0a0a0;
-    }
-    </style>
-
-    <!-- AI Chat Script -->
-    <script>
-    (function() {
-        'use strict';
-        
-        // AI Chat Module
-        window.AIChat = {
-            // State
-            conversationHistory: [],
-            isOpen: false,
-            isProcessing: false,
-            
-            // DOM Elements (cached)
-            elements: {
-                button: null,
-                chat: null,
-                messages: null,
-                input: null,
-                sendBtn: null
-            },
-            
-            // Initialize
-            init: function() {
-                // Cache DOM elements
-                this.elements.button = document.getElementById('ai-button');
-                this.elements.chat = document.getElementById('ai-chat');
-                this.elements.messages = document.getElementById('ai-messages');
-                this.elements.input = document.getElementById('ai-input');
-                this.elements.sendBtn = document.querySelector('.ai-chat-send-btn');
-                
-                // Add click handler to button
-                if (this.elements.button) {
-                    this.elements.button.onclick = () => this.toggle();
-                }
-                
-                console.log('✅ AI Chat initialized');
-            },
-            
-            // Toggle chat visibility
-            toggle: function() {
-                this.isOpen = !this.isOpen;
-                
-                if (this.isOpen) {
-                    this.elements.chat.classList.add('active');
-                    this.elements.button.style.transform = 'scale(0)';
-                    setTimeout(() => {
-                        this.elements.button.style.display = 'none';
-                    }, 200);
-                    
-                    // Focus input
-                    setTimeout(() => {
-                        this.elements.input.focus();
-                    }, 300);
-                } else {
-                    this.elements.chat.classList.remove('active');
-                    this.elements.button.style.display = 'flex';
-                    setTimeout(() => {
-                        this.elements.button.style.transform = 'scale(1)';
-                    }, 10);
-                }
-            },
-            
-            // Add message to chat
-            addMessage: function(content, type = 'assistant') {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'ai-message-wrapper' + (type === 'user' ? ' user' : '');
-                
-                const message = document.createElement('div');
-                message.className = `ai-message ai-message-${type}`;
-                message.innerHTML = type === 'assistant' ? this.formatResponse(content) : this.escapeHtml(content);
-                
-                wrapper.appendChild(message);
-                this.elements.messages.appendChild(wrapper);
-                
-                // Scroll to bottom
-                this.elements.messages.scrollTop = this.elements.messages.scrollHeight;
-                
-                return wrapper;
-            },
-            
-            // Show thinking indicator
-            showThinking: function() {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'ai-message-wrapper thinking';
-                wrapper.id = 'thinking-indicator';
-                
-                const message = document.createElement('div');
-                message.className = 'ai-message ai-message-assistant';
-                message.innerHTML = `
-                    <div class="thinking-indicator">
-                        <div class="thinking-dot"></div>
-                        <div class="thinking-dot"></div>
-                        <div class="thinking-dot"></div>
-                        <span style="margin-left: 8px;">Denke nach...</span>
-                    </div>
-                `;
-                
-                wrapper.appendChild(message);
-                this.elements.messages.appendChild(wrapper);
-                this.elements.messages.scrollTop = this.elements.messages.scrollHeight;
-                
-                return wrapper;
-            },
-            
-            // Remove thinking indicator
-            removeThinking: function() {
-                const thinking = document.getElementById('thinking-indicator');
-                if (thinking) {
-                    thinking.remove();
-                }
-            },
-            
-            // Send message
-            sendMessage: async function() {
-                const query = this.elements.input.value.trim();
-                
-                if (!query || this.isProcessing) return;
-                
-                // Disable input
-                this.isProcessing = true;
-                this.elements.input.disabled = true;
-                this.elements.sendBtn.disabled = true;
-                
-                // Add user message
-                this.addMessage(query, 'user');
-                this.elements.input.value = '';
-                
-                // Add to conversation history
-                this.conversationHistory.push({
-                    role: 'user',
-                    content: query
-                });
-                
-                // Show thinking
-                this.showThinking();
-                
-                try {
-                    // Get context
-                    const context = this.getContext();
-                    
-                    // Call API
-                    const response = await fetch('/api/claude', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model: 'claude-sonnet-4-20250514',
-                            max_tokens: 1500,
-                            system: context.systemPrompt,
-                            messages: this.conversationHistory
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    // Remove thinking
-                    this.removeThinking();
-                    
-                    if (response.ok) {
-                        const aiResponse = data.content[0].text;
-                        
-                        // Add to conversation history
-                        this.conversationHistory.push({
-                            role: 'assistant',
-                            content: aiResponse
-                        });
-                        
-                        // Add AI message
-                        this.addMessage(aiResponse, 'assistant');
-                        
-                    } else {
-                        throw new Error(data.error?.message || 'API-Fehler');
-                    }
-                    
-                } catch (error) {
-                    this.removeThinking();
-                    this.addMessage('❌ Fehler: ' + error.message, 'error');
-                    console.error('AI Chat Error:', error);
-                }
-                
-                // Re-enable input
-                this.isProcessing = false;
-                this.elements.input.disabled = false;
-                this.elements.sendBtn.disabled = false;
-                this.elements.input.focus();
-            },
-            
-            // Get context from current view
-            getContext: function() {
-                let systemPrompt = "Du bist ein erfahrener CFO-Assistent für Business Case Management. Antworte präzise, professionell und hilfreich auf Deutsch.";
-                
-                // Add project context if available
-                if (window.cfoDashboard?.currentProjekt && window.state) {
-                    const projekt = window.state.getProjekt(window.cfoDashboard.currentProjekt);
-                    if (projekt) {
-                        systemPrompt += `\n\nAktueller Kontext:\n- Projekt: ${projekt.name}\n- Division: ${projekt.division || 'N/A'}`;
-                    }
-                }
-                
-                return { systemPrompt };
-            },
-            
-            // Helper: Escape HTML
-            escapeHtml: function(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            },
-            
-            // Helper: Format Response
-            formatResponse: function(text) {
-                return this.escapeHtml(text)
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\n\n/g, '<br><br>')
-                    .replace(/\n/g, '<br>');
-            }
-        };
-        
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => window.AIChat.init());
-        } else {
-            window.AIChat.init();
-        }
-        
-    })();
-    </script>
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  </script>
 
 </body>
 </html>
