@@ -1668,7 +1668,8 @@ body {
 }
 
 /* ==========================================
-   GESCHÄFTSMODELL STYLES
+   GESCHÄFTSMODELL STYLES V2
+   Inline Badges, Section Validation, Custom Streams
    ========================================== */
 
 .geschaeftsmodell-container {
@@ -1699,6 +1700,7 @@ body {
   font-size: 13px;
   color: var(--gray-500);
   font-weight: 400;
+  line-height: 1.5;
 }
 
 .gm-section {
@@ -1707,8 +1709,14 @@ body {
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
 }
 
+.gm-section:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Feature Items */
 .feature-item {
   display: flex;
   gap: 8px;
@@ -1723,6 +1731,7 @@ body {
   border-radius: 4px;
   font-size: 14px;
   font-family: var(--font-family);
+  transition: border-color 0.2s ease;
 }
 
 .feature-input:focus {
@@ -1731,30 +1740,89 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.artikel-name-input,
-.artikel-typ-select,
-.artikel-desc-input {
-  width: 100%;
-  padding: 6px 10px;
+/* Custom Stream Items */
+.custom-stream-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.custom-stream-input {
+  flex: 1;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   font-family: var(--font-family);
+  transition: border-color 0.2s ease;
 }
 
-.artikel-name-input:focus,
-.artikel-typ-select:focus,
-.artikel-desc-input:focus {
+.custom-stream-input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.gm-artikel-row {
-  transition: background-color 0.2s ease;
+/* ==========================================
+   INLINE BADGES (KI-Feedback)
+   ========================================== */
+
+.inline-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  animation: slideInFromLeft 0.3s ease;
+  margin-top: 16px;
 }
 
-.gm-artikel-row:hover {
-  background-color: var(--gray-50);
+.inline-badge > span {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.inline-badge strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.1);
+  border-left-color: var(--success);
+  color: var(--text);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-left-color: var(--warning);
+  color: var(--text);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-left-color: var(--danger);
+  color: var(--text);
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.1);
+  border-left-color: var(--info);
+  color: var(--text);
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Progress Bar Styles */
@@ -1768,7 +1836,7 @@ body {
   margin-top: 24px;
 }
 
-/* Radio and Checkbox Labels */
+/* Radio and Checkbox Labels - Better UX */
 .gm-section label[style*="cursor: pointer"] {
   padding: 8px;
   border-radius: 4px;
@@ -1777,6 +1845,116 @@ body {
 
 .gm-section label[style*="cursor: pointer"]:hover {
   background-color: var(--gray-50);
+}
+
+/* Checkbox and Radio Styling */
+.gm-section input[type="checkbox"],
+.gm-section input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+/* Section Completion Button */
+.gm-section .btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.gm-section .btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.gm-section .btn-primary:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* Icon Buttons */
+.btn-icon {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  transform: scale(1.1);
+}
+
+.btn-icon.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+/* Form Group Improvements */
+.gm-section .form-group label {
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.gm-section .form-group small {
+  color: var(--gray-500);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Grid Layouts for Metrics */
+.gm-section input[type="number"] {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: var(--font-family);
+  transition: border-color 0.2s ease;
+}
+
+.gm-section input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Revenue Stream Checkboxes - Special Styling */
+.gm-section input[name="revenue_streams"] + span {
+  font-weight: 500;
+}
+
+.gm-section input[name="revenue_streams"]:checked + span {
+  color: var(--primary);
+}
+
+/* Hover Effects on Section */
+.gm-section[data-section] {
+  scroll-margin-top: 100px; /* For smooth scrolling with fixed header */
+}
+
+/* Tooltips for Tips */
+.form-group small::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: var(--primary);
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 /* Responsive Design */
@@ -1789,12 +1967,72 @@ body {
     padding: 16px;
   }
   
-  .feature-item {
+  .feature-item,
+  .custom-stream-item {
     flex-direction: column;
   }
   
-  .feature-input {
+  .feature-input,
+  .custom-stream-input {
     width: 100%;
+  }
+
+  .inline-badge {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .inline-badge > span {
+    font-size: 20px;
+  }
+}
+
+/* ========================================== */
+/* ANIMATIONS */
+/* ========================================== */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Success Toast Animation */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
   }
 }
 
