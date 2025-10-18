@@ -574,3 +574,73 @@ export default {
   debounce,
   deepClone
 };
+
+// ==========================================
+// TOAST NOTIFICATIONS
+// ==========================================
+
+export function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    `;
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
+  
+  const colors = {
+    success: '#10b981',
+    error: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6'
+  };
+  
+  toast.innerHTML = `
+    <span style="font-size: 20px;">${icons[type] || icons.info}</span>
+    <span>${escapeHtml(message)}</span>
+  `;
+  
+  toast.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: white;
+    border-left: 4px solid ${colors[type] || colors.info};
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    min-width: 300px;
+    max-width: 500px;
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+    if (container.children.length === 0) {
+      container.remove();
+    }
+  }, 3000);
+}
