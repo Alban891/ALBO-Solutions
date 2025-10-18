@@ -1601,67 +1601,67 @@
 
     </script>
 
-    <!-- FIX: Verschiebe Finanz-Parameter in den richtigen Container -->
+  <!-- FIX: Verstecke die falsch platzierte Finanz-Parameter Section -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 FIX: Suche falsch platzierte Finanz-Parameter Section...');
+    console.log('🔧 FIX: Suche und verstecke falsch platzierte Sections...');
     
-    // Finde das falsch platzierte Element
-    const finanzSection = Array.from(document.querySelectorAll('#tab-projekte > *'))
-        .find(el => {
-            // Nur direct children, nicht artikel-detail-view selbst
-            return el.textContent.includes('Finanz-Parameter & Entwicklungsmodelle') && 
-                   el.id !== 'artikel-detail-view' &&
-                   el.id !== 'projekt-detail-view';
-        });
+    // Finde ALLE Finanz-Parameter Sections die NICHT in artikel-detail-view sind
+    const allElements = document.querySelectorAll('#tab-projekte > *');
     
-    // Finde den richtigen Container (artikel-detail-view)
-    const artikelDetailView = document.getElementById('artikel-detail-view');
-    
-    if (finanzSection && artikelDetailView) {
-        // WICHTIG: Füge am ENDE hinzu, nicht ersetzen!
-        const wrapper = document.createElement('div');
-        wrapper.id = 'finanz-parameter-wrapper';
-        wrapper.style.display = 'none'; // Initial versteckt
-        wrapper.appendChild(finanzSection);
-        
-        // Füge am Ende der artikel-detail-view hinzu
-        artikelDetailView.appendChild(wrapper);
-        
-        console.log('✅ FIX: Finanz-Parameter Section verschoben (wrapped)');
-        
-        // Zeige/Verstecke basierend auf Artikel-Status
-        const originalOpenArtikel = window.openArtikelDetail;
-        window.openArtikelDetail = function(artikelId) {
-            console.log('🔍 Opening artikel with wrapper control...');
-            if (originalOpenArtikel) {
-                originalOpenArtikel.call(this, artikelId);
-            }
-            // Zeige Finanz-Parameter wenn Artikel offen
-            const wrapper = document.getElementById('finanz-parameter-wrapper');
-            if (wrapper) wrapper.style.display = 'block';
-        };
-        
-        const originalCloseArtikel = window.closeArtikelDetail;
-        window.closeArtikelDetail = function() {
-            console.log('🔍 Closing artikel with wrapper control...');
-            if (originalCloseArtikel) {
-                originalCloseArtikel.call(this);
-            }
-            // Verstecke Finanz-Parameter
-            const wrapper = document.getElementById('finanz-parameter-wrapper');
-            if (wrapper) wrapper.style.display = 'none';
-        };
-        
-    } else {
-        // Alternative: Verstecke es einfach wenn es existiert
-        if (finanzSection && !artikelDetailView) {
-            console.log('⚠️ Verstecke Finanz-Parameter Section direkt');
-            finanzSection.style.display = 'none';
-            finanzSection.id = 'orphaned-finanz-section';
+    allElements.forEach(element => {
+        // Wenn es Finanz-Parameter enthält UND NICHT artikel-detail-view ist
+        if (element.textContent.includes('Finanz-Parameter & Entwicklungsmodelle') && 
+            element.id !== 'artikel-detail-view' &&
+            element.id !== 'projekt-overview' &&
+            element.id !== 'artikel-overview') {
+            
+            console.log('⚠️ Verstecke falsch platziertes Element:', element);
+            element.style.display = 'none';
+            element.classList.add('hidden-finanz-section');
         }
+    });
+    
+    // Stelle sicher, dass artikel-detail-view Kinder sichtbar sind
+    const artikelDetail = document.getElementById('artikel-detail-view');
+    if (artikelDetail) {
+        // Mache alle direkten Kinder sichtbar (außer finanz-wrapper)
+        Array.from(artikelDetail.children).forEach(child => {
+            if (child.id !== 'finanz-parameter-wrapper') {
+                child.style.display = ''; // Entfernt display:none
+                child.style.visibility = 'visible';
+            }
+        });
+        console.log('✅ Artikel-detail-view Kinder sichtbar gemacht');
     }
 });
+
+// Fix: Beim Öffnen eines Artikels sicherstellen, dass Inhalt sichtbar ist
+const originalOpen = window.openArtikelDetail;
+if (originalOpen) {
+    window.openArtikelDetail = function(artikelId) {
+        console.log('📂 Opening artikel:', artikelId);
+        
+        // Original Funktion aufrufen
+        if (originalOpen) {
+            originalOpen.call(this, artikelId);
+        }
+        
+        // Sicherstellen, dass alle Kinder sichtbar sind
+        setTimeout(() => {
+            const artikelDetail = document.getElementById('artikel-detail-view');
+            if (artikelDetail) {
+                Array.from(artikelDetail.children).forEach(child => {
+                    if (!child.classList.contains('hidden-finanz-section')) {
+                        child.style.display = '';
+                        child.style.visibility = 'visible';
+                    }
+                });
+                console.log('✅ Artikel Inhalt sichtbar gemacht');
+            }
+        }, 100);
+    };
+}
 </script>
 
 </body>
