@@ -1601,35 +1601,5 @@
 
     </script>
 
-<script type="module">
-/**
- * Fix: Entferne doppelte "Finanz-Parameter & Entwicklungsmodelle"-Sections,
- * aber schütze den echten Artikel-Detail-View.
- */
-document.addEventListener('DOMContentLoaded', () => {
-  const cleanDuplicates = () => {
-    document.querySelectorAll('h3').forEach(h3 => {
-      if (!h3.textContent.includes('Finanz-Parameter & Entwicklungsmodelle')) return;
-
-      const inDetail = h3.closest('#artikel-detail-view');
-      // ✅ nur löschen, wenn sie NICHT im echten Detail-View sind
-      if (!inDetail) {
-        const container = h3.closest('.form-section') || h3;
-        console.warn('🧹 Entferne doppelte Finanz-Parameter-Section außerhalb artikel-detail-view');
-        container.remove();
-      }
-    });
-  };
-
-  // einmalig direkt nach DOM-Load ausführen
-  cleanDuplicates();
-
-  // zusätzlich: bei späterem dynamischem Einfügen prüfen
-  const observer = new MutationObserver(() => cleanDuplicates());
-  observer.observe(document.body, { childList: true, subtree: true });
-});
-</script>
-
-
 </body>
 </html>
