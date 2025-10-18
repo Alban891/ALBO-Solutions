@@ -246,9 +246,32 @@ export default {
   addRisk: assumptionsModule.addRisk,
   addSuccessFactor: assumptionsModule.addSuccessFactor,
   
-  // Legacy (for backwards compatibility)
-  addFeature: () => console.warn('addFeature deprecated, use sections/section-7.js'),
-  addCustomStream: () => console.warn('addCustomStream deprecated, use sections/section-5.js')
+  // Features & Streams (from sections)
+  addFeature: () => {
+    const container = document.getElementById('features-container');
+    if (!container) return;
+    const count = container.querySelectorAll('.feature-item').length + 1;
+    const html = `
+      <div class="feature-item" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+        <span style="font-weight: 600; color: var(--primary);">${count}.</span>
+        <input type="text" class="feature-input" placeholder="z.B. KI-basierte Fehlerkennung" style="flex: 1;" />
+        <button type="button" class="btn-icon btn-danger" onclick="this.closest('.feature-item').remove()">🗑️</button>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  },
+  
+  addCustomStream: () => {
+    const container = document.getElementById('custom-streams-container');
+    if (!container) return;
+    const html = `
+      <div class="custom-stream" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+        <input type="text" class="custom-stream-input" placeholder="z.B. Professional Services" style="flex: 1;" />
+        <button type="button" class="btn-icon btn-danger" onclick="this.closest('.custom-stream').remove()">🗑️</button>
+      </div>
+    `;
+    container.insertAdjacentHTML('beforeend', html);
+  }
 };
 
 console.log('📦 Geschäftsmodell Module (Modular) loaded');
