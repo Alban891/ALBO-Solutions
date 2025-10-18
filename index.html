@@ -1601,5 +1601,34 @@
 
     </script>
 
+    <script>
+// Finde heraus WO das Element erstellt wird
+console.log('🔍 Starte Überwachung für Finanz-Parameter...');
+
+// Überwache DOM-Änderungen
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1 && node.textContent && 
+                node.textContent.includes('Finanz-Parameter')) {
+                console.error('🔴 FINANZ-PARAMETER WURDE HINZUGEFÜGT!');
+                console.error('Element:', node);
+                console.error('Parent:', node.parentElement);
+                console.error('Stack Trace:');
+                console.trace();
+                // Stoppe Observer nach Fund
+                observer.disconnect();
+            }
+        });
+    });
+});
+
+// Starte Überwachung
+observer.observe(document.body, { 
+    childList: true, 
+    subtree: true 
+});
+</script>
+
 </body>
 </html>
