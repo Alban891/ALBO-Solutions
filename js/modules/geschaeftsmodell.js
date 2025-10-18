@@ -1,10 +1,24 @@
 /**
- * CFO Dashboard - Geschäftsmodell Module
- * Business Model Canvas für Controller - Tiefes Verständnis des Projekts
+ * CFO Dashboard - Geschäftsmodell Module V2
+ * Business Model Canvas für Controller - mit KI-Unterstützung
+ * 
+ * Features:
+ * - Section-basierte Validierung
+ * - Inline-Badges für KI-Feedback
+ * - Flexible Revenue Models (Multi-Select + Custom)
+ * - Vorbereitet für KI-Panel Integration
  */
 
 import { state } from '../state.js';
 import * as helpers from '../helpers.js';
+import { analyzeSection, validateGeschaeftsmodell } from './geschaeftsmodell-ki.js';
+
+// ==========================================
+// STATE
+// ==========================================
+
+let currentSectionAnalysis = {};
+let completedSections = new Set();
 
 // ==========================================
 // RENDER GESCHÄFTSMODELL TAB
@@ -37,6 +51,10 @@ export function renderGeschaeftsmodell() {
   // Load existing Geschäftsmodell data
   const geschaeftsmodell = state.getGeschaeftsmodell(projektId) || {};
 
+  // Reset state
+  currentSectionAnalysis = {};
+  completedSections = new Set();
+
   container.innerHTML = `
     <div class="geschaeftsmodell-container">
       
@@ -45,7 +63,7 @@ export function renderGeschaeftsmodell() {
         <div>
           <h3>🏗️ Geschäftsmodell</h3>
           <p style="color: var(--gray); margin-top: 8px;">
-            Verstehen Sie das Projekt im Detail - als Basis für fundierte Beratung
+            Business Model Canvas - Verstehen Sie das Projekt strategisch
           </p>
         </div>
         <div style="display: flex; gap: 12px;">
@@ -72,10 +90,15 @@ export function renderGeschaeftsmodell() {
       <!-- Main Form -->
       <form id="geschaeftsmodell-form" style="display: flex; flex-direction: column; gap: 32px;">
 
+        <!-- ========================================== -->
         <!-- 1. KUNDENPROBLEM & KONTEXT -->
-        <div class="form-section gm-section" data-section="1">
+        <!-- ========================================== -->
+        <div class="form-section gm-section" data-section="1" id="section-1">
           <div class="section-header-small">
             <h4>1️⃣ Kundenproblem & Kontext</h4>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Warum ist das wichtig? Ein Senior Controller versteht: Ohne echten Schmerzpunkt keine Zahlungsbereitschaft.
+            </small>
           </div>
 
           <div class="form-group">
@@ -87,7 +110,7 @@ export function renderGeschaeftsmodell() {
               required
             >${geschaeftsmodell.kundenproblem || ''}</textarea>
             <small style="color: var(--gray); display: block; margin-top: 4px;">
-              Beschreiben Sie das konkrete Problem, das Ihre Kunden haben (3-5 Sätze)
+              Beschreiben Sie das konkrete Problem quantifizierbar (3-5 Sätze)
             </small>
           </div>
 
@@ -98,6 +121,9 @@ export function renderGeschaeftsmodell() {
               rows="3" 
               placeholder="z.B. 'Durchschnittlicher Mittelständler verliert ca. 400k€/Jahr durch Ineffizienzen, Ausschuss und Produktionsausfälle'"
             >${geschaeftsmodell.problemkosten || ''}</textarea>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Tipp: Je höher die Kosten, desto höher die Zahlungsbereitschaft
+            </small>
           </div>
 
           <div class="form-group">
@@ -121,12 +147,27 @@ export function renderGeschaeftsmodell() {
               </label>
             </div>
           </div>
+
+          <!-- Section Completion -->
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <button type="button" class="btn btn-primary" onclick="geschaeftsmodellModule.completeSection(1)">
+              Abschnitt 1 abschließen & KI-Analyse →
+            </button>
+          </div>
+
+          <!-- Inline Badge (wird dynamisch eingefügt) -->
+          <div id="section-1-badge"></div>
         </div>
 
+        <!-- ========================================== -->
         <!-- 2. ZIELKUNDEN -->
-        <div class="form-section gm-section" data-section="2">
+        <!-- ========================================== -->
+        <div class="form-section gm-section" data-section="2" id="section-2">
           <div class="section-header-small">
             <h4>2️⃣ Zielkunden</h4>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Warum ist das wichtig? Klar definierte Zielgruppe = fokussierte GTM-Strategie
+            </small>
           </div>
 
           <div class="form-group">
@@ -246,74 +287,146 @@ export function renderGeschaeftsmodell() {
                 <span>CTO</span>
               </label>
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" name="buying_center" value="cfo" ${geschaeftsmodell.buying_center?.includes('cfo') ? 'checked' : ''}>
+                <span>CFO</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="checkbox" name="buying_center" value="einkauf" ${geschaeftsmodell.buying_center?.includes('einkauf') ? 'checked' : ''}>
                 <span>Einkauf</span>
               </label>
             </div>
+            <small style="color: var(--gray); display: block; margin-top: 8px;">
+              💡 Tipp: Bei Investments >100k€ ist typischerweise GF/CFO-Ebene involviert
+            </small>
           </div>
+
+          <!-- Section Completion -->
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <button type="button" class="btn btn-primary" onclick="geschaeftsmodellModule.completeSection(2)">
+              Abschnitt 2 abschließen & KI-Analyse →
+            </button>
+          </div>
+
+          <!-- Inline Badge -->
+          <div id="section-2-badge"></div>
         </div>
 
-        <!-- 3. GESCHÄFTSMODELL-TYP -->
-        <div class="form-section gm-section" data-section="3">
+        <!-- ========================================== -->
+        <!-- 3. GESCHÄFTSMODELL & REVENUE STREAMS -->
+        <!-- ========================================== -->
+        <div class="form-section gm-section" data-section="3" id="section-3">
           <div class="section-header-small">
-            <h4>3️⃣ Geschäftsmodell-Typ</h4>
+            <h4>3️⃣ Geschäftsmodell & Revenue Streams</h4>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Warum ist das wichtig? Revenue Model bestimmt Planbarkeit, Skalierbarkeit und Bewertung
+            </small>
           </div>
 
           <div class="form-group">
-            <label>💼 Wie verdienen wir Geld? (Primary Revenue Model) *</label>
-            <select id="gm-revenue-model" required style="margin-top: 8px;">
-              <option value="">Bitte wählen...</option>
-              <option value="einmalverkauf" ${geschaeftsmodell.revenue_model === 'einmalverkauf' ? 'selected' : ''}>Einmalverkauf (Hardware, Software-Lizenz)</option>
-              <option value="subscription" ${geschaeftsmodell.revenue_model === 'subscription' ? 'selected' : ''}>Subscription / SaaS</option>
-              <option value="hybrid" ${geschaeftsmodell.revenue_model === 'hybrid' ? 'selected' : ''}>Hybrid (Hardware + Subscription)</option>
-              <option value="usage_based" ${geschaeftsmodell.revenue_model === 'usage_based' ? 'selected' : ''}>Usage-Based / Pay-per-Use</option>
-              <option value="freemium" ${geschaeftsmodell.revenue_model === 'freemium' ? 'selected' : ''}>Freemium</option>
-              <option value="marketplace" ${geschaeftsmodell.revenue_model === 'marketplace' ? 'selected' : ''}>Marketplace / Platform</option>
-              <option value="services" ${geschaeftsmodell.revenue_model === 'services' ? 'selected' : ''}>Professional Services / Beratung</option>
-              <option value="licensing" ${geschaeftsmodell.revenue_model === 'licensing' ? 'selected' : ''}>Lizenzierung / IP Licensing</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>💡 Zusätzliche Revenue Streams (Optional)</label>
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="additional_streams" value="maintenance" ${geschaeftsmodell.additional_streams?.includes('maintenance') ? 'checked' : ''}>
-                <span>Wartung & Support (jährlicher Vertrag)</span>
+            <label>💼 Revenue Streams (Mehrfachauswahl möglich) *</label>
+            <small style="color: var(--gray); display: block; margin-bottom: 8px;">
+              Wählen Sie alle Umsatzquellen, die zum Geschäftsmodell gehören
+            </small>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="software_license" ${geschaeftsmodell.revenue_streams?.includes('software_license') ? 'checked' : ''}>
+                <span>Software-Lizenz (Einmalverkauf)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="additional_streams" value="services" ${geschaeftsmodell.additional_streams?.includes('services') ? 'checked' : ''}>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="hardware" ${geschaeftsmodell.revenue_streams?.includes('hardware') ? 'checked' : ''}>
+                <span>Hardware-Komponenten (Einmalverkauf)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="subscription" ${geschaeftsmodell.revenue_streams?.includes('subscription') ? 'checked' : ''}>
+                <span>Subscription / SaaS (wiederkehrend)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="usage_based" ${geschaeftsmodell.revenue_streams?.includes('usage_based') ? 'checked' : ''}>
+                <span>Usage-Based / Pay-per-Use</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="maintenance" ${geschaeftsmodell.revenue_streams?.includes('maintenance') ? 'checked' : ''}>
+                <span>Wartung & Support (jährlich)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="services" ${geschaeftsmodell.revenue_streams?.includes('services') ? 'checked' : ''}>
                 <span>Professional Services (Consulting, Training)</span>
               </label>
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="additional_streams" value="spare_parts" ${geschaeftsmodell.additional_streams?.includes('spare_parts') ? 'checked' : ''}>
-                <span>Spare Parts / Verbrauchsmaterial</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="additional_streams" value="upselling" ${geschaeftsmodell.additional_streams?.includes('upselling') ? 'checked' : ''}>
-                <span>Upselling / Zusatzmodule</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" name="additional_streams" value="data_analytics" ${geschaeftsmodell.additional_streams?.includes('data_analytics') ? 'checked' : ''}>
-                <span>Data Analytics / Insights</span>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border-radius: 4px;">
+                <input type="checkbox" name="revenue_streams" value="marketplace" ${geschaeftsmodell.revenue_streams?.includes('marketplace') ? 'checked' : ''}>
+                <span>Marketplace / Platform (Commission)</span>
               </label>
             </div>
           </div>
 
+          <!-- Custom Revenue Stream -->
           <div class="form-group">
-            <label>📝 Geschäftsmodell-Erläuterung</label>
+            <label>➕ Weitere Revenue Streams (Custom)</label>
+            <div id="custom-streams-container">
+              ${renderCustomStreams(geschaeftsmodell.custom_streams || [])}
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="geschaeftsmodellModule.addCustomStream()" style="margin-top: 8px;">
+              ➕ Eigenen Stream hinzufügen
+            </button>
+          </div>
+
+          <!-- Revenue Model Summary -->
+          <div class="form-group">
+            <label>📝 Revenue Model Beschreibung *</label>
             <textarea 
               id="gm-revenue-erklaerung" 
               rows="4" 
-              placeholder="z.B. 'Wir verkaufen Hardware-Roboter als Einmalverkauf (150k€), dazu kommt eine Software-Subscription (1.200€/Monat)...'"
+              placeholder="Beispiel: 'Wir verkaufen eine Software-Lizenz einmalig (80k€), plus Hardware-Komponenten als Cross-Sell (30k€), plus eine jährliche Subscription für Updates & Support (12k€/Jahr). Gesamtumsatz im ersten Jahr: 122k€, danach 12k€/Jahr recurring.'"
+              required
             >${geschaeftsmodell.revenue_erklaerung || ''}</textarea>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Beschreiben Sie konkret: Was wird wann wie verkauft? Welche Preise? Welche Laufzeiten?
+            </small>
           </div>
+
+          <!-- Key Metrics für Revenue Model -->
+          <div class="form-group">
+            <label>📊 Wichtige Kennzahlen (falls bekannt)</label>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
+              <div>
+                <label style="font-size: 13px; color: var(--gray);">Durchschn. Deal Size (k€)</label>
+                <input type="number" id="gm-deal-size" placeholder="z.B. 150" value="${geschaeftsmodell.deal_size || ''}" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 13px; color: var(--gray);">Sales Cycle (Monate)</label>
+                <input type="number" id="gm-sales-cycle" placeholder="z.B. 6" value="${geschaeftsmodell.sales_cycle || ''}" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 13px; color: var(--gray);">Vertragslaufzeit (Monate)</label>
+                <input type="number" id="gm-contract-length" placeholder="z.B. 24" value="${geschaeftsmodell.contract_length || ''}" style="width: 100%;">
+              </div>
+              <div>
+                <label style="font-size: 13px; color: var(--gray);">Erwartete Churn Rate (%)</label>
+                <input type="number" id="gm-churn-rate" placeholder="z.B. 15" value="${geschaeftsmodell.churn_rate || ''}" style="width: 100%;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Completion -->
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <button type="button" class="btn btn-primary" onclick="geschaeftsmodellModule.completeSection(3)">
+              Abschnitt 3 abschließen & KI-Analyse →
+            </button>
+          </div>
+
+          <!-- Inline Badge -->
+          <div id="section-3-badge"></div>
         </div>
 
+        <!-- ========================================== -->
         <!-- 4. UNSERE LÖSUNG -->
-        <div class="form-section gm-section" data-section="4">
+        <!-- ========================================== -->
+        <div class="form-section gm-section" data-section="4" id="section-4">
           <div class="section-header-small">
             <h4>4️⃣ Unsere Lösung</h4>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Warum ist das wichtig? Value Proposition muss zum Problem passen und differenziert sein
+            </small>
           </div>
 
           <div class="form-group">
@@ -333,9 +446,12 @@ export function renderGeschaeftsmodell() {
             <textarea 
               id="gm-value-proposition" 
               rows="4" 
-              placeholder="z.B. 'Flexibles Robotik-System mit 70% geringeren Implementierungskosten als traditionelle Lösungen...'"
+              placeholder="z.B. 'Flexibles Robotik-System mit 70% geringeren Implementierungskosten als traditionelle Lösungen. Plug-and-Play Installation in 2 Wochen statt 6 Monaten. KI-gesteuerte Prozessoptimierung steigert Produktivität um 40%.'"
               required
             >${geschaeftsmodell.value_proposition || ''}</textarea>
+            <small style="color: var(--gray); display: block; margin-top: 4px;">
+              💡 Quantifizieren Sie den Nutzen! Prozente, Zeitersparnis, Kostenreduktion
+            </small>
           </div>
 
           <div class="form-group">
@@ -381,10 +497,22 @@ export function renderGeschaeftsmodell() {
               </label>
             </div>
           </div>
+
+          <!-- Section Completion -->
+          <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <button type="button" class="btn btn-primary" onclick="geschaeftsmodellModule.completeSection(4)">
+              Abschnitt 4 abschließen & KI-Analyse →
+            </button>
+          </div>
+
+          <!-- Inline Badge -->
+          <div id="section-4-badge"></div>
         </div>
 
+        <!-- ========================================== -->
         <!-- 5. ZUSÄTZLICHE NOTIZEN -->
-        <div class="form-section gm-section" data-section="5">
+        <!-- ========================================== -->
+        <div class="form-section gm-section" data-section="5" id="section-5">
           <div class="section-header-small">
             <h4>5️⃣ Zusätzliche Notizen (Optional)</h4>
           </div>
@@ -393,7 +521,7 @@ export function renderGeschaeftsmodell() {
             <textarea 
               id="gm-notizen" 
               rows="4" 
-              placeholder="z.B. 'Wichtig: Kunde braucht CE-Zertifizierung. Launch-Kunde bereits identifiziert...'"
+              placeholder="z.B. 'Wichtig: Kunde braucht CE-Zertifizierung. Launch-Kunde bereits identifiziert (Firma XYZ). Patent-Anmeldung läuft.'"
             >${geschaeftsmodell.notizen || ''}</textarea>
           </div>
         </div>
@@ -449,6 +577,22 @@ function renderFeaturesList(features) {
   `).join('');
 }
 
+/**
+ * Render custom revenue streams
+ */
+function renderCustomStreams(streams) {
+  if (!streams || streams.length === 0) {
+    return '';
+  }
+
+  return streams.map((stream, index) => `
+    <div class="custom-stream-item" style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <input type="text" class="custom-stream-input" value="${helpers.escapeHtml(stream)}" placeholder="z.B. Daten-Monetarisierung" style="flex: 1;" />
+      <button type="button" class="btn-icon btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+    </div>
+  `).join('');
+}
+
 // ==========================================
 // FORM ACTIONS
 // ==========================================
@@ -468,6 +612,259 @@ export function addFeature() {
   `;
 
   container.insertAdjacentHTML('beforeend', featureHtml);
+}
+
+/**
+ * Add custom revenue stream
+ */
+export function addCustomStream() {
+  const container = document.getElementById('custom-streams-container');
+  if (!container) return;
+
+  const streamHtml = `
+    <div class="custom-stream-item" style="display: flex; gap: 8px; margin-bottom: 8px;">
+      <input type="text" class="custom-stream-input" placeholder="z.B. Daten-Monetarisierung" style="flex: 1;" />
+      <button type="button" class="btn-icon btn-danger" onclick="this.parentElement.remove()">🗑️</button>
+    </div>
+  `;
+
+  container.insertAdjacentHTML('beforeend', streamHtml);
+}
+
+// ==========================================
+// SECTION VALIDATION
+// ==========================================
+
+/**
+ * Complete section and trigger KI analysis
+ */
+export function completeSection(sectionNumber) {
+  console.log('🔍 Completing section:', sectionNumber);
+
+  // Collect data for this section
+  const sectionData = collectSectionData(sectionNumber);
+  
+  // Analyze with KI
+  const analysis = analyzeSection(sectionNumber, sectionData);
+  
+  // Store analysis
+  currentSectionAnalysis[sectionNumber] = analysis;
+  completedSections.add(sectionNumber);
+  
+  // Display inline badge
+  displayInlineBadge(sectionNumber, analysis);
+  
+  // TODO: Later - send to KI Panel
+  // updateKIPanel(analysis);
+  
+  // Scroll to next section
+  scrollToNextSection(sectionNumber);
+  
+  console.log('✅ Section analysis:', analysis);
+}
+
+/**
+ * Collect data for specific section
+ */
+function collectSectionData(sectionNumber) {
+  const form = document.getElementById('geschaeftsmodell-form');
+  if (!form) return {};
+
+  const getCheckboxValues = (name) => {
+    return Array.from(form.querySelectorAll(`input[name="${name}"]:checked`))
+      .map(cb => cb.value);
+  };
+
+  const getRadioValue = (name) => {
+    const checked = form.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : null;
+  };
+
+  switch (sectionNumber) {
+    case 1:
+      return {
+        kundenproblem: document.getElementById('gm-kundenproblem')?.value || '',
+        problemkosten: document.getElementById('gm-problemkosten')?.value || '',
+        urgency: getRadioValue('urgency')
+      };
+    
+    case 2:
+      return {
+        kundentyp: getCheckboxValues('kundentyp'),
+        unternehmensgroesse: getCheckboxValues('unternehmensgroesse'),
+        branchen: getCheckboxValues('branchen'),
+        geografie: getCheckboxValues('geografie'),
+        kundenprofil: document.getElementById('gm-kundenprofil')?.value || '',
+        buying_center: getCheckboxValues('buying_center')
+      };
+    
+    case 3:
+      const customStreams = Array.from(document.querySelectorAll('.custom-stream-input'))
+        .map(input => input.value.trim())
+        .filter(val => val !== '');
+      
+      return {
+        revenue_streams: getCheckboxValues('revenue_streams'),
+        custom_streams: customStreams,
+        revenue_erklaerung: document.getElementById('gm-revenue-erklaerung')?.value || '',
+        deal_size: document.getElementById('gm-deal-size')?.value || '',
+        sales_cycle: document.getElementById('gm-sales-cycle')?.value || '',
+        contract_length: document.getElementById('gm-contract-length')?.value || '',
+        churn_rate: document.getElementById('gm-churn-rate')?.value || ''
+      };
+    
+    case 4:
+      const features = Array.from(document.querySelectorAll('.feature-input'))
+        .map(input => input.value.trim())
+        .filter(val => val !== '');
+      
+      return {
+        produktkategorie: document.getElementById('gm-produktkategorie')?.value || '',
+        value_proposition: document.getElementById('gm-value-proposition')?.value || '',
+        features: features,
+        wettbewerbsvorteil: getCheckboxValues('wettbewerbsvorteil')
+      };
+    
+    default:
+      return {};
+  }
+}
+
+/**
+ * Display inline badge with analysis results
+ */
+function displayInlineBadge(sectionNumber, analysis) {
+  const badgeContainer = document.getElementById(`section-${sectionNumber}-badge`);
+  if (!badgeContainer) return;
+
+  const issueCount = analysis.issues.length;
+  const tipCount = analysis.tips.length;
+
+  if (issueCount === 0 && tipCount === 0) {
+    // All good
+    badgeContainer.innerHTML = `
+      <div class="inline-badge badge-success" style="margin-top: 16px;">
+        <span style="font-size: 20px;">✅</span>
+        <div>
+          <strong>Abschnitt ${sectionNumber} vollständig</strong>
+          <div style="font-size: 13px; margin-top: 2px;">Keine kritischen Punkte gefunden</div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Has issues or tips
+    badgeContainer.innerHTML = `
+      <div class="inline-badge badge-warning" style="margin-top: 16px;">
+        <span style="font-size: 20px;">⚠️</span>
+        <div style="flex: 1;">
+          <strong>${issueCount} ${issueCount === 1 ? 'Hinweis' : 'Hinweise'} zur Prüfung</strong>
+          <div style="font-size: 13px; margin-top: 4px;">
+            ${analysis.issues.map(issue => `• ${issue.title}`).join('<br>')}
+          </div>
+          ${tipCount > 0 ? `<div style="font-size: 13px; margin-top: 8px; color: var(--primary);">💡 ${tipCount} Verbesserungsvorschläge verfügbar</div>` : ''}
+        </div>
+        <button class="btn btn-sm btn-secondary" onclick="geschaeftsmodellModule.showSectionDetails(${sectionNumber})">
+          Details anzeigen
+        </button>
+      </div>
+    `;
+  }
+
+  // Scroll badge into view
+  badgeContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/**
+ * Show section details in modal
+ */
+export function showSectionDetails(sectionNumber) {
+  const analysis = currentSectionAnalysis[sectionNumber];
+  if (!analysis) return;
+
+  let detailsHtml = `
+    <div style="max-width: 600px;">
+      <h3 style="margin-bottom: 16px;">🤖 KI-Analyse: Abschnitt ${sectionNumber}</h3>
+  `;
+
+  // Critical issues
+  if (analysis.issues.length > 0) {
+    detailsHtml += `
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: var(--danger); margin-bottom: 12px;">⚠️ Zu prüfen:</h4>
+        ${analysis.issues.map(issue => `
+          <div style="padding: 12px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--danger); border-radius: 4px; margin-bottom: 8px;">
+            <strong>${issue.title}</strong>
+            <div style="margin-top: 4px; font-size: 14px;">${issue.message}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Tips
+  if (analysis.tips.length > 0) {
+    detailsHtml += `
+      <div style="margin-bottom: 20px;">
+        <h4 style="color: var(--primary); margin-bottom: 12px;">💡 Verbesserungsvorschläge:</h4>
+        ${analysis.tips.map(tip => `
+          <div style="padding: 12px; background: rgba(37, 99, 235, 0.1); border-left: 3px solid var(--primary); border-radius: 4px; margin-bottom: 8px;">
+            <strong>${tip.title}</strong>
+            <div style="margin-top: 4px; font-size: 14px;">${tip.message}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Quality score
+  detailsHtml += `
+    <div style="padding: 16px; background: var(--bg-secondary); border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600;">Qualitäts-Score:</span>
+        <span style="font-size: 24px; font-weight: 700; color: ${getScoreColor(analysis.quality_score)};">
+          ${analysis.quality_score}/10
+        </span>
+      </div>
+    </div>
+  `;
+
+  detailsHtml += `</div>`;
+
+  // Show in alert (später: Modal oder KI-Panel)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = detailsHtml;
+  tempDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 10000; max-height: 80vh; overflow-y: auto;';
+  
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;';
+  overlay.onclick = () => {
+    document.body.removeChild(overlay);
+    document.body.removeChild(tempDiv);
+  };
+  
+  document.body.appendChild(overlay);
+  document.body.appendChild(tempDiv);
+}
+
+/**
+ * Get color for score
+ */
+function getScoreColor(score) {
+  if (score >= 8) return 'var(--success)';
+  if (score >= 6) return 'var(--warning)';
+  return 'var(--danger)';
+}
+
+/**
+ * Scroll to next section
+ */
+function scrollToNextSection(currentSection) {
+  const nextSection = document.getElementById(`section-${currentSection + 1}`);
+  if (nextSection) {
+    setTimeout(() => {
+      nextSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 500);
+  }
 }
 
 // ==========================================
@@ -492,7 +889,7 @@ function updateProgress() {
   });
 
   // Count checkboxes and radios (at least one checked per group)
-  const checkboxGroups = ['kundentyp', 'urgency'];
+  const checkboxGroups = ['kundentyp', 'urgency', 'revenue_streams'];
   checkboxGroups.forEach(groupName => {
     const checked = form.querySelector(`input[name="${groupName}"]:checked`);
     if (checked) filledCount++;
@@ -514,19 +911,17 @@ function updateProgress() {
 // ==========================================
 
 /**
- * Collect form data
+ * Collect complete form data
  */
 function collectFormData() {
   const form = document.getElementById('geschaeftsmodell-form');
   if (!form) return null;
 
-  // Helper function to get checkbox values
   const getCheckboxValues = (name) => {
     return Array.from(form.querySelectorAll(`input[name="${name}"]:checked`))
       .map(cb => cb.value);
   };
 
-  // Helper function to get radio value
   const getRadioValue = (name) => {
     const checked = form.querySelector(`input[name="${name}"]:checked`);
     return checked ? checked.value : null;
@@ -534,6 +929,11 @@ function collectFormData() {
 
   // Collect features
   const features = Array.from(document.querySelectorAll('.feature-input'))
+    .map(input => input.value.trim())
+    .filter(val => val !== '');
+
+  // Collect custom streams
+  const customStreams = Array.from(document.querySelectorAll('.custom-stream-input'))
     .map(input => input.value.trim())
     .filter(val => val !== '');
 
@@ -552,9 +952,13 @@ function collectFormData() {
     buying_center: getCheckboxValues('buying_center'),
 
     // Section 3
-    revenue_model: document.getElementById('gm-revenue-model')?.value || '',
-    additional_streams: getCheckboxValues('additional_streams'),
+    revenue_streams: getCheckboxValues('revenue_streams'),
+    custom_streams: customStreams,
     revenue_erklaerung: document.getElementById('gm-revenue-erklaerung')?.value || '',
+    deal_size: document.getElementById('gm-deal-size')?.value || '',
+    sales_cycle: document.getElementById('gm-sales-cycle')?.value || '',
+    contract_length: document.getElementById('gm-contract-length')?.value || '',
+    churn_rate: document.getElementById('gm-churn-rate')?.value || '',
 
     // Section 4
     produktkategorie: document.getElementById('gm-produktkategorie')?.value || '',
@@ -563,7 +967,11 @@ function collectFormData() {
     wettbewerbsvorteil: getCheckboxValues('wettbewerbsvorteil'),
 
     // Section 5
-    notizen: document.getElementById('gm-notizen')?.value || ''
+    notizen: document.getElementById('gm-notizen')?.value || '',
+
+    // Meta
+    completed_sections: Array.from(completedSections),
+    section_analysis: currentSectionAnalysis
   };
 }
 
@@ -589,9 +997,27 @@ export function saveGeschaeftsmodell() {
     return;
   }
 
-  if (!data.revenue_model) {
-    alert('Bitte wählen Sie ein Revenue Model');
+  if (!data.revenue_streams || data.revenue_streams.length === 0) {
+    alert('Bitte wählen Sie mindestens einen Revenue Stream');
     return;
+  }
+
+  if (!data.revenue_erklaerung || data.revenue_erklaerung.trim() === '') {
+    alert('Bitte beschreiben Sie das Revenue Model');
+    return;
+  }
+
+  // Perform full validation
+  const validation = validateGeschaeftsmodell(data);
+  
+  if (validation.critical_issues.length > 0) {
+    const proceed = confirm(
+      `KI hat ${validation.critical_issues.length} kritische Punkte identifiziert:\n\n` +
+      validation.critical_issues.map(issue => `• ${issue.title}`).join('\n') +
+      '\n\nTrotzdem speichern?'
+    );
+    
+    if (!proceed) return;
   }
 
   // Save to state
@@ -604,12 +1030,11 @@ export function saveGeschaeftsmodell() {
     window.cfoDashboard.aiController.addAIMessage({
       level: 'success',
       title: '✅ Geschäftsmodell gespeichert',
-      text: 'Business Model erfolgreich dokumentiert.',
+      text: `Business Model erfolgreich dokumentiert. Qualitäts-Score: ${validation.overall_score}/10`,
       timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
     });
   }
 
-  // Optional: Show toast notification
   showSuccessToast('Geschäftsmodell gespeichert');
 }
 
@@ -629,6 +1054,21 @@ export function resetForm() {
     if (featuresContainer) {
       featuresContainer.innerHTML = renderFeaturesList([]);
     }
+
+    const customStreamsContainer = document.getElementById('custom-streams-container');
+    if (customStreamsContainer) {
+      customStreamsContainer.innerHTML = '';
+    }
+
+    // Clear badges
+    for (let i = 1; i <= 5; i++) {
+      const badge = document.getElementById(`section-${i}-badge`);
+      if (badge) badge.innerHTML = '';
+    }
+
+    // Reset state
+    currentSectionAnalysis = {};
+    completedSections = new Set();
     
     updateProgress();
   }
@@ -642,7 +1082,6 @@ export function resetForm() {
  * Show success toast
  */
 function showSuccessToast(message) {
-  // Simple toast notification
   const toast = document.createElement('div');
   toast.style.cssText = `
     position: fixed;
@@ -674,7 +1113,10 @@ export default {
   renderGeschaeftsmodell,
   saveGeschaeftsmodell,
   resetForm,
-  addFeature
+  addFeature,
+  addCustomStream,
+  completeSection,
+  showSectionDetails
 };
 
-console.log('📦 Geschäftsmodell module loaded');
+console.log('📦 Geschäftsmodell module V2 loaded');
