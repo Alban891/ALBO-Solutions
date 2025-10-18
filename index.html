@@ -1389,10 +1389,10 @@
             });        
         }
         else if (tabName === 'geschaeftsmodell') {
-            // Import und render Geschäftsmodell
-            import('./js/modules/geschaeftsmodell.js').then(module => {
-                if (module.renderGeschaeftsmodell) {
-                    module.renderGeschaeftsmodell();
+            // Import und render Geschäftsmodell (MODULAR)
+            import('./js/modules/geschaeftsmodell/index.js').then(module => {
+                if (module.default && module.default.renderGeschaeftsmodell) {
+                module.default.renderGeschaeftsmodell();
                 }
             }).catch(err => {
                 console.error('Failed to load geschaeftsmodell module:', err);
