@@ -35,6 +35,7 @@ class DashboardState {
     // Data Storage - Isolated per session
     this.projektData = {};
     this.artikelData = {};
+    this.geschaeftsmodellData = {};
     this.personalDetails = {};
 
     // Current Dashboard Values
@@ -534,7 +535,42 @@ class DashboardState {
       }))
     };
   }
-}
+
+  // ==========================================
+  // GESCHÄFTSMODELL MANAGEMENT
+  // ==========================================
+
+  /**
+   * Get Geschäftsmodell for project
+   */
+  getGeschaeftsmodell(projektId) {
+    return this.geschaeftsmodellData[projektId] || null;
+  }
+
+  /**
+   * Set/Update Geschäftsmodell
+   */
+  setGeschaeftsmodell(projektId, geschaeftsmodellData) {
+    this.geschaeftsmodellData[projektId] = {
+      ...geschaeftsmodellData,
+      projektId: projektId,
+      updated_at: new Date().toISOString()
+    };
+    this.saveState();
+  }
+
+  /**
+   * Delete Geschäftsmodell
+   */
+  deleteGeschaeftsmodell(projektId) {
+    if (this.geschaeftsmodellData[projektId]) {
+      delete this.geschaeftsmodellData[projektId];
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+} 
 
 // Create singleton instance
 export const state = new DashboardState();
