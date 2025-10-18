@@ -1285,22 +1285,13 @@
     import { renderProjektOverview, updateProjektStats } from './js/modules/projekte.js';
     import { renderArtikelListByProjekt } from './js/modules/artikel.js';
 
-    // FIX: Entferne duplizierte Sections, aber NICHT die in artikel-detail-view
-    setTimeout(() => {
-        const allSections = document.querySelectorAll('.form-section');
-        allSections.forEach(section => {
-            // Nur entfernen wenn:
-            // 1. Kein ID hat
-            // 2. Finanz-Parameter enthält
-            // 3. NICHT innerhalb von artikel-detail-view ist
-            if (!section.id && 
-                section.textContent.includes('Finanz-Parameter') && 
-                !section.closest('#artikel-detail-view')) {
-                section.remove();
-                console.log('✅ Duplizierte Finanz-Parameter Section entfernt');
-            }
-        });
-    }, 100);
+    // Verstecke artikel-detail-view beim Start RICHTIG
+    document.addEventListener('DOMContentLoaded', function() {
+        const artikelView = document.getElementById('artikel-detail-view');
+        if (artikelView && !window.cfoDashboard?.currentArtikel) {
+            artikelView.style.display = 'none';
+        }
+    });
     
     // Make modules globally available for inline handlers
     window.state = state;
