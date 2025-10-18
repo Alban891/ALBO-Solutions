@@ -2,8 +2,6 @@
  * CFO Dashboard - Helper Functions
  * Professional formatting, parsing, and utility functions
  * Production-ready with extensive error handling
- * 
- * FIXES: formatCurrency() nun mit korrektem deutschen Format ohne Nachkommastellen
  */
 
 // ==========================================
@@ -101,37 +99,23 @@ export function formatRevenue(value) {
 }
 
 /**
- * Format currency (always in €) - Deutsches Format
+ * Format currency (always in €)
  * @param {number} value - Value to format
- * @param {boolean} showDecimals - Show decimal places (default: false für ganze Euros)
- * @returns {string} Formatted currency (e.g., "120.000€" oder "1.234,56€")
+ * @param {boolean} showDecimals - Show decimal places
+ * @returns {string} Formatted currency (e.g., "1.234,56€")
  */
-export function formatCurrency(value, showDecimals = false) {
+export function formatCurrency(value, showDecimals = true) {
   if (value === null || value === undefined) return '0€';
   
   try {
-    // Parse string to number if needed
-    const numValue = typeof value === 'string' 
-      ? parseFloat(value.replace(/\./g, '').replace(',', '.')) 
-      : value;
-    
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
     if (isNaN(numValue)) return '0€';
     
-    // OHNE Nachkommastellen (Standard für CFO Dashboard)
-    if (!showDecimals) {
-      const rounded = Math.round(numValue);
-      return rounded.toLocaleString('de-DE', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }) + '€';
+    if (showDecimals) {
+      return numValue.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.').replace('.', ',') + '€';
     }
     
-    // MIT Nachkommastellen (falls explizit gewünscht)
-    return numValue.toLocaleString('de-DE', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }) + '€';
-    
+    return Math.round(numValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '€';
   } catch (error) {
     console.error('formatCurrency error:', error);
     return '0€';
@@ -416,38 +400,6 @@ export function toggleElement(id, show) {
   }
 }
 
-/**
- * Toggle custom input field for select dropdowns with "custom" option
- * @param {HTMLSelectElement} selectElement - The select element
- * @param {string} customInputId - ID of the custom input field
- */
-export function toggleCustomInput(selectElement, customInputId) {
-  const customInput = document.getElementById(customInputId);
-  if (!customInput) return;
-  
-  if (selectElement.value === 'custom') {
-    customInput.style.display = 'block';
-    customInput.focus();
-  } else {
-    customInput.style.display = 'none';
-    customInput.value = '';
-  }
-}
-
-/**
- * Get value from select with custom option support
- * @param {string} selectId - ID of the select element
- * @param {string} customInputId - ID of the custom input field
- * @returns {string} The selected or custom value
- */
-export function getSelectOrCustomValue(selectId, customInputId) {
-  const selectValue = getInputValue(selectId);
-  if (selectValue === 'custom') {
-    return getInputValue(customInputId);
-  }
-  return selectValue;
-}
-
 // ==========================================
 // CALCULATION HELPERS
 // ==========================================
@@ -620,7 +572,5 @@ export default {
   averageArray,
   maxArray,
   debounce,
-  deepClone,
-  toggleCustomInput,
-  getSelectOrCustomValue
+  deepClone
 };
