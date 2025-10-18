@@ -1280,10 +1280,21 @@
     <!-- Load Modules (ES6) -->
     <script type="module">
     import './js/main.js';
-        //import { state } from './js/state.js';
-        //import * as helpers from './js/helpers.js';
-        //import { renderProjektOverview, updateProjektStats } from './js/modules/projekte.js';
-        //import { renderArtikelListByProjekt } from './js/modules/artikel.js';
+    import { state } from './js/state.js';
+    import * as helpers from './js/helpers.js';
+    import { renderProjektOverview, updateProjektStats } from './js/modules/projekte.js';
+    import { renderArtikelListByProjekt } from './js/modules/artikel.js';
+
+    // FIX: Entferne duplizierte Finanz-Parameter Sections beim Laden
+    setTimeout(() => {
+        const duplicates = document.querySelectorAll('#tab-projekte > .form-section');
+        duplicates.forEach(section => {
+            if (!section.id && section.textContent.includes('Finanz-Parameter')) {
+                section.remove();
+                console.log('✅ Duplizierte Finanz-Parameter Section entfernt');
+            }
+        });
+    }, 100);
     
     // Make modules globally available for inline handlers
     window.state = state;
