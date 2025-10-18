@@ -383,34 +383,10 @@ export function renderGeschaeftsmodell() {
           </div>
         </div>
 
-        <!-- 5. ARTIKEL-STRUKTUR -->
+        <!-- 5. ZUSÄTZLICHE NOTIZEN -->
         <div class="form-section gm-section" data-section="5">
           <div class="section-header-small">
-            <h4>5️⃣ Artikel-Struktur</h4>
-            <small style="color: var(--gray); font-weight: 400;">
-              Welche Artikel/Produkte werden in diesem Projekt verkauft?
-            </small>
-          </div>
-
-          <div id="gm-artikel-container">
-            ${renderArtikelTable(geschaeftsmodell.artikel || [])}
-          </div>
-          
-          <button type="button" class="btn btn-secondary" onclick="geschaeftsmodellModule.addArtikel()" style="margin-top: 12px;">
-            ➕ Artikel hinzufügen
-          </button>
-
-          <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid var(--primary); border-radius: 4px;">
-            <div style="font-size: 13px; color: var(--text);">
-              💡 <strong>Tipp:</strong> Diese Artikel werden später als Vorschläge im "Artikel"-Tab angelegt.
-            </div>
-          </div>
-        </div>
-
-        <!-- 6. ZUSÄTZLICHE NOTIZEN -->
-        <div class="form-section gm-section" data-section="6">
-          <div class="section-header-small">
-            <h4>📝 Zusätzliche Notizen (Optional)</h4>
+            <h4>5️⃣ Zusätzliche Notizen (Optional)</h4>
           </div>
 
           <div class="form-group">
@@ -429,14 +405,9 @@ export function renderGeschaeftsmodell() {
         <button class="btn btn-secondary" onclick="geschaeftsmodellModule.resetForm()">
           🔄 Zurücksetzen
         </button>
-        <div style="display: flex; gap: 12px;">
-          <button class="btn btn-secondary" onclick="geschaeftsmodellModule.saveGeschaeftsmodell()">
-            💾 Speichern
-          </button>
-          <button class="btn btn-primary" onclick="geschaeftsmodellModule.saveAndCreateArtikel()">
-            💾 Speichern & Artikel anlegen
-          </button>
-        </div>
+        <button class="btn btn-primary" onclick="geschaeftsmodellModule.saveGeschaeftsmodell()">
+          💾 Speichern
+        </button>
       </div>
 
     </div>
@@ -478,56 +449,6 @@ function renderFeaturesList(features) {
   `).join('');
 }
 
-/**
- * Render artikel table
- */
-function renderArtikelTable(artikel) {
-  return `
-    <table class="data-table" style="margin-top: 12px;">
-      <thead>
-        <tr>
-          <th style="width: 35%;">Artikel-Name</th>
-          <th style="width: 20%;">Typ</th>
-          <th style="width: 35%;">Beschreibung</th>
-          <th style="width: 10%;">Aktion</th>
-        </tr>
-      </thead>
-      <tbody id="gm-artikel-tbody">
-        ${artikel.length === 0 ? `
-          <tr>
-            <td colspan="4" style="text-align: center; padding: 24px; color: var(--gray);">
-              Noch keine Artikel definiert. Klicken Sie auf "Artikel hinzufügen".
-            </td>
-          </tr>
-        ` : artikel.map((art, index) => `
-          <tr class="gm-artikel-row">
-            <td>
-              <input type="text" class="artikel-name-input" value="${helpers.escapeHtml(art.name || '')}" placeholder="z.B. Roboter Basis-Unit" />
-            </td>
-            <td>
-              <select class="artikel-typ-select">
-                <option value="">Wählen...</option>
-                <option value="Hardware" ${art.typ === 'Hardware' ? 'selected' : ''}>Hardware</option>
-                <option value="Software" ${art.typ === 'Software' ? 'selected' : ''}>Software</option>
-                <option value="Service" ${art.typ === 'Service' ? 'selected' : ''}>Service</option>
-                <option value="Hybrid" ${art.typ === 'Hybrid' ? 'selected' : ''}>Hybrid</option>
-              </select>
-            </td>
-            <td>
-              <input type="text" class="artikel-desc-input" value="${helpers.escapeHtml(art.beschreibung || '')}" placeholder="Kurzbeschreibung" />
-            </td>
-            <td>
-              <button type="button" class="btn-icon btn-danger" onclick="geschaeftsmodellModule.removeArtikel(this)">
-                🗑️
-              </button>
-            </td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
 // ==========================================
 // FORM ACTIONS
 // ==========================================
@@ -547,69 +468,6 @@ export function addFeature() {
   `;
 
   container.insertAdjacentHTML('beforeend', featureHtml);
-}
-
-/**
- * Add artikel to table
- */
-export function addArtikel() {
-  const tbody = document.getElementById('gm-artikel-tbody');
-  if (!tbody) return;
-
-  // Remove "no artikel" message if exists
-  const noArtikelRow = tbody.querySelector('td[colspan="4"]');
-  if (noArtikelRow) {
-    tbody.innerHTML = '';
-  }
-
-  const artikelHtml = `
-    <tr class="gm-artikel-row">
-      <td>
-        <input type="text" class="artikel-name-input" placeholder="z.B. Roboter Basis-Unit" />
-      </td>
-      <td>
-        <select class="artikel-typ-select">
-          <option value="">Wählen...</option>
-          <option value="Hardware">Hardware</option>
-          <option value="Software">Software</option>
-          <option value="Service">Service</option>
-          <option value="Hybrid">Hybrid</option>
-        </select>
-      </td>
-      <td>
-        <input type="text" class="artikel-desc-input" placeholder="Kurzbeschreibung" />
-      </td>
-      <td>
-        <button type="button" class="btn-icon btn-danger" onclick="geschaeftsmodellModule.removeArtikel(this)">
-          🗑️
-        </button>
-      </td>
-    </tr>
-  `;
-
-  tbody.insertAdjacentHTML('beforeend', artikelHtml);
-}
-
-/**
- * Remove artikel from table
- */
-export function removeArtikel(button) {
-  const row = button.closest('tr');
-  if (row) {
-    row.remove();
-  }
-
-  // Check if table is empty
-  const tbody = document.getElementById('gm-artikel-tbody');
-  if (tbody && tbody.children.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="4" style="text-align: center; padding: 24px; color: var(--gray);">
-          Noch keine Artikel definiert. Klicken Sie auf "Artikel hinzufügen".
-        </td>
-      </tr>
-    `;
-  }
 }
 
 // ==========================================
@@ -679,15 +537,6 @@ function collectFormData() {
     .map(input => input.value.trim())
     .filter(val => val !== '');
 
-  // Collect artikel
-  const artikel = Array.from(document.querySelectorAll('.gm-artikel-row')).map(row => {
-    return {
-      name: row.querySelector('.artikel-name-input')?.value || '',
-      typ: row.querySelector('.artikel-typ-select')?.value || '',
-      beschreibung: row.querySelector('.artikel-desc-input')?.value || ''
-    };
-  }).filter(art => art.name.trim() !== '');
-
   return {
     // Section 1
     kundenproblem: document.getElementById('gm-kundenproblem')?.value || '',
@@ -714,9 +563,6 @@ function collectFormData() {
     wettbewerbsvorteil: getCheckboxValues('wettbewerbsvorteil'),
 
     // Section 5
-    artikel: artikel,
-
-    // Section 6
     notizen: document.getElementById('gm-notizen')?.value || ''
   };
 }
@@ -768,90 +614,6 @@ export function saveGeschaeftsmodell() {
 }
 
 /**
- * Save and create Artikel
- */
-export function saveAndCreateArtikel() {
-  // First save the Geschäftsmodell
-  saveGeschaeftsmodell();
-
-  const projektId = window.cfoDashboard.currentProjekt;
-  const geschaeftsmodell = state.getGeschaeftsmodell(projektId);
-
-  if (!geschaeftsmodell || !geschaeftsmodell.artikel || geschaeftsmodell.artikel.length === 0) {
-    alert('Keine Artikel im Geschäftsmodell definiert');
-    return;
-  }
-
-  // Show confirmation
-  const artikelCount = geschaeftsmodell.artikel.length;
-  const confirm = window.confirm(
-    `${artikelCount} Artikel als Vorschläge anlegen?\n\n` +
-    geschaeftsmodell.artikel.map(a => `• ${a.name} (${a.typ})`).join('\n')
-  );
-
-  if (!confirm) return;
-
-  // Create artikel (as suggestions - not yet filled with financial data)
-  let createdCount = 0;
-
-  geschaeftsmodell.artikel.forEach(art => {
-    const artikelId = `artikel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const artikelData = {
-      id: artikelId,
-      projektId: projektId,
-      name: art.name,
-      typ: art.typ,
-      beschreibung: art.beschreibung,
-      kategorie: art.typ, // Use typ as kategorie
-      
-      // Mark as "from Geschäftsmodell" 
-      from_geschaeftsmodell: true,
-      
-      // Prefill some defaults based on Geschäftsmodell
-      geschaeftsmodell: geschaeftsmodell.revenue_model || '',
-      zielmarkt: geschaeftsmodell.kundentyp?.includes('b2b') ? 'B2B' : 'B2C',
-      
-      // Empty financial data (user fills later)
-      start_menge: 0,
-      start_preis: 0,
-      start_hk: 0,
-      mengen_modell: 'realistisch',
-      preis_modell: 'konstant',
-      kosten_modell: 'konstant',
-      zeitraum: 5,
-      volumes: {},
-      prices: {},
-      status: 'Entwurf'
-    };
-
-    state.setArtikel(artikelId, artikelData);
-    createdCount++;
-  });
-
-  console.log(`✅ ${createdCount} Artikel created from Geschäftsmodell`);
-
-  // Show success and navigate to Artikel tab
-  if (window.cfoDashboard.aiController) {
-    window.cfoDashboard.aiController.addAIMessage({
-      level: 'success',
-      title: '✅ Artikel angelegt',
-      text: `${createdCount} Artikel als Vorschläge erstellt.`,
-      timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-    });
-  }
-
-  showSuccessToast(`${createdCount} Artikel als Vorschläge angelegt`);
-
-  // Navigate to Artikel tab
-  if (window.switchProjektTab) {
-    setTimeout(() => {
-      window.switchProjektTab('artikel');
-    }, 500);
-  }
-}
-
-/**
  * Reset form
  */
 export function resetForm() {
@@ -866,17 +628,6 @@ export function resetForm() {
     const featuresContainer = document.getElementById('gm-features-container');
     if (featuresContainer) {
       featuresContainer.innerHTML = renderFeaturesList([]);
-    }
-
-    const artikelTbody = document.getElementById('gm-artikel-tbody');
-    if (artikelTbody) {
-      artikelTbody.innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center; padding: 24px; color: var(--gray);">
-            Noch keine Artikel definiert. Klicken Sie auf "Artikel hinzufügen".
-          </td>
-        </tr>
-      `;
     }
     
     updateProgress();
@@ -922,11 +673,8 @@ function showSuccessToast(message) {
 export default {
   renderGeschaeftsmodell,
   saveGeschaeftsmodell,
-  saveAndCreateArtikel,
   resetForm,
-  addFeature,
-  addArtikel,
-  removeArtikel
+  addFeature
 };
 
 console.log('📦 Geschäftsmodell module loaded');
