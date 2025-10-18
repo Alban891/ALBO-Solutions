@@ -1,46 +1,43 @@
 /**
- * CFO Dashboard – State Management (v3.2)
- * ========================================
- * Centralized state with localStorage persistence.
- * Handles full navigation restore, data caching, and validation.
- * Compatible with main.js v3.2 and index.html v3.2.
+ * CFO Dashboard - State Management
+ * Centralized state with localStorage persistence
+ * COMPLETE VERSION with all navigation state variables and API methods
  */
 
 class DashboardState {
   constructor() {
     // ==========================================
-    // BASE STATE CONFIGURATION
+    // COMPLETE NAVIGATION STATE
     // ==========================================
-    this.version = '3.2';
-    this.debug = true; // set false for production builds
-    this.initialized = false;
-
-    // ==========================================
-    // NAVIGATION STATE
-    // ==========================================
-    this.currentTab = 'cockpit';          // active main tab
-    this.currentProjekt = null;           // selected project ID
+    
+    // Level 1: Main Tab
+    this.currentView = 'dashboard';
+    this.currentTab = 'cockpit';
+    
+    // Level 2: Projekt Navigation
+    this.currentProjekt = null;           // Which projekt is open?
     this.projektViewMode = 'overview';    // 'overview' | 'detail'
     this.projektListView = 'liste';       // 'liste' | 'karten' | 'kompakt'
-    this.currentProjektTab = null;        // project sub-tab (uebersicht, artikel, etc.)
-
-    this.currentArtikel = null;           // selected article ID
+    
+    // Level 3: Projekt-Detail Tabs
+    this.currentProjektTab = null;        // 'uebersicht' | 'artikel' | 'projektkosten' | 'wirtschaftlichkeit' | 'dashboard'
+    
+    // Level 4: Artikel Navigation
+    this.currentArtikel = null;           // Which artikel is open?
     this.artikelViewMode = 'list';        // 'list' | 'detail'
-    this.artikelDetailScroll = 0;         // scroll pos inside detail
-
-    // Legacy compatibility
+    
+    // Level 5: Artikel-Detail
+    this.artikelDetailScroll = 0;         // Scroll position in artikel detail
+    
+    // Legacy (for compatibility)
     this.currentDetailTab = 'artikel';
 
-    // ==========================================
-    // DATA STORAGE
-    // ==========================================
+    // Data Storage - Isolated per session
     this.projektData = {};
     this.artikelData = {};
     this.personalDetails = {};
 
-    // ==========================================
-    // DASHBOARD VALUES (adjustable KPIs)
-    // ==========================================
+    // Current Dashboard Values
     this.currentValues = {
       marketVolume: 100,
       pricePremium: 100,
@@ -50,272 +47,476 @@ class DashboardState {
       npv: 44.7,
       db2Margin: 34
     };
-
-    // ==========================================
-    // LOAD / ERROR MANAGEMENT
-    // ==========================================
+    
+    // Loading and Error States
     this.isLoading = false;
     this.loadingResources = {};
     this.errors = [];
-
-    if (this.debug) {
-      console.log('✅ DashboardState initialized', {
-        tab: this.currentTab,
-        projektViewMode: this.projektViewMode,
-        artikelViewMode: this.artikelViewMode,
-        projektListView: this.projektListView
-      });
-    }
+    
+    console.log('✅ DashboardState initialized with navigation variables:', {
+      currentProjektTab: this.currentProjektTab,
+      projektViewMode: this.projektViewMode,
+      artikelViewMode: this.artikelViewMode,
+      projektListView: this.projektListView
+    });
   }
 
-  // ==========================================================
-  // LOADING & ERROR HANDLING
-  // ==========================================================
+  // ==========================================
+  // LOADING & ERROR MANAGEMENT
+  // ==========================================
+
+  /**
+   * Set loading state for a specific resource
+   * @param {string} resource - Resource name (e.g., 'projekte', 'artikel')
+   * @param {boolean} loading - Loading state
+   */
   setLoading(resource, loading = true) {
     this.loadingResources[resource] = loading;
-    this.isLoading = Object.values(this.loadingResources).some(v => v === true);
-    if (this.debug) console.log(`⏳ Loading [${resource}] = ${loading}`);
+    this.isLoading = Object.values(this.loadingResources).some(l => l === true);
+    console.log(`⏳ Loading ${resource}: ${loading}`);
   }
 
+  /**
+   * Add error to error log
+   * @param {string} context - Context where error occurred
+   * @param {Error} error - Error object
+   */
   setError(context, error) {
-    this.errors.push({
-      context,
-      error,
-      message: error.message || 'Unknown error',
-      timestamp: new Date().toISOString()
+    this.errors.push({ 
+      context, 
+      error, 
+      timestamp: new Date().toISOString(),
+      message: error.message || 'Unknown error'
     });
     console.error(`❌ Error in ${context}:`, error);
   }
 
-  getErrors() { return this.errors; }
-  clearErrors() { this.errors = []; }
+  /**
+   * Get all errors
+   * @returns {Array} Array of errors
+   */
+  getErrors() {
+    return this.errors;
+  }
 
-  // ==========================================================
-  // VALIDATION
-  // ==========================================================
-  validateProjektData(data) {
-    if (!data.name?.trim()) throw new Error('Projektname ist erforderlich');
-    if (!data.status) throw new Error('Projektstatus ist erforderlich');
+  /**
+   * Clear all errors
+   */
+  clearErrors() {
+    this.errors = [];
+  }
+
+  // ==========================================
+  // DATA VALIDATION
+  // ==========================================
+
+  /**
+   * Validate project data before save
+   * @param {object} projektData - Project data to validate
+   * @returns {boolean} Is valid
+   * @throws {Error} If validation fails
+   */
+  validateProjektData(projektData) {
+    if (!projektData.name || projektData.name.trim() === '') {
+      throw new Error('Projektname ist erforderlich');
+    }
+    if (!projektData.status) {
+      throw new Error('Projektstatus ist erforderlich');
+    }
     return true;
   }
 
-  validateArtikelData(data) {
-    if (!data.name?.trim()) throw new Error('Artikelname ist erforderlich');
-    if (!data.projektId) throw new Error('Projekt-ID ist erforderlich');
+  /**
+   * Validate artikel data before save
+   * @param {object} artikelData - Artikel data to validate
+   * @returns {boolean} Is valid
+   * @throws {Error} If validation fails
+   */
+  validateArtikelData(artikelData) {
+    if (!artikelData.name || artikelData.name.trim() === '') {
+      throw new Error('Artikelname ist erforderlich');
+    }
+    if (!artikelData.projektId) {
+      throw new Error('Projekt-ID ist erforderlich');
+    }
     return true;
   }
 
-  // ==========================================================
+  // ==========================================
   // PROJEKT MANAGEMENT
-  // ==========================================================
-  getAllProjekte() { return Object.values(this.projektData); }
-  getProjekt(id) { return this.projektData[id] || null; }
+  // ==========================================
 
-  setProjekt(id, data) {
-    this.projektData[id] = { ...data, id, updated_at: new Date().toISOString() };
-    this.saveState();
+  /**
+   * Get all projects
+   * @returns {Array} Array of projects
+   */
+  getAllProjekte() {
+    return Object.values(this.projektData);
   }
 
-  addProjekt(projekt) {
-    const id = projekt.id || `projekt-${Date.now()}`;
-    this.setProjekt(id, { ...projekt, created_at: projekt.created_at || new Date().toISOString() });
-    return id;
+  /**
+   * Get single project
+   * @param {string} projektId - Project ID
+   * @returns {object|null} Project or null
+   */
+  getProjekt(projektId) {
+    return this.projektData[projektId] || null;
   }
 
-  updateProjekt(id, updates) {
-    if (!this.projektData[id]) return false;
-    this.projektData[id] = {
-      ...this.projektData[id],
-      ...updates,
+  /**
+   * Set/Update project (used by API)
+   * @param {string} projektId - Project ID
+   * @param {object} projektData - Project data
+   */
+  setProjekt(projektId, projektData) {
+    this.projektData[projektId] = {
+      ...projektData,
+      id: projektId,
       updated_at: new Date().toISOString()
     };
     this.saveState();
-    return true;
   }
 
-  deleteProjekt(id) {
-    if (!this.projektData[id]) return false;
-    delete this.projektData[id];
-
-    // Remove related articles
-    Object.keys(this.artikelData).forEach(aid => {
-      if (this.artikelData[aid].projektId === id) delete this.artikelData[aid];
+  /**
+   * Add new project
+   * @param {object} projekt - Project data
+   * @returns {string} Project ID
+   */
+  addProjekt(projekt) {
+    const id = projekt.id || `projekt-${Date.now()}`;
+    this.setProjekt(id, {
+      ...projekt,
+      created_at: projekt.created_at || new Date().toISOString()
     });
-
-    this.saveState();
-    return true;
-  }
-
-  // ==========================================================
-  // ARTIKEL MANAGEMENT
-  // ==========================================================
-  getAllArtikel() { return Object.values(this.artikelData); }
-  getArtikel(id) { return this.artikelData[id] || null; }
-
-  getArtikelByProjekt(pid) {
-    return Object.values(this.artikelData).filter(a => a.projektId === pid);
-  }
-
-  setArtikel(id, data) {
-    this.artikelData[id] = { ...data, id, updated_at: new Date().toISOString() };
-
-    // also update reference in project
-    if (data.projektId) {
-      const projekt = this.getProjekt(data.projektId);
-      if (projekt) {
-        projekt.artikel = projekt.artikel || [];
-        projekt.artikel = projekt.artikel.filter(a => a.id !== id);
-        projekt.artikel.push(this.artikelData[id]);
-      }
-    }
-    this.saveState();
-  }
-
-  addArtikel(data) {
-    const id = data.id || `artikel-${Date.now()}`;
-    this.setArtikel(id, { ...data, created_at: data.created_at || new Date().toISOString() });
     return id;
   }
 
-  updateArtikel(id, updates) {
-    if (!this.artikelData[id]) return false;
-    const current = this.artikelData[id];
-    this.setArtikel(id, { ...current, ...updates });
-    return true;
+  /**
+   * Update existing project
+   * @param {string} projektId - Project ID
+   * @param {object} updates - Updates to apply
+   * @returns {boolean} Success
+   */
+  updateProjekt(projektId, updates) {
+    if (this.projektData[projektId]) {
+      this.projektData[projektId] = {
+        ...this.projektData[projektId],
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      this.saveState();
+      return true;
+    }
+    return false;
   }
 
-  deleteArtikel(id) {
-    if (!this.artikelData[id]) return false;
-    const pid = this.artikelData[id].projektId;
-    delete this.artikelData[id];
+  /**
+   * Delete project
+   * @param {string} projektId - Project ID
+   * @returns {boolean} Success
+   */
+  deleteProjekt(projektId) {
+    if (this.projektData[projektId]) {
+      delete this.projektData[projektId];
+      
+      // Also delete associated articles
+      Object.keys(this.artikelData).forEach(artikelId => {
+        if (this.artikelData[artikelId].projektId === projektId) {
+          delete this.artikelData[artikelId];
+        }
+      });
+      
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
 
-    if (pid) {
-      const projekt = this.getProjekt(pid);
-      if (projekt?.artikel) {
-        projekt.artikel = projekt.artikel.filter(a => a.id !== id);
+  // ==========================================
+  // ARTIKEL MANAGEMENT
+  // ==========================================
+
+  /**
+   * Get all articles
+   * @returns {Array} Array of articles
+   */
+  getAllArtikel() {
+    return Object.values(this.artikelData);
+  }
+
+  /**
+   * Get single article
+   * @param {string} artikelId - Article ID
+   * @returns {object|null} Article or null
+   */
+  getArtikel(artikelId) {
+    return this.artikelData[artikelId] || null;
+  }
+
+  /**
+   * Get articles by project
+   * @param {string} projektId - Project ID
+   * @returns {Array} Array of articles
+   */
+  getArtikelByProjekt(projektId) {
+    return Object.values(this.artikelData).filter(
+      artikel => artikel.projektId === projektId
+    );
+  }
+
+  /**
+   * Set/Update article (used by API)
+   * @param {string} artikelId - Article ID
+   * @param {object} artikelData - Article data
+   */
+  setArtikel(artikelId, artikelData) {
+    this.artikelData[artikelId] = {
+      ...artikelData,
+      id: artikelId,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Also update the projekt's artikel array
+    if (artikelData.projektId) {
+      const projekt = this.getProjekt(artikelData.projektId);
+      if (projekt) {
+        if (!projekt.artikel) {
+          projekt.artikel = [];
+        }
+        // Remove old version if exists
+        projekt.artikel = projekt.artikel.filter(a => a.id !== artikelId);
+        // Add new version
+        projekt.artikel.push(this.artikelData[artikelId]);
       }
     }
-
-    this.saveState();
-    return true;
-  }
-
-  // ==========================================================
-  // BULK SETTERS
-  // ==========================================================
-  setProjekte(arr) {
-    arr.forEach(p => { this.projektData[p.id] = p; });
+    
     this.saveState();
   }
 
-  setArtikelList(arr) {
-    arr.forEach(a => { this.artikelData[a.id] = a; });
+  /**
+   * Add new article
+   * @param {object} artikel - Article data
+   * @returns {string} Article ID
+   */
+  addArtikel(artikel) {
+    const id = artikel.id || `artikel-${Date.now()}`;
+    this.setArtikel(id, {
+      ...artikel,
+      created_at: artikel.created_at || new Date().toISOString()
+    });
+    return id;
+  }
+
+  /**
+   * Update existing article
+   * @param {string} artikelId - Article ID
+   * @param {object} updates - Updates to apply
+   * @returns {boolean} Success
+   */
+  updateArtikel(artikelId, updates) {
+    if (this.artikelData[artikelId]) {
+      const currentArtikel = this.artikelData[artikelId];
+      this.setArtikel(artikelId, {
+        ...currentArtikel,
+        ...updates
+      });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Delete article
+   * @param {string} artikelId - Article ID
+   * @returns {boolean} Success
+   */
+  deleteArtikel(artikelId) {
+    if (this.artikelData[artikelId]) {
+      const projektId = this.artikelData[artikelId].projektId;
+      
+      // Remove from artikel data
+      delete this.artikelData[artikelId];
+      
+      // Remove from projekt's artikel array
+      if (projektId) {
+        const projekt = this.getProjekt(projektId);
+        if (projekt && projekt.artikel) {
+          projekt.artikel = projekt.artikel.filter(a => a.id !== artikelId);
+        }
+      }
+      
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+
+  // ==========================================
+  // BULK OPERATIONS
+  // ==========================================
+
+  /**
+   * Set multiple projects at once
+   * @param {Array} projekte - Array of projects
+   */
+  setProjekte(projekte) {
+    projekte.forEach(projekt => {
+      this.projektData[projekt.id] = projekt;
+    });
     this.saveState();
   }
 
-  // ==========================================================
-  // PERSISTENCE (localStorage)
-  // ==========================================================
+  /**
+   * Set multiple articles at once
+   * @param {Array} artikel - Array of articles
+   */
+  setArtikelList(artikel) {
+    artikel.forEach(art => {
+      this.artikelData[art.id] = art;
+    });
+    this.saveState();
+  }
+
+  // ==========================================
+  // PERSISTENCE
+  // ==========================================
+
+  /**
+   * Save COMPLETE state to localStorage
+   * This ensures user stays on exact page after refresh
+   */
   saveState() {
     try {
-      if (typeof localStorage === 'undefined') {
-        console.warn('⚠️ localStorage not available — skipping save');
-        return false;
-      }
-
       const stateToSave = {
-        _version: this.version,
+        // Level 1: Main Tab
+        currentView: this.currentView,
         currentTab: this.currentTab,
+        
+        // Level 2: Projekt Navigation
         currentProjekt: this.currentProjekt,
         projektViewMode: this.projektViewMode,
         projektListView: this.projektListView,
+        
+        // Level 3: Projekt-Detail Tabs
         currentProjektTab: this.currentProjektTab,
+        
+        // Level 4: Artikel Navigation
         currentArtikel: this.currentArtikel,
         artikelViewMode: this.artikelViewMode,
+        
+        // Level 5: Artikel-Detail
         artikelDetailScroll: this.artikelDetailScroll,
+        
+        // Legacy
         currentDetailTab: this.currentDetailTab,
+        
+        // Dashboard Values
         currentValues: this.currentValues,
+        
+        // Data (optional - can be large)
+        // projektData: this.projektData,
+        // artikelData: this.artikelData,
+        
         timestamp: new Date().toISOString()
       };
 
       localStorage.setItem('cfo-dashboard-state', JSON.stringify(stateToSave));
-
-      if (this.debug)
-        console.log('💾 State saved', {
-          tab: stateToSave.currentTab,
-          projekt: stateToSave.currentProjekt,
-          projektTab: stateToSave.currentProjektTab
-        });
-
+      
+      // ✓ DEBUG OUTPUT
+      console.log('💾 State saved to localStorage:', {
+        tab: stateToSave.currentTab,
+        projekt: stateToSave.currentProjekt,
+        projektTab: stateToSave.currentProjektTab
+      });
+      
       return true;
-    } catch (err) {
-      console.error('❌ Failed to save state:', err);
+    } catch (error) {
+      console.error('❌ Failed to save state:', error);
       return false;
     }
   }
 
+  /**
+   * Restore COMPLETE navigation state from localStorage
+   * This ensures user returns to exact page after refresh
+   */
   restoreState() {
     try {
-      const saved = localStorage.getItem('cfo-dashboard-state');
-      if (!saved) {
-        if (this.debug) console.log('ℹ️ No saved state found → using defaults');
+      const savedState = localStorage.getItem('cfo-dashboard-state');
+      if (!savedState) {
+        console.log('ℹ️ No saved state found - using defaults');
         return false;
       }
 
-      const s = JSON.parse(saved);
+      const state = JSON.parse(savedState);
+      
+      // Level 1: Main Tab
+      this.currentView = state.currentView || 'dashboard';
+      this.currentTab = state.currentTab || 'cockpit';
+      
+      // Level 2: Projekt Navigation
+      this.currentProjekt = state.currentProjekt || null;
+      this.projektViewMode = state.projektViewMode || 'overview';
+      this.projektListView = state.projektListView || 'liste';
+      
+      // Level 3: Projekt-Detail Tabs
+      this.currentProjektTab = state.currentProjektTab || null;
+      
+      // Level 4: Artikel Navigation
+      this.currentArtikel = state.currentArtikel || null;
+      this.artikelViewMode = state.artikelViewMode || 'list';
+      
+      // Level 5: Artikel-Detail
+      this.artikelDetailScroll = state.artikelDetailScroll || 0;
+      
+      // Legacy
+      this.currentDetailTab = state.currentDetailTab || 'artikel';
+      
+      // Dashboard Values
+      if (state.currentValues) {
+        this.currentValues = { ...this.currentValues, ...state.currentValues };
+      }
+      
+      // Data (if saved)
+      // if (state.projektData) {
+      //   this.projektData = state.projektData;
+      // }
+      // if (state.artikelData) {
+      //   this.artikelData = state.artikelData;
+      // }
 
-      this.currentTab = s.currentTab || 'cockpit';
-      this.currentProjekt = s.currentProjekt || null;
-      this.projektViewMode = s.projektViewMode || 'overview';
-      this.projektListView = s.projektListView || 'liste';
-      this.currentProjektTab = s.currentProjektTab || null;
-      this.currentArtikel = s.currentArtikel || null;
-      this.artikelViewMode = s.artikelViewMode || 'list';
-      this.artikelDetailScroll = s.artikelDetailScroll || 0;
-      this.currentDetailTab = s.currentDetailTab || 'artikel';
-      if (s.currentValues) this.currentValues = { ...this.currentValues, ...s.currentValues };
-      this.projektData = s.projektData || this.projektData || {};
-      this.artikelData = s.artikelData || this.artikelData || {};
-      this.version = s._version || 'legacy';
-      this.initialized = true;
-
-      if (this.debug)
-        console.log('✅ State restored', {
-          tab: this.currentTab,
-          projekt: this.currentProjekt,
-          projektTab: this.currentProjektTab,
-          artikel: this.currentArtikel
-        });
-
+      console.log('✅ State restored:', {
+        tab: this.currentTab,
+        projekt: this.currentProjekt,
+        projektTab: this.currentProjektTab,
+        artikel: this.currentArtikel,
+        viewMode: this.projektViewMode
+      });
+      
       return true;
-    } catch (err) {
-      console.error('❌ Failed to restore state:', err);
+    } catch (error) {
+      console.error('Failed to restore state:', error);
       return false;
     }
   }
 
+  /**
+   * Clear all saved state
+   */
   clearState() {
     localStorage.removeItem('cfo-dashboard-state');
     this.errors = [];
     this.loadingResources = {};
-    if (this.debug) console.log('🧹 State cleared');
   }
 
-  resetNavigation() {
-    this.currentTab = 'cockpit';
-    this.currentProjekt = null;
-    this.projektViewMode = 'overview';
-    this.currentProjektTab = null;
-    this.currentArtikel = null;
-    this.artikelViewMode = 'list';
-    this.artikelDetailScroll = 0;
-    this.saveState();
-    if (this.debug) console.log('🔄 Navigation reset');
-  }
-
-  // ==========================================================
+  // ==========================================
   // STATISTICS
-  // ==========================================================
+  // ==========================================
+
+  /**
+   * Get statistics about current data
+   * @returns {object} Statistics object
+   */
   getStatistics() {
     const projekte = this.getAllProjekte();
     const artikel = this.getAllArtikel();
@@ -323,9 +524,9 @@ class DashboardState {
     return {
       totalProjekte: projekte.length,
       totalArtikel: artikel.length,
-      aktiveProjekte: projekte.filter(p => p.status?.toLowerCase() === 'aktiv').length,
-      onHoldProjekte: projekte.filter(p => p.status?.toLowerCase() === 'on hold').length,
-      abgeschlosseneProjekte: projekte.filter(p => p.status?.toLowerCase() === 'abgeschlossen').length,
+      aktiveProjekte: projekte.filter(p => p.status === 'Aktiv').length,
+      onHoldProjekte: projekte.filter(p => p.status === 'On Hold').length,
+      abgeschlosseneProjekte: projekte.filter(p => p.status === 'Abgeschlossen').length,
       artikelByProjekt: projekte.map(p => ({
         projektId: p.id,
         projektName: p.name,
@@ -335,8 +536,10 @@ class DashboardState {
   }
 }
 
-// Singleton export
+// Create singleton instance
 export const state = new DashboardState();
+
+// Expose for debugging
 window.dashboardState = state;
 
-console.log('📦 state.js v3.2 loaded and ready');
+console.log('📦 State module loaded with complete navigation and API support');
