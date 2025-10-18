@@ -1601,93 +1601,47 @@
 
     </script>
 
- <!-- FINALER FIX: Finanz-Parameter richtig handhaben -->
-<script>
+ <script>
+// FINALER FIX: Entferne DUPLIZIERTE Finanz-Parameter Sections
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔧 FINALER FIX: Reorganisiere Finanz-Parameter Section...');
-    
-    // Finde die Finanz-Parameter Section (die falsch platziert ist)
-    let finanzSection = null;
-    const allElements = document.querySelectorAll('#tab-projekte > *');
-    
-    allElements.forEach(element => {
-        if (element.textContent.includes('Finanz-Parameter & Entwicklungsmodelle') && 
-            element.id !== 'artikel-detail-view') {
-            finanzSection = element;
-            console.log('✅ Finanz-Parameter Section gefunden:', element);
-        }
-    });
-    
-    if (finanzSection) {
-        // Verstecke sie initial
-        finanzSection.style.display = 'none';
-        finanzSection.id = 'finanz-parameter-section';
+    setTimeout(() => {
+        // Finde ALLE Finanz-Parameter Sections
+        const allFinanzSections = Array.from(document.querySelectorAll('h3')).filter(h3 => 
+            h3.textContent.includes('Finanz-Parameter & Entwicklungsmodelle')
+        );
         
-        // Beim Öffnen eines Artikels: Zeige sie AN DER RICHTIGEN STELLE
-        const originalOpen = window.openArtikelDetail;
-        window.openArtikelDetail = function(artikelId) {
-            console.log('📂 Opening artikel mit Finanz-Parameter...');
+        console.log(`🔍 Gefunden: ${allFinanzSections.length} Finanz-Parameter Sections`);
+        
+        // Behalte nur die INNERHALB von artikel-detail-view
+        allFinanzSections.forEach(h3 => {
+            const inArtikelDetail = h3.closest('#artikel-detail-view');
             
-            // Original Funktion aufrufen
-            if (originalOpen) {
-                originalOpen.call(this, artikelId);
-            }
-            
-            // Warte kurz, dann füge Finanz-Parameter ein
-            setTimeout(() => {
-                const artikelDetail = document.getElementById('artikel-detail-view');
-                const finanzSec = document.getElementById('finanz-parameter-section');
+            if (!inArtikelDetail) {
+                // Diese ist AUSSERHALB - entferne sie!
+                const parent = h3.parentElement;
+                console.log('🗑️ Entferne duplizierte Finanz-Parameter Section außerhalb artikel-detail-view');
                 
-                if (artikelDetail && finanzSec) {
-                    // Finde die richtige Stelle (nach Basis-Informationen)
-                    const basisInfo = artikelDetail.querySelector('.form-section');
-                    
-                    if (basisInfo && basisInfo.nextSibling) {
-                        // Füge Finanz-Parameter NACH Basis-Info ein
-                        basisInfo.parentNode.insertBefore(finanzSec, basisInfo.nextSibling);
-                    } else {
-                        // Oder füge am Ende ein
-                        artikelDetail.appendChild(finanzSec);
-                    }
-                    
-                    // Mache sichtbar
-                    finanzSec.style.display = 'block';
-                    console.log('✅ Finanz-Parameter eingefügt und sichtbar');
-                }
-            }, 200);
-        };
-        
-        // Beim Schließen: Verstecke wieder
-        const originalClose = window.closeArtikelDetail;
-        window.closeArtikelDetail = function() {
-            const finanzSec = document.getElementById('finanz-parameter-section');
-            if (finanzSec) {
-                finanzSec.style.display = 'none';
-                // Verschiebe zurück zu tab-projekte (versteckt)
-                const tabProjekte = document.getElementById('tab-projekte');
-                if (tabProjekte) {
-                    tabProjekte.appendChild(finanzSec);
+                // Wenn es ein Container div ist, entferne das ganze div
+                if (parent && parent.classList.contains('form-section')) {
+                    parent.remove();
+                } else {
+                    // Sonst nur das h3
+                    h3.remove();
                 }
             }
-            
-            if (originalClose) {
-                originalClose.call(this);
-            }
-        };
+        });
         
-        // Bei Tab-Wechsel: Verstecke
-        const originalSwitchTab = window.switchTab;
-        window.switchTab = function(tabName) {
-            const finanzSec = document.getElementById('finanz-parameter-section');
-            if (finanzSec) {
-                finanzSec.style.display = 'none';
+        // Stelle sicher, dass artikel-detail-view content sichtbar ist
+        const artikelDetail = document.getElementById('artikel-detail-view');
+        if (artikelDetail) {
+            // Mache die originale Section sichtbar
+            const originalSection = artikelDetail.querySelector('.form-section h3');
+            if (originalSection && originalSection.textContent.includes('Finanz-Parameter')) {
+                originalSection.parentElement.style.display = '';
+                originalSection.parentElement.style.visibility = 'visible';
             }
-            
-            if (originalSwitchTab) {
-                originalSwitchTab.call(this, tabName);
-            }
-        };
-    }
+        }
+    }, 500);
 });
 </script>
 
