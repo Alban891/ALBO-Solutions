@@ -559,6 +559,19 @@ class DashboardState {
     this.saveState();
   }
 
+   /**
+   * Update Geschäftsmodell (Alias für setGeschaeftsmodell)
+   * Wird vom modularen Geschäftsmodell-System verwendet
+   */
+  updateGeschaeftsmodell(projektId, geschaeftsmodellData) {
+    // Merge mit existierenden Daten (wichtig!)
+    const existing = this.getGeschaeftsmodell(projektId) || {};
+    this.setGeschaeftsmodell(projektId, {
+      ...existing,
+      ...geschaeftsmodellData
+    });
+  }
+
   /**
    * Delete Geschäftsmodell
    */
@@ -579,3 +592,16 @@ export const state = new DashboardState();
 window.dashboardState = state;
 
 console.log('📦 State module loaded with complete navigation and API support');
+
+// ==========================================
+// EXPORT HELPER FUNCTIONS
+// (Für modulares Geschäftsmodell-System)
+// ==========================================
+
+export function getGeschaeftsmodell(projektId) {
+  return state.getGeschaeftsmodell(projektId);
+}
+
+export function updateGeschaeftsmodell(projektId, data) {
+  return state.updateGeschaeftsmodell(projektId, data);
+}
