@@ -15,6 +15,7 @@ import * as cockpit from './modules/cockpit.js';
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel.js';
 import * as projektkosten from './modules/projektkosten.js';
+import * as geschaeftsmodell from './modules/geschaeftsmodell.js';
 
 // ==========================================
 // APPLICATION STATE
@@ -63,6 +64,7 @@ async function initializeApplication() {
     window.projekte = projekte;
     window.artikel = artikel;
     window.projektkosten = projektkosten;
+    window.geschaeftsmodellModule = geschaeftsmodell;
     window.cockpitModule = cockpit;
     window.renderProjektOverview = projekte.renderProjektOverview;
     window.updateProjektStats = projekte.updateProjektStats;
