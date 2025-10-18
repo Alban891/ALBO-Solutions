@@ -226,12 +226,8 @@ body {
   display: flex;
   gap: var(--spacing-sm);
   position: sticky;
-  top: 60px;
+  top: 60px; /* ✅ ANGEPASST von 73px auf 60px */
   z-index: 1020;
-  max-width: calc(100% - 420px); /* ✅ Navigation endet vor Sidebar */
-  width: 100%;
-  margin-top: 0 !important; /* ✅ NEU: Kein Abstand nach oben */
-  margin-bottom: 0 !important; /* ✅ NEU: Kein Abstand nach unten */
 }
 
 .tab-btn {
@@ -266,9 +262,7 @@ body {
   flex: 1;
   overflow: hidden;
   max-width: 100%;
-  min-height: calc(100vh - 120px);
-  gap: 0 !important; /* ✅ KEIN GAP */
-  align-items: flex-start; /* ✅ BEIDE OBEN AUSRICHTEN */
+  min-height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
 }
 
 .dashboard-content {
@@ -282,8 +276,6 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  padding-right: var(--spacing-xl); /* ✅ Normales Padding */
-  margin-right: 420px; /* ✅ NEU: Platz für Sidebar */
   background: var(--background-alt);
 }
 
@@ -411,63 +403,61 @@ body {
 .portfolio-overview-header {
   display: flex;
   align-items: center;
-  padding: 14px 24px; /* ✅ KOMPAKTER: 24px→14px vertical, 32px→24px horizontal */
+  padding: 24px 32px;
   background: var(--background);
   border: 1px solid var(--border);
-  border-radius: 4px; /* ✅ KANTIGER: 12px→4px */
-  margin-bottom: 24px; /* ✅ WENIGER ABSTAND: 32px→24px */
-  border-left: 3px solid var(--primary); /* ✅ SCHMALER: 4px→3px */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* ✅ DEZENTER */
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-xl);
+  border-left: 4px solid var(--primary);
+  box-shadow: var(--shadow);
 }
 
 .portfolio-label {
-  font-size: 10px; /* ✅ KLEINER: 11px→10px */
+  font-size: 11px;
   font-weight: 600;
-  color: #6b7280; /* var(--text-light) */
+  color: var(--text-light);
   text-transform: uppercase;
-  letter-spacing: 0.08em; /* ✅ ENGER: 0.1em→0.08em */
+  letter-spacing: 0.1em;
   margin-right: auto;
 }
 
 .portfolio-stats {
   display: flex;
-  gap: 28px; /* ✅ ENGER: 40px→28px */
+  gap: 40px;
   align-items: center;
 }
 
 .portfolio-stat {
   display: flex;
   align-items: baseline;
-  gap: 6px; /* ✅ ENGER: 8px→6px */
+  gap: 8px;
 }
 
 .portfolio-stat-value {
-  font-size: 24px; /* ✅ KLEINER: 28px→24px */
+  font-size: 28px;
   font-weight: 700;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #111827; /* var(--text) */
-  line-height: 1; /* ✅ NEU: Kompaktere Zeilenhöhe */
+  color: var(--text);
 }
 
 .portfolio-stat-label {
-  font-size: 9px; /* ✅ KLEINER: 11px→9px */
-  font-weight: 600; /* ✅ STÄRKER: 500→600 */
+  font-size: 11px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.03em; /* ✅ ENGER: 0.05em→0.03em */
-  color: #6b7280; /* var(--text-light) */
-  line-height: 1.2; /* ✅ NEU: Kompaktere Zeilenhöhe */
+  letter-spacing: 0.05em;
+  color: var(--text-light);
 }
 
 .portfolio-stat.portfolio-stat-success .portfolio-stat-value {
-  color: #10b981; /* var(--success) */
+  color: var(--success);
 }
 
 .portfolio-stat.portfolio-stat-warning .portfolio-stat-value {
-  color: #f59e0b; /* var(--warning) */
+  color: var(--warning);
 }
 
 .portfolio-stat.portfolio-stat-neutral .portfolio-stat-value {
-  color: #6b7280; /* var(--text-light) */
+  color: var(--text-light);
 }
 
 /* ========================================== */
@@ -1314,14 +1304,10 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: fixed;
-  top: 0; /* ✅ GEÄNDERT: Top des Viewports */
-  right: 0;
-  z-index: 1010; /* ✅ GEÄNDERT: UNTER Header (1020) */
-  height: 100vh; /* ✅ GEÄNDERT: Volle Viewport-Höhe */
+  position: relative;
+  z-index: 998;
+  height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
-  overflow-y: auto;
-  padding-top: 60px; /* ✅ NEU: Padding oben = Header-Höhe */
 }
 
 .ai-header {
@@ -1330,12 +1316,9 @@ body {
   color: white;
   border-radius: 0;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  position: sticky; /* ✅ NEU: Sticky innerhalb Sidebar */
-  top: 0; /* ✅ NEU: Bleibt oben beim Scrollen */
+  position: relative;
   overflow: hidden;
   border-bottom: none;
-  z-index: 1; /* ✅ NEU: Über Content in Sidebar */
-  margin-top: -60px; /* ✅ NEU: Negiert das padding-top */
 }
 
 .ai-header::before {
@@ -1682,230 +1665,6 @@ body {
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
 }
-
-/* ========================================== */
-/* TUTORIAL SYSTEM - PULSING & HIGHLIGHTING */
-/* ========================================== */
-
-/* 1. Pulsierender Effekt für Buttons/Felder */
-@keyframes pulse-tutorial {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
-    transform: scale(1.05);
-  }
-}
-
-/* 2. Klasse für pulsierende Elemente */
-.tutorial-pulse {
-  animation: pulse-tutorial 2s infinite;
-  position: relative;
-  z-index: 9999;
-  transition: all 0.3s ease;
-}
-
-/* 3. Overlay (dimmt Rest der Seite) */
-.tutorial-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 9998;
-  pointer-events: none;
-  animation: fadeIn 0.3s ease;
-}
-
-/* 4. Fokussiertes Element (hebt sich ab) */
-.tutorial-focus {
-  position: relative;
-  z-index: 9999 !important;
-  pointer-events: auto;
-  border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6) !important;
-}
-
-/* 5. ALBO Tutorial-Nachricht */
-.tutorial-message {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #1e40af 0%, #3730a3 100%);
-  color: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  z-index: 10000;
-  max-width: 500px;
-  width: 90%;
-  animation: slideUpBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-@keyframes slideUpBounce {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(50px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-/* 6. ALBO Icon in Nachricht */
-.tutorial-message::before {
-  content: '🤖';
-  font-size: 36px;
-  display: block;
-  margin-bottom: 12px;
-  animation: wave 2s infinite;
-}
-
-@keyframes wave {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
-}
-
-/* 7. Tutorial-Nachricht Titel */
-.tutorial-message-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  line-height: 1.3;
-}
-
-/* 8. Tutorial-Nachricht Text */
-.tutorial-message-text {
-  font-size: 15px;
-  line-height: 1.6;
-  margin-bottom: 12px;
-  opacity: 0.95;
-}
-
-/* 9. Controller-Tipp Box */
-.tutorial-tip {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 12px;
-  border-radius: 6px;
-  margin-top: 12px;
-  font-size: 14px;
-  border-left: 3px solid #10b981;
-}
-
-.tutorial-tip::before {
-  content: '💡 ';
-  font-size: 16px;
-}
-
-/* 10. Tutorial Skip Button */
-.tutorial-skip {
-  margin-top: 16px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.tutorial-skip:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-/* 11. Tutorial Completion Message */
-.tutorial-complete {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  text-align: center;
-}
-
-.tutorial-complete-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-  animation: celebrate 0.6s ease;
-}
-
-@keyframes celebrate {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.2) rotate(-10deg); }
-  50% { transform: scale(1.3) rotate(10deg); }
-  75% { transform: scale(1.2) rotate(-5deg); }
-}
-
-.tutorial-complete-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.tutorial-complete-text {
-  font-size: 16px;
-  margin-bottom: 20px;
-  opacity: 0.95;
-}
-
-.tutorial-complete-button {
-  width: 100%;
-  padding: 14px;
-  background: white;
-  color: #059669;
-  border: none;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tutorial-complete-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* 12. Mobile Responsiveness */
-@media (max-width: 768px) {
-  .tutorial-message {
-    bottom: 20px;
-    max-width: calc(100% - 40px);
-  }
-  
-  .tutorial-message-title {
-    font-size: 16px;
-  }
-  
-  .tutorial-message-text {
-    font-size: 14px;
-  }
-}
-
-/* FIX: Verstecke artikel-detail-view immer, außer wenn explizit sichtbar */
-#artikel-detail-view {
-  display: none !important;
-}
-
-/* Zeige nur wenn openArtikelDetail aufgerufen wurde */
-body.artikel-detail-open #artikel-detail-view {
-  display: block !important;
-}
-
-/* Verstecke Finanz-Parameter Sections die nicht in artikel-detail-view sind */
-.form-section:has(h3:contains("Finanz-Parameter")) {
-  display: none;
-}
-
-#artikel-detail-view .form-section {
-  display: block !important;
-}
-
 }
 
 /* ========================================== */
