@@ -176,6 +176,7 @@ class PromptsEngine {
             'M&A': '🤝',
             'Bilanzbuchhalter': '📚',
             'Business Developer': '🚀',
+            'Fachanwalt Gesellschaftsrecht': '⚖️',
             'Accountant': '💼',
             'Finance Manager': '💵',
             'Auditor': '🔍'
@@ -639,14 +640,20 @@ class PromptsEngine {
             ? BIZDEV_PROMPTS 
             : [];
 
+        // Load Fachanwalt Prompts
+        const lawyerPrompts = (typeof LAWYER_PROMPTS !== 'undefined' && Array.isArray(LAWYER_PROMPTS)) 
+            ? LAWYER_PROMPTS 
+            : [];
+
         console.log(`📦 Loaded ${controllerPrompts.length} Controller prompts`);
         console.log(`🏦 Loaded ${treasuryPrompts.length} Treasury prompts`);
         console.log(`📈 Loaded ${cfoPrompts.length} CFO prompts`);
         console.log(`🤝 Loaded ${maPrompts.length} M&A prompts`);
         console.log(`📚 Loaded ${bilanzPrompts.length} Bilanzbuchhalter prompts`);
         console.log(`🚀 Loaded ${bizdevPrompts.length} Business Developer prompts`);
+        console.log(`⚖️ Loaded ${lawyerPrompts.length} Fachanwalt prompts`);
 
-        return [...builtinPrompts, ...controllerPrompts, ...treasuryPrompts, ...cfoPrompts, ...maPrompts, ...bilanzPrompts, ...bizdevPrompts];
+        return [...builtinPrompts, ...controllerPrompts, ...treasuryPrompts, ...cfoPrompts, ...maPrompts, ...bilanzPrompts, ...bizdevPrompts, ...lawyerPrompts];
     }
 }
 
