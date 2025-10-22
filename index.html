@@ -12,6 +12,7 @@
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/cockpit-COMPLETE.css">
+    <link rel="stylesheet" href="css/case-search.css">
 
     <!-- 🔧 MODAL FIX - CRITICAL -->
 <style>
@@ -1656,7 +1657,35 @@
 
     console.log('✅ All modules and navigation functions loaded');
 
+    // ========================================
+    // CASE SEARCH MODULE
+    // ========================================
+    import('./js/modules/case-search.js').then(module => {
+        const { renderCaseSearch } = module;
+        
+        // Render Case Search Panel
+        const panel = document.getElementById('case-search-panel');
+        if (panel) {
+            panel.style.display = 'block';
+            renderCaseSearch();
+            console.log('✅ Case Search Panel rendered');
+        }
+    }).catch(error => {
+        console.error('❌ Failed to load Case Search:', error);
+    });
+
     </script>
+
+    <!-- Case Search Panel -->
+    <div id="case-search-panel" style="
+        position: fixed;
+        right: 20px;
+        top: 120px;
+        width: 420px;
+        max-height: calc(100vh - 140px);
+        z-index: 1000;
+        display: none;
+    "></div>
 
 </body>
 </html>
