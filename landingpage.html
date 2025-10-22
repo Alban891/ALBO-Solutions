@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALBO Landing Page - Demo</title>
+    
+    <link rel="stylesheet" href="platform/landing-page/styles/landing-page.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f8fafc;
+            color: #111827;
+        }
+        
+        .demo-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .demo-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .demo-header p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="demo-header">
+        <h1>🚀 ALBO Solutions - Landing Page Demo</h1>
+        <p>Finance Command Center Dashboard • Samstag, 19. Oktober 2025</p>
+    </div>
+    
+    <div id="content"></div>
+    
+    <script src="landing-page-utils.js"></script>
+    
+    <script>
+        // Render the landing page content
+        const greeting = (() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Guten Morgen';
+            if (hour < 18) return 'Guten Tag';
+            return 'Guten Abend';
+        })();
+        
+        document.getElementById('content').innerHTML = `
+            <div class="landing-page-v2">
+                <!-- Hero Section -->
+                <div class="landing-hero-v2">
+                    <h1>${greeting} 👋</h1>
+                    <div class="hero-badges">
+                        <span class="badge badge-primary">3 neue Aufgaben</span>
+                        <span class="badge badge-warning">8 relevante Nachrichten</span>
+                    </div>
+                </div>
+
+                <!-- Main Content: Calendar + News -->
+                <div class="landing-main-grid">
+                    <!-- Calendar Widget (25%) -->
+                    <div class="calendar-widget">
+                        <div class="widget-header">
+                            <h3>📅 Kalender</h3>
+                        </div>
+                        
+                        <div class="calendar-container">
+                            <div class="calendar-nav">
+                                <button class="btn-icon" onclick="window.landingPageUtils.prevMonth()">◀</button>
+                                <h4 id="calendar-month">Oktober 2025</h4>
+                                <button class="btn-icon" onclick="window.landingPageUtils.nextMonth()">▶</button>
+                            </div>
+                            
+                            <div class="calendar-grid" id="calendar-grid">
+                                <!-- Will be populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <div class="calendar-notes">
+                            <h4>📝 Notizen</h4>
+                            <textarea 
+                                id="calendar-note" 
+                                placeholder="Notiz für heute..."
+                                class="note-input"
+                            ></textarea>
+                            <button class="btn-sm btn-primary" onclick="window.landingPageUtils.saveNote()">
+                                Speichern
+                            </button>
+                        </div>
+                        
+                        <div class="calendar-reminders">
+                            <h4>⏰ Erinnerungen</h4>
+                            <ul class="reminder-list" id="reminder-list">
+                                <!-- Will be populated by JS -->
+                            </ul>
+                            <button class="btn-link" onclick="window.landingPageUtils.addReminder()">
+                                + Erinnerung hinzufügen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- News Feed (75%) -->
+                    <div class="news-widget">
+                        <div class="widget-header">
+                            <h3>📰 Wirtschaftsnachrichten</h3>
+                            <button class="btn-icon" onclick="window.landingPageUtils.refreshNews()">🔄</button>
+                        </div>
+                        
+                        <!-- News Categories -->
+                        <div class="news-categories">
+                            <button class="category-tab active" data-category="wirtschaft" onclick="window.landingPageUtils.switchCategory('wirtschaft')">
+                                💼 Wirtschaft
+                            </button>
+                            <button class="category-tab" data-category="politik" onclick="window.landingPageUtils.switchCategory('politik')">
+                                🏛️ Politik
+                            </button>
+                            <button class="category-tab" data-category="unternehmen" onclick="window.landingPageUtils.switchCategory('unternehmen')">
+                                🏢 Unternehmen
+                            </button>
+                            <button class="category-tab" data-category="maerkte" onclick="window.landingPageUtils.switchCategory('maerkte')">
+                                📈 Märkte
+                            </button>
+                            <button class="category-tab" data-category="technologie" onclick="window.landingPageUtils.switchCategory('technologie')">
+                                💻 Technologie
+                            </button>
+                            <button class="category-tab" data-category="boerse" onclick="window.landingPageUtils.switchCategory('boerse')">
+                                💹 Börse
+                            </button>
+                        </div>
+                        
+                        <!-- News Feed Container -->
+                        <div class="news-feed" id="news-feed">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Queue -->
+                <div class="task-section">
+                    <div class="section-header">
+                        <h3>🎯 Deine Aufgaben heute</h3>
+                        <button class="btn-secondary btn-sm">Alle anzeigen (5)</button>
+                    </div>
+                    
+                    <div class="task-grid">
+                        <div class="task-card task-new">
+                            <div class="task-header">
+                                <div class="task-icon">📧</div>
+                                <div class="task-meta">
+                                    <span class="task-badge new">NEU</span>
+                                    <span class="task-time">Vor 15 Min</span>
+                                </div>
+                            </div>
+                            <h4>Cash Pooling Analyse erstellen</h4>
+                            <div class="task-details">
+                                <div class="detail-row">
+                                    <span class="label">Von:</span>
+                                    <span class="value">CFO (Hans Müller)</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="label">Priorität:</span>
+                                    <span class="value priority-high">⚠️ Hoch</span>
+                                </div>
+                            </div>
+                            <div class="ai-match">
+                                <span class="match-icon">🤖</span>
+                                <span class="match-score">AI Match: 95%</span>
+                                <p class="match-prompt">"Treasury Manager - Cash Pooling"</p>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-primary btn-sm">Jetzt starten →</button>
+                                <button class="btn-secondary btn-sm">Später</button>
+                            </div>
+                        </div>
+
+                        <div class="task-card task-urgent">
+                            <div class="task-header">
+                                <div class="task-icon">⏰</div>
+                                <div class="task-meta">
+                                    <span class="task-badge deadline">DEADLINE</span>
+                                    <span class="task-time">In 3 Tagen</span>
+                                </div>
+                            </div>
+                            <h4>Q4 Forecast Finalisierung</h4>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 65%">65%</div>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-primary btn-sm">Weiter bearbeiten →</button>
+                            </div>
+                        </div>
+
+                        <div class="task-card task-progress">
+                            <div class="task-header">
+                                <div class="task-icon">📝</div>
+                                <div class="task-meta">
+                                    <span class="task-badge progress">IN ARBEIT</span>
+                                    <span class="task-time">Seit gestern</span>
+                                </div>
+                            </div>
+                            <h4>Budget Review 2026</h4>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 40%">40%</div>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn-primary btn-sm">Fortsetzen →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-icon">📋</span>
+                        <div class="stat-content">
+                            <span class="stat-value">5</span>
+                            <span class="stat-label">Offene Tasks</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">🔄</span>
+                        <div class="stat-content">
+                            <span class="stat-value">3</span>
+                            <span class="stat-label">In Arbeit</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">✅</span>
+                        <div class="stat-content">
+                            <span class="stat-value">12</span>
+                            <span class="stat-label">Abgeschlossen</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-icon">⏱️</span>
+                        <div class="stat-content">
+                            <span class="stat-value">18h</span>
+                            <span class="stat-label">Zeit gespart</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trending Topics -->
+                <div class="trending-section">
+                    <h3>🔥 Trending Topics in Finance</h3>
+                    <div class="trending-grid">
+                        <div class="trending-card">
+                            <div class="trending-icon">🏦</div>
+                            <h4>Basel III/IV</h4>
+                            <p class="trending-count">15 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                        <div class="trending-card">
+                            <div class="trending-icon">📊</div>
+                            <h4>CSRD Reporting</h4>
+                            <p class="trending-count">23 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                        <div class="trending-card">
+                            <div class="trending-icon">🌱</div>
+                            <h4>ESG Ratings</h4>
+                            <p class="trending-count">18 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                        <div class="trending-card">
+                            <div class="trending-icon">🤖</div>
+                            <h4>AI/Automation</h4>
+                            <p class="trending-count">31 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                        <div class="trending-card">
+                            <div class="trending-icon">💰</div>
+                            <h4>Cryptocurrency</h4>
+                            <p class="trending-count">12 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                        <div class="trending-card">
+                            <div class="trending-icon">📦</div>
+                            <h4>Supply Chain</h4>
+                            <p class="trending-count">19 Prompts</p>
+                            <button class="btn-link">Erkunden →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Initialize dynamic content
+        setTimeout(() => {
+            window.landingPageUtils.initCalendar();
+            window.landingPageUtils.loadNews('wirtschaft');
+        }, 100);
+    </script>
+
+</body>
+</html>
