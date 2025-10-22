@@ -1,6 +1,6 @@
 /* ========================================== */
-/* PROMPTS ENGINE - COMPLETE MERGED VERSION */
-/* Your Features + 126 Notion Prompts        */
+/* ALBO PROMPTS - TRANSPARENCY & EXPLAINABILITY */
+/* Full visibility into AI prompts and execution */
 /* ========================================== */
 
 class PromptsEngine {
@@ -8,17 +8,15 @@ class PromptsEngine {
         this.taskQueue = [];
         this.allPrompts = this.getAllPrompts();
         this.currentView = 'library';
-        this.currentMode = 'templates'; // 'templates' or 'freeform'
+        this.currentMode = 'templates';
         this.currentPrompt = null;
         this.userAnswers = {};
-        this.executionResult = null;
-        this.lastResult = null;
         this.searchQuery = '';
         this.activeCategory = 'all';
-        this.lastGeneratedCode = null;
-        this.appGenerationEnabled = true;
+        this.showTransparency = true; // Always show full transparency
+        this.expandedCategories = []; // Track which categories are expanded
         
-        console.log('💡 Prompts Engine initialized (Hybrid + Free-Form + 126 Notion Prompts)');
+        console.log('💡 Prompts Engine initialized with Transparency Mode');
         console.log(`📚 Loaded ${this.allPrompts.length} prompts`);
     }
 
@@ -166,9 +164,9 @@ class PromptsEngine {
                 <div class="task-actions">
                     <button 
                         class="btn-task-start"
-                        onclick="window.promptsEngine.startTaskFromQueue(${task.id})"
+                        onclick="window.promptsEngine.showPromptDetailModal('${task.agentId}')"
                     >
-                        ▶️ Starten
+                        🔍 Details ansehen
                     </button>
                     <button 
                         class="btn-task-remove"
@@ -187,7 +185,6 @@ class PromptsEngine {
             { id: 'all', label: 'Alle', count: this.allPrompts.length }
         ];
         
-        // Add categories with counts
         Object.keys(categories).forEach(cat => {
             filters.push({
                 id: cat.toLowerCase(),
@@ -230,47 +227,427 @@ class PromptsEngine {
         
         const grouped = this.groupPromptsByCategory(prompts);
         
-        return Object.entries(grouped).map(([category, prompts]) => `
-            <div class="category-section">
-                <div class="category-header">
-                    <span class="category-icon">${this.getCategoryIcon(category)}</span>
-                    <span class="category-title">${category}</span>
-                    <span class="category-count">${prompts.length}</span>
+        return Object.entries(grouped).map(([category, categoryPrompts]) => {
+            const isExpanded = this.expandedCategories.includes(category);
+            const displayPrompts = isExpanded ? categoryPrompts : categoryPrompts.slice(0, 6);
+            const hasMore = categoryPrompts.length > 6;
+            
+            return `
+                <div class="category-section">
+                    <div class="category-header">
+                        <span class="category-icon">${this.getCategoryIcon(category)}</span>
+                        <span class="category-title">${category}</span>
+                        <span class="category-count">${categoryPrompts.length}</span>
+                    </div>
+                    <div class="prompts-grid">
+                        ${displayPrompts.map(prompt => this.renderCompactPromptCard(prompt)).join('')}
+                    </div>
+                    ${hasMore && !isExpanded ? `
+                        <div class="show-more-container">
+                            <button 
+                                class="btn-show-more"
+                                onclick="window.promptsEngine.expandCategory('${category}')"
+                            >
+                                ⬇️ Zeige ${categoryPrompts.length - 6} weitere ${category} Prompts
+                            </button>
+                        </div>
+                    ` : ''}
+                    ${isExpanded ? `
+                        <div class="show-more-container">
+                            <button 
+                                class="btn-show-more"
+                                onclick="window.promptsEngine.collapseCategory('${category}')"
+                            >
+                                ⬆️ Weniger anzeigen
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
-                <div class="prompts-grid">
-                    ${prompts.map(prompt => this.renderPromptCard(prompt)).join('')}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
-    renderPromptCard(prompt) {
+    expandCategory(category) {
+        if (!this.expandedCategories.includes(category)) {
+            this.expandedCategories.push(category);
+        }
+        this.updateLibrary();
+    }
+
+    collapseCategory(category) {
+        this.expandedCategories = this.expandedCategories.filter(c => c !== category);
+        this.updateLibrary();
+    }
+
+    renderCompactPromptCard(prompt) {
         return `
-            <div class="prompt-card" onclick="window.promptsEngine.startPrompt('${prompt.id}')">
+            <div class="prompt-card compact" onclick="window.promptsEngine.showPromptDetailModal('${prompt.id}')">
                 <div class="prompt-card-header">
                     <span class="prompt-icon">${prompt.icon || this.getCategoryIcon(prompt.category)}</span>
                     <h3 class="prompt-name">${prompt.name}</h3>
                 </div>
-                <p class="prompt-description">${prompt.description}</p>
+                <p class="prompt-description">${prompt.description.substring(0, 120)}${prompt.description.length > 120 ? '...' : ''}</p>
                 <div class="prompt-tags">
-                    ${(prompt.tags || []).slice(0, 3).map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    ${(prompt.tags || []).slice(0, 2).map(tag => `<span class="tag">${tag}</span>`).join('')}
                 </div>
                 <div class="prompt-footer">
                     <span class="prompt-duration">⏱️ ${prompt.duration || 20} Min</span>
-                    <button class="btn-start-small">▶️ Starten</button>
+                    <button class="btn-details-small" onclick="event.stopPropagation(); window.promptsEngine.showPromptDetailModal('${prompt.id}')">
+                        🔍 Details
+                    </button>
                 </div>
             </div>
         `;
     }
 
     /* ========================================== */
-    /* FREE-FORM MODE */
+    /* TRANSPARENCY: PROMPT DETAIL MODAL */
+    /* ========================================== */
+
+    showPromptDetailModal(promptId) {
+        const prompt = this.getPromptById(promptId);
+        if (!prompt) return;
+
+        this.currentPrompt = prompt;
+
+        const modal = document.createElement('div');
+        modal.id = 'prompt-detail-modal';
+        modal.className = 'modal-overlay';
+        modal.onclick = (e) => {
+            if (e.target === modal) this.closePromptDetailModal();
+        };
+
+        modal.innerHTML = `
+            <div class="modal-content modal-large" onclick="event.stopPropagation()">
+                <!-- Header -->
+                <div class="modal-header">
+                    <div class="modal-title-section">
+                        <span class="modal-icon">${prompt.icon || this.getCategoryIcon(prompt.category)}</span>
+                        <div>
+                            <h2 class="modal-title">${prompt.name}</h2>
+                            <p class="modal-category">${prompt.category} • ${prompt.duration || 20} Min</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" onclick="window.promptsEngine.closePromptDetailModal()">✕</button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+                    <!-- Goal -->
+                    <div class="prompt-goal-section">
+                        <h3>🎯 Ziel</h3>
+                        <p>${prompt.goal || prompt.description}</p>
+                    </div>
+
+                    <!-- Full Prompt Text (TRANSPARENCY!) -->
+                    ${prompt.fullPromptText ? `
+                        <div class="prompt-transparency-section">
+                            <div class="transparency-header">
+                                <h3>📋 Vollständiger Prompt (100% Transparenz)</h3>
+                                <button 
+                                    class="btn-copy-prompt" 
+                                    onclick="window.promptsEngine.copyPromptText()"
+                                >
+                                    📋 Kopieren
+                                </button>
+                            </div>
+                            <div class="prompt-full-text">
+                                ${this.formatPromptText(prompt.fullPromptText)}
+                            </div>
+                            <div class="transparency-note">
+                                💡 <strong>Das ist exakt der Prompt</strong>, der an die AI gesendet wird. 
+                                Volle Transparenz für dich!
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Questions -->
+                    ${prompt.questions && prompt.questions.length > 0 ? `
+                        <div class="questions-section">
+                            <h3>🔍 Deine Inputs</h3>
+                            <p class="questions-intro">Diese Informationen werden in den Prompt eingefügt:</p>
+                            ${prompt.questions.map((q, i) => `
+                                <div class="question-item">
+                                    <label class="question-label">
+                                        ${i + 1}. ${q.question}
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        class="question-input"
+                                        id="answer-${i}"
+                                        placeholder="${q.placeholder || q.example}"
+                                        data-question-index="${i}"
+                                    />
+                                    ${q.example ? `<span class="question-example">💡 Beispiel: ${q.example}</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Tags & Meta -->
+                    <div class="prompt-meta-section">
+                        ${(prompt.tags || []).length > 0 ? `
+                            <div class="meta-item">
+                                <strong>🏷️ Tags:</strong>
+                                ${prompt.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        ${prompt.outputs ? `
+                            <div class="meta-item">
+                                <strong>📄 Outputs:</strong> ${prompt.outputs.join(', ')}
+                            </div>
+                        ` : ''}
+                        ${prompt.role ? `
+                            <div class="meta-item">
+                                <strong>👤 Rolle:</strong> ${prompt.role}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="modal-footer">
+                    <button 
+                        class="btn-secondary" 
+                        onclick="window.promptsEngine.closePromptDetailModal()"
+                    >
+                        Abbrechen
+                    </button>
+                    <button 
+                        class="btn-execute-prompt"
+                        onclick="window.promptsEngine.executePromptWithTransparency()"
+                    >
+                        ▶️ Analyse starten (mit voller Transparenz)
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    closePromptDetailModal() {
+        const modal = document.getElementById('prompt-detail-modal');
+        if (modal) modal.remove();
+    }
+
+    formatPromptText(text) {
+        // Format the prompt text for display
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/\n/g, '<br>');
+    }
+
+    copyPromptText() {
+        if (!this.currentPrompt?.fullPromptText) return;
+
+        navigator.clipboard.writeText(this.currentPrompt.fullPromptText)
+            .then(() => {
+                this.showToast('✅ Prompt in Zwischenablage kopiert!');
+            })
+            .catch(err => {
+                console.error('Fehler beim Kopieren:', err);
+            });
+    }
+
+    /* ========================================== */
+    /* TRANSPARENT EXECUTION */
+    /* ========================================== */
+
+    executePromptWithTransparency() {
+        const answers = {};
+        const inputs = document.querySelectorAll('.question-input');
+        
+        inputs.forEach((input, i) => {
+            answers[i] = input.value;
+        });
+
+        this.userAnswers = answers;
+        
+        // Close modal
+        this.closePromptDetailModal();
+        
+        // Show transparency execution view
+        this.renderTransparentExecution();
+    }
+
+    renderTransparentExecution() {
+        const container = document.getElementById('prompts-content');
+        if (!container) return;
+
+        const prompt = this.currentPrompt;
+        const filledPrompt = this.fillPromptWithAnswers(prompt, this.userAnswers);
+
+        container.innerHTML = `
+            <div class="execution-transparency-container">
+                <!-- Header -->
+                <div class="execution-header">
+                    <button class="btn-back" onclick="window.promptsEngine.backToLibrary()">← Zurück</button>
+                    <h2>🚀 Analyse läuft mit voller Transparenz</h2>
+                </div>
+
+                <!-- Transparency Timeline -->
+                <div class="transparency-timeline">
+                    <div class="timeline-step active">
+                        <div class="step-icon">✅</div>
+                        <div class="step-content">
+                            <h4>1. Prompt vorbereitet</h4>
+                            <p>Deine Inputs wurden in den Prompt eingefügt</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-step active">
+                        <div class="step-icon">📤</div>
+                        <div class="step-content">
+                            <h4>2. An AI gesendet</h4>
+                            <p>Prompt wird an Claude Sonnet 4 gesendet</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-step processing">
+                        <div class="step-icon spinner-small"></div>
+                        <div class="step-content">
+                            <h4>3. AI verarbeitet</h4>
+                            <p>Claude analysiert deine Anfrage...</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-step">
+                        <div class="step-icon">📥</div>
+                        <div class="step-content">
+                            <h4>4. Ergebnis wird angezeigt</h4>
+                            <p>Warte auf Antwort...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Your Inputs -->
+                <div class="transparency-section">
+                    <h3>📝 Deine Eingaben</h3>
+                    <div class="inputs-display">
+                        ${Object.entries(this.userAnswers).map(([idx, answer]) => {
+                            const question = prompt.questions[idx];
+                            return `
+                                <div class="input-item">
+                                    <strong>${question.question}</strong>
+                                    <span class="input-value">${answer || '(nicht angegeben)'}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Sent Prompt (Full Transparency) -->
+                <div class="transparency-section">
+                    <h3>🤖 Exakter Prompt an AI gesendet</h3>
+                    <div class="sent-prompt-display">
+                        ${filledPrompt}
+                    </div>
+                    <button class="btn-copy-sent" onclick="window.promptsEngine.copySentPrompt()">
+                        📋 Diesen Prompt kopieren
+                    </button>
+                </div>
+
+                <!-- Progress -->
+                <div class="execution-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="exec-progress-fill"></div>
+                    </div>
+                    <p class="progress-text">Warte auf AI Antwort...</p>
+                </div>
+            </div>
+        `;
+
+        // Animate progress
+        this.animateExecutionProgress();
+
+        // Simulate execution (replace with actual API call)
+        setTimeout(() => {
+            this.showExecutionResult();
+        }, 4000);
+    }
+
+    fillPromptWithAnswers(prompt, answers) {
+        let filledPrompt = prompt.fullPromptText || prompt.description;
+        
+        // Replace placeholders with actual answers
+        Object.entries(answers).forEach(([idx, answer]) => {
+            const question = prompt.questions?.[idx];
+            if (question && answer) {
+                const placeholder = `{${question.question}}`;
+                filledPrompt = filledPrompt.replace(placeholder, `<mark>${answer}</mark>`);
+            }
+        });
+
+        return this.formatPromptText(filledPrompt);
+    }
+
+    copySentPrompt() {
+        const prompt = this.fillPromptWithAnswers(this.currentPrompt, this.userAnswers);
+        const textOnly = prompt.replace(/<[^>]*>/g, '');
+        
+        navigator.clipboard.writeText(textOnly)
+            .then(() => this.showToast('✅ Gesendeter Prompt kopiert!'))
+            .catch(err => console.error('Copy error:', err));
+    }
+
+    animateExecutionProgress() {
+        const fill = document.getElementById('exec-progress-fill');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 2;
+            if (fill) fill.style.width = progress + '%';
+            if (progress >= 100) clearInterval(interval);
+        }, 80);
+    }
+
+    showExecutionResult() {
+        const container = document.getElementById('prompts-content');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="execution-result-container">
+                <div class="result-header">
+                    <button class="btn-back" onclick="window.promptsEngine.backToLibrary()">← Zurück</button>
+                    <h2>✅ Analyse abgeschlossen</h2>
+                </div>
+
+                <div class="result-body">
+                    <div class="result-section">
+                        <h3>📊 Ergebnis</h3>
+                        <div class="result-content">
+                            <p><strong>Mock Ergebnis:</strong> Die Analyse wurde erfolgreich durchgeführt.</p>
+                            <p>In der Produktivversion würde hier die echte AI-Antwort erscheinen.</p>
+                            <p><em>Integration mit Anthropic API oder OpenAI API erforderlich.</em></p>
+                        </div>
+                    </div>
+
+                    <div class="transparency-note">
+                        💡 <strong>Volle Transparenz:</strong> Du konntest sehen, welcher Prompt an die AI gesendet wurde 
+                        und welche Inputs verwendet wurden. Explainable AI in Action!
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button class="btn-secondary" onclick="window.promptsEngine.backToLibrary()">
+                        Zurück zur Übersicht
+                    </button>
+                    <button class="btn-primary" onclick="alert('Download-Funktion folgt')">
+                        📥 Ergebnis herunterladen
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    /* ========================================== */
+    /* FREE-FORM MODE (kept from original) */
     /* ========================================== */
 
     renderFreeFormMode() {
         return `
             <div class="freeform-builder">
-                <!-- Header -->
                 <div class="freeform-header">
                     <div class="freeform-icon">🆓</div>
                     <div class="freeform-content">
@@ -281,7 +658,6 @@ class PromptsEngine {
                     </div>
                 </div>
                 
-                <!-- Input Section -->
                 <div class="freeform-input-section">
                     <label class="freeform-label">
                         💭 Was für ein Finance Tool brauchst du?
@@ -289,37 +665,8 @@ class PromptsEngine {
                     <textarea 
                         id="freeform-input"
                         class="freeform-textarea"
-                        placeholder="Beschreibe dein Tool so detailliert wie möglich...
-
-Beispiele:
-
-• Ich brauche ein Working Capital Management Tool für 5 Gesellschaften. 
-  Ich will DSO, DIO, DPO tracken und den Cash Conversion Cycle optimieren.
-
-• Erstelle mir einen FX Risk Calculator der automatisch Exposures berechnet 
-  und Hedging-Empfehlungen gibt.
-
-• Ich brauche ein Procurement Savings Tracking Tool mit Budget vs. Actual 
-  und automatischer Lieferanten-Performance Analyse.
-
-• Baue mir eine Cost Allocation Engine die Kosten nach verschiedenen 
-  Schlüsseln verteilt und Reports generiert."
+                        placeholder="Beschreibe dein Tool..."
                     ></textarea>
-                    
-                    <div class="freeform-tips">
-                        <div class="tip-item">
-                            <span class="tip-icon">💡</span>
-                            <span class="tip-text">Je detaillierter deine Beschreibung, desto besser die App</span>
-                        </div>
-                        <div class="tip-item">
-                            <span class="tip-icon">⚡</span>
-                            <span class="tip-text">AI wird dir noch 3-5 Fragen stellen für perfektes Ergebnis</span>
-                        </div>
-                        <div class="tip-item">
-                            <span class="tip-icon">⏱️</span>
-                            <span class="tip-text">Dauer: ~90 Sekunden bis fertige App</span>
-                        </div>
-                    </div>
                     
                     <button 
                         id="freeform-generate-btn"
@@ -329,394 +676,12 @@ Beispiele:
                         🚀 App generieren
                     </button>
                 </div>
-                
-                <!-- Examples Section -->
-                <div class="freeform-examples">
-                    <h3 class="examples-title">💡 Beliebte Custom Apps</h3>
-                    <div class="examples-grid">
-                        ${this.renderFreeFormExamples()}
-                    </div>
-                </div>
             </div>
         `;
-    }
-
-    renderFreeFormExamples() {
-        const examples = [
-            {
-                id: 'workingcapital',
-                icon: '💰',
-                title: 'Working Capital Tool',
-                description: 'DSO, DIO, DPO Tracking + CCC Optimization'
-            },
-            {
-                id: 'fxrisk',
-                icon: '💱',
-                title: 'FX Risk Calculator',
-                description: 'Exposure Tracking + Hedging Recommendations'
-            },
-            {
-                id: 'procurement',
-                icon: '📦',
-                title: 'Procurement Savings',
-                description: 'Budget Tracking + Supplier Performance'
-            },
-            {
-                id: 'costallocation',
-                icon: '🧮',
-                title: 'Cost Allocation Engine',
-                description: 'Multi-Key Distribution + Automated Reports'
-            }
-        ];
-
-        return examples.map(ex => `
-            <div class="example-card" onclick="window.promptsEngine.useFreeFormExample('${ex.id}')">
-                <div class="example-icon">${ex.icon}</div>
-                <div class="example-title">${ex.title}</div>
-                <div class="example-description">${ex.description}</div>
-            </div>
-        `).join('');
-    }
-
-    useFreeFormExample(exampleId) {
-        const examples = {
-            workingcapital: 'Ich brauche ein Working Capital Management Tool für 5 Gesellschaften. Ich will DSO, DIO, DPO tracken und den Cash Conversion Cycle optimieren. Zeige mir Trends über die letzten 12 Monate und gib mir Empfehlungen zur Verbesserung.',
-            fxrisk: 'Erstelle mir einen FX Risk Calculator der automatisch meine Währungs-Exposures berechnet und Hedging-Empfehlungen gibt. Ich habe Transaktionen in EUR, USD, GBP und CHF.',
-            procurement: 'Ich brauche ein Procurement Savings Tracking Tool mit Budget vs. Actual Vergleich und automatischer Lieferanten-Performance Analyse. Zeige Top 10 Lieferanten und Savings-Potenziale.',
-            costallocation: 'Baue mir eine Cost Allocation Engine die Kosten nach verschiedenen Schlüsseln (FTE, Revenue, Square Meters) verteilt und automatisch Reports für 8 Kostenstellen generiert.'
-        };
-
-        const textarea = document.getElementById('freeform-input');
-        if (textarea && examples[exampleId]) {
-            textarea.value = examples[exampleId];
-        }
     }
 
     startFreeFormGeneration() {
-        const input = document.getElementById('freeform-input');
-        const description = input?.value?.trim();
-        
-        if (!description) {
-            this.showToast('⚠️ Bitte beschreibe dein Tool');
-            return;
-        }
-
-        console.log('🚀 Starting free-form generation:', description);
-        this.renderAppGenerationProgress();
-        
-        // Simulate app generation (replace with actual API call)
-        setTimeout(() => {
-            const mockReactCode = this.generateMockReactApp(description);
-            this.renderGeneratedApp(mockReactCode);
-        }, 3000);
-    }
-
-    generateMockReactApp(description) {
-        // This would be replaced with actual API call to Claude/GPT
-        return `
-function App() {
-    const [data, setData] = useState([
-        { name: 'Jan', value: 100 },
-        { name: 'Feb', value: 150 },
-        { name: 'Mar', value: 120 }
-    ]);
-
-    return (
-        <div className="p-6 bg-white rounded-lg shadow-lg">
-            <h1 className="text-2xl font-bold mb-4">Custom Finance App</h1>
-            <p className="text-gray-600 mb-6">${description.substring(0, 100)}...</p>
-            
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded">
-                    <div className="text-sm text-gray-600">Total</div>
-                    <div className="text-2xl font-bold">370</div>
-                </div>
-                <div className="bg-green-50 p-4 rounded">
-                    <div className="text-sm text-gray-600">Average</div>
-                    <div className="text-2xl font-bold">123</div>
-                </div>
-                <div className="bg-purple-50 p-4 rounded">
-                    <div className="text-sm text-gray-600">Growth</div>
-                    <div className="text-2xl font-bold">+20%</div>
-                </div>
-            </div>
-
-            <div className="bg-gray-50 p-6 rounded">
-                <h2 className="font-semibold mb-4">Data Overview</h2>
-                <div className="space-y-2">
-                    {data.map((item, i) => (
-                        <div key={i} className="flex justify-between items-center p-3 bg-white rounded">
-                            <span className="font-medium">{item.name}</span>
-                            <span className="text-blue-600">{item.value}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-}
-        `;
-    }
-
-    renderAppGenerationProgress() {
-        const container = document.getElementById('prompts-content');
-        if (!container) return;
-        
-        container.innerHTML = `
-            <div class="app-generation-container">
-                <div class="generation-icon">🚀</div>
-                <h2 class="generation-title">Deine App wird generiert...</h2>
-                <p class="generation-subtitle">AI erstellt gerade deine maßgeschneiderte Finance App</p>
-                
-                <div class="generation-progress">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="app-progress-fill"></div>
-                    </div>
-                </div>
-                
-                <div class="generation-steps">
-                    <div class="step active">
-                        <div class="step-icon">✅</div>
-                        <div class="step-text">Anforderungen analysiert</div>
-                    </div>
-                    <div class="step active">
-                        <div class="step-icon">⚙️</div>
-                        <div class="step-text">React Components generieren...</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">🎨</div>
-                        <div class="step-text">UI Design optimieren...</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">🧪</div>
-                        <div class="step-text">App testen...</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        this.animateAppGenProgress();
-    }
-
-    animateAppGenProgress() {
-        const fill = document.getElementById('app-progress-fill');
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 1.5;
-            if (fill) fill.style.width = progress + '%';
-            if (progress >= 100) clearInterval(interval);
-        }, 500);
-    }
-
-    renderGeneratedApp(reactCode) {
-        const container = document.getElementById('prompts-content');
-        if (!container) return;
-        
-        this.lastGeneratedCode = reactCode;
-        
-        container.innerHTML = `
-            <div class="generated-app-container">
-                <div class="app-header">
-                    <button class="btn-secondary" onclick="window.promptsEngine.backToLibrary()">← Zurück</button>
-                    <h2>🚀 Generierte App</h2>
-                    <button class="btn-primary" onclick="window.promptsEngine.downloadApp()">💾 Herunterladen</button>
-                </div>
-                <div class="app-preview" id="app-preview">
-                    <div class="loading-app"><div class="spinner"></div></div>
-                </div>
-            </div>
-        `;
-        
-        this.renderInIframe(reactCode);
-    }
-
-    renderInIframe(reactCode) {
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
-    <style>body{margin:0;padding:20px;font-family:sans-serif;background:#f8fafc;}#root{max-width:1400px;margin:0 auto;}</style>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState } = React;
-        ${reactCode}
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
-        `;
-        
-        const preview = document.getElementById('app-preview');
-        if (!preview) return;
-        
-        const iframe = document.createElement('iframe');
-        iframe.className = 'app-iframe';
-        iframe.sandbox = 'allow-scripts';
-        iframe.style.cssText = 'width:100%;height:600px;border:none;border-radius:12px;';
-        
-        preview.innerHTML = '';
-        preview.appendChild(iframe);
-        
-        const doc = iframe.contentDocument;
-        doc.open();
-        doc.write(html);
-        doc.close();
-    }
-
-    downloadApp() {
-        if (!this.lastGeneratedCode) return;
-        
-        const html = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>ALBO Finance App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState } = React;
-        ${this.lastGeneratedCode}
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>`;
-
-        const blob = new Blob([html], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'albo-finance-app.html';
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        this.showToast('✅ App heruntergeladen!');
-    }
-
-    /* ========================================== */
-    /* PROMPT EXECUTION */
-    /* ========================================== */
-
-    startPrompt(promptId, context = null) {
-        const prompt = this.getPromptById(promptId);
-        if (!prompt) return;
-        
-        this.currentPrompt = prompt;
-        this.currentView = 'execution';
-        this.userAnswers = {};
-        
-        this.renderPromptExecution(context);
-    }
-
-    renderPromptExecution(context) {
-        const container = document.getElementById('prompts-content');
-        if (!container) return;
-        
-        const prompt = this.currentPrompt;
-        
-        container.innerHTML = `
-            <div class="prompt-execution-container">
-                <div class="execution-header">
-                    <button class="btn-back" onclick="window.promptsEngine.backToLibrary()">← Zurück</button>
-                    <div class="execution-title">
-                        <span class="execution-icon">${prompt.icon || this.getCategoryIcon(prompt.category)}</span>
-                        <h2>${prompt.name}</h2>
-                    </div>
-                </div>
-                
-                <div class="execution-body">
-                    <div class="prompt-meta-info">
-                        <p class="prompt-goal"><strong>Ziel:</strong> ${prompt.goal || prompt.description}</p>
-                        <div class="prompt-stats">
-                            <span>⏱️ ~${prompt.duration || 20} Minuten</span>
-                            <span>👤 ${prompt.role || prompt.category}</span>
-                            ${prompt.outputs ? `<span>📄 ${prompt.outputs.join(', ')}</span>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="questions-section">
-                        <h3>🔍 Deine Inputs</h3>
-                        ${(prompt.questions || []).map((q, i) => `
-                            <div class="question-item">
-                                <label class="question-label">
-                                    ${i + 1}. ${q.question}
-                                </label>
-                                <input 
-                                    type="text" 
-                                    class="question-input"
-                                    id="answer-${i}"
-                                    placeholder="${q.placeholder || q.example}"
-                                    data-question-index="${i}"
-                                />
-                                ${q.example ? `<span class="question-example">Beispiel: ${q.example}</span>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="execution-actions">
-                        <button 
-                            class="btn-execute-prompt"
-                            onclick="window.promptsEngine.executePrompt()"
-                        >
-                            ▶️ Analyse starten
-                        </button>
-                        ${this.appGenerationEnabled ? `
-                            <button 
-                                class="btn-generate-app"
-                                onclick="window.promptsEngine.generateAppFromPrompt()"
-                            >
-                                💻 Als App generieren
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    executePrompt() {
-        const answers = {};
-        const inputs = document.querySelectorAll('.question-input');
-        
-        inputs.forEach((input, i) => {
-            answers[i] = input.value;
-        });
-        
-        this.userAnswers = answers;
-        console.log('🚀 Executing prompt:', this.currentPrompt.name, 'with answers:', answers);
-        
-        // TODO: Send to backend
-        this.showToast('🚀 Prompt wird ausgeführt...');
-        
-        // Simulate execution
-        setTimeout(() => {
-            this.showToast('✅ Analyse abgeschlossen!');
-        }, 2000);
-    }
-
-    generateAppFromPrompt() {
-        console.log('💻 Generating app from prompt:', this.currentPrompt.name);
-        
-        this.renderAppGenerationProgress();
-        
-        setTimeout(() => {
-            const mockCode = this.generateMockReactApp(this.currentPrompt.name);
-            this.renderGeneratedApp(mockCode);
-        }, 3000);
+        alert('Free-Form Generation - Integration folgt');
     }
 
     /* ========================================== */
@@ -728,6 +693,7 @@ function App() {
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.searchQuery = e.target.value;
+                this.expandedCategories = []; // Reset expanded state on search
                 this.updateLibrary();
             });
         }
@@ -737,19 +703,15 @@ function App() {
         this.currentView = 'library';
         this.currentPrompt = null;
         this.currentMode = 'templates';
+        this.expandedCategories = [];
         this.renderMainView();
     }
 
     setCategory(category) {
         this.activeCategory = category;
+        this.expandedCategories = []; // Reset expanded state on category change
         this.updateFilters();
         this.updateLibrary();
-    }
-
-    startTaskFromQueue(taskId) {
-        const task = this.taskQueue.find(t => t.id === taskId);
-        if (!task) return;
-        this.startPrompt(task.agentId, { task: task.title, email: task.email });
     }
 
     removeTaskFromQueue(taskId) {
@@ -771,7 +733,6 @@ function App() {
             body.innerHTML = this.renderPromptLibrary();
         }
         
-        // Update count
         const count = document.querySelector('.library-count');
         if (count) {
             count.textContent = `(${this.getFilteredPrompts().length} verfügbar)`;
@@ -835,12 +796,10 @@ function App() {
     }
 
     /* ========================================== */
-    /* PROMPTS DATA - MERGED VERSION */
-    /* Your 2 prompts + 126 Notion prompts */
+    /* DATA LOADING */
     /* ========================================== */
 
     getAllPrompts() {
-        // Your existing prompts
         const builtinPrompts = [
             {
                 id: 'treasury_cashpool',
@@ -853,6 +812,7 @@ function App() {
                 role: 'Treasury Manager',
                 goal: 'Liquidität steuern',
                 outputs: ['IST-Analyse', 'Business Case'],
+                fullPromptText: 'Du bist ein erfahrener Treasury Manager. Erstelle ein optimiertes Cash Pooling Konzept...',
                 questions: [
                     { question: 'Gesellschaften?', example: '7 Gesellschaften', placeholder: 'Struktur...' },
                     { question: 'Banken?', example: 'Deutsche Bank', placeholder: 'Systeme...' },
@@ -872,6 +832,7 @@ function App() {
                 role: 'Controller',
                 goal: 'Budget Review',
                 outputs: ['Variance', 'Forecast'],
+                fullPromptText: 'Du bist ein Controller. Führe eine Budget Variance Analysis durch...',
                 questions: [
                     { question: 'Jahr?', example: '2026', placeholder: 'Jahr...' },
                     { question: 'Kostenstellen?', example: '15', placeholder: 'Anzahl...' }
@@ -879,7 +840,6 @@ function App() {
             }
         ];
 
-        // Import 126 Notion prompts if available
         const notionPrompts = (typeof NOTION_PROMPTS !== 'undefined' && Array.isArray(NOTION_PROMPTS)) 
             ? NOTION_PROMPTS 
             : [];
@@ -894,4 +854,4 @@ function App() {
 
 // Initialize
 window.promptsEngine = new PromptsEngine();
-console.log('✅ Prompts Engine loaded (Merged: Your Features + 126 Notion Prompts)');
+console.log('✅ Prompts Engine loaded with Transparency & Explainability');
