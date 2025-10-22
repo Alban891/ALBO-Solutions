@@ -1,21 +1,26 @@
 /* ========================================== */
-/* ALBO PROMPTS - HIERARCHICAL 3-LEVEL STRUCTURE */
-/* Level 1: Roles → Level 2: Title List → Level 3: Split Detail */
+/* ALBO PROMPTS - MULTI-ROLE SUPPORT */
+/* Loads prompts from multiple role-specific files */
 /* ========================================== */
 
 class PromptsEngine {
     constructor() {
         this.taskQueue = [];
         this.allPrompts = this.getAllPrompts();
-        this.currentView = 'roles'; // 'roles' | 'titleList' | 'splitDetail'
+        this.currentView = 'roles';
         this.currentMode = 'templates';
         this.currentRole = null;
         this.currentPrompt = null;
         this.userAnswers = {};
         this.searchQuery = '';
         
-        console.log('💡 Prompts Engine initialized (Hierarchical Structure)');
-        console.log(`📚 Loaded ${this.allPrompts.length} prompts`);
+        console.log('💡 Prompts Engine initialized (Multi-Role)');
+        console.log(`📚 Loaded ${this.allPrompts.length} prompts across ${this.getRoleCount()} roles`);
+    }
+
+    getRoleCount() {
+        const roles = new Set(this.allPrompts.map(p => p.category));
+        return roles.size;
     }
 
     init(context = null) {
@@ -139,7 +144,7 @@ class PromptsEngine {
                     💼 Wähle deine Rolle
                 </div>
                 <div class="library-subtitle">
-                    Klicke auf eine Rolle um alle verfügbaren Prompts zu sehen
+                    ${this.allPrompts.length} Prompts in ${roles.length} Rollen verfügbar
                 </div>
             </div>
             
@@ -168,7 +173,9 @@ class PromptsEngine {
             'Treasury': '🏦',
             'Tax': '💰',
             'CFO': '📈',
+            'M&A': '🤝',
             'Bilanzbuchhalter': '📚',
+            'Business Developer': '🚀',
             'Accountant': '💼',
             'Finance Manager': '💵',
             'Auditor': '🔍'
@@ -184,7 +191,7 @@ class PromptsEngine {
     }
 
     /* ========================================== */
-    /* LEVEL 2: TITLE LIST (NUR ÜBERSCHRIFTEN!) */
+    /* LEVEL 2: TITLE LIST */
     /* ========================================== */
 
     renderTitleList() {
@@ -277,7 +284,7 @@ class PromptsEngine {
         
         return `
             <div class="split-detail-container">
-                <!-- LEFT: Title List (stays visible) -->
+                <!-- LEFT: Title List -->
                 <div class="split-left">
                     <div class="split-left-header">
                         <button class="btn-back-to-roles" onclick="window.promptsEngine.backToRoles()">
@@ -312,7 +319,6 @@ class PromptsEngine {
     renderPromptDetail(prompt) {
         return `
             <div class="prompt-detail-view">
-                <!-- Header -->
                 <div class="prompt-detail-header">
                     <div class="prompt-detail-title-section">
                         <span class="prompt-detail-icon">${prompt.icon || this.getRoleIcon(this.currentRole)}</span>
@@ -323,32 +329,20 @@ class PromptsEngine {
                             </p>
                         </div>
                     </div>
-                    <button 
-                        class="btn-close-detail" 
-                        onclick="window.promptsEngine.closeDetail()"
-                    >
-                        ✕
-                    </button>
+                    <button class="btn-close-detail" onclick="window.promptsEngine.closeDetail()">✕</button>
                 </div>
                 
-                <!-- Body -->
                 <div class="prompt-detail-body">
-                    <!-- Goal -->
                     <div class="detail-section">
                         <h3 class="detail-section-title">🎯 Ziel</h3>
                         <p class="detail-section-text">${prompt.goal || prompt.description}</p>
                     </div>
                     
-                    <!-- Full Prompt Text (TRANSPARENCY!) -->
                     ${prompt.fullPromptText ? `
                         <div class="detail-section transparency-section">
                             <div class="transparency-header-inline">
                                 <h3 class="detail-section-title">📋 Vollständiger Prompt</h3>
-                                <button 
-                                    class="btn-copy-inline" 
-                                    onclick="window.promptsEngine.copyPromptText()"
-                                    title="Prompt kopieren"
-                                >
+                                <button class="btn-copy-inline" onclick="window.promptsEngine.copyPromptText()">
                                     📋 Kopieren
                                 </button>
                             </div>
@@ -361,11 +355,9 @@ class PromptsEngine {
                         </div>
                     ` : ''}
                     
-                    <!-- Questions -->
                     ${prompt.questions && prompt.questions.length > 0 ? `
                         <div class="detail-section">
                             <h3 class="detail-section-title">🔍 Deine Eingaben</h3>
-                            <p class="detail-section-subtitle">Diese Informationen werden in den Prompt eingefügt:</p>
                             <div class="questions-list-detail">
                                 ${prompt.questions.map((q, i) => `
                                     <div class="question-item-detail">
@@ -378,18 +370,13 @@ class PromptsEngine {
                                             id="answer-${i}"
                                             placeholder="${q.placeholder || q.example || ''}"
                                         />
-                                        ${q.example ? `
-                                            <span class="question-example-detail">
-                                                💡 Beispiel: ${q.example}
-                                            </span>
-                                        ` : ''}
+                                        ${q.example ? `<span class="question-example-detail">💡 Beispiel: ${q.example}</span>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
                     ` : ''}
                     
-                    <!-- Tags & Meta -->
                     <div class="detail-section">
                         <h3 class="detail-section-title">ℹ️ Details</h3>
                         <div class="detail-meta-grid">
@@ -406,27 +393,15 @@ class PromptsEngine {
                                     <strong>📄 Outputs:</strong> ${prompt.outputs.join(', ')}
                                 </div>
                             ` : ''}
-                            ${prompt.role ? `
-                                <div class="meta-item-detail">
-                                    <strong>👤 Rolle:</strong> ${prompt.role}
-                                </div>
-                            ` : ''}
                         </div>
                     </div>
                 </div>
                 
-                <!-- Footer Actions -->
                 <div class="prompt-detail-footer">
-                    <button 
-                        class="btn-secondary-large" 
-                        onclick="window.promptsEngine.closeDetail()"
-                    >
+                    <button class="btn-secondary-large" onclick="window.promptsEngine.closeDetail()">
                         Abbrechen
                     </button>
-                    <button 
-                        class="btn-primary-large"
-                        onclick="window.promptsEngine.executePrompt()"
-                    >
+                    <button class="btn-primary-large" onclick="window.promptsEngine.executePrompt()">
                         ▶️ Analyse starten
                     </button>
                 </div>
@@ -449,125 +424,34 @@ class PromptsEngine {
 
     copyPromptText() {
         if (!this.currentPrompt?.fullPromptText) return;
-
         navigator.clipboard.writeText(this.currentPrompt.fullPromptText)
-            .then(() => {
-                this.showToast('✅ Prompt kopiert!');
-            })
-            .catch(err => {
-                console.error('Copy error:', err);
-            });
+            .then(() => this.showToast('✅ Prompt kopiert!'))
+            .catch(err => console.error('Copy error:', err));
     }
 
     executePrompt() {
         const answers = {};
         const inputs = document.querySelectorAll('.question-input-detail');
-        
-        inputs.forEach((input, i) => {
-            answers[i] = input.value;
-        });
-
+        inputs.forEach((input, i) => { answers[i] = input.value; });
         this.userAnswers = answers;
-        
-        // Show execution view
         this.showExecutionView();
     }
 
     showExecutionView() {
         const container = document.getElementById('prompts-content');
         if (!container) return;
-
-        const prompt = this.currentPrompt;
-        
         container.innerHTML = `
             <div class="execution-view-container">
                 <div class="execution-header">
-                    <button class="btn-back" onclick="window.promptsEngine.backToDetail()">
-                        ← Zurück zum Prompt
-                    </button>
+                    <button class="btn-back" onclick="window.promptsEngine.backToDetail()">← Zurück</button>
                     <h2>🚀 Analyse läuft</h2>
                 </div>
-
-                <div class="execution-progress-section">
-                    <div class="progress-timeline">
-                        <div class="progress-step active">
-                            <div class="step-icon">✅</div>
-                            <div class="step-text">Prompt vorbereitet</div>
-                        </div>
-                        <div class="progress-step active">
-                            <div class="step-icon">📤</div>
-                            <div class="step-text">An AI gesendet</div>
-                        </div>
-                        <div class="progress-step processing">
-                            <div class="step-icon spinner-mini"></div>
-                            <div class="step-text">AI verarbeitet...</div>
-                        </div>
-                        <div class="progress-step">
-                            <div class="step-icon">📥</div>
-                            <div class="step-text">Ergebnis bereit</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="execution-transparency">
-                    <h3>📝 Deine Eingaben</h3>
-                    <div class="inputs-display">
-                        ${Object.entries(this.userAnswers).map(([idx, answer]) => {
-                            const question = prompt.questions?.[idx];
-                            return question ? `
-                                <div class="input-display-item">
-                                    <strong>${question.question}</strong>
-                                    <span>${answer || '(nicht angegeben)'}</span>
-                                </div>
-                            ` : '';
-                        }).join('')}
-                    </div>
-                </div>
-
                 <div class="execution-result">
-                    <p>⏳ Warte auf AI Antwort...</p>
-                    <p class="result-note">In Produktivversion würde hier die echte AI-Antwort erscheinen.</p>
+                    <p>⏳ Mock Execution - Integration mit AI API erforderlich</p>
                 </div>
             </div>
         `;
-
-        // Simulate execution
-        setTimeout(() => {
-            this.showResultView();
-        }, 3000);
-    }
-
-    showResultView() {
-        const container = document.getElementById('prompts-content');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="result-view-container">
-                <div class="result-header">
-                    <button class="btn-back" onclick="window.promptsEngine.backToRoles()">
-                        ← Zurück zur Übersicht
-                    </button>
-                    <h2>✅ Analyse abgeschlossen</h2>
-                </div>
-
-                <div class="result-content">
-                    <h3>📊 Ergebnis</h3>
-                    <div class="result-box">
-                        <p><strong>Mock Ergebnis:</strong> Die Analyse wurde erfolgreich durchgeführt.</p>
-                        <p>In der Produktivversion würde hier die echte AI-Antwort erscheinen.</p>
-                    </div>
-                </div>
-
-                <div class="result-actions">
-                    <button class="btn-secondary-large" onclick="window.promptsEngine.backToRoles()">
-                        Neue Analyse
-                    </button>
-                    <button class="btn-primary-large" onclick="alert('Download-Funktion folgt')">
-                        📥 Herunterladen
-                    </button>
-                </div>
-            </div>
-        `;
+        setTimeout(() => this.backToDetail(), 3000);
     }
 
     backToDetail() {
@@ -581,7 +465,6 @@ class PromptsEngine {
 
     renderTaskQueue() {
         if (this.taskQueue.length === 0) return '';
-        
         return this.taskQueue.map(task => `
             <div class="task-card">
                 <div class="task-icon">${this.getRoleIcon(this.getPromptById(task.agentId)?.category || 'Controller')}</div>
@@ -593,18 +476,10 @@ class PromptsEngine {
                     </div>
                 </div>
                 <div class="task-actions">
-                    <button 
-                        class="btn-task-start"
-                        onclick="window.promptsEngine.startTaskFromQueue('${task.agentId}')"
-                    >
+                    <button class="btn-task-start" onclick="window.promptsEngine.startTaskFromQueue('${task.agentId}')">
                         Starten
                     </button>
-                    <button 
-                        class="btn-task-remove"
-                        onclick="window.promptsEngine.removeTask(${task.id})"
-                    >
-                        ✕
-                    </button>
+                    <button class="btn-task-remove" onclick="window.promptsEngine.removeTask(${task.id})">✕</button>
                 </div>
             </div>
         `).join('');
@@ -636,23 +511,12 @@ class PromptsEngine {
                     <div class="freeform-icon">🆓</div>
                     <div class="freeform-content">
                         <h2 class="freeform-title">Custom App Builder</h2>
-                        <p class="freeform-subtitle">
-                            Beschreibe frei was du brauchst
-                        </p>
+                        <p class="freeform-subtitle">Beschreibe frei was du brauchst</p>
                     </div>
                 </div>
-                
                 <div class="freeform-input-section">
-                    <textarea 
-                        id="freeform-input"
-                        class="freeform-textarea"
-                        placeholder="Beschreibe dein Tool..."
-                    ></textarea>
-                    
-                    <button 
-                        class="btn-freeform-generate"
-                        onclick="window.promptsEngine.startFreeForm()"
-                    >
+                    <textarea id="freeform-input" class="freeform-textarea" placeholder="Beschreibe dein Tool..."></textarea>
+                    <button class="btn-freeform-generate" onclick="window.promptsEngine.startFreeForm()">
                         🚀 App generieren
                     </button>
                 </div>
@@ -704,61 +568,88 @@ class PromptsEngine {
     showToast(message) {
         const toast = document.createElement('div');
         toast.textContent = message;
-        toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#1e293b;color:white;padding:1rem 1.5rem;border-radius:8px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+        toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#1e293b;color:white;padding:1rem 1.5rem;border-radius:8px;z-index:10000;';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
 
     /* ========================================== */
-    /* DATA LOADING */
+    /* DATA LOADING - MULTI-ROLE SUPPORT */
     /* ========================================== */
 
     getAllPrompts() {
         const builtinPrompts = [
             {
-                id: 'treasury_cashpool',
+                id: 'treasury_demo',
                 name: 'Cash Pooling Konzept',
                 category: 'Treasury',
                 icon: '🏦',
-                description: 'Cash Pooling optimieren mit ROI.',
-                tags: ['Liquidität', 'Optimierung'],
+                description: 'Cash Pooling optimieren.',
+                tags: ['Liquidität'],
                 duration: 30,
-                role: 'Treasury Manager',
+                role: 'Treasurer',
                 goal: 'Liquidität steuern',
-                outputs: ['IST-Analyse', 'Business Case'],
-                fullPromptText: 'Du bist ein erfahrener Treasury Manager. Erstelle ein optimiertes Cash Pooling Konzept...',
-                questions: [
-                    { question: 'Gesellschaften?', example: '7 Gesellschaften' },
-                    { question: 'Banken?', example: 'Deutsche Bank' }
-                ]
+                outputs: ['Business Case'],
+                fullPromptText: 'Du bist ein Treasurer...',
+                questions: [{ question: 'Gesellschaften?', example: '7' }]
             },
             {
-                id: 'controller_budget',
+                id: 'controller_demo',
                 name: 'Budget Variance Analysis',
                 category: 'Controller',
                 icon: '📊',
-                description: 'Budget vs. Ist Analyse.',
-                tags: ['Budget', 'Variance'],
+                description: 'Budget vs. Ist.',
+                tags: ['Budget'],
                 duration: 25,
                 role: 'Controller',
                 goal: 'Budget Review',
-                outputs: ['Variance', 'Forecast'],
-                fullPromptText: 'Du bist ein Controller. Führe eine Budget Variance Analysis durch...',
-                questions: [
-                    { question: 'Jahr?', example: '2026' },
-                    { question: 'Kostenstellen?', example: '15' }
-                ]
+                outputs: ['Variance'],
+                fullPromptText: 'Du bist ein Controller...',
+                questions: [{ question: 'Jahr?', example: '2026' }]
             }
         ];
 
-        const notionPrompts = (typeof NOTION_PROMPTS !== 'undefined' && Array.isArray(NOTION_PROMPTS)) 
+        // Load Controller Prompts
+        const controllerPrompts = (typeof NOTION_PROMPTS !== 'undefined' && Array.isArray(NOTION_PROMPTS)) 
             ? NOTION_PROMPTS 
             : [];
 
-        return [...builtinPrompts, ...notionPrompts];
+        // Load Treasury Prompts
+        const treasuryPrompts = (typeof TREASURY_PROMPTS !== 'undefined' && Array.isArray(TREASURY_PROMPTS)) 
+            ? TREASURY_PROMPTS 
+            : [];
+
+        // Load CFO Prompts
+        const cfoPrompts = (typeof CFO_PROMPTS !== 'undefined' && Array.isArray(CFO_PROMPTS)) 
+            ? CFO_PROMPTS 
+            : [];
+
+        // Load M&A Prompts
+        const maPrompts = (typeof MA_PROMPTS !== 'undefined' && Array.isArray(MA_PROMPTS)) 
+            ? MA_PROMPTS 
+            : [];
+
+        // Load Bilanzbuchhalter Prompts
+        const bilanzPrompts = (typeof BILANZ_PROMPTS !== 'undefined' && Array.isArray(BILANZ_PROMPTS)) 
+            ? BILANZ_PROMPTS 
+            : [];
+
+        // Load Business Developer Prompts
+        const bizdevPrompts = (typeof BIZDEV_PROMPTS !== 'undefined' && Array.isArray(BIZDEV_PROMPTS)) 
+            ? BIZDEV_PROMPTS 
+            : [];
+
+        console.log(`📦 Loaded ${controllerPrompts.length} Controller prompts`);
+        console.log(`🏦 Loaded ${treasuryPrompts.length} Treasury prompts`);
+        console.log(`📈 Loaded ${cfoPrompts.length} CFO prompts`);
+        console.log(`🤝 Loaded ${maPrompts.length} M&A prompts`);
+        console.log(`📚 Loaded ${bilanzPrompts.length} Bilanzbuchhalter prompts`);
+        console.log(`🚀 Loaded ${bizdevPrompts.length} Business Developer prompts`);
+
+        return [...builtinPrompts, ...controllerPrompts, ...treasuryPrompts, ...cfoPrompts, ...maPrompts, ...bilanzPrompts, ...bizdevPrompts];
     }
 }
 
 // Initialize
 window.promptsEngine = new PromptsEngine();
-console.log('✅ Prompts Engine loaded (3-Level Hierarchy)');
+console.log('✅ Prompts Engine loaded (Multi-Role Support)');
