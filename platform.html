@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALBO Solutions - Financial Intelligence Platform</title>
+    
+    <!-- Platform Core Styles -->
+    <link rel="stylesheet" href="platform/styles/platform.css">
+    
+    <!-- Module Styles -->
+    <link rel="stylesheet" href="platform/landing-page/styles/landing-page.css">
+    <link rel="stylesheet" href="platform/command-center/styles/command-center.css">
+    <link rel="stylesheet" href="platform/prompts/styles/prompts.css">
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- PLATFORM HEADER -->
+    <!-- ========================================== -->
+    <header class="platform-header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1>ALBO Solutions - Financial Intelligence Platform</h1>
+                <span class="header-subtitle">Dein tägliches Werkzeug für CFO Excellence - KI-gestützte Analysen und Entscheidungen</span>
+            </div>
+            
+            <!-- Optional: Global Stats -->
+            <div class="header-stats" style="display: none;">
+                <div class="stat">
+                    <div class="stat-value">24</div>
+                    <div class="stat-label">ACTIVE CASES</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">1.4K</div>
+                    <div class="stat-label">AI AGENTS</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">€2.5M</div>
+                    <div class="stat-label">TOTAL NPV</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- MAIN NAVIGATION (6 Tabs) -->
+    <!-- ========================================== -->
+    <nav class="main-navigation">
+        <button class="nav-tab active" data-section="landing">
+            🏠 Landing Page
+        </button>
+        <button class="nav-tab" data-section="command-center">
+            🎯 Command Center
+        </button>
+        <button class="nav-tab" data-section="agents">
+            🤖 Agents
+        </button>
+        <button class="nav-tab" data-section="workflows">
+            ⚙️ Workflows
+        </button>
+        <button class="nav-tab" data-section="prompts">
+            💡 Prompts
+        </button>
+        <button class="nav-tab" data-section="cases">
+            📊 Cases
+        </button>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- CONTENT AREA (wird dynamisch geladen) -->
+    <!-- ========================================== -->
+    <main id="platform-content" class="platform-content">
+        <!-- Content wird von main-nav.js geladen -->
+        <div style="text-align: center; padding: 4rem;">
+            <p>Loading platform...</p>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- SCRIPTS -->
+    <!-- ========================================== -->
+    
+    <!-- Module Scripts -->
+    <script src="platform/landing-page/js/landing-page-utils.js"></script>
+    <script src="platform/command-center/js/command-center.js"></script>
+    <script src="platform/prompts/js/prompts.js"></script>
+    
+    <!-- Core Navigation -->
+    <script src="platform/navigation/router.js"></script>
+    <script src="platform/navigation/main-nav.js"></script>
+
+</body>
+</html>
