@@ -1398,6 +1398,67 @@ renderPreview(prompt, fullPromptText) {
         return extractedQuestions;
     }
 
+    getQuestionContext(question, index, category) {
+        const questionLower = question.toLowerCase();
+        
+        // Bilanzbuchhalter
+        if (category === 'Bilanzbuchhalter') {
+            if (questionLower.includes('bilanzposten') || questionLower.includes('sachverhalt')) {
+                return 'Präzise Angaben zum Bilanzposten sind essentiell für eine korrekte bilanzielle Behandlung. Je konkreter Ihre Beschreibung, desto besser kann die rechtssichere Einordnung und Dokumentation erfolgen.';
+            }
+            if (questionLower.includes('vorratsgüter') || questionLower.includes('vg')) {
+                return 'Die Bewertung von Vorratsgütern erfolgt nach § 253 HGB zu Anschaffungs-/Herstellungskosten oder niedrigerem beizulegenden Wert. Die korrekte Methodik (LIFO/FIFO/Durchschnitt) ist entscheidend für Bilanz und GuV.';
+            }
+            if (questionLower.includes('bewertung') || questionLower.includes('verfahren')) {
+                return 'Das gewählte Bewertungsverfahren muss den GoB entsprechen und stetig angewendet werden. Methodenwechsel sind dokumentations- und begründungspflichtig.';
+            }
+            if (questionLower.includes('preis') || questionLower.includes('schwankung')) {
+                return 'Preisschwankungen sind bei der Bewertung zu berücksichtigen (Niederstwertprinzip). Dies hat direkte Auswirkungen auf die GuV und ist prüfungsrelevant.';
+            }
+            if (questionLower.includes('standard') || questionLower.includes('hgb') || questionLower.includes('ifrs')) {
+                return 'Die Wahl des Rechnungslegungsstandards bestimmt die Bilanzierungs- und Bewertungsmethoden. IFRS und HGB unterscheiden sich erheblich - eine klare Angabe ist zwingend erforderlich.';
+            }
+            if (questionLower.includes('entwicklung') || questionLower.includes('guv') || questionLower.includes('bilanz')) {
+                return 'Die Entwicklungen in GuV und Bilanz sind das Herzstück Ihrer Finanzberichterstattung. Investoren, Banken und Wirtschaftsprüfer analysieren diese Kennzahlen.';
+            }
+            if (questionLower.includes('wirtschaftsgut') || questionLower.includes('vermögen')) {
+                return 'Die korrekte Identifikation und Klassifizierung von Wirtschaftsgütern ist Basis für Abschreibung, Bewertung und steuerliche Behandlung.';
+            }
+            if (questionLower.includes('zeitraum') || questionLower.includes('zeitpunkt')) {
+                return 'Zeitliche Angaben sind entscheidend für Periodisierung, Stichtagsbewertung und Vollständigkeit.';
+            }
+        }
+        
+        // Controller
+        if (category === 'Controller') {
+            if (questionLower.includes('kosten')) {
+                return 'Eine detaillierte Kostenanalyse ist die Basis für fundierte Managemententscheidungen.';
+            }
+            if (questionLower.includes('budget') || questionLower.includes('planung')) {
+                return 'Präzise Budgetierung ist Ihre Kernaufgabe als Business Partner.';
+            }
+        }
+        
+        // Generische Fallbacks
+        if (questionLower.includes('betrag') || questionLower.includes('höhe')) {
+            return 'Konkrete Beträge sind essentiell für finanzielle Bewertung. Geben Sie Größenordnungen an.';
+        }
+        if (questionLower.includes('gibt es') || questionLower.includes('liegt vor')) {
+            return 'Diese Information hilft bei der Vollständigkeitsprüfung.';
+        }
+        
+        // Position-basiert
+        if (index === 0) {
+            return 'Diese erste Frage hilft uns, den Kontext Ihrer Anfrage zu verstehen. Je präziser Ihre Antwort, desto passgenauer wird der AI-Output.';
+        }
+        if (index === 1) {
+            return 'Diese Angabe ergänzt den Kontext und ermöglicht eine differenziertere Bearbeitung.';
+        }
+        
+        // Ultimate Fallback
+        return 'Diese Information ist wichtig für die Vollständigkeit und Qualität der Analyse. Je mehr relevante Details Sie angeben, desto präziser wird das Ergebnis.\n\n💡 Tipp: Nutzen Sie konkrete Zahlen und Beispiele.';
+    }
+
     // 3. Render Preview with Placeholders
     renderPreviewWithPlaceholders(prompt, fullPromptText, extractedQuestions) {
         let preview = this.escapeHtml(fullPromptText);
