@@ -3,7 +3,7 @@
 // DO NOT EDIT MANUALLY
 // Last updated: October 2025
 
-export const NOTION_PROMPTS = [
+const NOTION_PROMPTS = [
   {
     "id": "abweichungsanalyse_mit_handlungsempfehlung",
     "name": "Abweichungsanalyse mit Handlungsempfehlung",
