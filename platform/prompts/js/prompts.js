@@ -1,21 +1,158 @@
 /* ========================================== */
-/* ALBO PROMPTS - MULTI-ROLE SUPPORT */
-/* Loads prompts from multiple role-specific files */
+/* ALBO PROMPTS - 3-LEVEL HIERARCHY */
+/* Multi-Role with MECE Theme Structure */
 /* ========================================== */
 
 class PromptsEngine {
     constructor() {
         this.taskQueue = [];
         this.allPrompts = this.getAllPrompts();
-        this.currentView = 'roles';
+        this.currentView = 'roles';  // 'roles' | 'themes' | 'prompts'
         this.currentMode = 'templates';
         this.currentRole = null;
+        this.currentTheme = null;
         this.currentPrompt = null;
         this.userAnswers = {};
         this.searchQuery = '';
         
-        console.log('💡 Prompts Engine initialized (Multi-Role)');
+        // MECE Theme Mapping
+        this.themeMapping = this.getThemeMapping();
+        
+        console.log('💡 Prompts Engine initialized (3-Level Hierarchy)');
         console.log(`📚 Loaded ${this.allPrompts.length} prompts across ${this.getRoleCount()} roles`);
+    }
+
+    getThemeMapping() {
+        return {
+            "Controller": {
+                "icon": "📊",
+                "themes": [
+                    {"id": "kostenrechnung", "name": "💰 Kostenrechnung", "keywords": ["Kostenartenrechnung", "Kostenstellenrechnung", "Kostenträgerrechnung"]},
+                    {"id": "kalkulation", "name": "📐 Kalkulation", "keywords": ["Zuschlagskalkulation", "Maschinenstundensatz", "Herstellkosten", "Kalkulation für"]},
+                    {"id": "deckungsbeitrag", "name": "📊 Deckungsbeitragsrechnung", "keywords": ["Deckungsbeitrag", "Break-Even"]},
+                    {"id": "budgetierung", "name": "📈 Budgetierung & Planung", "keywords": ["Budget", "Planung", "Bottom-Up", "Top-Down"]},
+                    {"id": "forecasting", "name": "🔮 Forecasting & Rolling", "keywords": ["Forecast", "Rolling", "Hochrechnung", "Prognose"]},
+                    {"id": "variance", "name": "📉 Variance & Abweichungsanalyse", "keywords": ["Abweichung", "Variance", "Plan-Ist"]},
+                    {"id": "reporting", "name": "💼 Management Reporting", "keywords": ["Report", "Reporting", "Dashboard", "KPI"]},
+                    {"id": "prozesse", "name": "🔄 Prozessoptimierung", "keywords": ["Prozess", "Digitalisierung", "Agile", "Activity-Based"]}
+                ]
+            },
+            "Treasury": {
+                "icon": "🏦",
+                "themes": [
+                    {"id": "cash", "name": "💵 Cash & Liquiditätsmanagement", "keywords": ["Cash", "Liquidität", "Working Capital"]},
+                    {"id": "banking", "name": "🏦 Banking & Bankbeziehungen", "keywords": ["Bank", "Konto", "KYC"]},
+                    {"id": "fx", "name": "💱 FX & Currency Management", "keywords": ["FX", "Währung", "Currency", "Hedging"]},
+                    {"id": "financing", "name": "💰 Financing & Debt", "keywords": ["Finanzierung", "Kredit", "Debt", "Darlehen"]},
+                    {"id": "risk", "name": "📊 Financial Risk Management", "keywords": ["Risiko", "Risk", "Exposure"]},
+                    {"id": "esg", "name": "🌱 ESG & Sustainable Finance", "keywords": ["ESG", "Sustainability", "Green", "CSRD"]},
+                    {"id": "compliance", "name": "⚖️ Compliance & Regulatory", "keywords": ["Compliance", "AML", "KYC", "Regulatory"]},
+                    {"id": "analytics", "name": "📈 Treasury Analytics", "keywords": ["Analytics", "Reporting", "Performance"]},
+                    {"id": "payments", "name": "💳 Payment Management", "keywords": ["Payment", "Zahlung", "SEPA", "Transaction"]},
+                    {"id": "operations", "name": "🔧 Treasury Operations", "keywords": ["TMS", "System", "Process", "Organisation"]}
+                ]
+            },
+            "CFO": {
+                "icon": "📈",
+                "themes": [
+                    {"id": "strategy", "name": "🎯 Strategische Finanzführung", "keywords": ["Strategie", "Strategic", "Kapitalallokation"]},
+                    {"id": "ma", "name": "🤝 M&A & Corporate Development", "keywords": ["M&A", "Deal", "Akquisition", "Carve"]},
+                    {"id": "partnering", "name": "💼 Business Partnering", "keywords": ["Business Partner", "Stakeholder", "Cross-functional"]},
+                    {"id": "ir", "name": "📊 Investor Relations", "keywords": ["Investor", "IR", "Capital Market", "Shareholder"]},
+                    {"id": "finance", "name": "🏗️ Corporate Finance", "keywords": ["Finanzierung", "Kapitalstruktur", "Rating"]},
+                    {"id": "transformation", "name": "🌍 Transformation & Digitalisierung", "keywords": ["Transformation", "Digital", "Change"]},
+                    {"id": "people", "name": "👥 People & Organization", "keywords": ["People", "Talent", "Team", "Organization"]}
+                ]
+            },
+            "M&A": {
+                "icon": "🤝",
+                "themes": [
+                    {"id": "origination", "name": "🎯 Deal Origination & Strategie", "keywords": ["Target", "Screening", "Pipeline", "Origination"]},
+                    {"id": "dd", "name": "🔍 Due Diligence", "keywords": ["Due Diligence", "DD", "Prüfung"]},
+                    {"id": "valuation", "name": "💰 Valuation & Pricing", "keywords": ["Bewertung", "Valuation", "DCF", "Multiple"]},
+                    {"id": "structuring", "name": "📄 Transaction Structuring", "keywords": ["Struktur", "SPA", "Earn-Out", "Deal Structure"]},
+                    {"id": "pmi", "name": "🏗️ Post-Merger Integration", "keywords": ["Integration", "PMI", "Day-1", "Synergien"]},
+                    {"id": "carveout", "name": "🔄 Carve-Outs & Divestments", "keywords": ["Carve-Out", "Divestment", "Separation", "Exit"]},
+                    {"id": "governance", "name": "💼 M&A Governance", "keywords": ["Governance", "Prozess", "Risk Management"]},
+                    {"id": "analytics", "name": "📊 M&A Analytics", "keywords": ["Analytics", "Performance", "Tracking", "Lessons"]}
+                ]
+            },
+            "Bilanzbuchhalter": {
+                "icon": "📚",
+                "themes": [
+                    {"id": "hgb", "name": "💼 HGB-Bilanzierung", "keywords": ["HGB", "§ 247", "§ 253", "Anlagevermögen nach HGB", "Umlaufvermögen nach HGB"]},
+                    {"id": "ifrs", "name": "🌍 IFRS-Bilanzierung", "keywords": ["IFRS", "IAS", "Fair Value", "Impairment"]},
+                    {"id": "jahresabschluss", "name": "📊 Jahresabschluss", "keywords": ["Jahresabschluss", "Bilanz erstellen", "GuV", "Abschluss"]},
+                    {"id": "rueckstellungen", "name": "💰 Rückstellungen", "keywords": ["Rückstellung", "Pension", "Drohverlust"]},
+                    {"id": "anhang", "name": "📄 Anhang & Lagebericht", "keywords": ["Anhang", "Lagebericht", "§ 285", "Nachtrag"]},
+                    {"id": "konzern", "name": "🏢 Konzernabschluss", "keywords": ["Konzern", "Konsolidierung", "Kapitalkonsolidierung"]},
+                    {"id": "analyse", "name": "📈 Bilanzanalyse", "keywords": ["Analyse", "Kennzahl", "Bilanzstruktur", "Rating"]},
+                    {"id": "sonder", "name": "🔄 Sonderthemen", "keywords": ["Währung", "Latente Steuer", "Kapitalfluss", "Eigenkapitalspiegel"]}
+                ]
+            },
+            "Business Developer": {
+                "icon": "🚀",
+                "themes": [
+                    {"id": "market", "name": "🎯 Market Analysis & Research", "keywords": ["Markt", "Wettbewerb", "Market", "Analyse"]},
+                    {"id": "gtm", "name": "🚀 Go-to-Market Strategy", "keywords": ["Go-to-Market", "GTM", "Market Entry", "Launch"]},
+                    {"id": "sales", "name": "💼 Sales & Business Development", "keywords": ["Sales", "Lead", "Funnel", "Pitch"]},
+                    {"id": "partnerships", "name": "🤝 Partnerships & Alliances", "keywords": ["Partner", "Alliance", "Co-Marketing", "Channel"]},
+                    {"id": "expansion", "name": "🌍 Expansion & Growth", "keywords": ["Expansion", "Growth", "Scaling", "International"]},
+                    {"id": "product", "name": "💎 Product & Value Proposition", "keywords": ["Produkt", "Product", "USP", "Value Proposition", "Leistung"]},
+                    {"id": "customer", "name": "😊 Customer Success", "keywords": ["Customer", "Retention", "Journey", "NPS"]}
+                ]
+            },
+            "Fachanwalt Gesellschaftsrecht": {
+                "icon": "⚖️",
+                "themes": [
+                    {"id": "einzelunternehmen", "name": "👤 Einzelunternehmen", "keywords": ["Einzelunternehmen", "Einzelunternehmer", "Gewerbe"]},
+                    {"id": "gmbh", "name": "🏢 GmbH-Recht", "keywords": ["GmbH", "Gesellschaft mit beschränkter"]},
+                    {"id": "ag", "name": "📈 AG-Recht", "keywords": ["AG", "Aktiengesellschaft", "Vorstand", "Aufsichtsrat"]},
+                    {"id": "personen", "name": "🤝 Personengesellschaften", "keywords": ["KG", "OHG", "Personengesellschaft"]},
+                    {"id": "umwandlung", "name": "🔄 Umwandlungsrecht", "keywords": ["Umwandlung", "Verschmelzung", "Formwechsel", "Spaltung"]},
+                    {"id": "governance", "name": "⚖️ Corporate Governance & Compliance", "keywords": ["Governance", "Compliance", "ESG", "Hinweisgeber", "DSGVO"]},
+                    {"id": "vertrag", "name": "📄 Vertragsrecht", "keywords": ["Vertrag", "Vereinbarung", "Contract", "Agreement"]},
+                    {"id": "konzern", "name": "🏢 Konzernrecht", "keywords": ["Konzern", "Beherrschung", "Squeeze"]}
+                ]
+            }
+        };
+    }
+
+    // Map prompt to theme based on keywords
+    getPromptTheme(prompt, role) {
+        const roleThemes = this.themeMapping[role];
+        if (!roleThemes) return null;
+
+        for (const theme of roleThemes.themes) {
+            for (const keyword of theme.keywords) {
+                if (prompt.name.toLowerCase().includes(keyword.toLowerCase())) {
+                    return theme.id;
+                }
+            }
+        }
+        
+        // Fallback: return first theme
+        return roleThemes.themes[0].id;
+    }
+
+    // Get prompts for a specific theme
+    getPromptsForTheme(role, themeId) {
+        return this.allPrompts.filter(p => {
+            if (p.category !== role) return false;
+            const promptTheme = this.getPromptTheme(p, role);
+            return promptTheme === themeId;
+        });
+    }
+
+    // Get theme statistics
+    getThemeStats(role, themeId) {
+        const prompts = this.getPromptsForTheme(role, themeId);
+        return {
+            total: prompts.length,
+            fundamental: prompts.filter(p => p.tags?.includes('Fundamental')).length,
+            erweitert: prompts.filter(p => p.tags?.includes('Erweitert')).length,
+            premium: prompts.filter(p => p.tags?.includes('Premium')).length
+        };
     }
 
     getRoleCount() {
@@ -28,7 +165,7 @@ class PromptsEngine {
             this.addTaskFromCommandCenter(context);
         }
         this.renderMainView();
-        console.log('✅ Prompts Engine ready');
+        console.log('✅ Prompts Engine ready (3-Level)');
     }
 
     addTaskFromCommandCenter(context) {
@@ -89,82 +226,412 @@ class PromptsEngine {
         this.currentMode = mode;
         this.currentView = 'roles';
         this.currentRole = null;
+        this.currentTheme = null;
         this.currentPrompt = null;
         this.renderMainView();
     }
 
     renderTemplateMode() {
-        return `
-            <!-- Task Queue Section -->
-            ${this.taskQueue.length > 0 ? `
-                <div class="task-queue-section">
-                    <div class="task-queue-header">
-                        <div class="task-queue-title">
-                            📋 Deine Aufgaben
-                            <span class="task-count-badge">${this.taskQueue.length}</span>
-                        </div>
-                    </div>
-                    <div id="task-queue-container">
-                        ${this.renderTaskQueue()}
-                    </div>
-                </div>
-            ` : ''}
-            
-            <!-- Main Content Area -->
-            <div class="prompt-library-section">
-                ${this.renderCurrentView()}
-            </div>
-        `;
-    }
-
-    renderCurrentView() {
-        switch(this.currentView) {
-            case 'roles':
-                return this.renderRolesOverview();
-            case 'titleList':
-                return this.renderTitleList();
-            case 'splitDetail':
-                return this.renderSplitDetail();
-            default:
-                return this.renderRolesOverview();
+        // Render based on current view
+        if (this.currentView === 'roles') {
+            return this.renderRolesView();
+        } else if (this.currentView === 'themes') {
+            return this.renderThemesView();
+        } else if (this.currentView === 'prompts') {
+            return this.renderPromptsView();
         }
     }
 
     /* ========================================== */
-    /* LEVEL 1: ROLES OVERVIEW */
+    /* LEVEL 1: ROLES VIEW */
     /* ========================================== */
 
-    renderRolesOverview() {
-        const roleGroups = this.groupPromptsByRole();
-        const roles = Object.keys(roleGroups).sort();
+    renderRolesView() {
+        const roles = this.getRoles();
         
         return `
-            <div class="library-header">
-                <div class="library-title">
-                    💼 Wähle deine Rolle
+            <div class="prompts-template-section">
+                <h2 class="section-title">💼 Wähle deine Rolle</h2>
+                <p class="section-subtitle">${this.allPrompts.length} Prompts in ${roles.length} Rollen verfügbar</p>
+                
+                <div class="roles-grid">
+                    ${roles.map(role => this.renderRoleCard(role)).join('')}
                 </div>
-                <div class="library-subtitle">
-                    ${this.allPrompts.length} Prompts in ${roles.length} Rollen verfügbar
-                </div>
-            </div>
-            
-            <div class="roles-grid">
-                ${roles.map(role => {
-                    const count = roleGroups[role].length;
-                    const icon = this.getRoleIcon(role);
-                    return `
-                        <div class="role-card" onclick="window.promptsEngine.selectRole('${role}')">
-                            <div class="role-card-icon">${icon}</div>
-                            <div class="role-card-content">
-                                <h3 class="role-card-title">${role}</h3>
-                                <p class="role-card-count">${count} Prompts verfügbar</p>
-                            </div>
-                            <div class="role-card-arrow">→</div>
-                        </div>
-                    `;
-                }).join('')}
             </div>
         `;
+    }
+
+    renderRoleCard(role) {
+        const roleIcon = this.getRoleIcon(role.name);
+        return `
+            <div class="role-card" onclick="window.promptsEngine.selectRole('${role.name}')">
+                <div class="role-icon">${roleIcon}</div>
+                <div class="role-info">
+                    <h3 class="role-name">${role.name}</h3>
+                    <p class="role-count">${role.count} Prompts verfügbar</p>
+                </div>
+                <div class="role-arrow">→</div>
+            </div>
+        `;
+    }
+
+    /* ========================================== */
+    /* LEVEL 2: THEMES VIEW */
+    /* ========================================== */
+
+    renderThemesView() {
+        const roleData = this.themeMapping[this.currentRole];
+        if (!roleData) return '';
+
+        const roleIcon = this.getRoleIcon(this.currentRole);
+        const totalPrompts = this.allPrompts.filter(p => p.category === this.currentRole).length;
+
+        return `
+            <div class="prompts-template-section">
+                <!-- Breadcrumb Navigation -->
+                <div class="breadcrumb-nav">
+                    <button onclick="window.promptsEngine.goBackToRoles()" class="breadcrumb-back">
+                        ← Zurück zu Rollen
+                    </button>
+                </div>
+
+                <h2 class="section-title">${roleIcon} ${this.currentRole}</h2>
+                <p class="section-subtitle">${totalPrompts} Prompts in ${roleData.themes.length} Hauptthemen</p>
+                
+                <div class="themes-grid">
+                    ${roleData.themes.map(theme => this.renderThemeCard(theme)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderThemeCard(theme) {
+        const stats = this.getThemeStats(this.currentRole, theme.id);
+        
+        return `
+            <div class="theme-card" onclick="window.promptsEngine.selectTheme('${theme.id}')">
+                <div class="theme-header">
+                    <h3 class="theme-name">${theme.name}</h3>
+                    <div class="theme-arrow">→</div>
+                </div>
+                <div class="theme-stats">
+                    <span class="theme-count">${stats.total} Prompts</span>
+                    ${stats.fundamental > 0 ? `<span class="badge badge-fundamental">${stats.fundamental} Fundamental</span>` : ''}
+                    ${stats.erweitert > 0 ? `<span class="badge badge-erweitert">${stats.erweitert} Erweitert</span>` : ''}
+                    ${stats.premium > 0 ? `<span class="badge badge-premium">${stats.premium} Premium</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    /* ========================================== */
+    /* LEVEL 3: PROMPTS VIEW */
+    /* ========================================== */
+
+    renderPromptsView() {
+        const prompts = this.getPromptsForTheme(this.currentRole, this.currentTheme);
+        const roleData = this.themeMapping[this.currentRole];
+        const theme = roleData.themes.find(t => t.id === this.currentTheme);
+        
+        if (!theme) return '';
+
+        return `
+            <div class="prompts-template-section">
+                <!-- Breadcrumb Navigation -->
+                <div class="breadcrumb-nav">
+                    <button onclick="window.promptsEngine.goBackToThemes()" class="breadcrumb-back">
+                        ← Zurück zu ${this.currentRole}
+                    </button>
+                </div>
+
+                <h2 class="section-title">${theme.name}</h2>
+                <p class="section-subtitle">${prompts.length} Prompts verfügbar</p>
+                
+                <!-- Prompt List -->
+                <div class="prompt-list-simple">
+                    ${prompts.map(prompt => this.renderPromptListItem(prompt)).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderPromptListItem(prompt) {
+        const impactClass = prompt.tags?.includes('Premium') ? 'premium' : 
+                          prompt.tags?.includes('Erweitert') ? 'erweitert' : 'fundamental';
+        
+        return `
+            <div class="prompt-list-item" onclick="window.promptsEngine.selectPrompt('${prompt.id}')">
+                <div class="prompt-icon">${prompt.icon || '📄'}</div>
+                <div class="prompt-details">
+                    <h4 class="prompt-name">${prompt.name}</h4>
+                    <div class="prompt-meta">
+                        <span class="badge badge-${impactClass}">${prompt.tags?.[0] || 'Standard'}</span>
+                        <span class="prompt-duration">⏱️ ${prompt.duration || 30} Min</span>
+                    </div>
+                </div>
+                <div class="prompt-arrow">→</div>
+            </div>
+        `;
+    }
+
+    /* ========================================== */
+    /* NAVIGATION METHODS */
+    /* ========================================== */
+
+    selectRole(roleName) {
+        this.currentRole = roleName;
+        this.currentView = 'themes';
+        this.currentTheme = null;
+        this.currentPrompt = null;
+        this.renderMainView();
+    }
+
+    selectTheme(themeId) {
+        this.currentTheme = themeId;
+        this.currentView = 'prompts';
+        this.currentPrompt = null;
+        this.renderMainView();
+    }
+
+    selectPrompt(promptId) {
+        const prompt = this.allPrompts.find(p => p.id === promptId);
+        if (!prompt) return;
+        
+        this.currentPrompt = prompt;
+        this.renderPromptDetail(prompt);
+    }
+
+    goBackToRoles() {
+        this.currentView = 'roles';
+        this.currentRole = null;
+        this.currentTheme = null;
+        this.currentPrompt = null;
+        this.renderMainView();
+    }
+
+    goBackToThemes() {
+        this.currentView = 'themes';
+        this.currentTheme = null;
+        this.currentPrompt = null;
+        this.renderMainView();
+    }
+
+    goBackToPrompts() {
+        this.currentPrompt = null;
+        this.renderMainView();
+    }
+
+    /* ========================================== */
+    /* PROMPT DETAIL VIEW */
+    /* ========================================== */
+
+    renderPromptDetail(prompt) {
+        const container = document.getElementById('prompts-content');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="prompt-detail-view">
+                <!-- Breadcrumb -->
+                <div class="breadcrumb-nav">
+                    <button onclick="window.promptsEngine.goBackToPrompts()" class="breadcrumb-back">
+                        ← Zurück
+                    </button>
+                </div>
+
+                <!-- Prompt Header -->
+                <div class="prompt-detail-header">
+                    <div class="prompt-icon-large">${prompt.icon || '📄'}</div>
+                    <div>
+                        <h2 class="prompt-detail-title">${prompt.name}</h2>
+                        <p class="prompt-detail-meta">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</p>
+                    </div>
+                </div>
+
+                <!-- Goal -->
+                <div class="prompt-section">
+                    <h3 class="prompt-section-title">🎯 Ziel</h3>
+                    <p class="prompt-section-content">${prompt.goal || prompt.name}</p>
+                </div>
+
+                <!-- Full Prompt -->
+                <div class="prompt-section">
+                    <h3 class="prompt-section-title">📋 Vollständiger Prompt</h3>
+                    <div class="prompt-code-box">
+                        <button class="copy-btn" onclick="window.promptsEngine.copyPromptCode('${prompt.id}')">
+                            📋 Kopieren
+                        </button>
+                        <pre class="prompt-code" id="prompt-code-${prompt.id}">${this.escapeHtml(prompt.fullPromptText || 'Kein Prompt-Text verfügbar')}</pre>
+                    </div>
+                    <p class="prompt-transparency-note">💡 <strong>100% Transparenz:</strong> Das ist exakt der Prompt, der an die AI gesendet wird.</p>
+                </div>
+
+                <!-- Questions/Inputs -->
+                ${prompt.questions && prompt.questions.length > 0 ? `
+                <div class="prompt-section">
+                    <h3 class="prompt-section-title">🔍 Deine Eingaben</h3>
+                    <div class="prompt-questions">
+                        ${prompt.questions.map((q, idx) => `
+                            <div class="question-group">
+                                <label class="question-label">
+                                    ${idx + 1}. ${q.question}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="question-input"
+                                    placeholder="${q.example || 'Ihre Antwort'}"
+                                    id="answer-${prompt.id}-${idx}"
+                                    onchange="window.promptsEngine.updateAnswer('${prompt.id}', ${idx}, this.value)"
+                                />
+                                <p class="question-example">💡 Beispiel: ${q.example}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Actions -->
+                <div class="prompt-actions">
+                    <button class="btn btn-primary" onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                        ▶️ Prompt ausführen
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.promptsEngine.addToQueue('${prompt.id}')">
+                        ➕ Zur Task Queue
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    updateAnswer(promptId, questionIndex, value) {
+        if (!this.userAnswers[promptId]) {
+            this.userAnswers[promptId] = {};
+        }
+        this.userAnswers[promptId][questionIndex] = value;
+    }
+
+    copyPromptCode(promptId) {
+        const codeElement = document.getElementById(`prompt-code-${promptId}`);
+        if (codeElement) {
+            navigator.clipboard.writeText(codeElement.textContent);
+            alert('✅ Prompt kopiert!');
+        }
+    }
+
+    executePrompt(promptId) {
+        const prompt = this.allPrompts.find(p => p.id === promptId);
+        if (!prompt) return;
+
+        // Get user answers
+        const answers = this.userAnswers[promptId] || {};
+        
+        console.log('🚀 Executing prompt:', prompt.name);
+        console.log('📝 User answers:', answers);
+        
+        // TODO: Integrate with AI execution
+        alert(`✅ Prompt "${prompt.name}" wird ausgeführt!\n\n(AI-Integration folgt)`);
+    }
+
+    addToQueue(promptId) {
+        const prompt = this.allPrompts.find(p => p.id === promptId);
+        if (!prompt) return;
+
+        const task = {
+            id: Date.now(),
+            title: prompt.name,
+            agent: prompt.role || prompt.category,
+            agentId: prompt.id,
+            matchScore: 100,
+            source: 'manual',
+            timestamp: new Date().toISOString()
+        };
+
+        this.taskQueue.push(task);
+        console.log('✅ Added to queue:', task);
+        alert(`✅ "${prompt.name}" zur Task Queue hinzugefügt!`);
+    }
+
+    /* ========================================== */
+    /* FREE-FORM MODE */
+    /* ========================================== */
+
+    renderFreeFormMode() {
+        return `
+            <div class="prompts-freeform-section">
+                <h2 class="section-title">🆓 Custom Prompt Builder</h2>
+                <p class="section-subtitle">Erstelle deinen eigenen Prompt</p>
+                
+                <div class="freeform-builder">
+                    <div class="form-group">
+                        <label>Rolle / Agent</label>
+                        <select class="form-control" id="freeform-role">
+                            <option>Controller</option>
+                            <option>Treasury</option>
+                            <option>CFO</option>
+                            <option>M&A</option>
+                            <option>Bilanzbuchhalter</option>
+                            <option>Business Developer</option>
+                            <option>Fachanwalt</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Aufgabe / Ziel</label>
+                        <textarea 
+                            class="form-control" 
+                            id="freeform-task" 
+                            rows="3"
+                            placeholder="Was möchtest du erreichen?"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Context / Details</label>
+                        <textarea 
+                            class="form-control" 
+                            id="freeform-context" 
+                            rows="5"
+                            placeholder="Gib relevante Details und Kontext..."
+                        ></textarea>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="window.promptsEngine.executeFreeForm()">
+                        ▶️ Prompt ausführen
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    executeFreeForm() {
+        const role = document.getElementById('freeform-role')?.value;
+        const task = document.getElementById('freeform-task')?.value;
+        const context = document.getElementById('freeform-context')?.value;
+
+        if (!task) {
+            alert('⚠️ Bitte gib eine Aufgabe ein');
+            return;
+        }
+
+        console.log('🚀 Executing custom prompt:', { role, task, context });
+        alert(`✅ Custom Prompt wird ausgeführt!\n\n(AI-Integration folgt)`);
+    }
+
+    /* ========================================== */
+    /* HELPER METHODS */
+    /* ========================================== */
+
+    getRoles() {
+        const roleMap = new Map();
+        
+        this.allPrompts.forEach(prompt => {
+            const role = prompt.category;
+            if (!roleMap.has(role)) {
+                roleMap.set(role, { name: role, count: 0 });
+            }
+            roleMap.get(role).count++;
+        });
+        
+        return Array.from(roleMap.values()).sort((a, b) => b.count - a.count);
     }
 
     getRoleIcon(role) {
@@ -184,431 +651,33 @@ class PromptsEngine {
         return icons[role] || '💼';
     }
 
-    selectRole(role) {
-        this.currentRole = role;
-        this.currentView = 'titleList';
-        this.currentPrompt = null;
-        this.renderMainView();
+    getAgentName(agentId) {
+        const agents = {
+            'controller': 'Controller',
+            'treasury': 'Treasury Manager',
+            'cfo': 'CFO',
+            'ma': 'M&A Specialist',
+            'accountant': 'Bilanzbuchhalter'
+        };
+        return agents[agentId] || 'Finance Expert';
     }
 
-    /* ========================================== */
-    /* LEVEL 2: TITLE LIST */
-    /* ========================================== */
-
-    renderTitleList() {
-        const prompts = this.getPromptsByRole(this.currentRole);
-        const filtered = this.searchQuery.trim() 
-            ? prompts.filter(p => 
-                p.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-              )
-            : prompts;
-        
-        return `
-            <div class="title-list-container">
-                <div class="title-list-header">
-                    <button class="btn-back-to-roles" onclick="window.promptsEngine.backToRoles()">
-                        ← Zurück zu Rollen
-                    </button>
-                    <div class="title-list-header-content">
-                        <h2 class="title-list-role">
-                            ${this.getRoleIcon(this.currentRole)} ${this.currentRole}
-                        </h2>
-                        <p class="title-list-count">${filtered.length} Prompts</p>
-                    </div>
-                    
-                    <div class="title-list-search">
-                        <input 
-                            type="text" 
-                            class="title-search-input"
-                            id="title-search-input"
-                            placeholder="Suche in ${this.currentRole} Prompts..."
-                            value="${this.searchQuery}"
-                        >
-                    </div>
-                </div>
-                
-                <div class="title-list-body">
-                    ${filtered.length === 0 ? `
-                        <div class="empty-state">
-                            <div class="empty-icon">🔍</div>
-                            <h3>Keine Prompts gefunden</h3>
-                            <p>Versuche einen anderen Suchbegriff</p>
-                        </div>
-                    ` : `
-                        <div class="prompt-titles-list">
-                            ${filtered.map(prompt => `
-                                <div 
-                                    class="prompt-title-item ${this.currentPrompt?.id === prompt.id ? 'active' : ''}"
-                                    onclick="window.promptsEngine.selectPrompt('${prompt.id}')"
-                                >
-                                    <span class="prompt-title-icon">${prompt.icon || '📄'}</span>
-                                    <span class="prompt-title-text">${prompt.name}</span>
-                                    <span class="prompt-title-duration">⏱️ ${prompt.duration || 20}min</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
-
-    backToRoles() {
-        this.currentView = 'roles';
-        this.currentRole = null;
-        this.currentPrompt = null;
-        this.searchQuery = '';
-        this.renderMainView();
-    }
-
-    /* ========================================== */
-    /* LEVEL 3: SPLIT-SCREEN DETAIL */
-    /* ========================================== */
-
-    selectPrompt(promptId) {
-        const prompt = this.getPromptById(promptId);
-        if (!prompt) return;
-        
-        this.currentPrompt = prompt;
-        this.currentView = 'splitDetail';
-        this.renderMainView();
-    }
-
-    renderSplitDetail() {
-        const prompts = this.getPromptsByRole(this.currentRole);
-        const prompt = this.currentPrompt;
-        
-        if (!prompt) {
-            this.currentView = 'titleList';
-            return this.renderTitleList();
-        }
-        
-        return `
-            <div class="split-detail-container">
-                <!-- LEFT: Title List -->
-                <div class="split-left">
-                    <div class="split-left-header">
-                        <button class="btn-back-to-roles" onclick="window.promptsEngine.backToRoles()">
-                            ← Zurück
-                        </button>
-                        <div class="split-left-title">
-                            ${this.getRoleIcon(this.currentRole)} ${this.currentRole}
-                        </div>
-                    </div>
-                    
-                    <div class="prompt-titles-list">
-                        ${prompts.map(p => `
-                            <div 
-                                class="prompt-title-item ${p.id === prompt.id ? 'active' : ''}"
-                                onclick="window.promptsEngine.selectPrompt('${p.id}')"
-                            >
-                                <span class="prompt-title-icon">${p.icon || '📄'}</span>
-                                <span class="prompt-title-text">${p.name}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <!-- RIGHT: Prompt Detail -->
-                <div class="split-right">
-                    ${this.renderPromptDetail(prompt)}
-                </div>
-            </div>
-        `;
-    }
-
-    renderPromptDetail(prompt) {
-        return `
-            <div class="prompt-detail-view">
-                <div class="prompt-detail-header">
-                    <div class="prompt-detail-title-section">
-                        <span class="prompt-detail-icon">${prompt.icon || this.getRoleIcon(this.currentRole)}</span>
-                        <div>
-                            <h2 class="prompt-detail-title">${prompt.name}</h2>
-                            <p class="prompt-detail-meta">
-                                ${this.currentRole} • ${prompt.duration || 20} Min
-                            </p>
-                        </div>
-                    </div>
-                    <button class="btn-close-detail" onclick="window.promptsEngine.closeDetail()">✕</button>
-                </div>
-                
-                <div class="prompt-detail-body">
-                    <div class="detail-section">
-                        <h3 class="detail-section-title">🎯 Ziel</h3>
-                        <p class="detail-section-text">${prompt.goal || prompt.description}</p>
-                    </div>
-                    
-                    ${prompt.fullPromptText ? `
-                        <div class="detail-section transparency-section">
-                            <div class="transparency-header-inline">
-                                <h3 class="detail-section-title">📋 Vollständiger Prompt</h3>
-                                <button class="btn-copy-inline" onclick="window.promptsEngine.copyPromptText()">
-                                    📋 Kopieren
-                                </button>
-                            </div>
-                            <div class="prompt-code-block">
-                                ${this.formatPromptText(prompt.fullPromptText)}
-                            </div>
-                            <div class="transparency-note">
-                                💡 <strong>100% Transparenz:</strong> Das ist exakt der Prompt, der an die AI gesendet wird.
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    ${prompt.questions && prompt.questions.length > 0 ? `
-                        <div class="detail-section">
-                            <h3 class="detail-section-title">🔍 Deine Eingaben</h3>
-                            <div class="questions-list-detail">
-                                ${prompt.questions.map((q, i) => `
-                                    <div class="question-item-detail">
-                                        <label class="question-label-detail">
-                                            ${i + 1}. ${q.question}
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            class="question-input-detail"
-                                            id="answer-${i}"
-                                            placeholder="${q.placeholder || q.example || ''}"
-                                        />
-                                        ${q.example ? `<span class="question-example-detail">💡 Beispiel: ${q.example}</span>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="detail-section">
-                        <h3 class="detail-section-title">ℹ️ Details</h3>
-                        <div class="detail-meta-grid">
-                            ${(prompt.tags || []).length > 0 ? `
-                                <div class="meta-item-detail">
-                                    <strong>🏷️ Tags:</strong>
-                                    <div class="tags-inline">
-                                        ${prompt.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-                            ${prompt.outputs ? `
-                                <div class="meta-item-detail">
-                                    <strong>📄 Outputs:</strong> ${prompt.outputs.join(', ')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="prompt-detail-footer">
-                    <button class="btn-secondary-large" onclick="window.promptsEngine.closeDetail()">
-                        Abbrechen
-                    </button>
-                    <button class="btn-primary-large" onclick="window.promptsEngine.executePrompt()">
-                        ▶️ Analyse starten
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    closeDetail() {
-        this.currentView = 'titleList';
-        this.currentPrompt = null;
-        this.renderMainView();
-    }
-
-    formatPromptText(text) {
-        return text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n\n/g, '</p><p>')
-            .replace(/\n/g, '<br>');
-    }
-
-    copyPromptText() {
-        if (!this.currentPrompt?.fullPromptText) return;
-        navigator.clipboard.writeText(this.currentPrompt.fullPromptText)
-            .then(() => this.showToast('✅ Prompt kopiert!'))
-            .catch(err => console.error('Copy error:', err));
-    }
-
-    executePrompt() {
-        const answers = {};
-        const inputs = document.querySelectorAll('.question-input-detail');
-        inputs.forEach((input, i) => { answers[i] = input.value; });
-        this.userAnswers = answers;
-        this.showExecutionView();
-    }
-
-    showExecutionView() {
-        const container = document.getElementById('prompts-content');
-        if (!container) return;
-        container.innerHTML = `
-            <div class="execution-view-container">
-                <div class="execution-header">
-                    <button class="btn-back" onclick="window.promptsEngine.backToDetail()">← Zurück</button>
-                    <h2>🚀 Analyse läuft</h2>
-                </div>
-                <div class="execution-result">
-                    <p>⏳ Mock Execution - Integration mit AI API erforderlich</p>
-                </div>
-            </div>
-        `;
-        setTimeout(() => this.backToDetail(), 3000);
-    }
-
-    backToDetail() {
-        this.currentView = 'splitDetail';
-        this.renderMainView();
-    }
-
-    /* ========================================== */
-    /* TASK QUEUE */
-    /* ========================================== */
-
-    renderTaskQueue() {
-        if (this.taskQueue.length === 0) return '';
-        return this.taskQueue.map(task => `
-            <div class="task-card">
-                <div class="task-icon">${this.getRoleIcon(this.getPromptById(task.agentId)?.category || 'Controller')}</div>
-                <div class="task-info">
-                    <div class="task-title">${task.title}</div>
-                    <div class="task-meta">
-                        <span class="task-agent">${task.agent}</span>
-                        <span class="task-score">${task.matchScore}% Match</span>
-                    </div>
-                </div>
-                <div class="task-actions">
-                    <button class="btn-task-start" onclick="window.promptsEngine.startTaskFromQueue('${task.agentId}')">
-                        Starten
-                    </button>
-                    <button class="btn-task-remove" onclick="window.promptsEngine.removeTask(${task.id})">✕</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    startTaskFromQueue(promptId) {
-        const prompt = this.getPromptById(promptId);
-        if (prompt) {
-            this.currentRole = prompt.category;
-            this.selectPrompt(promptId);
-        }
-    }
-
-    removeTask(taskId) {
-        this.taskQueue = this.taskQueue.filter(t => t.id !== taskId);
-        const container = document.getElementById('task-queue-container');
-        if (container) container.innerHTML = this.renderTaskQueue();
-        this.showToast('✅ Task entfernt');
-    }
-
-    /* ========================================== */
-    /* FREE-FORM MODE */
-    /* ========================================== */
-
-    renderFreeFormMode() {
-        return `
-            <div class="freeform-builder">
-                <div class="freeform-header">
-                    <div class="freeform-icon">🆓</div>
-                    <div class="freeform-content">
-                        <h2 class="freeform-title">Custom App Builder</h2>
-                        <p class="freeform-subtitle">Beschreibe frei was du brauchst</p>
-                    </div>
-                </div>
-                <div class="freeform-input-section">
-                    <textarea id="freeform-input" class="freeform-textarea" placeholder="Beschreibe dein Tool..."></textarea>
-                    <button class="btn-freeform-generate" onclick="window.promptsEngine.startFreeForm()">
-                        🚀 App generieren
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    startFreeForm() {
-        alert('Free-Form Generation - Integration folgt');
-    }
-
-    /* ========================================== */
-    /* UTILITY METHODS */
-    /* ========================================== */
 
     setupEventListeners() {
-        const searchInput = document.getElementById('title-search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                this.searchQuery = e.target.value;
-                this.renderMainView();
-            });
-        }
-    }
-
-    groupPromptsByRole() {
-        const grouped = {};
-        this.allPrompts.forEach(prompt => {
-            const role = prompt.category || 'Andere';
-            if (!grouped[role]) grouped[role] = [];
-            grouped[role].push(prompt);
-        });
-        return grouped;
-    }
-
-    getPromptsByRole(role) {
-        return this.allPrompts.filter(p => p.category === role);
-    }
-
-    getPromptById(id) {
-        return this.allPrompts.find(p => p.id === id);
-    }
-
-    getAgentName(agentId) {
-        const prompt = this.getPromptById(agentId);
-        return prompt ? prompt.name : 'Agent';
-    }
-
-    showToast(message) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#1e293b;color:white;padding:1rem 1.5rem;border-radius:8px;z-index:10000;';
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        // Event listeners können hier hinzugefügt werden
     }
 
     /* ========================================== */
-    /* DATA LOADING - MULTI-ROLE SUPPORT */
+    /* DATA LOADING */
     /* ========================================== */
 
     getAllPrompts() {
-        const builtinPrompts = [
-            {
-                id: 'treasury_demo',
-                name: 'Cash Pooling Konzept',
-                category: 'Treasury',
-                icon: '🏦',
-                description: 'Cash Pooling optimieren.',
-                tags: ['Liquidität'],
-                duration: 30,
-                role: 'Treasurer',
-                goal: 'Liquidität steuern',
-                outputs: ['Business Case'],
-                fullPromptText: 'Du bist ein Treasurer...',
-                questions: [{ question: 'Gesellschaften?', example: '7' }]
-            },
-            {
-                id: 'controller_demo',
-                name: 'Budget Variance Analysis',
-                category: 'Controller',
-                icon: '📊',
-                description: 'Budget vs. Ist.',
-                tags: ['Budget'],
-                duration: 25,
-                role: 'Controller',
-                goal: 'Budget Review',
-                outputs: ['Variance'],
-                fullPromptText: 'Du bist ein Controller...',
-                questions: [{ question: 'Jahr?', example: '2026' }]
-            }
-        ];
+        const builtinPrompts = [];
 
         // Load Controller Prompts
         const controllerPrompts = (typeof NOTION_PROMPTS !== 'undefined' && Array.isArray(NOTION_PROMPTS)) 
@@ -657,6 +726,8 @@ class PromptsEngine {
     }
 }
 
-// Initialize
-window.promptsEngine = new PromptsEngine();
-console.log('✅ Prompts Engine loaded (Multi-Role Support)');
+// Initialize when DOM is ready
+if (typeof window !== 'undefined') {
+    window.PromptsEngine = PromptsEngine;
+    console.log('✅ PromptsEngine (3-Level) class loaded');
+}
