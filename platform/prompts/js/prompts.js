@@ -730,4 +730,37 @@ class PromptsEngine {
 if (typeof window !== 'undefined') {
     window.PromptsEngine = PromptsEngine;
     console.log('✅ PromptsEngine (3-Level) class loaded');
+    
+    // Global init function for navigation
+    window.initPromptsTab = function() {
+        console.log('🎯 initPromptsTab() called');
+        
+        if (!window.promptsEngine) {
+            console.log('📦 Creating new PromptsEngine instance...');
+            window.promptsEngine = new PromptsEngine();
+        }
+        
+        window.promptsEngine.init();
+        console.log('✅ Prompts Engine initialized and rendered');
+    };
+    
+    // Auto-initialize when prompts container exists
+    document.addEventListener('DOMContentLoaded', function() {
+        const promptsContainer = document.getElementById('prompts-content');
+        if (promptsContainer) {
+            console.log('🎯 Auto-initializing Prompts Engine (DOMContentLoaded)...');
+            window.initPromptsTab();
+        }
+    });
+    
+    // Also check after a short delay (for dynamic content loading)
+    setTimeout(function() {
+        if (!window.promptsEngine) {
+            const promptsContainer = document.getElementById('prompts-content');
+            if (promptsContainer) {
+                console.log('🎯 Auto-initializing Prompts Engine (delayed)...');
+                window.initPromptsTab();
+            }
+        }
+    }, 500);
 }
