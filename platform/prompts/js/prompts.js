@@ -442,109 +442,128 @@ class PromptsEngine {
     /* ========================================== */
 
     renderPromptDetail(prompt) {
-    const container = document.getElementById('prompts-content');
-    if (!container) return;
+        const container = document.getElementById('prompts-content');
+        if (!container) return;
 
-    // Auto-generate fullPromptText
-    let fullPromptText = prompt.fullPromptText;
-    if (!fullPromptText && prompt.goal && prompt.questions) {
-        fullPromptText = `${prompt.goal}\n\n`;
-        prompt.questions.forEach((q, idx) => {
-            fullPromptText += `${idx + 1}. ${q.question}\n`;
-            if (q.example) fullPromptText += `   Beispiel: ${q.example}\n`;
-            fullPromptText += '\n';
-        });
-    }
-    
-    if (!fullPromptText) {
-        fullPromptText = prompt.goal || prompt.name || 'Kein Prompt-Text verfügbar';
-    }
+        let fullPromptText = prompt.fullPromptText;
+        if (!fullPromptText && prompt.goal && prompt.questions) {
+            fullPromptText = `${prompt.goal}\n\n`;
+            prompt.questions.forEach((q, idx) => {
+                fullPromptText += `${idx + 1}. ${q.question}\n`;
+                if (q.example) fullPromptText += `   Beispiel: ${q.example}\n`;
+                fullPromptText += '\n';
+            });
+        }
+        
+        if (!fullPromptText) {
+            fullPromptText = prompt.goal || prompt.name || 'Kein Prompt-Text verfügbar';
+        }
 
-    const summary = this.extractSummary(prompt);
+        const extractedQuestions = this.extractQuestionsFromPrompt(prompt);
+        const summary = this.extractSummary(prompt);
 
-    container.innerHTML = `
-        <div class="prompt-detail-view">
-            <div class="breadcrumb-nav">
-                <button onclick="window.promptsEngine.goBackToPrompts()" class="breadcrumb-back">
-                    ← Zurück
-                </button>
-            </div>
-
-            <div class="prompt-detail-header">
-                <div class="prompt-icon-large">${prompt.icon || '📄'}</div>
-                <div>
-                    <h2 class="prompt-detail-title">${prompt.name}</h2>
-                    <p class="prompt-detail-meta">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</p>
+        container.innerHTML = `
+            <div class="prompt-detail-view">
+                <div class="breadcrumb-nav">
+                    <button onclick="window.promptsEngine.goBackToPrompts()" class="breadcrumb-back">
+                        ← Zurück
+                    </button>
                 </div>
-            </div>
 
-            <div class="prompt-summary-sticky">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">💡 Kurz erklärt</div>
-                <div style="font-size: 14px; margin-bottom: 12px;">${summary}</div>
-                <div style="display: flex; gap: 8px;">
-                    <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Professionell</span>
-                    <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Sofort nutzbar</span>
+                <div class="prompt-detail-header">
+                    <div class="prompt-icon-large">${prompt.icon || '📄'}</div>
+                    <div>
+                        <h2 class="prompt-detail-title">${prompt.name}</h2>
+                        <p class="prompt-detail-meta">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="prompt-split-container">
-                
-                <div class="prompt-input-panel">
-                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px;">🔍 Ihre Eingaben</h3>
+                <div class="prompt-summary-sticky">
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">💡 Kurz erklärt</div>
+                    <div style="font-size: 14px; margin-bottom: 12px; line-height: 1.6;">${summary}</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Revisionssicher</span>
+                        <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Professionell</span>
+                        <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Sofort nutzbar</span>
+                    </div>
+                </div>
+
+                <div class="prompt-split-container">
                     
-                    ${prompt.questions && prompt.questions.length > 0 ? 
-                        prompt.questions.map((q, idx) => `
-                            <div style="margin-bottom: 20px;">
-                                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
-                                    ${idx + 1}. ${q.question}
+                    <div class="prompt-input-panel">
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a202c;">🔍 Ihre Eingaben</h3>
+                        
+                        ${extractedQuestions.length > 0 ? 
+                            extractedQuestions.map((q, idx) => `
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #2d3748;">
+                                        ${q.number}. ${this.escapeHtml(q.question)}
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                                        id="input-${prompt.id}-${idx}"
+                                        placeholder="${this.escapeHtml(q.example || 'Ihre Antwort')}"
+                                        oninput="window.promptsEngine.updateLivePreview('${prompt.id}', ${idx}, this.value, '${this.escapeHtml(q.question).replace(/'/g, "\\'")}')"
+                                    />
+                                    ${q.example ? `<div style="font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic;">💡 Beispiel: ${this.escapeHtml(q.example)}</div>` : ''}
+                                </div>
+                            `).join('') 
+                            : '<p style="color: #64748b; font-size: 14px;">Keine Eingaben erforderlich.</p>'
+                        }
+
+                        ${extractedQuestions.length > 0 ? `
+                            <div style="margin-top: 24px; padding-top: 24px; border-top: 2px solid #f1f5f9;">
+                                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #2d3748;">
+                                    ➕ Zusätzliche Hinweise (optional)
                                 </label>
-                                <input 
-                                    type="text" 
-                                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px;"
-                                    id="input-${prompt.id}-${idx}"
-                                    placeholder="${this.escapeHtml(q.example || 'Ihre Antwort')}"
-                                    oninput="window.promptsEngine.updateLivePreview('${prompt.id}', ${idx}, this.value)"
-                                />
-                                ${q.example ? `<div style="font-size: 12px; color: #64748b; margin-top: 6px;">💡 ${this.escapeHtml(q.example)}</div>` : ''}
+                                <textarea
+                                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-height: 100px; font-family: inherit;"
+                                    id="additional-${prompt.id}"
+                                    placeholder="z.B.: Bitte beachte, dass auch Polen trotz Zloty hohe Euro-Geldbestände hat..."
+                                    oninput="window.promptsEngine.updateAdditionalHints('${prompt.id}', this.value)"
+                                ></textarea>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic;">
+                                    💡 Hier können Sie dem Prompt weitere wichtige Informationen mitgeben
+                                </div>
                             </div>
-                        `).join('') 
-                        : '<p>Keine Eingaben erforderlich.</p>'
-                    }
+                        ` : ''}
 
-                    <div class="progress-indicator" id="progress-${prompt.id}">
-                        ⏺️ Bitte ausfüllen (0/${prompt.questions ? prompt.questions.length : 0})
+                        <div class="progress-indicator" id="progress-${prompt.id}" style="margin-top: 20px;">
+                            ⏺️ Bitte ausfüllen (0/${extractedQuestions.length})
+                        </div>
+
+                        <div style="display: flex; gap: 12px; margin-top: 24px;">
+                            <button class="btn btn-primary" style="flex: 1;" onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                                ▶️ Prompt ausführen
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 12px;">
+                            <button class="btn btn-secondary" onclick="window.promptsEngine.copyPromptCode('${prompt.id}')">
+                                📋 Kopieren
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.promptsEngine.addToQueue('${prompt.id}')">
+                                ➕ Task Queue
+                            </button>
+                        </div>
                     </div>
 
-                    <div style="display: flex; gap: 12px; margin-top: 24px;">
-                        <button class="btn btn-primary" onclick="window.promptsEngine.executePrompt('${prompt.id}')">
-                            ▶️ Ausführen
-                        </button>
+                    <div class="prompt-preview-panel">
+                        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f1f5f9; color: #1a202c;">
+                            📖 Prompt Live-Preview
+                        </h3>
+                        
+                        <div style="font-size: 14px; line-height: 1.8; color: #334155; white-space: pre-wrap; font-family: inherit;" id="preview-${prompt.id}">
+                            ${this.renderPreviewWithPlaceholders(prompt, fullPromptText, extractedQuestions)}
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 12px; margin-top: 12px;">
-                        <button class="btn btn-secondary" onclick="window.promptsEngine.copyPromptCode('${prompt.id}')">
-                            📋 Kopieren
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.promptsEngine.addToQueue('${prompt.id}')">
-                            ➕ Queue
-                        </button>
-                    </div>
+
                 </div>
-
-                <div class="prompt-preview-panel">
-                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f1f5f9;">
-                        📖 Prompt Live-Preview
-                    </h3>
-                    <div style="font-size: 14px; line-height: 1.8; white-space: pre-wrap;" id="preview-${prompt.id}">
-                        ${this.renderPreview(prompt, fullPromptText)}
-                    </div>
-                </div>
-
             </div>
-        </div>
-    `;
+        `;
 
-    this.updateProgress(prompt.id);
-}
+        this.updateProgress(prompt.id, extractedQuestions.length);
+    }
 
 renderPreview(prompt, fullPromptText) {
     let preview = this.escapeHtml(fullPromptText);
@@ -786,7 +805,7 @@ renderPreview(prompt, fullPromptText) {
         return [...builtinPrompts, ...controllerPrompts, ...treasuryPrompts, ...cfoPrompts, ...maPrompts, ...bilanzPrompts, ...bizdevPrompts, ...lawyerPrompts];
     }
 
-    // 🆕 Inject Split-Screen CSS
+    // 1. CSS Injection
     injectSplitScreenCSS() {
         if (document.getElementById('split-screen-styles')) return;
 
@@ -826,12 +845,14 @@ renderPreview(prompt, fullPromptText) {
                 border-radius: 6px;
                 font-weight: 600;
                 color: #065f46;
+                border-left: 3px solid #10b981;
+                display: inline-block;
                 animation: pulse-in 0.4s ease;
             }
             @keyframes pulse-in {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-                100% { transform: scale(1); }
+                0% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.05); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
             }
             .placeholder-text {
                 background: #fef3c7;
@@ -839,6 +860,19 @@ renderPreview(prompt, fullPromptText) {
                 border-radius: 4px;
                 font-style: italic;
                 color: #92400e;
+            }
+            .progress-indicator {
+                padding: 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                background: #fef3c7;
+                border-left: 4px solid #f59e0b;
+                color: #92400e;
+            }
+            .progress-indicator.complete {
+                background: #f0fdf4;
+                border-color: #10b981;
+                color: #065f46;
             }
             @media (max-width: 1200px) {
                 .prompt-split-container {
@@ -849,16 +883,94 @@ renderPreview(prompt, fullPromptText) {
         document.head.appendChild(style);
     }
 
-    // 🆕 Extract summary
+    // 2. Extract Questions from Prompt Text
+    extractQuestionsFromPrompt(prompt) {
+        const fullText = prompt.fullPromptText || '';
+        
+        const frageMatch = fullText.match(/\*\*🔍 Bitte frage den Nutzer vorab\*\*([^]*?)(?=\n\n\*\*|$)/);
+        
+        if (!frageMatch) {
+            return prompt.questions || [];
+        }
+        
+        const frageSection = frageMatch[1];
+        const lines = frageSection.split('\n');
+        const extractedQuestions = [];
+        
+        let currentQuestion = null;
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            const questionMatch = trimmed.match(/^(\d+)\.\s+(.+?)(\?|:)?\s*$/);
+            
+            if (questionMatch) {
+                if (currentQuestion) {
+                    extractedQuestions.push(currentQuestion);
+                }
+                
+                currentQuestion = {
+                    number: parseInt(questionMatch[1]),
+                    question: questionMatch[2] + (questionMatch[3] || ''),
+                    example: ''
+                };
+            } else if (trimmed.startsWith('→ z. B.:') || trimmed.startsWith('→ z.B.:')) {
+                if (currentQuestion) {
+                    const exampleText = trimmed.replace(/^→ z\. ?B\.:\s*[„"]?/, '').replace(/[""]$/, '');
+                    currentQuestion.example = exampleText;
+                }
+            }
+        }
+        
+        if (currentQuestion) {
+            extractedQuestions.push(currentQuestion);
+        }
+        
+        return extractedQuestions;
+    }
+
+    // 3. Render Preview with Placeholders
+    renderPreviewWithPlaceholders(prompt, fullPromptText, extractedQuestions) {
+        let preview = this.escapeHtml(fullPromptText);
+        
+        extractedQuestions.forEach((q, idx) => {
+            const questionText = this.escapeHtml(q.question);
+            const placeholder = `<span class="placeholder-text" id="placeholder-${prompt.id}-${idx}">[Eingabe erforderlich]</span>`;
+            
+            const patterns = [
+                `${q.number}. ${questionText}`,
+                questionText
+            ];
+            
+            for (const pattern of patterns) {
+                if (preview.includes(pattern)) {
+                    preview = preview.replace(
+                        pattern,
+                        `${pattern}\n   <strong style="color: #0ea5e9;">→ Ihre Eingabe:</strong> ${placeholder}`
+                    );
+                    break;
+                }
+            }
+        });
+        
+        if (extractedQuestions.length > 0) {
+            const additionalPlaceholder = `<span class="placeholder-text" id="additional-placeholder-${prompt.id}">[Keine zusätzlichen Hinweise]</span>`;
+            preview += `\n\n<strong style="color: #0ea5e9;">➕ Zusätzliche Hinweise:</strong>\n${additionalPlaceholder}`;
+        }
+        
+        return preview;
+    }
+
+    // 4. Extract Summary
     extractSummary(prompt) {
         let text = prompt.fullPromptText || prompt.goal || '';
         text = text.replace(/\*\*/g, '').replace(/\n/g, ' ');
         const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-        return sentences.slice(0, 2).join(' ').substring(0, 250);
+        const summary = sentences.slice(0, 2).join(' ');
+        return summary.length > 250 ? summary.substring(0, 250) + '...' : summary;
     }
 
-    // 🆕 Update live preview
-    updateLivePreview(promptId, fieldIndex, value) {
+    // 5. Update Live Preview (ÜBERSCHREIBT ALTE METHODE)
+    updateLivePreview(promptId, fieldIndex, value, questionText) {
         const placeholder = document.getElementById(`placeholder-${promptId}-${fieldIndex}`);
         
         if (placeholder) {
@@ -875,31 +987,41 @@ renderPreview(prompt, fullPromptText) {
             this.userAnswers[promptId] = {};
         }
         this.userAnswers[promptId][fieldIndex] = value;
-        this.updateProgress(promptId);
+
+        const prompt = this.allPrompts.find(p => p.id === promptId);
+        if (prompt) {
+            const extractedQuestions = this.extractQuestionsFromPrompt(prompt);
+            this.updateProgress(promptId, extractedQuestions.length);
+        }
     }
 
-    // 🆕 Update progress
-    updateProgress(promptId) {
-        const prompt = this.allPrompts.find(p => p.id === promptId);
-        if (!prompt || !prompt.questions) return;
-
-        let filledCount = 0;
-        for (let i = 0; i < prompt.questions.length; i++) {
-            const input = document.getElementById(`input-${promptId}-${i}`);
-            if (input && input.value.trim() !== '') filledCount++;
-        }
-
-        const progress = document.getElementById(`progress-${promptId}`);
-        if (progress) {
-            if (filledCount === prompt.questions.length) {
-                progress.innerHTML = `✅ Alle Felder ausgefüllt (${filledCount}/${prompt.questions.length})`;
-                progress.className = 'progress-indicator complete';
+    // 6. Update Additional Hints
+    updateAdditionalHints(promptId, value) {
+        const placeholder = document.getElementById(`additional-placeholder-${promptId}`);
+        
+        if (placeholder) {
+            if (value && value.trim() !== '') {
+                placeholder.className = 'user-input-highlight';
+                placeholder.style.display = 'block';
+                placeholder.style.padding = '12px';
+                placeholder.style.marginTop = '8px';
+                placeholder.textContent = value;
             } else {
-                progress.innerHTML = `⏺️ Bitte ausfüllen (${filledCount}/${prompt.questions.length})`;
-                progress.className = 'progress-indicator';
+                placeholder.className = 'placeholder-text';
+                placeholder.style.display = 'inline';
+                placeholder.style.padding = '2px 6px';
+                placeholder.style.marginTop = '0';
+                placeholder.textContent = '[Keine zusätzlichen Hinweise]';
             }
         }
+
+        if (!this.userAnswers[promptId]) {
+            this.userAnswers[promptId] = {};
+        }
+        this.userAnswers[promptId]['additional'] = value;
     }
+
+    // 🆕 ========== ENDE NEUE METHODEN ==========
 }
 
 // Initialize when DOM is ready
