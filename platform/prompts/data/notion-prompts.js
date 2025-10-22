@@ -1,8 +1,3 @@
-// AUTO-GENERATED FROM NOTION EXPORT
-// Generated: 126 prompts
-// DO NOT EDIT MANUALLY
-// Last updated: October 2025
-
 const NOTION_PROMPTS = [
   {
     "id": "abweichungsanalyse_mit_handlungsempfehlung",
@@ -4000,26 +3995,3 @@ const NOTION_PROMPTS = [
     ]
   }
 ];
-
-// Export default for easy import
-export default NOTION_PROMPTS;
-
-// Helper function to find prompt by ID
-export const findPromptById = (id) => {
-  return NOTION_PROMPTS.find(p => p.id === id);
-};
-
-// Helper function to filter by category
-export const getPromptsByCategory = (category) => {
-  return NOTION_PROMPTS.filter(p => p.category === category);
-};
-
-// Helper function to search prompts
-export const searchPrompts = (query) => {
-  const lowerQuery = query.toLowerCase();
-  return NOTION_PROMPTS.filter(p => 
-    p.name.toLowerCase().includes(lowerQuery) ||
-    p.description.toLowerCase().includes(lowerQuery) ||
-    p.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
-  );
-};
