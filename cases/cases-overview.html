@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALBO Cases</title>
+</head>
+<body>
+    <!-- Cases Content -->
+    <div class="cases-container" style="padding: 3rem 2rem; max-width: 1400px; margin: 0 auto;">
+        
+        <div style="margin-bottom: 2rem;">
+            <h2 style="font-size: 28px; font-weight: 700; color: #1e40af; margin-bottom: 0.5rem;">
+                📊 Cases
+            </h2>
+            <p style="color: #64748b; font-size: 16px;">
+                Wähle einen Case-Type für deine Analyse:
+            </p>
+        </div>
+
+        <!-- Cases Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+            
+            <!-- Business Case Controller -->
+            <div class="case-card" onclick="window.location.href='index.html'">
+                <div class="case-icon">📊</div>
+                <h3>Business Case Controller</h3>
+                <p>KI-gestützte Business Case Analyse mit Geschäftsmodell, Finanzplanung und Wirtschaftlichkeit</p>
+                <button class="case-btn">Case öffnen</button>
+            </div>
+
+            <!-- M&A Analysis -->
+            <div class="case-card case-card-highlight" onclick="window.location.href='ma-case/index.html'">
+                <div class="case-icon">🤝</div>
+                <h3>M&A Analysis</h3>
+                <p>Merger & Acquisition Cases mit Valuation, Due Diligence und Synergieanalyse</p>
+                <button class="case-btn case-btn-primary">Case öffnen</button>
+            </div>
+
+            <!-- Financial Statements -->
+            <div class="case-card">
+                <div class="case-icon">📋</div>
+                <h3>Financial Statements</h3>
+                <p>Bilanz, GuV, Cash Flow Analyse mit automatischer KI-Bewertung</p>
+                <button class="case-btn">Case öffnen</button>
+            </div>
+
+            <!-- Cash Flow Planning -->
+            <div class="case-card">
+                <div class="case-icon">💰</div>
+                <h3>Cash Flow Planning</h3>
+                <p>Liquiditätsplanung und Working Capital Management</p>
+                <button class="case-btn">Case öffnen</button>
+            </div>
+
+            <!-- Controlling Dashboard -->
+            <div class="case-card">
+                <div class="case-icon">📈</div>
+                <h3>Controlling Dashboard</h3>
+                <p>Monatliches Controlling, KPI-Tracking und Abweichungsanalyse</p>
+                <button class="case-btn">Case öffnen</button>
+            </div>
+
+            <!-- Business Planning -->
+            <div class="case-card">
+                <div class="case-icon">🎯</div>
+                <h3>Business Planning</h3>
+                <p>Strategische Planung, Budget-Szenarien und Forecasting</p>
+                <button class="case-btn">Case öffnen</button>
+            </div>
+
+        </div>
+
+    </div>
+
+    <style>
+        .cases-container {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .case-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .case-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            border-color: #cbd5e1;
+        }
+
+        .case-card-highlight {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+
+        .case-card-highlight:hover {
+            border-color: #2563eb;
+            box-shadow: 0 12px 30px rgba(59, 130, 246, 0.25);
+        }
+
+        .case-icon {
+            font-size: 64px;
+            margin-bottom: 1rem;
+        }
+
+        .case-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 0.75rem;
+        }
+
+        .case-card p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            flex: 1;
+        }
+
+        .case-btn {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .case-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+        }
+
+        .case-btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .case-btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .cases-container {
+                padding: 2rem 1rem;
+            }
+        }
+    </style>
+</body>
+</html>

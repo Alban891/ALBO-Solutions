@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALBO Solutions - M&A Case Management</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="styles/ma-case.css">
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- HEADER -->
+    <!-- ========================================== -->
+    <header class="dashboard-header">
+        <div class="header-left">
+            <h1>ALBO Solutions - M&A Case Management</h1>
+            <span class="header-subtitle">KI-gestützte Analyse mit vollständigem M&A-Prozess-Management</span>
+        </div>
+        <!-- RECHTS: KPIs -->
+        <div class="header-stats">
+            <div class="stat">
+                <div class="stat-value" id="active-deals-value">8</div>
+                <div class="stat-label">ACTIVE DEALS</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="pipeline-value">€124M</div>
+                <div class="stat-label">PIPELINE VALUE</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="closed-value">3</div>
+                <div class="stat-label">YTD CLOSED</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="avg-irr-value">18.5%</div>
+                <div class="stat-label">AVG IRR</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Zurück zur Platform -->
+    <div style="background: #f1f5f9; padding: 0.75rem 2rem; border-bottom: 1px solid #e2e8f0;">
+        <button 
+            onclick="window.location.href='../../platform.html?section=cases'" 
+            style="
+                background: white;
+                border: 1px solid #e2e8f0;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                color: #475569;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+            "
+            onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'"
+            onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'"
+        >
+            ← Zurück zur Platform
+        </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MAIN NAVIGATION TABS -->
+    <!-- ========================================== -->
+    <nav class="main-tabs">
+        <button class="tab-btn active" data-tab="cockpit">
+            📊 Cockpit
+        </button>
+        <button class="tab-btn" data-tab="deals">
+            📁 Deals
+        </button>
+        <button class="tab-btn" data-tab="target">
+            🎯 Target
+        </button>
+        <button class="tab-btn" data-tab="process">
+            🔄 Process
+        </button>
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- MAIN CONTENT CONTAINER -->
+    <!-- ========================================== -->
+    <div class="main-container">
+        
+        <!-- LEFT CONTENT (80%) -->
+        <div class="content-left">
+            
+            <!-- TAB 1: COCKPIT (M&A Overview by Division) -->
+            <div id="tab-cockpit" class="tab-content active">
+                <div class="section-header">
+                    <h2>M&A Targets by Division</h2>
+                    <div class="section-actions">
+                        <button class="btn-filter">
+                            🔍 Filter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="division-grid" id="divisionGrid">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- TAB 2: DEALS OVERVIEW -->
+            <div id="tab-deals" class="tab-content">
+                <div class="section-header">
+                    <h2>All Deals</h2>
+                    <div class="section-actions">
+                        <button class="btn-primary" onclick="createNewDeal()">
+                            + New Deal
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Deal ID</th>
+                                <th>Target Company</th>
+                                <th>Division</th>
+                                <th>Status</th>
+                                <th>Deal Value</th>
+                                <th>Stage</th>
+                                <th>Lead</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dealsTableBody">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: TARGET DETAILS -->
+            <div id="tab-target" class="tab-content">
+                <div class="section-header">
+                    <h2>Target Company Information</h2>
+                    <div class="section-actions">
+                        <button class="btn-secondary" onclick="cancelTarget()">Cancel</button>
+                        <button class="btn-primary" onclick="saveTarget()">Save Target</button>
+                    </div>
+                </div>
+
+                <form id="targetForm" class="form-grid">
+                    <div class="form-group">
+                        <label>Deal ID</label>
+                        <input type="text" id="dealId" value="MA-2025-001" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Company Name *</label>
+                        <input type="text" id="companyName" placeholder="Enter company name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Division *</label>
+                        <select id="division" required>
+                            <option value="">Select Division</option>
+                            <option value="industrial">Industrial Solutions</option>
+                            <option value="tech">Technology</option>
+                            <option value="services">Services</option>
+                            <option value="consumer">Consumer Goods</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text" id="country" placeholder="e.g., Germany">
+                    </div>
+                    <div class="form-group">
+                        <label>Industry Sector</label>
+                        <input type="text" id="sector" placeholder="e.g., Automotive">
+                    </div>
+                    <div class="form-group">
+                        <label>Revenue (Annual)</label>
+                        <input type="text" id="revenue" placeholder="€ 0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>EBITDA</label>
+                        <input type="text" id="ebitda" placeholder="€ 0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Employees</label>
+                        <input type="number" id="employees" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Deal Lead</label>
+                        <select id="dealLead">
+                            <option value="">Select Deal Lead</option>
+                            <option value="mueller">Dr. Michael Müller</option>
+                            <option value="schmidt">Anna Schmidt</option>
+                            <option value="weber">Thomas Weber</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Expected Deal Value</label>
+                        <input type="text" id="dealValue" placeholder="€ 0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Close Date</label>
+                        <input type="date" id="closeDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Initial Contact Date</label>
+                        <input type="date" id="contactDate">
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Strategic Rationale</label>
+                        <textarea id="rationale" placeholder="Why is this target attractive? How does it fit our strategy?"></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Notes</label>
+                        <textarea id="notes" placeholder="Additional information..."></textarea>
+                    </div>
+                </form>
+
+                <!-- Deal Team -->
+                <div style="margin-top: 3rem;">
+                    <h3 style="margin-bottom: 1rem; color: #1e40af;">Deal Team</h3>
+                    <div class="team-grid">
+                        <div class="team-member">
+                            <div class="member-avatar">MM</div>
+                            <div class="member-info">
+                                <div class="member-name">Dr. Michael Müller</div>
+                                <div class="member-role">M&A Lead</div>
+                            </div>
+                        </div>
+                        <div class="team-member">
+                            <div class="member-avatar">AS</div>
+                            <div class="member-info">
+                                <div class="member-name">Anna Schmidt</div>
+                                <div class="member-role">Financial Advisor</div>
+                            </div>
+                        </div>
+                        <div class="team-member">
+                            <div class="member-avatar">TW</div>
+                            <div class="member-info">
+                                <div class="member-name">Thomas Weber</div>
+                                <div class="member-role">Legal Counsel</div>
+                            </div>
+                        </div>
+                        <div class="team-member">
+                            <div class="member-avatar">SK</div>
+                            <div class="member-info">
+                                <div class="member-name">Sarah Klein</div>
+                                <div class="member-role">Tax Advisor</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: PROCESS STATUS -->
+            <div id="tab-process" class="tab-content">
+                <div class="section-header">
+                    <h2>M&A Process Visualization</h2>
+                    <div class="section-info">
+                        Target: <strong id="processTargetName">TechCorp GmbH</strong> | Deal ID: <strong>MA-2025-001</strong>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="process-timeline">
+                    <div class="timeline-line">
+                        <div class="timeline-progress" id="timelineProgress" style="width: 40%;"></div>
+                    </div>
+                    <div class="process-phases">
+                        <div class="phase completed" onclick="openPhase('pre-deal')">
+                            <div class="phase-dot">✓</div>
+                            <div class="phase-name">Pre-Deal</div>
+                            <div class="phase-date">01.10.2025</div>
+                        </div>
+                        <div class="phase completed" onclick="openPhase('strategic-dd')">
+                            <div class="phase-dot">✓</div>
+                            <div class="phase-name">Strategic DD</div>
+                            <div class="phase-date">15.10.2025</div>
+                        </div>
+                        <div class="phase active" onclick="openPhase('valuation')">
+                            <div class="phase-dot">3</div>
+                            <div class="phase-name">Valuation</div>
+                            <div class="phase-date">In Progress</div>
+                        </div>
+                        <div class="phase" onclick="openPhase('nbo')">
+                            <div class="phase-dot">4</div>
+                            <div class="phase-name">NBO</div>
+                            <div class="phase-date">Pending</div>
+                        </div>
+                        <div class="phase" onclick="openPhase('due-diligence')">
+                            <div class="phase-dot">5</div>
+                            <div class="phase-name">Due Diligence</div>
+                            <div class="phase-date">Pending</div>
+                        </div>
+                        <div class="phase" onclick="openPhase('spa')">
+                            <div class="phase-dot">6</div>
+                            <div class="phase-name">SPA</div>
+                            <div class="phase-date">Pending</div>
+                        </div>
+                        <div class="phase" onclick="openPhase('closing')">
+                            <div class="phase-dot">7</div>
+                            <div class="phase-name">Closing</div>
+                            <div class="phase-date">Pending</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase Details Container -->
+                <div id="phaseDetailsContainer" class="phase-details">
+                    <!-- Will be populated by JavaScript based on selected phase -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR (20%) - AI Assistant -->
+        <div class="content-right">
+            <div class="ai-assistant-panel">
+                <div class="ai-header">
+                    🤖 <strong>ALBO Senior M&A Advisor</strong>
+                    <div style="font-size: 11px; font-weight: 400; margin-top: 4px;">Live M&A Case Monitoring</div>
+                </div>
+                
+                <div class="ai-chat-container" id="aiChatContainer">
+                    <div class="ai-message ai-message-system">
+                        <div class="ai-message-content">
+                            👋 Hello! I'm your AI M&A Advisor. I can help you with:
+                            <ul style="margin-top: 8px; padding-left: 20px; font-size: 12px;">
+                                <li>Business Plan Analysis</li>
+                                <li>Automated Valuations (DCF, Multiples)</li>
+                                <li>Due Diligence Checklists</li>
+                                <li>Deal Structure Optimization</li>
+                                <li>Synergy Analysis</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-input-container">
+                    <input 
+                        type="text" 
+                        id="aiInput" 
+                        placeholder="Ask me anything about your M&A deals..." 
+                        class="ai-input"
+                    >
+                    <button class="ai-send-btn" onclick="sendAIMessage()">
+                        ➤
+                    </button>
+                </div>
+
+                <!-- Business Plan Upload -->
+                <div class="ai-upload-section">
+                    <div style="font-weight: 600; margin-bottom: 8px; font-size: 12px;">📊 Business Plan Analysis</div>
+                    <input type="file" id="businessPlanUpload" accept=".pdf,.xlsx,.xls" style="display: none;">
+                    <button class="btn-upload" onclick="document.getElementById('businessPlanUpload').click()">
+                        📤 Upload Business Plan
+                    </button>
+                    <div id="uploadStatus" style="font-size: 11px; margin-top: 8px; color: #64748b;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT -->
+    <!-- ========================================== -->
+    <script src="js/ma-business-plan-analyzer.js"></script>
+    <script>
+        // Sample Data
+        const divisions = [
+            {
+                name: 'Industrial Solutions',
+                id: 'industrial',
+                targets: [
+                    { name: 'TechCorp GmbH', status: 'due-diligence', value: '€45M' },
+                    { name: 'AutoParts AG', status: 'negotiation', value: '€28M' },
+                    { name: 'MechanicsPro', status: 'active', value: '€15M' }
+                ]
+            },
+            {
+                name: 'Technology',
+                id: 'tech',
+                targets: [
+                    { name: 'CloudSoft Solutions', status: 'active', value: '€35M' },
+                    { name: 'DataAnalytica', status: 'negotiation', value: '€22M' }
+                ]
+            },
+            {
+                name: 'Services',
+                id: 'services',
+                targets: [
+                    { name: 'ConsultPro GmbH', status: 'active', value: '€18M' },
+                    { name: 'ServiceMasters', status: 'closed', value: '€12M' }
+                ]
+            },
+            {
+                name: 'Consumer Goods',
+                id: 'consumer',
+                targets: [
+                    { name: 'BrandCo International', status: 'due-diligence', value: '€50M' }
+                ]
+            }
+        ];
+
+        const deals = [
+            {
+                id: 'MA-2025-001',
+                company: 'TechCorp GmbH',
+                division: 'Industrial Solutions',
+                status: 'Active',
+                value: '€45.0M',
+                stage: 'Valuation',
+                lead: 'Dr. M. Müller',
+                updated: '19.10.2025'
+            },
+            {
+                id: 'MA-2025-002',
+                company: 'AutoParts AG',
+                division: 'Industrial Solutions',
+                status: 'Active',
+                value: '€28.5M',
+                stage: 'Term Sheet',
+                lead: 'A. Schmidt',
+                updated: '18.10.2025'
+            },
+            {
+                id: 'MA-2025-003',
+                company: 'CloudSoft Solutions',
+                division: 'Technology',
+                status: 'Active',
+                value: '€35.2M',
+                stage: 'Pre-Deal',
+                lead: 'T. Weber',
+                updated: '17.10.2025'
+            },
+            {
+                id: 'MA-2025-004',
+                company: 'DataAnalytica',
+                division: 'Technology',
+                status: 'Active',
+                value: '€22.0M',
+                stage: 'Due Diligence',
+                lead: 'Dr. M. Müller',
+                updated: '16.10.2025'
+            },
+            {
+                id: 'MA-2025-005',
+                company: 'BrandCo International',
+                division: 'Consumer Goods',
+                status: 'Active',
+                value: '€50.0M',
+                stage: 'Strategic DD',
+                lead: 'A. Schmidt',
+                updated: '15.10.2025'
+            },
+            {
+                id: 'MA-2024-012',
+                company: 'ServiceMasters',
+                division: 'Services',
+                status: 'Closed',
+                value: '€12.0M',
+                stage: 'Completed',
+                lead: 'T. Weber',
+                updated: '30.09.2025'
+            }
+        ];
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTabs();
+            renderDivisionGrid();
+            renderDealsTable();
+            loadPhaseDetails('valuation');
+        });
+
+        // Tab switching
+        function initializeTabs() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetTab = this.dataset.tab;
+                    
+                    // Update buttons
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update content
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById('tab-' + targetTab).classList.add('active');
+                });
+            });
+        }
+
+        // Render Division Grid
+        function renderDivisionGrid() {
+            const grid = document.getElementById('divisionGrid');
+            grid.innerHTML = '';
+
+            divisions.forEach(division => {
+                const card = document.createElement('div');
+                card.className = 'division-card';
+                
+                let targetsList = '';
+                division.targets.forEach(target => {
+                    const statusClass = 'status-' + target.status;
+                    const statusText = target.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    targetsList += `
+                        <li class="target-item" onclick="openTarget('${target.name}')">
+                            <span class="target-name">${target.name}</span>
+                            <span class="target-status ${statusClass}">${statusText}</span>
+                        </li>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="division-header">
+                        <div class="division-name">${division.name}</div>
+                        <div class="target-count">${division.targets.length} Targets</div>
+                    </div>
+                    <ul class="targets-list">
+                        ${targetsList}
+                    </ul>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Render Deals Table
+        function renderDealsTable() {
+            const tbody = document.getElementById('dealsTableBody');
+            tbody.innerHTML = '';
+
+            deals.forEach(deal => {
+                const row = document.createElement('tr');
+                row.onclick = () => openDeal(deal.id);
+                row.innerHTML = `
+                    <td>${deal.id}</td>
+                    <td><strong>${deal.company}</strong></td>
+                    <td>${deal.division}</td>
+                    <td><span class="target-status status-${deal.status.toLowerCase()}">${deal.status}</span></td>
+                    <td><strong>${deal.value}</strong></td>
+                    <td>${deal.stage}</td>
+                    <td>${deal.lead}</td>
+                    <td>${deal.updated}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Open Target
+        function openTarget(targetName) {
+            // Switch to target tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tab="target"]').classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-target').classList.add('active');
+            
+            // Fill form
+            document.getElementById('companyName').value = targetName;
+            document.getElementById('processTargetName').textContent = targetName;
+        }
+
+        // Open Deal
+        function openDeal(dealId) {
+            // Switch to process tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tab="process"]').classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-process').classList.add('active');
+        }
+
+        // Create New Deal
+        function createNewDeal() {
+            // Switch to target tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-tab="target"]').classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-target').classList.add('active');
+            
+            // Reset form
+            document.getElementById('targetForm').reset();
+            const newId = 'MA-2025-' + String(deals.length + 1).padStart(3, '0');
+            document.getElementById('dealId').value = newId;
+        }
+
+        // Save Target
+        function saveTarget() {
+            const formData = {
+                dealId: document.getElementById('dealId').value,
+                companyName: document.getElementById('companyName').value,
+                division: document.getElementById('division').value,
+                country: document.getElementById('country').value,
+                sector: document.getElementById('sector').value,
+                revenue: document.getElementById('revenue').value,
+                ebitda: document.getElementById('ebitda').value,
+                employees: document.getElementById('employees').value,
+                dealLead: document.getElementById('dealLead').value,
+                dealValue: document.getElementById('dealValue').value,
+                closeDate: document.getElementById('closeDate').value,
+                contactDate: document.getElementById('contactDate').value,
+                rationale: document.getElementById('rationale').value,
+                notes: document.getElementById('notes').value
+            };
+
+            console.log('Target saved:', formData);
+            
+            // Show success message
+            addAIMessage('system', `✅ Target "${formData.companyName}" successfully saved! Deal ID: ${formData.dealId}`);
+            
+            // Switch to process tab
+            openDeal(formData.dealId);
+        }
+
+        // Cancel Target
+        function cancelTarget() {
+            if (confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-tab="deals"]').classList.add('active');
+                
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById('tab-deals').classList.add('active');
+            }
+        }
+
+        // Open Phase Details
+        function openPhase(phaseName) {
+            loadPhaseDetails(phaseName);
+        }
+
+        // Load Phase Details
+        function loadPhaseDetails(phaseName) {
+            const container = document.getElementById('phaseDetailsContainer');
+            
+            let content = '';
+            
+            if (phaseName === 'valuation') {
+                content = `
+                    <h3 style="color: #1e40af; margin-bottom: 1.5rem;">📊 Phase 3: Unternehmensbewertung</h3>
+
+                    <!-- Business Plan Review -->
+                    <div class="phase-section">
+                        <h4>📈 Business Plan Analysis</h4>
+                        <ul class="checklist">
+                            <li class="checklist-item completed" onclick="toggleChecklistItem(this)">
+                                <div class="checkbox"></div>
+                                <span>Review of 5-Year Financial Projections</span>
+                            </li>
+                            <li class="checklist-item completed" onclick="toggleChecklistItem(this)">
+                                <div class="checkbox"></div>
+                                <span>Revenue Growth Assumptions Validated</span>
+                            </li>
+                            <li class="checklist-item" onclick="toggleChecklistItem(this)">
+                                <div class="checkbox"></div>
+                                <span>EBITDA Margin Analysis</span>
+                            </li>
+                            <li class="checklist-item" onclick="toggleChecklistItem(this)">
+                                <div class="checkbox"></div>
+                                <span>CapEx Requirements Assessment</span>
+                            </li>
+                            <li class="checklist-item" onclick="toggleChecklistItem(this)">
+                                <div class="checkbox"></div>
+                                <span>Working Capital Needs Evaluation</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Valuation Methods -->
+                    <div class="phase-section">
+                        <h4>💰 Valuation Methods</h4>
+                        <div class="valuation-grid">
+                            <div class="valuation-card">
+                                <h4>DCF Valuation</h4>
+                                <div class="valuation-value">€45.2M</div>
+                                <div class="valuation-label">WACC: 8.5%</div>
+                            </div>
+                            <div class="valuation-card">
+                                <h4>Multiple Approach</h4>
+                                <div class="valuation-value">€42.8M</div>
+                                <div class="valuation-label">EV/EBITDA: 8.5x</div>
+                            </div>
+                            <div class="valuation-card">
+                                <h4>Precedent Transactions</h4>
+                                <div class="valuation-value">€47.5M</div>
+                                <div class="valuation-label">Avg Premium: 25%</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.5rem; text-align: center;">
+                            <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">Weighted Average Valuation</div>
+                            <div style="font-size: 36px; font-weight: 700; color: #1e40af;">€45.0M</div>
+                        </div>
+                    </div>
+
+                    <!-- Business Case -->
+                    <div class="phase-section">
+                        <h4>📊 Internal Business Case</h4>
+                        <table class="metrics-table">
+                            <tr>
+                                <td>Target Purchase Price</td>
+                                <td>€45.0M</td>
+                            </tr>
+                            <tr>
+                                <td>Transaction Costs</td>
+                                <td>€2.5M</td>
+                            </tr>
+                            <tr>
+                                <td>Integration Costs (Y1-Y2)</td>
+                                <td>€3.8M</td>
+                            </tr>
+                            <tr>
+                                <td>Total Investment</td>
+                                <td style="border-top: 2px solid #1e40af;">€51.3M</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="height: 20px;"></td>
+                            </tr>
+                            <tr>
+                                <td>Expected Synergies (NPV)</td>
+                                <td style="color: #10b981;">€8.5M</td>
+                            </tr>
+                            <tr>
+                                <td>Revenue Synergies (Y3+)</td>
+                                <td style="color: #10b981;">€12.3M</td>
+                            </tr>
+                            <tr>
+                                <td>Cost Synergies (Annual)</td>
+                                <td style="color: #10b981;">€4.2M</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="height: 20px;"></td>
+                            </tr>
+                            <tr>
+                                <td>IRR (Internal Rate of Return)</td>
+                                <td style="color: #10b981; font-size: 18px;">18.5%</td>
+                            </tr>
+                            <tr>
+                                <td>Payback Period</td>
+                                <td>4.2 years</td>
+                            </tr>
+                            <tr>
+                                <td>NPV at WACC 8.5%</td>
+                                <td style="color: #10b981; font-size: 18px;">€15.7M</td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+            } else {
+                content = `
+                    <h3 style="color: #1e40af; margin-bottom: 1.5rem;">Phase Details: ${phaseName}</h3>
+                    <div class="phase-section">
+                        <p style="color: #64748b;">Details for this phase will be loaded here...</p>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = content;
+        }
+
+        // Toggle Checklist Item
+        function toggleChecklistItem(item) {
+            item.classList.toggle('completed');
+            updateProgressBar();
+        }
+
+        // Update Progress Bar
+        function updateProgressBar() {
+            const allItems = document.querySelectorAll('.checklist-item').length;
+            const completedItems = document.querySelectorAll('.checklist-item.completed').length;
+            if (allItems > 0) {
+                const progress = (completedItems / allItems) * 100;
+                document.getElementById('timelineProgress').style.width = progress + '%';
+            }
+        }
+
+        // AI Message Handling
+        function sendAIMessage() {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addAIMessage('user', message);
+            
+            // Clear input
+            input.value = '';
+            
+            // Simulate AI response
+            setTimeout(() => {
+                const response = generateAIResponse(message);
+                addAIMessage('assistant', response);
+            }, 1000);
+        }
+
+        function addAIMessage(type, content) {
+            const container = document.getElementById('aiChatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `ai-message ai-message-${type}`;
+            messageDiv.innerHTML = `<div class="ai-message-content">${content}</div>`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function generateAIResponse(message) {
+            const lowercaseMsg = message.toLowerCase();
+            
+            if (lowercaseMsg.includes('valuation') || lowercaseMsg.includes('bewertung')) {
+                return '📊 For TechCorp GmbH, I recommend using a weighted average of DCF (50%), multiples (30%), and precedent transactions (20%). The DCF analysis shows €45.2M assuming 8.5% WACC. Would you like me to run sensitivity analysis?';
+            }
+            else if (lowercaseMsg.includes('synergy') || lowercaseMsg.includes('synergien')) {
+                return '💡 I identified €8.5M NPV in synergies: €4.2M annual cost synergies from procurement and €12.3M revenue synergies from cross-selling. Integration costs estimated at €3.8M over 24 months.';
+            }
+            else if (lowercaseMsg.includes('risk') || lowercaseMsg.includes('risiko')) {
+                return '⚠️ Key risks: Customer concentration (top 3 = 45% revenue), EBITDA margin pressure (declining 2pp YoY), integration complexity. Recommend detailed commercial DD and customer retention plan.';
+            }
+            else {
+                return `I'm analyzing your request: "${message}". For detailed M&A analysis, please upload the Business Plan or specify which aspect you'd like me to focus on (valuation, synergies, risks, due diligence, etc.).`;
+            }
+        }
+
+        // Business Plan Upload
+        document.getElementById('businessPlanUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const status = document.getElementById('uploadStatus');
+            status.textContent = '📤 Uploading...';
+            status.style.color = '#3b82f6';
+            
+            // Simulate upload and analysis
+            setTimeout(() => {
+                status.textContent = '✅ Uploaded: ' + file.name;
+                status.style.color = '#10b981';
+                
+                addAIMessage('system', `📊 Business Plan "${file.name}" uploaded successfully! I'm analyzing the financial projections...`);
+                
+                setTimeout(() => {
+                    addAIMessage('assistant', `✅ Analysis complete! Key findings:<br><br>
+                    • Revenue CAGR: 12.5% (2025-2029)<br>
+                    • EBITDA Margin: 18.2% avg<br>
+                    • CapEx: €2.1M annually<br>
+                    • Working Capital: 15% of revenue<br><br>
+                    Based on these assumptions, I recommend a DCF valuation range of €42-48M. Would you like me to run the full valuation?`);
+                }, 2000);
+            }, 1500);
+        });
+
+        // Allow Enter key to send messages
+        document.getElementById('aiInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendAIMessage();
+            }
+        });
+
+        console.log('✅ M&A Case Management initialized');
+    </script>
+
+</body>
+</html>
