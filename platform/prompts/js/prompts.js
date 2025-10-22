@@ -655,68 +655,198 @@ class PromptsEngine {
 getQuestionContext(question, index, category) {
     const questionLower = question.toLowerCase();
     
-    // Bilanzbuchhalter Context
+    // ========== SPEZIFISCHE PATTERN (Bilanzbuchhalter) ==========
     if (category === 'Bilanzbuchhalter') {
+        
+        // Bilanzposten / Sachverhalt
+        if (questionLower.includes('bilanzposten') || questionLower.includes('sachverhalt')) {
+            return 'Präzise Angaben zum Bilanzposten sind essentiell für eine korrekte bilanzielle Behandlung. Je konkreter Ihre Beschreibung, desto besser kann die rechtssichere Einordnung und Dokumentation erfolgen.';
+        }
+        
+        // Entwicklung / GuV / Bilanz
         if (questionLower.includes('entwicklung') || questionLower.includes('guv') || questionLower.includes('bilanz')) {
             return 'Die Entwicklungen in GuV und Bilanz sind das Herzstück Ihrer Finanzberichterstattung. Investoren, Banken und Wirtschaftsprüfer analysieren diese Kennzahlen, um Ihre Unternehmensentwicklung zu bewerten. Geben Sie konkrete Zahlen und Prozente an (z.B. "Umsatz +15%").';
         }
-        if (questionLower.includes('einflüsse') || questionLower.includes('finanzierung') || questionLower.includes('investition')) {
+        
+        // Standards / HGB / IFRS / US-GAAP
+        if (questionLower.includes('standard') || questionLower.includes('hgb') || questionLower.includes('ifrs') || questionLower.includes('gaap') || questionLower.includes('rechnungslegung')) {
+            return 'Die Wahl des Rechnungslegungsstandards bestimmt die Bilanzierungs- und Bewertungsmethoden. IFRS und HGB unterscheiden sich erheblich - eine klare Angabe ist für die rechtssichere Bearbeitung zwingend erforderlich.';
+        }
+        
+        // Einflüsse / Finanzierung / Investition
+        if (questionLower.includes('einflüsse') || questionLower.includes('einfluss') || questionLower.includes('finanzierung') || questionLower.includes('investition')) {
             return 'Außergewöhnliche Einflüsse aus Finanzierung oder Investitionen müssen separat ausgewiesen werden (§ 277 Abs. 4 HGB). Dies erhöht die Vergleichbarkeit und Transparenz. Nennen Sie konkrete Beträge und Ursachen.';
         }
-        if (questionLower.includes('kennzahlen') || questionLower.includes('ebit') || questionLower.includes('cashflow')) {
+        
+        // Kennzahlen / EBIT / Cashflow / KPI
+        if (questionLower.includes('kennzahlen') || questionLower.includes('ebit') || questionLower.includes('cashflow') || questionLower.includes('quote') || questionLower.includes('kpi')) {
             return 'Diese Kennzahlen sind entscheidend für die Beurteilung Ihrer Ertragskraft und Liquidität. Banken nutzen sie für Kreditentscheidungen, Investoren für Bewertungen. Wählen Sie die für Ihre Branche relevanten KPIs.';
         }
-        if (questionLower.includes('vorjahreswerte') || questionLower.includes('benchmark') || questionLower.includes('vergleich')) {
+        
+        // Vorjahreswerte / Benchmark / Vergleich
+        if (questionLower.includes('vorjahres') || questionLower.includes('benchmark') || questionLower.includes('vergleich')) {
             return 'Der Vergleich mit Vorjahren oder externen Benchmarks zeigt Trends und positioniert Ihr Unternehmen im Wettbewerb. Dies ist besonders wichtig für Stakeholder-Kommunikation und strategische Entscheidungen.';
+        }
+        
+        // Wirtschaftsgut / Vermögensgegenstand
+        if (questionLower.includes('wirtschaftsgut') || questionLower.includes('vermögen')) {
+            return 'Die korrekte Identifikation und Klassifizierung von Wirtschaftsgütern ist Basis für Abschreibung, Bewertung und steuerliche Behandlung. Beschreiben Sie Art, Zweck und geplante Nutzungsdauer.';
+        }
+        
+        // Nutzung / Nutzungsdauer
+        if (questionLower.includes('nutzung') || questionLower.includes('dauer')) {
+            return 'Die voraussichtliche Nutzungsdauer bestimmt Abschreibungsmethode und -dauer. Sie ist relevant für Anlage- vs. Umlaufvermögen und beeinflusst GuV und Bilanz über mehrere Jahre.';
+        }
+        
+        // Zeitraum / Zeitpunkt
+        if (questionLower.includes('zeitraum') || questionLower.includes('zeitpunkt') || questionLower.includes('wann') || questionLower.includes('bis wann')) {
+            return 'Zeitliche Angaben sind entscheidend für Periodisierung, Stichtagsbewertung und Vollständigkeit. Sie bestimmen in welchem Geschäftsjahr Aufwendungen und Erträge zu erfassen sind.';
+        }
+        
+        // Aufwendungen / Kosten / Ausgaben
+        if (questionLower.includes('aufwend') || questionLower.includes('kosten') || questionLower.includes('ausgab')) {
+            return 'Detaillierte Aufwendungsanalyse ermöglicht korrekte Zuordnung, Aktivierungsfähigkeit und steuerliche Behandlung. Unterscheiden Sie zwischen Anschaffungs-, Herstellungs- und laufenden Kosten.';
+        }
+        
+        // Abzinsung / Bewertung / Schätzung
+        if (questionLower.includes('abzins') || questionLower.includes('bewert') || questionLower.includes('schätz') || questionLower.includes('zinssatz')) {
+            return 'Bewertungsparameter wie Abzinsungssätze beeinflussen direkt den Bilanzausweis und haben GuV-Wirkung. Sie müssen sachgerecht begründet und dokumentiert werden (GoB, IAS 1).';
+        }
+        
+        // Steuerliche Aspekte
+        if (questionLower.includes('steuer') || questionLower.includes('finanzamt') || questionLower.includes('betriebsprüfung')) {
+            return 'Steuerliche Aspekte können von der Handelsbilanz abweichen. Eine klare Dokumentation hilft bei Betriebsprüfungen und sichert steuerliche Anerkennung von Sachverhalten ab.';
         }
     }
     
-    // Controller Context
+    // ========== CONTROLLER ==========
     if (category === 'Controller') {
+        
+        // Kosten / Aufwand
         if (questionLower.includes('kosten') || questionLower.includes('aufwand')) {
             return 'Eine detaillierte Kostenanalyse ist die Basis für fundierte Managemententscheidungen. Unterscheiden Sie zwischen fixen und variablen Kosten, um Hebel für Effizienzsteigerungen zu identifizieren.';
         }
-        if (questionLower.includes('budget') || questionLower.includes('planung') || questionLower.includes('forecast')) {
+        
+        // Budget / Planung / Forecast
+        if (questionLower.includes('budget') || questionLower.includes('planung') || questionLower.includes('forecast') || questionLower.includes('plan')) {
             return 'Präzise Budgetierung und Forecasting sind Ihre Kernaufgaben als Business Partner. Managemententscheidungen basieren auf Ihren Zahlen - je besser die Datenqualität, desto besser die Entscheidungen.';
         }
-        if (questionLower.includes('abweichung') || questionLower.includes('analyse')) {
+        
+        // Abweichung / Analyse / Variance
+        if (questionLower.includes('abweichung') || questionLower.includes('analyse') || questionLower.includes('variance')) {
             return 'Abweichungsanalysen decken Potenziale und Risiken auf. Als Business Partner erklären Sie nicht nur "was" abweicht, sondern vor allem "warum" und "was zu tun ist".';
         }
+        
+        // KPI / Kennzahlen / Metrics
+        if (questionLower.includes('kpi') || questionLower.includes('kennzahl') || questionLower.includes('metric')) {
+            return 'KPIs sind Ihr Steuerungsinstrument. Wählen Sie Kennzahlen, die wirklich geschäftsrelevant sind und zum Handeln führen - nicht nur "nice to know".';
+        }
     }
     
-    // Treasury Context
+    // ========== TREASURY ==========
     if (category === 'Treasury') {
-        if (questionLower.includes('liquidität') || questionLower.includes('cash')) {
+        
+        // Liquidität / Cash
+        if (questionLower.includes('liquidität') || questionLower.includes('cash') || questionLower.includes('zahlungsfähig')) {
             return 'Liquiditätssicherung ist Ihre Kernaufgabe. Banken und Management verlassen sich darauf, dass Sie Cashflow-Risiken frühzeitig erkennen und absichern.';
         }
-        if (questionLower.includes('finanzierung') || questionLower.includes('kredit')) {
+        
+        // Finanzierung / Kredit / Darlehen
+        if (questionLower.includes('finanzierung') || questionLower.includes('kredit') || questionLower.includes('darlehen')) {
             return 'Die richtige Finanzierungsstruktur optimiert Ihre Kapitalkosten und sichert finanzielle Flexibilität. Berücksichtigen Sie sowohl Kosten als auch strategische Aspekte.';
         }
+        
+        // Risiko / Hedging / Währung
+        if (questionLower.includes('risiko') || questionLower.includes('hedge') || questionLower.includes('währung') || questionLower.includes('zins')) {
+            return 'Aktives Risikomanagement schützt vor unerwarteten Verlusten. Dokumentieren Sie Absicherungsstrategien transparent für Wirtschaftsprüfer und Management.';
+        }
     }
     
-    // CFO Context  
+    // ========== CFO ==========
     if (category === 'CFO') {
-        if (questionLower.includes('strategie') || questionLower.includes('transformation')) {
+        
+        // Strategie / Transformation
+        if (questionLower.includes('strategie') || questionLower.includes('transformation') || questionLower.includes('vision')) {
             return 'Als CFO gestalten Sie die finanzielle Zukunft des Unternehmens. Ihre Antworten sollten strategische Überlegungen und langfristige Auswirkungen berücksichtigen.';
         }
-        if (questionLower.includes('kapital') || questionLower.includes('investition')) {
+        
+        // Kapital / Investition / Allocation
+        if (questionLower.includes('kapital') || questionLower.includes('investition') || questionLower.includes('allocation')) {
             return 'Capital Allocation ist eine Ihrer wichtigsten strategischen Entscheidungen. Sie bestimmt, wie Ihr Unternehmen Wert schafft und wächst.';
         }
+        
+        // M&A / Akquisition
+        if (questionLower.includes('m&a') || questionLower.includes('akquisition') || questionLower.includes('übernahme')) {
+            return 'M&A-Entscheidungen sind strategische Weichenstellungen. Eine gründliche finanzielle und strategische Bewertung ist entscheidend für den Transaktionserfolg.';
+        }
     }
     
-    // M&A Context
+    // ========== M&A ==========
     if (category === 'M&A') {
-        if (questionLower.includes('due diligence') || questionLower.includes('prüfung')) {
+        
+        // Due Diligence
+        if (questionLower.includes('due diligence') || questionLower.includes('prüfung') || questionLower.includes('dd')) {
             return 'Eine gründliche Due Diligence schützt vor bösen Überraschungen und liefert die Basis für Kaufpreis und Vertragsgestaltung. Je detaillierter, desto besser.';
         }
-        if (questionLower.includes('bewertung') || questionLower.includes('preis')) {
+        
+        // Bewertung / Valuation / Preis
+        if (questionLower.includes('bewertung') || questionLower.includes('valuation') || questionLower.includes('preis') || questionLower.includes('wert')) {
             return 'Die Unternehmensbewertung ist oft Verhandlungsbasis und bestimmt den Deal-Erfolg. Nutzen Sie mehrere Methoden und Szenarien für Robustheit.';
+        }
+        
+        // Synergien / Integration
+        if (questionLower.includes('synergie') || questionLower.includes('integration') || questionLower.includes('pmi')) {
+            return 'Synergien sind der Werttreiber vieler Deals. Quantifizieren Sie diese realistisch und planen Sie die Integration sorgfältig - 70% der Deals scheitern in der PMI.';
         }
     }
     
-    // Default Context
-    return `Diese Frage ist wichtig für die Vollständigkeit und Qualität Ihres Prompts. Je präziser Ihre Antwort, desto besser kann die AI Ihnen helfen. Nutzen Sie konkrete Zahlen, Beispiele und Kontext.`;
+    // ========== GENERISCHE PATTERN (Fallback nach Keyword) ==========
+    
+    // Projekt / Initiative
+    if (questionLower.includes('projekt') || questionLower.includes('initiative')) {
+        return 'Klare Projektbeschreibungen ermöglichen bessere Einschätzung von Ressourcenbedarf, Timeline und Risiken. Beschreiben Sie Ziel, Scope und erwartete Ergebnisse.';
+    }
+    
+    // Betrag / Summe / Höhe / Volumen
+    if (questionLower.includes('betrag') || questionLower.includes('summe') || questionLower.includes('höhe') || questionLower.includes('volumen') || questionLower.includes('wie hoch') || questionLower.includes('wie viel')) {
+        return 'Konkrete Beträge sind essentiell für finanzielle Bewertung und Entscheidungsfindung. Geben Sie Größenordnungen an (z.B. "ca. 250.000 €") für bessere Einordnung.';
+    }
+    
+    // Grund / Ursache / Warum
+    if (questionLower.includes('grund') || questionLower.includes('ursache') || questionLower.includes('warum') || questionLower.includes('weshalb')) {
+        return 'Die Ursachenanalyse ist entscheidend für die Beurteilung von Einmaligkeit vs. Dauerhaftigkeit. Dies beeinflusst Prognosen, Planung und strategische Maßnahmen.';
+    }
+    
+    // Wie lange / Dauer / Zeitraum
+    if (questionLower.includes('wie lange') || questionLower.includes('dauer') || questionLower.includes('zeitraum') || questionLower.includes('frist')) {
+        return 'Zeitliche Dimensionen sind wichtig für Planung, Periodisierung und Ressourcenallokation. Geben Sie realistische Zeitrahmen an.';
+    }
+    
+    // Ja/Nein Fragen
+    if (questionLower.includes('gibt es') || questionLower.includes('liegt vor') || questionLower.includes('existiert')) {
+        return 'Diese Information hilft bei der Vollständigkeitsprüfung und Risikoeinschätzung. Geben Sie auch bei "Nein" eine kurze Begründung an.';
+    }
+    
+    // ========== ULTIMATE FALLBACK ==========
+    // Wenn GAR NICHTS matched, dann basierend auf Position
+    
+    if (index === 0) {
+        return 'Diese erste Frage hilft uns, den Kontext und Scope Ihrer Anfrage zu verstehen. Je präziser Ihre Antwort, desto passgenauer wird der AI-Output auf Ihre Situation zugeschnitten.';
+    }
+    
+    if (index === 1) {
+        return 'Diese Angabe ergänzt den Kontext und ermöglicht eine differenziertere Bearbeitung. Fügen Sie Details hinzu, die für Ihre spezifische Situation relevant sind.';
+    }
+    
+    // Generischer Fallback für alle anderen
+    return `Diese Information ist wichtig für die Vollständigkeit und Qualität der Analyse. Je mehr relevante Details Sie angeben, desto präziser und wertvoller wird das Ergebnis für Ihre Business-Entscheidung. 
+    
+    💡 Tipp: Nutzen Sie konkrete Zahlen, Beispiele und Kontext aus Ihrer spezifischen Situation.`;
 }
+
+/* ========================================== */
+/* ENDE DER VERBESSERTEN METHODE */
+/* ========================================== */
 
 /**
  * 2. Smarte Placeholders generieren
