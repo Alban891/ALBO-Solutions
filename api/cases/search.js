@@ -89,7 +89,7 @@ export default async function handler(req, res) {
                 filter_status: filters.status || null,
                 filter_roi_min: filters.roi_min || null,
                 filter_roi_max: filters.roi_max || null,
-                match_threshold: filters.threshold || 0.65,
+                match_threshold: filters.threshold || 0.3,
                 match_count: limit
             })
         });
