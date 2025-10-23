@@ -11,7 +11,7 @@
 // CONFIGURATION
 // ========================================
 
-const API_URL = 'https://YOUR-PROJECT.vercel.app'; // ← CHANGE THIS!
+const API_URL = 'https://albo-solutions.vercel.app'; // ← CHANGE THIS!
 
 // ========================================
 // DUMMY CASES DATA
@@ -461,9 +461,9 @@ async function ingestDummyCases() {
     console.log('🚀 Starting dummy case ingestion...');
     console.log(`📍 Target API: ${API_URL}\n`);
     
-    if (API_URL === 'https://YOUR-PROJECT.vercel.app') {
+    if (API_URL === 'https://albo-solutions.vercel.app') {
         console.error('❌ ERROR: Please update API_URL in the script!');
-        console.error('   Line 10: const API_URL = "https://YOUR-PROJECT.vercel.app";\n');
+        console.error('   Line 10: const API_URL = "https://albo-solutions.vercel.app";\n');
         return;
     }
     
