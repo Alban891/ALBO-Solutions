@@ -11,6 +11,7 @@
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/ai-advisor.css">
     <link rel="stylesheet" href="css/cockpit-COMPLETE.css">
     <link rel="stylesheet" href="css/case-search.css">
 
@@ -1658,34 +1659,33 @@
     console.log('✅ All modules and navigation functions loaded');
 
     // ========================================
-    // CASE SEARCH MODULE
+    // AI ADVISOR MODULE
     // ========================================
-    import('./js/modules/case-search.js').then(module => {
-        const { renderCaseSearch } = module;
+    import('./js/modules/ai-advisor.js').then(module => {
+        const { renderAIAdvisor } = module;
         
-        // Render Case Search Panel
-        const panel = document.getElementById('case-search-panel');
-        if (panel) {
-            panel.style.display = 'block';
-            renderCaseSearch();
-            console.log('✅ Case Search Panel rendered');
-        }
+        // Initialize AI Advisor
+        const aiAdvisor = renderAIAdvisor('ai-advisor-container');
+        console.log('✅ AI Advisor initialized');
+        
     }).catch(error => {
-        console.error('❌ Failed to load Case Search:', error);
+        console.error('❌ Failed to load AI Advisor:', error);
     });
 
     </script>
 
-    <!-- Case Search Panel -->
-    <div id="case-search-panel" style="
+    <!-- AI Advisor Panel (Context-Aware) -->
+    <div id="ai-advisor-panel" style="
         position: fixed;
         right: 20px;
         top: 120px;
-        width: 420px;
-        max-height: calc(100vh - 140px);
+        width: 450px;
+        height: calc(100vh - 140px);
         z-index: 1000;
-        display: none;
-    "></div>
+        display: block;
+    ">
+        <div id="ai-advisor-container"></div>
+    </div>
 
 </body>
 </html>
