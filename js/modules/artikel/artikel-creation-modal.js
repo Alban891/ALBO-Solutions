@@ -22,7 +22,8 @@ import * as api from '../../api.js';
 export async function openArtikelCreationModal(projektId) {
   console.log('🤖 Öffne Artikel-Erstellung für Projekt:', projektId);
   
-  const projekt = state.getProjekt(projektId);
+  // ✅ Use window.cfoDashboard directly since state.projektData may be undefined
+  const projekt = window.cfoDashboard.projektData[projektId];
   if (!projekt) {
     alert('Projekt nicht gefunden!');
     return;
