@@ -88,7 +88,15 @@ async function loadProjektFromDatabase(projektId) {
       throw new Error('Supabase client not initialized');
     }
     
-    console.log('🔍 Querying Supabase for projekt:', projektId);
+    // ✅ CLEAN UP PROJECT ID
+    // Remove any prefix like "projekt-db-" to get pure UUID
+    let cleanProjektId = projektId;
+    if (projektId.includes('-db-')) {
+      cleanProjektId = projektId.split('-db-')[1];
+      console.log('🔧 Cleaned projekt ID:', projektId, '→', cleanProjektId);
+    }
+    
+    console.log('🔍 Querying Supabase for projekt:', cleanProjektId);
     
     // Load projekt WITH geschaeftsmodell data (separate table!)
     const { data: projekt, error } = await supabase
@@ -97,7 +105,7 @@ async function loadProjektFromDatabase(projektId) {
         *,
         geschaeftsmodell (*)
       `)
-      .eq('id', projektId)
+      .eq('id', cleanProjektId)
       .single();
     
     if (error) {
