@@ -8,7 +8,7 @@
   import { state } from '../state.js';
   import * as helpers from '../helpers.js';
   import * as api from '../api.js';
-  import { renderArtikelListByProjekt } from './artikel.js';
+  import { renderArtikelListByProjekt } from './artikel/artikel.js';
 
   // ==========================================
   // VIEW STATE
