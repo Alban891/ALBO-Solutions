@@ -71,13 +71,24 @@
           <tr>
             <th style="width: 40px;">
               <input type="checkbox" id="select-all-projects" onchange="toggleAllProjects(this)">
+            <th style="cursor: pointer;" onclick="sortProjekte('name')" title="Klicken zum Sortieren">
+              PROJEKT <span class="sort-arrow">⇅</span>
             </th>
-            <th>PROJEKT</th>
-            <th>DIVISION</th>
-            <th>OWNER</th>
-            <th>START</th>
-            <th>END</th>
-            <th>STATUS</th>
+            <th style="cursor: pointer;" onclick="sortProjekte('division')" title="Klicken zum Sortieren">
+              DIVISION <span class="sort-arrow">⇅</span>
+            </th>
+            <th style="cursor: pointer;" onclick="sortProjekte('owner')" title="Klicken zum Sortieren">
+              OWNER <span class="sort-arrow">⇅</span>
+            </th>
+            <th style="cursor: pointer;" onclick="sortProjekte('start')" title="Klicken zum Sortieren">
+              START <span class="sort-arrow">⇅</span>
+            </th>
+            <th style="cursor: pointer;" onclick="sortProjekte('end')" title="Klicken zum Sortieren">
+              END <span class="sort-arrow">⇅</span>
+            </th>
+            <th style="cursor: pointer;" onclick="sortProjekte('status')" title="Klicken zum Sortieren">
+              STATUS <span class="sort-arrow">⇅</span>
+            </th>
             <th style="width: 100px;">AKTIONEN</th>
           </tr>
         </thead>
@@ -899,30 +910,71 @@ window.openProjektDetail = async function(projektId) {
     updateFilteredStats();
   };
 
+  // Sorting state
+  let currentSort = {
+    field: 'name',
+    direction: 'asc'
+  };
+
   /**
-   * Sort projects
+   * Sort projects by field
    */
-  window.sortProjekte = function() {
-    const sortBy = helpers.getInputValue('projekt-sort');
+  window.sortProjekte = function(field = null) {
+    // If field provided (from column click), update sort state
+    if (field) {
+      if (currentSort.field === field) {
+        // Toggle direction
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        // New field, default to ascending
+        currentSort.field = field;
+        currentSort.direction = 'asc';
+      }
+    } else {
+      // Called from dropdown
+      const sortBy = helpers.getInputValue('projekt-sort');
+      currentSort.field = sortBy;
+      currentSort.direction = 'asc';
+    }
+    
+    console.log('🔄 Sorting by:', currentSort.field, currentSort.direction);
     
     // Get all projekte and sort
     const projekte = state.getAllProjekte();
     
     projekte.sort((a, b) => {
-      switch(sortBy) {
+      let compareResult = 0;
+      
+      switch(currentSort.field) {
         case 'name':
-          return (a.name || '').localeCompare(b.name || '');
-        case 'start':
-          return new Date(a.startDatum || '2099-12-31') - new Date(b.startDatum || '2099-12-31');
-        case 'status':
-          return (a.status || '').localeCompare(b.status || '');
+          compareResult = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'division':
+          compareResult = (a.division || '').localeCompare(b.division || '');
+          break;
         case 'owner':
-          return (a.owner || '').localeCompare(b.owner || '');
+          compareResult = (a.owner || '').localeCompare(b.owner || '');
+          break;
+        case 'start':
+          compareResult = new Date(a.startDatum || '2099-12-31') - new Date(b.startDatum || '2099-12-31');
+          break;
+        case 'end':
+          compareResult = new Date(a.endDatum || '2099-12-31') - new Date(b.endDatum || '2099-12-31');
+          break;
+        case 'status':
+          compareResult = (a.status || '').localeCompare(b.status || '');
+          break;
         default:
-          return 0;
+          compareResult = 0;
       }
+      
+      // Apply direction
+      return currentSort.direction === 'asc' ? compareResult : -compareResult;
     });
 
+    // Update state with sorted array
+    state.projekte = projekte;
+    
     // Re-render with sorted data
     renderProjektOverview();
   };
