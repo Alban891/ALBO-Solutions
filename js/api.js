@@ -938,15 +938,16 @@ export async function loadGeschaeftsmodell(projektId) {
       .from('geschaeftsmodell')
       .select('*')
       .eq('projekt_id', projektId)
-      .single();
+      .maybeSingle();  // ← ÄNDERUNG: single() → maybeSingle()
 
     if (error) {
-      // If error is "no rows", that's OK - just return null
-      if (error.code === 'PGRST116') {
-        console.log('ℹ️ No Geschäftsmodell found for this projekt');
-        return null;
-      }
+      console.error('❌ Load error:', error);
       throw error;
+    }
+
+    if (!data) {
+      console.log('ℹ️ No Geschäftsmodell found for this projekt');
+      return null;
     }
 
     console.log('✅ Geschäftsmodell loaded successfully');
@@ -960,8 +961,7 @@ export async function loadGeschaeftsmodell(projektId) {
       message: error.message,
       code: error.code,
       details: error.details,
-      hint: error.hint,
-      full: error
+      hint: error.hint
     });
     state.setError('load_geschaeftsmodell', error);
     return null;
