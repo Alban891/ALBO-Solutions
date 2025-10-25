@@ -16,22 +16,119 @@ import { state } from '../../state.js';
 // ==========================================
 
 /**
- * Open artikel creation modal with Claude AI analysis
- * Loads fresh data from Supabase for accurate analysis
+ * Open artikel creation modal with user choice
  */
 export async function openArtikelCreationModal(projektId) {
-  console.log('🤖 Opening intelligent artikel creation modal...');
+  console.log('🤖 Opening artikel creation modal...');
   console.log('projektId:', projektId);
   
-  // Show loading modal
+  // Show choice modal first
+  showChoiceModal(projektId);
+}
+
+/**
+ * Show choice modal: AI Analysis vs Manual Creation
+ */
+function showChoiceModal(projektId) {
+  const existing = document.getElementById('artikel-creation-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'artikel-creation-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-icon">📦</span>
+          <h2>Neuer Artikel</h2>
+        </div>
+        <button class="modal-close" onclick="closeArtikelCreationModal()">×</button>
+      </div>
+      
+      <div class="modal-body" style="padding: 40px 30px;">
+        <h3 style="margin: 0 0 20px; text-align: center; color: #1f2937;">
+          Wie möchtest du vorgehen?
+        </h3>
+        
+        <!-- AI Option -->
+        <div class="choice-card" onclick="startAIAnalysis('${projektId}')" style="
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 30px;
+          margin-bottom: 20px;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
+        " onmouseover="this.style.borderColor='#667eea'; this.style.transform='translateY(-2px)'" 
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform='translateY(0)'">
+          <div style="display: flex; align-items: start; gap: 20px;">
+            <div style="font-size: 48px;">🤖</div>
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 10px; font-size: 18px; color: #1f2937;">
+                KI-gestützte Analyse
+              </h4>
+              <p style="margin: 0 0 15px; color: #6b7280; line-height: 1.6;">
+                Claude analysiert dein komplettes Geschäftsmodell und schlägt passende Artikel vor.
+              </p>
+              <div style="display: flex; gap: 15px; font-size: 13px; color: #6b7280;">
+                <div>⏱️ 5-10 Sekunden</div>
+                <div>🎯 Intelligente Vorschläge</div>
+                <div>📊 Mit Begründungen</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Manual Option -->
+        <div class="choice-card" onclick="startManualCreation('${projektId}')" style="
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 30px;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: white;
+        " onmouseover="this.style.borderColor='#2563eb'; this.style.transform='translateY(-2px)'" 
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.transform='translateY(0)'">
+          <div style="display: flex; align-items: start; gap: 20px;">
+            <div style="font-size: 48px;">✏️</div>
+            <div style="flex: 1;">
+              <h4 style="margin: 0 0 10px; font-size: 18px; color: #1f2937;">
+                Manuell anlegen
+              </h4>
+              <p style="margin: 0 0 15px; color: #6b7280; line-height: 1.6;">
+                Erstelle einen Artikel direkt mit deinen eigenen Eingaben.
+              </p>
+              <div style="display: flex; gap: 15px; font-size: 13px; color: #6b7280;">
+                <div>⚡ Sofort</div>
+                <div>🎨 Volle Kontrolle</div>
+                <div>📝 Einfach</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeArtikelCreationModal()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+/**
+ * Start AI Analysis (original flow)
+ */
+window.startAIAnalysis = async function(projektId) {
+  console.log('🤖 User chose AI analysis');
+  
   showLoadingModal();
   
   try {
-    // ✅ LOAD PROJECT DIRECTLY FROM SUPABASE
-    // This ensures we always have the latest data
-    // (Important for future RAG integration!)
-    console.log('📊 Loading projekt from Supabase...');
-    
     const projekt = await loadProjektFromDatabase(projektId);
     
     if (!projekt) {
@@ -40,34 +137,60 @@ export async function openArtikelCreationModal(projektId) {
     
     console.log('✅ Projekt loaded:', projekt.name);
     
-    // Extract geschaeftsmodell from projekt
     const geschaeftsmodell = extractGeschaeftsmodell(projekt);
     
     console.log('📋 Extracted Geschäftsmodell:', geschaeftsmodell);
     console.log('📋 Section 5:', geschaeftsmodell.section5);
     
-    // ============================================
-    // FUTURE: RAG INTEGRATION POINT
-    // ============================================
-    // const similarCases = await findSimilarCases(geschaeftsmodell);
-    // const enrichedPrompt = enrichPromptWithRAG(geschaeftsmodell, similarCases);
-    // const analysis = await analyzeWithClaude(enrichedPrompt);
-    // ============================================
-    
-    // Call Claude AI for intelligent analysis
     console.log('🤖 Starting Claude AI analysis...');
     const analysis = await analyzeGeschaeftsmodellWithClaude(geschaeftsmodell);
     
     console.log('✅ Analysis complete:', analysis);
     
-    // Show modal with results
     showArtikelModal(projektId, geschaeftsmodell, analysis);
     
   } catch (error) {
-    console.error('❌ Error in modal:', error);
+    console.error('❌ Error in AI analysis:', error);
     showErrorModal(projektId, error.message);
   }
-}
+};
+
+/**
+ * Start Manual Creation (skip AI)
+ */
+window.startManualCreation = function(projektId) {
+  console.log('✏️ User chose manual creation');
+  
+  const existing = document.getElementById('artikel-creation-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'artikel-creation-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span class="modal-icon">✏️</span>
+          <h2>Artikel manuell anlegen</h2>
+        </div>
+        <button class="modal-close" onclick="closeArtikelCreationModal()">×</button>
+      </div>
+      
+      <div class="modal-body">
+        ${renderManualTab(projektId)}
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeArtikelCreationModal()">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+};
 
 // ==========================================
 // DATABASE ACCESS
@@ -653,23 +776,62 @@ window.createSelectedArtikel = async function(projektId) {
     return;
   }
   
+  console.log(`📦 Creating ${checkboxes.length} articles...`);
+  
   const analysis = window.currentArtikelAnalysis;
   const articlesToCreate = Array.from(checkboxes).map(cb => {
     const index = parseInt(cb.dataset.index);
     return analysis.suggested_articles[index];
   });
   
+  console.log('📋 Articles to create:', articlesToCreate);
+  
+  // Show progress
+  const button = document.querySelector('#create-btn-text');
+  const originalText = button?.textContent;
+  if (button) button.textContent = 'Erstelle Artikel...';
+  
   try {
-    for (const artikel of articlesToCreate) {
-      await createArtikelFromSuggestion(projektId, artikel);
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (let i = 0; i < articlesToCreate.length; i++) {
+      const artikel = articlesToCreate[i];
+      console.log(`\n📝 Creating article ${i+1}/${articlesToCreate.length}: ${artikel.name}`);
+      
+      try {
+        const result = await createArtikelFromSuggestion(projektId, artikel);
+        console.log(`✅ Article created successfully:`, result);
+        successCount++;
+        
+        if (button) button.textContent = `${successCount}/${articlesToCreate.length} erstellt...`;
+      } catch (error) {
+        console.error(`❌ Failed to create article "${artikel.name}":`, error);
+        failCount++;
+      }
     }
     
+    console.log(`\n📊 Summary: ${successCount} success, ${failCount} failed`);
+    
+    if (failCount > 0) {
+      alert(`⚠️ ${successCount} Artikel erstellt, ${failCount} fehlgeschlagen. Siehe Console für Details.`);
+    } else {
+      console.log('✅ All articles created successfully!');
+    }
+    
+    // Close and reload
     window.closeArtikelCreationModal();
-    window.location.reload();
+    
+    // Wait a bit before reload to ensure DB is updated
+    setTimeout(() => {
+      console.log('🔄 Reloading page...');
+      window.location.reload();
+    }, 500);
     
   } catch (error) {
-    console.error('Error:', error);
-    alert('Fehler: ' + error.message);
+    console.error('❌ Error in createSelectedArtikel:', error);
+    alert('Fehler beim Erstellen der Artikel: ' + error.message);
+    if (button) button.textContent = originalText;
   }
 };
 
@@ -716,38 +878,64 @@ window.createManualArtikel = async function(projektId) {
 };
 
 async function createArtikelFromSuggestion(projektId, suggestion) {
+  console.log('📝 createArtikelFromSuggestion called');
+  console.log('  projektId:', projektId);
+  console.log('  suggestion:', suggestion);
+  
   // Clean projekt ID
   let cleanProjektId = projektId;
   if (projektId.includes('-db-')) {
     cleanProjektId = projektId.split('-db-')[1];
+    console.log('  🔧 Cleaned projekt ID:', projektId, '→', cleanProjektId);
   }
   
   const artikelData = {
     name: suggestion.name,
     typ: suggestion.typ,
-    projekt_id: cleanProjektId,  // Use cleaned ID
+    projekt_id: cleanProjektId,
     release_datum: '2025-01',
     volumes: {},
     prices: {},
-    hk: suggestion.suggested_values.start_hk || 0,
-    start_menge: suggestion.suggested_values.start_menge || 0,
-    start_preis: suggestion.suggested_values.start_preis || 0,
-    start_hk: suggestion.suggested_values.start_hk || 0,
-    mengen_modell: suggestion.suggested_values.mengen_modell,
-    preis_modell: suggestion.suggested_values.preis_modell,
-    kosten_modell: suggestion.suggested_values.kosten_modell,
-    zeitraum: suggestion.suggested_values.zeitraum || 5
+    hk: suggestion.suggested_values?.start_hk || 0,
+    start_menge: suggestion.suggested_values?.start_menge || 0,
+    start_preis: suggestion.suggested_values?.start_preis || 0,
+    start_hk: suggestion.suggested_values?.start_hk || 0,
+    mengen_modell: suggestion.suggested_values?.mengen_modell,
+    preis_modell: suggestion.suggested_values?.preis_modell,
+    kosten_modell: suggestion.suggested_values?.kosten_modell,
+    zeitraum: suggestion.suggested_values?.zeitraum || 5
   };
   
   // Set volumes and prices for each year
   const currentYear = new Date().getFullYear();
   for (let i = 0; i < (artikelData.zeitraum || 5); i++) {
     const year = currentYear + i;
-    artikelData.volumes[year] = suggestion.suggested_values.start_menge;
-    artikelData.prices[year] = suggestion.suggested_values.start_preis;
+    artikelData.volumes[year] = suggestion.suggested_values?.start_menge || 0;
+    artikelData.prices[year] = suggestion.suggested_values?.start_preis || 0;
   }
   
-  // Import dynamically to avoid circular dependency
-  const { saveArticle } = await import('../../api.js');
-  return await saveArticle(artikelData);
+  console.log('  📋 Artikel data prepared:', artikelData);
+  
+  try {
+    // Import dynamically to avoid circular dependency
+    console.log('  📦 Importing saveArticle...');
+    const apiModule = await import('../../api.js');
+    console.log('  ✅ API module loaded:', Object.keys(apiModule));
+    
+    const { saveArticle } = apiModule;
+    
+    if (!saveArticle) {
+      throw new Error('saveArticle function not found in api module');
+    }
+    
+    console.log('  💾 Calling saveArticle...');
+    const result = await saveArticle(artikelData);
+    console.log('  ✅ saveArticle returned:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('  ❌ Error in createArtikelFromSuggestion:', error);
+    console.error('  Stack:', error.stack);
+    throw error;
+  }
 }
