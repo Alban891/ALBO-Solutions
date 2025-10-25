@@ -4,10 +4,10 @@
  * Enterprise-grade with validation and error handling
  */
 
-import { state } from '../state.js';
-import * as helpers from '../helpers.js';
-import * as api from '../api.js';
-import * as charts from '../charts.js';
+import { state } from '../../state.js';
+import * as helpers from '../../helpers.js';
+import * as api from '../../api.js';
+import * as charts from '../../charts.js';
 import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
 
 // ==========================================
