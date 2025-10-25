@@ -1,6 +1,11 @@
 /**
  * Intelligent Artikel Creation Modal WITH CLAUDE AI
- * COMPLETE VERSION - Reads actual geschaeftsmodell structure from your Supabase
+ * PRODUCTION VERSION - Direct Supabase access for scalability
+ * 
+ * ARCHITECTURE:
+ * - Always loads fresh data from Supabase (no cache issues)
+ * - Scalable for future RAG integration
+ * - Ready for vector database similarity search
  */
 
 import { analyzeGeschaeftsmodellWithClaude } from './artikel-ai-complete.js';
@@ -13,32 +18,43 @@ import * as api from '../../api.js';
 
 /**
  * Open artikel creation modal with Claude AI analysis
+ * Loads fresh data from Supabase for accurate analysis
  */
 export async function openArtikelCreationModal(projektId) {
   console.log('🤖 Opening intelligent artikel creation modal...');
   console.log('projektId:', projektId);
   
-  // Get projekt
-  const projekt = window.cfoDashboard?.projektData?.[projektId];
-  
-  if (!projekt) {
-    console.error('❌ Projekt not found:', projektId);
-    alert('Projekt nicht gefunden!');
-    return;
-  }
-  
-  console.log('✅ Projekt found:', projekt.name);
-  
-  // CRITICAL FIX: Your geschaeftsmodell structure is FLAT, not nested!
-  const geschaeftsmodell = extractGeschaeftsmodell(projekt);
-  
-  console.log('📋 Extracted Geschäftsmodell:', geschaeftsmodell);
-  console.log('📋 Section 5:', geschaeftsmodell.section5);
-  
-  // Show loading modal first
+  // Show loading modal
   showLoadingModal();
   
   try {
+    // ✅ LOAD PROJECT DIRECTLY FROM SUPABASE
+    // This ensures we always have the latest data
+    // (Important for future RAG integration!)
+    console.log('📊 Loading projekt from Supabase...');
+    
+    const projekt = await loadProjektFromDatabase(projektId);
+    
+    if (!projekt) {
+      throw new Error('Projekt nicht gefunden in Datenbank');
+    }
+    
+    console.log('✅ Projekt loaded:', projekt.name);
+    
+    // Extract geschaeftsmodell from projekt
+    const geschaeftsmodell = extractGeschaeftsmodell(projekt);
+    
+    console.log('📋 Extracted Geschäftsmodell:', geschaeftsmodell);
+    console.log('📋 Section 5:', geschaeftsmodell.section5);
+    
+    // ============================================
+    // FUTURE: RAG INTEGRATION POINT
+    // ============================================
+    // const similarCases = await findSimilarCases(geschaeftsmodell);
+    // const enrichedPrompt = enrichPromptWithRAG(geschaeftsmodell, similarCases);
+    // const analysis = await analyzeWithClaude(enrichedPrompt);
+    // ============================================
+    
     // Call Claude AI for intelligent analysis
     console.log('🤖 Starting Claude AI analysis...');
     const analysis = await analyzeGeschaeftsmodellWithClaude(geschaeftsmodell);
@@ -49,16 +65,63 @@ export async function openArtikelCreationModal(projektId) {
     showArtikelModal(projektId, geschaeftsmodell, analysis);
     
   } catch (error) {
-    console.error('❌ Error in AI analysis:', error);
-    
-    // Show error and offer manual creation
+    console.error('❌ Error in modal:', error);
     showErrorModal(projektId, error.message);
   }
 }
 
+// ==========================================
+// DATABASE ACCESS
+// ==========================================
+
 /**
- * Extract geschaeftsmodell from projekt
- * CRITICAL: Your data structure has fields directly on projekt object
+ * Load projekt from Supabase with ALL fields
+ * @param {string} projektId - Project ID
+ * @returns {Promise<Object>} Complete project data
+ */
+async function loadProjektFromDatabase(projektId) {
+  try {
+    // Get Supabase client (initialized in api.js)
+    const supabase = window.supabase;
+    
+    if (!supabase) {
+      throw new Error('Supabase client not initialized');
+    }
+    
+    console.log('🔍 Querying Supabase for projekt:', projektId);
+    
+    // Load ALL fields from projects table
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')  // ✅ ALL fields including geschaeftsmodell data!
+      .eq('id', projektId)
+      .single();
+    
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      throw new Error(`Datenbank-Fehler: ${error.message}`);
+    }
+    
+    if (!data) {
+      throw new Error('Projekt nicht gefunden');
+    }
+    
+    console.log('✅ Project loaded from database:', data.name);
+    console.log('📊 Revenue streams hardware:', data.revenue_streams_hardware);
+    console.log('📊 Average deal size:', data.average_deal_size);
+    console.log('📊 Revenue model:', data.revenue_model_erklaerung?.substring(0, 100) + '...');
+    
+    return data;
+    
+  } catch (error) {
+    console.error('❌ Error loading from database:', error);
+    throw error;
+  }
+}
+
+/**
+ * Extract geschaeftsmodell from projekt data
+ * Maps database fields to structured sections
  */
 function extractGeschaeftsmodell(projekt) {
   return {
@@ -81,6 +144,9 @@ function extractGeschaeftsmodell(projekt) {
     section3: {
       kundentyp_b2b: projekt.kundentyp_b2b || false,
       kundentyp_b2c: projekt.kundentyp_b2c || false,
+      unternehmensgroesse_konzerne: projekt.unternehmensgroesse_konzerne || false,
+      unternehmensgroesse_gross: projekt.unternehmensgroesse_gross || false,
+      unternehmensgroesse_mittel: projekt.unternehmensgroesse_mittel || false,
       branchen_automotive: projekt.branchen_automotive || false,
       branchen_maschinenbau: projekt.branchen_maschinenbau || false,
       branchen_elektronik: projekt.branchen_elektronik || false,
@@ -103,26 +169,90 @@ function extractGeschaeftsmodell(projekt) {
       revenue_streams_hardware: projekt.revenue_streams_hardware || false,
       revenue_streams_wartung: projekt.revenue_streams_wartung || false,
       revenue_streams_training: projekt.revenue_streams_training || false,
+      revenue_streams_lizenz: projekt.revenue_streams_lizenz || false,
+      revenue_streams_subscription: projekt.revenue_streams_subscription || false,
       custom_revenue_streams: projekt.custom_revenue_streams || [],
       revenue_model_erklaerung: projekt.revenue_model_erklaerung || '',
-      average_deal_size: projekt.average_deal_size || ''
+      average_deal_size: projekt.average_deal_size || '',
+      sales_cycle_monate: projekt.sales_cycle_monate || '',
+      vertragslaufzeit_monate: projekt.vertragslaufzeit_monate || ''
     },
     
     // Section 6 - Go-to-Market
     section6: {
-      sales_motion_direct: projekt.sales_motion_direct || false
+      sales_motion_direct: projekt.sales_motion_direct || false,
+      sales_motion_channel: projekt.sales_motion_channel || false,
+      expansion_cross_sell: projekt.expansion_cross_sell || false
     },
     
     // Section 7 - Unsere Lösung
     section7: {
       produktkategorie: projekt.produktkategorie || '',
-      value_proposition: projekt.value_proposition || ''
+      value_proposition: projekt.value_proposition || '',
+      top_features: projekt.top_features || []
+    },
+    
+    // Section 8 - Kritische Annahmen
+    section8: {
+      kritische_annahmen: projekt.kritische_annahmen || []
     }
   };
 }
 
 // ==========================================
-// LOADING MODAL
+// FUTURE: RAG INTEGRATION PLACEHOLDER
+// ==========================================
+
+/**
+ * Find similar cases in vector database (FUTURE)
+ * 
+ * @param {Object} geschaeftsmodell - Current business model
+ * @returns {Promise<Array>} Similar cases
+ */
+async function findSimilarCases(geschaeftsmodell) {
+  // TODO: Implement vector similarity search
+  // 
+  // 1. Create embedding of current geschaeftsmodell
+  // const embedding = await createEmbedding(geschaeftsmodell);
+  // 
+  // 2. Query pgvector/Pinecone for similar cases
+  // const { data } = await supabase.rpc('match_geschaeftsmodelle', {
+  //   query_embedding: embedding,
+  //   match_threshold: 0.8,
+  //   match_count: 5
+  // });
+  // 
+  // 3. Return enriched cases with artikel data
+  // return data.map(case => ({
+  //   projekt_name: case.name,
+  //   similarity_score: case.similarity,
+  //   artikel_created: case.artikel,
+  //   success_metrics: case.metrics
+  // }));
+  
+  return [];
+}
+
+/**
+ * Enrich prompt with RAG context (FUTURE)
+ */
+function enrichPromptWithRAG(geschaeftsmodell, similarCases) {
+  // TODO: Add similar cases to prompt
+  // 
+  // const ragContext = `
+  // ÄHNLICHE CASES AUS DATENBANK:
+  // ${similarCases.map(c => `
+  //   - ${c.projekt_name} (${Math.round(c.similarity * 100)}% ähnlich)
+  //     Artikel: ${c.artikel_created.length}
+  //     Durchschnittlicher Deal: ${c.success_metrics.avg_deal_size}
+  // `).join('\n')}
+  // `;
+  
+  return geschaeftsmodell;
+}
+
+// ==========================================
+// UI COMPONENTS (Same as before)
 // ==========================================
 
 function showLoadingModal() {
@@ -140,7 +270,8 @@ function showLoadingModal() {
         </div>
         <h3 style="margin: 0 0 15px; color: #1f2937;">🤖 KI analysiert dein Geschäftsmodell...</h3>
         <p style="margin: 0; color: #6b7280;">
-          Claude liest alle Sections und schlägt intelligente Artikel vor.<br>
+          Claude liest alle Sections aus der Datenbank<br>
+          und schlägt intelligente Artikel vor.<br>
           Dies dauert 5-10 Sekunden.
         </p>
       </div>
@@ -156,10 +287,6 @@ function showLoadingModal() {
   document.body.appendChild(modal);
 }
 
-// ==========================================
-// ERROR MODAL
-// ==========================================
-
 function showErrorModal(projektId, errorMessage) {
   const modal = document.getElementById('artikel-creation-modal');
   if (!modal) return;
@@ -169,7 +296,7 @@ function showErrorModal(projektId, errorMessage) {
       <div class="modal-header">
         <div class="modal-title">
           <span class="modal-icon">⚠️</span>
-          <h2>KI-Analyse fehlgeschlagen</h2>
+          <h2>Fehler</h2>
         </div>
         <button class="modal-close" onclick="closeArtikelCreationModal()">×</button>
       </div>
@@ -182,7 +309,7 @@ function showErrorModal(projektId, errorMessage) {
         </div>
         
         <div style="padding: 0 30px 30px;">
-          <p>Die KI-Analyse konnte nicht durchgeführt werden. Du kannst einen Artikel manuell anlegen.</p>
+          <p>Bitte versuche es erneut oder kontaktiere den Support.</p>
         </div>
       </div>
       
@@ -195,18 +322,12 @@ function showErrorModal(projektId, errorMessage) {
   `;
 }
 
-// ==========================================
-// MAIN MODAL WITH RESULTS
-// ==========================================
-
 function showArtikelModal(projektId, geschaeftsmodell, analysis) {
   console.log('🎨 Rendering modal with analysis...');
   
-  // Remove loading modal
   const existing = document.getElementById('artikel-creation-modal');
   if (existing) existing.remove();
   
-  // Store analysis globally for later use
   window.currentArtikelAnalysis = analysis;
   
   const modal = document.createElement('div');
@@ -268,9 +389,8 @@ function showArtikelModal(projektId, geschaeftsmodell, analysis) {
   console.log('✅ Modal rendered');
 }
 
-// ==========================================
-// RENDER FUNCTIONS
-// ==========================================
+// [Rest of the render functions - same as artikel-creation-modal-COMPLETE.js]
+// (Copy all the render functions from the complete version)
 
 function renderAISummary(analysis) {
   if (!analysis.analysis_summary) return '';
@@ -312,7 +432,7 @@ function renderAISuggestionsTab(analysis) {
         <div style="font-size: 64px; margin-bottom: 20px;">📋</div>
         <h3 style="margin: 0 0 10px;">Keine Vorschläge generiert</h3>
         <p style="margin: 0 0 30px; color: #6b7280;">
-          Bitte fülle mehr Sections aus oder erstelle manuell.
+          Bitte fülle mehr Sections aus.
         </p>
       </div>
     `;
@@ -422,10 +542,6 @@ function renderManualTab(projektId) {
   `;
 }
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
 function getConfidenceBadge(confidence) {
   const percentage = Math.round(confidence * 100);
   let color = confidence >= 0.9 ? '#059669' : confidence >= 0.75 ? '#2563eb' : '#f59e0b';
@@ -452,10 +568,6 @@ function formatCurrency(value) {
     minimumFractionDigits: 0
   }).format(value);
 }
-
-// ==========================================
-// INTERACTION HANDLERS
-// ==========================================
 
 function setupTabSwitching() {
   document.querySelectorAll('.tab-button').forEach(btn => {
@@ -495,10 +607,6 @@ window.closeArtikelCreationModal = function() {
   const modal = document.getElementById('artikel-creation-modal');
   if (modal) modal.remove();
 };
-
-// ==========================================
-// ARTIKEL CREATION
-// ==========================================
 
 window.createSelectedArtikel = async function(projektId) {
   const checkboxes = document.querySelectorAll('.artikel-checkbox:checked');
