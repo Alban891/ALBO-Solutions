@@ -1,15 +1,10 @@
 /**
  * Section 2: Marktgröße & Opportunity
- * Includes TAM/SAM/SOM with detail modal
+ * UPDATED: Simple Calculator mit McKinsey Templates
  */
-
-import * as helpers from '../../../helpers.js';
 
 export function renderSection2(geschaeftsmodell) {
   return `
-    <!-- ========================================== -->
-    <!-- 2. MARKTGRÖSSE & OPPORTUNITY -->
-    <!-- ========================================== -->
     <div class="form-section gm-section" data-section="2" id="section-2">
       <div class="section-header-small">
         <h4>2️⃣ Marktgröße & Opportunity</h4>
@@ -29,19 +24,20 @@ export function renderSection2(geschaeftsmodell) {
               value="${geschaeftsmodell.tam || ''}"
               readonly
               style="background: var(--gray-50); cursor: pointer;"
-              onclick="geschaeftsmodellModule.openMarketDetailModal('tam')"
+              onclick="marketSizing.openTAMCalculator()"
             />
             <small style="color: var(--gray); display: block; margin-top: 4px;">
-              Gesamtmarkt in € (automatisch berechnet)
+              Gesamtmarkt in € - Klick für McKinsey-Template
             </small>
           </div>
           <button 
             type="button" 
             class="btn btn-secondary" 
-            onclick="geschaeftsmodellModule.openMarketDetailModal('tam')"
+            onclick="marketSizing.openTAMCalculator()"
             style="white-space: nowrap;"
+            title="TAM berechnen"
           >
-            📊 Berechnen
+            📊 Details
           </button>
         </div>
       </div>
@@ -57,19 +53,20 @@ export function renderSection2(geschaeftsmodell) {
               value="${geschaeftsmodell.sam || ''}"
               readonly
               style="background: var(--gray-50); cursor: pointer;"
-              onclick="geschaeftsmodellModule.openMarketDetailModal('sam')"
+              onclick="marketSizing.openSAMCalculator()"
             />
             <small style="color: var(--gray); display: block; margin-top: 4px;">
-              Realistisch erreichbarer Markt in €
+              Realistisch erreichbarer Markt - Filter auf TAM
             </small>
           </div>
           <button 
             type="button" 
             class="btn btn-secondary" 
-            onclick="geschaeftsmodellModule.openMarketDetailModal('sam')"
+            onclick="marketSizing.openSAMCalculator()"
             style="white-space: nowrap;"
+            title="SAM berechnen"
           >
-            📊 Berechnen
+            📊 Details
           </button>
         </div>
       </div>
@@ -85,19 +82,20 @@ export function renderSection2(geschaeftsmodell) {
               value="${geschaeftsmodell.som || ''}"
               readonly
               style="background: var(--gray-50); cursor: pointer;"
-              onclick="geschaeftsmodellModule.openMarketDetailModal('som')"
+              onclick="marketSizing.openSOMCalculator()"
             />
             <small style="color: var(--gray); display: block; margin-top: 4px;">
-              Realistisch in 3 Jahren erreichbar in €
+              Realistisch in 3 Jahren - Jahr-für-Jahr Planung
             </small>
           </div>
           <button 
             type="button" 
             class="btn btn-secondary" 
-            onclick="geschaeftsmodellModule.openMarketDetailModal('som')"
+            onclick="marketSizing.openSOMCalculator()"
             style="white-space: nowrap;"
+            title="SOM berechnen"
           >
-            📊 Berechnen
+            📊 Details
           </button>
         </div>
       </div>
