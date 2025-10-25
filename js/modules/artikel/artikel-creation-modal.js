@@ -98,34 +98,48 @@ async function loadProjektFromDatabase(projektId) {
     
     console.log('🔍 Querying Supabase for projekt:', cleanProjektId);
     
-    // Load projekt WITH geschaeftsmodell data (separate table!)
-    const { data: projekt, error } = await supabase
+    // Load projekt basic info
+    const { data: projekt, error: projektError } = await supabase
       .from('ALBO_Projects')
-      .select(`
-        *,
-        geschaeftsmodell (*)
-      `)
+      .select('*')
       .eq('id', cleanProjektId)
       .single();
     
-    if (error) {
-      console.error('❌ Supabase error:', error);
-      throw new Error(`Datenbank-Fehler: ${error.message}`);
+    if (projektError) {
+      console.error('❌ Projekt error:', projektError);
+      throw new Error(`Fehler beim Laden des Projekts: ${projektError.message}`);
     }
     
     if (!projekt) {
       throw new Error('Projekt nicht gefunden');
     }
     
-    // Merge geschaeftsmodell data into projekt object
-    const gmData = projekt.geschaeftsmodell?.[0] || {};
-    const mergedData = { ...projekt, ...gmData };
+    console.log('✅ Projekt loaded:', projekt.name);
     
-    console.log('✅ Project loaded from database:', mergedData.name);
-    console.log('📊 Geschaeftsmodell data:', gmData);
-    console.log('📊 Revenue streams hardware:', gmData.revenue_streams_hardware);
-    console.log('📊 Average deal size:', gmData.average_deal_size);
-    console.log('📊 Revenue model:', gmData.revenue_model_erklaerung?.substring(0, 100) + '...');
+    // ✅ Load geschaeftsmodell data SEPARATELY using projekt_id
+    const { data: gmData, error: gmError } = await supabase
+      .from('geschaeftsmodell')
+      .select('*')
+      .eq('projekt_id', cleanProjektId)
+      .maybeSingle();  // Use maybeSingle instead of single (allows null)
+    
+    if (gmError) {
+      console.error('❌ Geschaeftsmodell error:', gmError);
+      throw new Error(`Fehler beim Laden der Geschäftsmodell-Daten: ${gmError.message}`);
+    }
+    
+    console.log('📊 Geschaeftsmodell data loaded:', gmData);
+    console.log('📊 Revenue streams from DB:', gmData?.revenue_streams);
+    console.log('📊 Custom streams from DB:', gmData?.custom_streams);
+    console.log('📊 Revenue erklaerung:', gmData?.revenue_erklaerung?.substring(0, 100));
+    
+    // Merge both into one object
+    const mergedData = { 
+      ...projekt, 
+      ...(gmData || {})  // Merge geschaeftsmodell fields into projekt
+    };
+    
+    console.log('✅ Merged data ready for analysis');
     
     return mergedData;
     
