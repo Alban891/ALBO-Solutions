@@ -6,12 +6,10 @@
 .ai-partner-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
   background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border-left: 1px solid #e5e7eb;
 }
 
 /* HEADER - Compact */
