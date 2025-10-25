@@ -10,6 +10,7 @@
 
 import { analyzeGeschaeftsmodellWithClaude } from './artikel-ai-complete.js';
 import { state } from '../../state.js';
+import { saveArticle } from '../../api.js';  // ✅ BACK TO STATIC IMPORT!
 
 // ==========================================
 // MAIN ENTRY POINT
@@ -30,6 +31,10 @@ export async function openArtikelCreationModal(projektId) {
  * Show choice modal: AI Analysis vs Manual Creation
  */
 function showChoiceModal(projektId) {
+  console.log('🎯 showChoiceModal received projektId:', projektId);
+  console.log('   Type:', typeof projektId);
+  console.log('   Has prefix?', projektId?.includes?.('projekt-db-'));
+  
   const existing = document.getElementById('artikel-creation-modal');
   if (existing) existing.remove();
   
@@ -846,9 +851,14 @@ window.createManualArtikel = async function(projektId) {
   
   // Clean projekt ID
   let cleanProjektId = projektId;
-  if (projektId.includes('-db-')) {
-    cleanProjektId = projektId.split('-db-')[1];
+  if (typeof projektId === 'string' && projektId.includes('projekt-db-')) {
+    cleanProjektId = projektId.replace('projekt-db-', '');
   }
+  
+  console.log('✏️ Creating manual article');
+  console.log('  projektId:', cleanProjektId);
+  console.log('  name:', name);
+  console.log('  typ:', typ);
   
   try {
     const artikelData = {
@@ -864,35 +874,51 @@ window.createManualArtikel = async function(projektId) {
       start_hk: 0
     };
     
-    // Import dynamically to avoid circular dependency
-    const { saveArticle } = await import('../../api.js');
-    await saveArticle(artikelData);
+    console.log('  💾 Calling saveArticle...');
+    
+    // ✅ USE STATIC IMPORT (imported at top of file)
+    const result = await saveArticle(artikelData);
+    
+    console.log('  ✅ Article created:', result);
     
     window.closeArtikelCreationModal();
-    window.location.reload();
+    
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('  ❌ Error:', error);
     alert('Fehler: ' + error.message);
   }
 };
 
 async function createArtikelFromSuggestion(projektId, suggestion) {
   console.log('📝 createArtikelFromSuggestion called');
-  console.log('  projektId:', projektId);
+  console.log('  projektId (raw):', projektId);
   console.log('  suggestion:', suggestion);
   
-  // Clean projekt ID
+  // Clean projekt ID - but check if it's already a UUID first!
   let cleanProjektId = projektId;
-  if (projektId.includes('-db-')) {
-    cleanProjektId = projektId.split('-db-')[1];
-    console.log('  🔧 Cleaned projekt ID:', projektId, '→', cleanProjektId);
+  
+  // If it has 'projekt-db-' prefix, remove it
+  if (typeof projektId === 'string' && projektId.includes('projekt-db-')) {
+    cleanProjektId = projektId.replace('projekt-db-', '');
+    console.log('  🔧 Removed prefix: projekt-db-xxx → ', cleanProjektId);
+  } 
+  // If it already looks like a UUID, use as-is
+  else if (typeof projektId === 'string' && projektId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    console.log('  ✅ Already a valid UUID:', cleanProjektId);
+  }
+  // Otherwise it might be wrong format
+  else {
+    console.warn('  ⚠️ Unexpected projektId format:', projektId);
   }
   
   const artikelData = {
     name: suggestion.name,
     typ: suggestion.typ,
-    projekt_id: cleanProjektId,
+    projekt_id: cleanProjektId,  // ✅ CRITICAL: Must be correct UUID!
     release_datum: '2025-01',
     volumes: {},
     prices: {},
@@ -914,21 +940,14 @@ async function createArtikelFromSuggestion(projektId, suggestion) {
     artikelData.prices[year] = suggestion.suggested_values?.start_preis || 0;
   }
   
-  console.log('  📋 Artikel data prepared:', artikelData);
+  console.log('  📋 Artikel data prepared:');
+  console.log('    projekt_id:', artikelData.projekt_id);
+  console.log('    name:', artikelData.name);
+  console.log('    typ:', artikelData.typ);
   
   try {
-    // Import dynamically to avoid circular dependency
-    console.log('  📦 Importing saveArticle...');
-    const apiModule = await import('../../api.js');
-    console.log('  ✅ API module loaded:', Object.keys(apiModule));
-    
-    const { saveArticle } = apiModule;
-    
-    if (!saveArticle) {
-      throw new Error('saveArticle function not found in api module');
-    }
-    
-    console.log('  💾 Calling saveArticle...');
+    // ✅ USE STATIC IMPORT (imported at top of file)
+    console.log('  💾 Calling saveArticle with projekt_id:', artikelData.projekt_id);
     const result = await saveArticle(artikelData);
     console.log('  ✅ saveArticle returned:', result);
     
