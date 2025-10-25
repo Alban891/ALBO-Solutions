@@ -1,14 +1,14 @@
 /**
  * CFO Dashboard - Geschäftsmodell Module (Modular Structure)
- * Entry Point - UPDATED WITH API INTEGRATION
+ * Entry Point with Supabase Integration
  * 
- * Version: 3.1 - Supabase Integration
+ * Version: 3.1 - Database Integration
  * Sections: 8 (Kundenproblem, Markt, Zielkunden, Wettbewerb, Revenue, GTM, Lösung, Annahmen)
  */
 
 import { state } from '../../state.js';
 import * as helpers from '../../helpers.js';
-import * as api from '../../api.js';  // ← API Import hinzugefügt
+import * as api from '../../api.js';
 import { analyzeSection, validateGeschaeftsmodell } from './ki-analysis.js';
 import { renderAllSections } from './sections/index.js';
 import { 
@@ -29,26 +29,47 @@ let currentSectionAnalysis = {};
 let completedSections = new Set();
 
 // ==========================================
+// HELPER: CLEAN PROJEKT ID
+// ==========================================
+
+/**
+ * Strip 'projekt-db-' prefix for database FK constraint
+ * @param {string} projektId - Original projekt ID (may have prefix)
+ * @returns {string} Clean UUID for database
+ */
+function cleanProjektId(projektId) {
+  if (!projektId) return null;
+  
+  // Remove 'projekt-db-' prefix if exists
+  if (projektId.includes('projekt-db-')) {
+    return projektId.replace('projekt-db-', '');
+  }
+  
+  return projektId;
+}
+
+// ==========================================
 // MAIN RENDER
 // ==========================================
 
 /**
  * Main render function for Geschäftsmodell tab
+ * Loads data from Supabase database
  */
-export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
-  const projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) {
+export async function renderGeschaeftsmodell() {
+  const projektIdRaw = window.cfoDashboard.currentProjekt;
+  if (!projektIdRaw) {
     console.warn('No projekt selected');
     return;
   }
 
-  const projekt = state.getProjekt(projektId);
+  const projekt = state.getProjekt(projektIdRaw);
   if (!projekt) {
-    console.error('Projekt not found:', projektId);
+    console.error('Projekt not found:', projektIdRaw);
     return;
   }
 
-  console.log('�️ Rendering Geschäftsmodell (Modular) for:', projekt.name);
+  console.log('🏗️ Rendering Geschäftsmodell (Modular) for:', projekt.name);
 
   const container = document.getElementById('projekt-tab-geschaeftsmodell');
   if (!container) {
@@ -56,13 +77,29 @@ export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
     return;
   }
 
-  // ← NEU: Load from database
+  // Show loading
   container.innerHTML = '<div style="padding: 40px; text-align: center;">⏳ Lade Geschäftsmodell...</div>';
-  
-  const geschaeftsmodell = await api.loadGeschaeftsmodell(projektId) || {};
-  
-  // Store in state for backward compatibility
-  state.updateGeschaeftsmodell(projektId, geschaeftsmodell);
+
+  // Clean projekt ID for database query
+  const projektId = cleanProjektId(projektIdRaw);
+  console.log('🔍 Original ID:', projektIdRaw);
+  console.log('🔍 Cleaned ID for DB:', projektId);
+
+  // Load from database
+  let geschaeftsmodell = null;
+  try {
+    geschaeftsmodell = await api.loadGeschaeftsmodell(projektId);
+    console.log('📥 Loaded from DB:', geschaeftsmodell);
+  } catch (error) {
+    console.error('❌ Error loading Geschäftsmodell:', error);
+    helpers.showToast('⚠️ Fehler beim Laden', 'error');
+  }
+
+  // Fallback to empty object if nothing loaded
+  if (!geschaeftsmodell) {
+    geschaeftsmodell = {};
+    console.log('ℹ️ No existing data, starting fresh');
+  }
 
   // Reset state
   currentSectionAnalysis = {};
@@ -75,7 +112,7 @@ export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
       <!-- Header -->
       <div class="section-header" style="margin-bottom: 32px;">
         <div>
-          <h3>�️ Geschäftsmodell</h3>
+          <h3>🏗️ Geschäftsmodell</h3>
           <p style="color: var(--gray); margin-top: 8px;">
             Business Model Canvas - 8 Sections für strategisches Verständnis
           </p>
@@ -129,71 +166,84 @@ export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
 // ==========================================
 
 /**
- * Save Geschäftsmodell data
+ * Save Geschäftsmodell data to database
  */
-export async function saveGeschaeftsmodell() {  // ← async hinzugefügt
-  let projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) {
+export async function saveGeschaeftsmodell() {
+  const projektIdRaw = window.cfoDashboard.currentProjekt;
+  if (!projektIdRaw) {
     alert('Kein Projekt ausgewählt');
     return;
   }
 
-  // Strip 'projekt-db-' prefix if exists (for database FK)
-  if (projektId.startsWith('projekt-db-')) {
-    projektId = projektId.replace('projekt-db-', '');
-  }
+  // Clean projekt ID for database FK
+  const projektId = cleanProjektId(projektIdRaw);
+  
+  console.log('💾 Saving Geschäftsmodell...');
+  console.log('💾 Original ID:', projektIdRaw);
+  console.log('💾 Cleaned ID for DB:', projektId);
 
-  console.log('💾 Using cleaned projekt ID for DB:', projektId);
-
-  // Show loading
+  // Show loading toast
   helpers.showToast('⏳ Speichere Geschäftsmodell...', 'info');
 
+  // Collect form data
   const formData = collectFormData();
+  console.log('📦 Form data collected:', formData);
   
-  // DEBUG: Log what we're sending
-  console.log('📤 Form Data to save:', formData);
-  console.log('📤 ProjektId:', projektId);
-  
-  // ← NEU: Save to database
-  const success = await api.saveGeschaeftsmodell(projektId, formData);
-  
-  if (success) {
-    // Update state
-    state.updateGeschaeftsmodell(projektId, formData);
+  try {
+    // Save to database
+    const success = await api.saveGeschaeftsmodell(projektId, formData);
     
-    // Show success
-    helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
-    
-    // Update progress bar
-    const progress = api.calculateGeschaeftsmodellProgress(formData);
-    const progressBar = document.getElementById('gm-progress-bar');
-    const progressText = document.getElementById('gm-progress-text');
-    if (progressBar) progressBar.style.width = `${progress}%`;
-    if (progressText) progressText.textContent = `${progress}%`;
-    
-    console.log('💾 Geschäftsmodell saved:', formData);
-  } else {
-    helpers.showToast('❌ Fehler beim Speichern', 'error');
+    if (success) {
+      // Update local state (with original ID for state management)
+      state.updateGeschaeftsmodell(projektIdRaw, formData);
+      
+      // Show success
+      helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
+      
+      // Update progress bar
+      const progress = api.calculateGeschaeftsmodellProgress(formData);
+      const progressBar = document.getElementById('gm-progress-bar');
+      const progressText = document.getElementById('gm-progress-text');
+      if (progressBar) progressBar.style.width = `${progress}%`;
+      if (progressText) progressText.textContent = `${progress}%`;
+      
+      console.log('✅ Geschäftsmodell saved successfully');
+    } else {
+      helpers.showToast('❌ Fehler beim Speichern', 'error');
+      console.error('❌ Save returned false');
+    }
+  } catch (error) {
+    console.error('❌ Error saving Geschäftsmodell:', error);
+    helpers.showToast('❌ Fehler: ' + (error.message || 'Unbekannter Fehler'), 'error');
   }
 }
 
 /**
  * Reset form
  */
-export async function resetForm() {  // ← async hinzugefügt
+export async function resetForm() {
   if (!confirm('Alle Eingaben zurücksetzen?')) return;
   
-  const projektId = window.cfoDashboard.currentProjekt;
+  const projektIdRaw = window.cfoDashboard.currentProjekt;
+  if (!projektIdRaw) return;
+
+  const projektId = cleanProjektId(projektIdRaw);
   
-  // ← NEU: Delete from database
-  if (confirm('Auch aus Datenbank löschen?')) {
+  try {
+    // Delete from database
     await api.deleteGeschaeftsmodell(projektId);
+    
+    // Reset local state
+    resetFormState();
+    
+    // Re-render
+    await renderGeschaeftsmodell();
+    
+    helpers.showToast('🔄 Formular zurückgesetzt', 'info');
+  } catch (error) {
+    console.error('❌ Error resetting:', error);
+    helpers.showToast('⚠️ Fehler beim Zurücksetzen', 'error');
   }
-  
-  resetFormState();
-  await renderGeschaeftsmodell();  // ← await hinzugefügt
-  
-  helpers.showToast('🔄 Formular zurückgesetzt', 'info');
 }
 
 // ==========================================
@@ -315,4 +365,4 @@ export default {
   }
 };
 
-console.log('📦 Geschäftsmodell Module (Modular + API) loaded');
+console.log('📦 Geschäftsmodell Module (Modular + DB) loaded');
