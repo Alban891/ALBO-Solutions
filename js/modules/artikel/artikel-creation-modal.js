@@ -10,7 +10,6 @@
 
 import { analyzeGeschaeftsmodellWithClaude } from './artikel-ai-complete.js';
 import { state } from '../../state.js';
-import * as api from '../../api.js';
 
 // ==========================================
 // MAIN ENTRY POINT
@@ -683,17 +682,29 @@ window.createManualArtikel = async function(projektId) {
     return;
   }
   
+  // Clean projekt ID
+  let cleanProjektId = projektId;
+  if (projektId.includes('-db-')) {
+    cleanProjektId = projektId.split('-db-')[1];
+  }
+  
   try {
-    await api.saveArtikel({
+    const artikelData = {
       name: name,
       typ: typ,
-      projektId: projektId,
-      release: '2025-01',
-      status: 'aktiv',
+      projekt_id: cleanProjektId,
+      release_datum: '2025-01',
       volumes: {},
       prices: {},
-      hk: 0
-    });
+      hk: 0,
+      start_menge: 0,
+      start_preis: 0,
+      start_hk: 0
+    };
+    
+    // Import dynamically to avoid circular dependency
+    const { saveArticle } = await import('../../api.js');
+    await saveArticle(artikelData);
     
     window.closeArtikelCreationModal();
     window.location.reload();
@@ -705,23 +716,38 @@ window.createManualArtikel = async function(projektId) {
 };
 
 async function createArtikelFromSuggestion(projektId, suggestion) {
+  // Clean projekt ID
+  let cleanProjektId = projektId;
+  if (projektId.includes('-db-')) {
+    cleanProjektId = projektId.split('-db-')[1];
+  }
+  
   const artikelData = {
     name: suggestion.name,
     typ: suggestion.typ,
-    projektId: projektId,
-    release: '2025-01',
-    status: 'aktiv',
+    projekt_id: cleanProjektId,  // Use cleaned ID
+    release_datum: '2025-01',
     volumes: {},
     prices: {},
-    hk: suggestion.suggested_values.start_hk
+    hk: suggestion.suggested_values.start_hk || 0,
+    start_menge: suggestion.suggested_values.start_menge || 0,
+    start_preis: suggestion.suggested_values.start_preis || 0,
+    start_hk: suggestion.suggested_values.start_hk || 0,
+    mengen_modell: suggestion.suggested_values.mengen_modell,
+    preis_modell: suggestion.suggested_values.preis_modell,
+    kosten_modell: suggestion.suggested_values.kosten_modell,
+    zeitraum: suggestion.suggested_values.zeitraum || 5
   };
   
+  // Set volumes and prices for each year
   const currentYear = new Date().getFullYear();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < (artikelData.zeitraum || 5); i++) {
     const year = currentYear + i;
     artikelData.volumes[year] = suggestion.suggested_values.start_menge;
     artikelData.prices[year] = suggestion.suggested_values.start_preis;
   }
   
-  return await api.saveArtikel(artikelData);
+  // Import dynamically to avoid circular dependency
+  const { saveArticle } = await import('../../api.js');
+  return await saveArticle(artikelData);
 }
