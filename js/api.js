@@ -956,6 +956,13 @@ export async function loadGeschaeftsmodell(projektId) {
 
   } catch (error) {
     console.error('❌ Load Geschäftsmodell error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      full: error
+    });
     state.setError('load_geschaeftsmodell', error);
     return null;
   }
@@ -996,6 +1003,13 @@ export async function saveGeschaeftsmodell(projektId, geschaeftsmodellData) {
 
   } catch (error) {
     console.error('❌ Save Geschäftsmodell error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      full: error
+    });
     state.setError('save_geschaeftsmodell', error);
     return false;
   }
