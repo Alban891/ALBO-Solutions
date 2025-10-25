@@ -1239,86 +1239,100 @@ function prepareGeschaeftsmodellForDB(projektId, formData) {
   const progress = calculateGeschaeftsmodellProgress(formData);
   const completedSections = getCompletedSections(formData);
 
-  return {
+  // Start with minimal required data
+  const dbData = {
     projekt_id: projektId,
-
-    // Section 1
-    kundenproblem: formData.kundenproblem || null,
-    problemkosten: formData.problemkosten || null,
-    urgency: formData.urgency || null,
-
-    // Section 2
-    tam: formData.tam || null,
-    tam_source: formData.tam_source || null,
-    tam_calculation: formData.tam_calculation || null,
-    sam: formData.sam || null,
-    sam_reasoning: formData.sam_reasoning || null,
-    sam_calculation: formData.sam_calculation || null,
-    som: formData.som || null,
-    som_reasoning: formData.som_reasoning || null,
-    som_calculation: formData.som_calculation || null,
-    market_validation: formData.market_validation || [],
-
-    // Section 3
-    kundentyp: formData.kundentyp || [],
-    unternehmensgroesse: formData.unternehmensgroesse || [],
-    branchen: formData.branchen || [],
-    geografie: formData.geografie || [],
-    kundenprofil: formData.kundenprofil || null,
-    buying_center: formData.buying_center || [],
-
-    // Section 4
-    competitors: formData.competitors || null,
-    status_quo: formData.status_quo || [],
-    do_nothing_cost: formData.do_nothing_cost || null,
-    positioning: formData.positioning || null,
-    competitive_moat: formData.competitive_moat || [],
-    moat_description: formData.moat_description || null,
-
-    // Section 5
-    revenue_streams: formData.revenue_streams || [],
-    custom_streams: formData.custom_streams || [],
-    revenue_erklaerung: formData.revenue_erklaerung || null,
-    deal_size: formData.deal_size || null,
-    sales_cycle: formData.sales_cycle || null,
-    contract_length: formData.contract_length || null,
-    churn_rate: formData.churn_rate || null,
-
-    // Section 6
-    sales_motion: formData.sales_motion || null,
-    sales_team_current: formData.sales_team_current || null,
-    sales_team_future: formData.sales_team_future || null,
-    quota_per_rep: formData.quota_per_rep || null,
-    ote_per_rep: formData.ote_per_rep || null,
-    lead_gen_channels: formData.lead_gen_channels || [],
-    marketing_budget_pct: formData.marketing_budget_pct || null,
-    cost_per_lead: formData.cost_per_lead || null,
-    lead_to_opp: formData.lead_to_opp || null,
-    opp_to_close: formData.opp_to_close || null,
-    pricing_strategy: formData.pricing_strategy || null,
-    max_discount: formData.max_discount || null,
-    early_adopter_discount: formData.early_adopter_discount || null,
-    onboarding_duration: formData.onboarding_duration || null,
-    support_level: formData.support_level || null,
-    expansion_strategy: formData.expansion_strategy || [],
-
-    // Section 7
-    produktkategorie: formData.produktkategorie || null,
-    value_proposition: formData.value_proposition || null,
-    features: formData.features || [],
-    wettbewerbsvorteil: formData.wettbewerbsvorteil || [],
-
-    // Section 8
-    assumptions: formData.assumptions || null,
-    risks: formData.risks || null,
-    success_factors: formData.success_factors || [],
-
-    // Meta
-    notizen: formData.notizen || null,
+    updated_at: new Date().toISOString(),
     progress: progress,
-    completed_sections: completedSections,
-    updated_at: new Date().toISOString()
+    completed_sections: completedSections
   };
+
+  // Only add fields that are NOT null/undefined/empty
+  const addIfExists = (key, value) => {
+    if (value !== null && value !== undefined && value !== '') {
+      // For arrays, only add if not empty
+      if (Array.isArray(value) && value.length === 0) return;
+      dbData[key] = value;
+    }
+  };
+
+  // Section 1
+  addIfExists('kundenproblem', formData.kundenproblem);
+  addIfExists('problemkosten', formData.problemkosten);
+  addIfExists('urgency', formData.urgency);
+
+  // Section 2
+  addIfExists('tam', formData.tam);
+  addIfExists('tam_source', formData.tam_source);
+  addIfExists('tam_calculation', formData.tam_calculation);
+  addIfExists('sam', formData.sam);
+  addIfExists('sam_reasoning', formData.sam_reasoning);
+  addIfExists('sam_calculation', formData.sam_calculation);
+  addIfExists('som', formData.som);
+  addIfExists('som_reasoning', formData.som_reasoning);
+  addIfExists('som_calculation', formData.som_calculation);
+  addIfExists('market_validation', formData.market_validation);
+
+  // Section 3
+  addIfExists('kundentyp', formData.kundentyp);
+  addIfExists('unternehmensgroesse', formData.unternehmensgroesse);
+  addIfExists('branchen', formData.branchen);
+  addIfExists('geografie', formData.geografie);
+  addIfExists('kundenprofil', formData.kundenprofil);
+  addIfExists('buying_center', formData.buying_center);
+
+  // Section 4
+  addIfExists('competitors', formData.competitors);
+  addIfExists('status_quo', formData.status_quo);
+  addIfExists('do_nothing_cost', formData.do_nothing_cost);
+  addIfExists('positioning', formData.positioning);
+  addIfExists('competitive_moat', formData.competitive_moat);
+  addIfExists('moat_description', formData.moat_description);
+
+  // Section 5
+  addIfExists('revenue_streams', formData.revenue_streams);
+  addIfExists('custom_streams', formData.custom_streams);
+  addIfExists('revenue_erklaerung', formData.revenue_erklaerung);
+  addIfExists('deal_size', formData.deal_size);
+  addIfExists('sales_cycle', formData.sales_cycle);
+  addIfExists('contract_length', formData.contract_length);
+  addIfExists('churn_rate', formData.churn_rate);
+
+  // Section 6
+  addIfExists('sales_motion', formData.sales_motion);
+  addIfExists('sales_team_current', formData.sales_team_current);
+  addIfExists('sales_team_future', formData.sales_team_future);
+  addIfExists('quota_per_rep', formData.quota_per_rep);
+  addIfExists('ote_per_rep', formData.ote_per_rep);
+  addIfExists('lead_gen_channels', formData.lead_gen_channels);
+  addIfExists('marketing_budget_pct', formData.marketing_budget_pct);
+  addIfExists('cost_per_lead', formData.cost_per_lead);
+  addIfExists('lead_to_opp', formData.lead_to_opp);
+  addIfExists('opp_to_close', formData.opp_to_close);
+  addIfExists('pricing_strategy', formData.pricing_strategy);
+  addIfExists('max_discount', formData.max_discount);
+  addIfExists('early_adopter_discount', formData.early_adopter_discount);
+  addIfExists('onboarding_duration', formData.onboarding_duration);
+  addIfExists('support_level', formData.support_level);
+  addIfExists('expansion_strategy', formData.expansion_strategy);
+
+  // Section 7
+  addIfExists('produktkategorie', formData.produktkategorie);
+  addIfExists('value_proposition', formData.value_proposition);
+  addIfExists('features', formData.features);
+  addIfExists('wettbewerbsvorteil', formData.wettbewerbsvorteil);
+
+  // Section 8
+  addIfExists('assumptions', formData.assumptions);
+  addIfExists('risks', formData.risks);
+  addIfExists('success_factors', formData.success_factors);
+
+  // Meta
+  addIfExists('notizen', formData.notizen);
+
+  console.log('📦 Prepared DB Data (only non-null):', dbData);
+  
+  return dbData;
 }
 
 // ==========================================
