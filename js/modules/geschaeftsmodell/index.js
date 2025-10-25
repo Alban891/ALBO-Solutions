@@ -1,13 +1,14 @@
 /**
  * CFO Dashboard - Geschäftsmodell Module (Modular Structure)
- * Entry Point
+ * Entry Point - UPDATED WITH API INTEGRATION
  * 
- * Version: 3.0 Modular
+ * Version: 3.1 - Supabase Integration
  * Sections: 8 (Kundenproblem, Markt, Zielkunden, Wettbewerb, Revenue, GTM, Lösung, Annahmen)
  */
 
 import { state } from '../../state.js';
 import * as helpers from '../../helpers.js';
+import * as api from '../../api.js';  // ← API Import hinzugefügt
 import { analyzeSection, validateGeschaeftsmodell } from './ki-analysis.js';
 import { renderAllSections } from './sections/index.js';
 import { 
@@ -34,7 +35,7 @@ let completedSections = new Set();
 /**
  * Main render function for Geschäftsmodell tab
  */
-export function renderGeschaeftsmodell() {
+export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
   const projektId = window.cfoDashboard.currentProjekt;
   if (!projektId) {
     console.warn('No projekt selected');
@@ -47,7 +48,7 @@ export function renderGeschaeftsmodell() {
     return;
   }
 
-  console.log('🏗️ Rendering Geschäftsmodell (Modular) for:', projekt.name);
+  console.log('�️ Rendering Geschäftsmodell (Modular) for:', projekt.name);
 
   const container = document.getElementById('projekt-tab-geschaeftsmodell');
   if (!container) {
@@ -55,8 +56,13 @@ export function renderGeschaeftsmodell() {
     return;
   }
 
-  // Load existing data
-  const geschaeftsmodell = state.getGeschaeftsmodell(projektId) || {};
+  // ← NEU: Load from database
+  container.innerHTML = '<div style="padding: 40px; text-align: center;">⏳ Lade Geschäftsmodell...</div>';
+  
+  const geschaeftsmodell = await api.loadGeschaeftsmodell(projektId) || {};
+  
+  // Store in state for backward compatibility
+  state.updateGeschaeftsmodell(projektId, geschaeftsmodell);
 
   // Reset state
   currentSectionAnalysis = {};
@@ -69,7 +75,7 @@ export function renderGeschaeftsmodell() {
       <!-- Header -->
       <div class="section-header" style="margin-bottom: 32px;">
         <div>
-          <h3>🏗️ Geschäftsmodell</h3>
+          <h3>�️ Geschäftsmodell</h3>
           <p style="color: var(--gray); margin-top: 8px;">
             Business Model Canvas - 8 Sections für strategisches Verständnis
           </p>
@@ -88,10 +94,10 @@ export function renderGeschaeftsmodell() {
       <div style="margin-bottom: 32px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: var(--gray);">
           <span>Fortschritt</span>
-          <span id="gm-progress-text">0%</span>
+          <span id="gm-progress-text">${geschaeftsmodell.progress || 0}%</span>
         </div>
         <div style="height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
-          <div id="gm-progress-bar" style="height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease;"></div>
+          <div id="gm-progress-bar" style="height: 100%; background: var(--primary); width: ${geschaeftsmodell.progress || 0}%; transition: width 0.3s ease;"></div>
         </div>
       </div>
 
@@ -125,32 +131,56 @@ export function renderGeschaeftsmodell() {
 /**
  * Save Geschäftsmodell data
  */
-export function saveGeschaeftsmodell() {
+export async function saveGeschaeftsmodell() {  // ← async hinzugefügt
   const projektId = window.cfoDashboard.currentProjekt;
   if (!projektId) {
     alert('Kein Projekt ausgewählt');
     return;
   }
 
+  // Show loading
+  helpers.showToast('⏳ Speichere Geschäftsmodell...', 'info');
+
   const formData = collectFormData();
   
-  // Save to state
-  state.updateGeschaeftsmodell(projektId, formData);
+  // ← NEU: Save to database
+  const success = await api.saveGeschaeftsmodell(projektId, formData);
   
-  // Show success
-  helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
-  
-  console.log('💾 Geschäftsmodell saved:', formData);
+  if (success) {
+    // Update state
+    state.updateGeschaeftsmodell(projektId, formData);
+    
+    // Show success
+    helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
+    
+    // Update progress bar
+    const progress = api.calculateGeschaeftsmodellProgress(formData);
+    const progressBar = document.getElementById('gm-progress-bar');
+    const progressText = document.getElementById('gm-progress-text');
+    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (progressText) progressText.textContent = `${progress}%`;
+    
+    console.log('💾 Geschäftsmodell saved:', formData);
+  } else {
+    helpers.showToast('❌ Fehler beim Speichern', 'error');
+  }
 }
 
 /**
  * Reset form
  */
-export function resetForm() {
+export async function resetForm() {  // ← async hinzugefügt
   if (!confirm('Alle Eingaben zurücksetzen?')) return;
   
+  const projektId = window.cfoDashboard.currentProjekt;
+  
+  // ← NEU: Delete from database
+  if (confirm('Auch aus Datenbank löschen?')) {
+    await api.deleteGeschaeftsmodell(projektId);
+  }
+  
   resetFormState();
-  renderGeschaeftsmodell();
+  await renderGeschaeftsmodell();  // ← await hinzugefügt
   
   helpers.showToast('🔄 Formular zurückgesetzt', 'info');
 }
@@ -274,4 +304,4 @@ export default {
   }
 };
 
-console.log('📦 Geschäftsmodell Module (Modular) loaded');
+console.log('📦 Geschäftsmodell Module (Modular + API) loaded');
