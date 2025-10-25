@@ -537,7 +537,7 @@ window.openProjektDetail = async function(projektId) {
       <div id="create-projekt-modal" class="modal">
         <div class="modal-content">
           <div class="modal-header">
-            <h2>📁 Neues Projekt erstellen</h2>
+            <h2>Neues Projekt erstellen</h2>
             <button class="btn-close" onclick="closeCreateProjektModal()">✕</button>
           </div>
           
@@ -545,12 +545,6 @@ window.openProjektDetail = async function(projektId) {
             <div class="form-group">
               <label>Projektname *</label>
               <input type="text" id="new-projekt-name" placeholder="z.B. Smart Home Platform" required>
-            </div>
-            
-            <div class="form-group">
-              <label>Beschreibung</label>
-              <textarea id="new-projekt-beschreibung" rows="3" 
-                        placeholder="Kurze Projektbeschreibung..."></textarea>
             </div>
             
             <div class="form-group">
