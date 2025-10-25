@@ -2079,6 +2079,33 @@ body.ai-panel-hidden #ai-partner-panel {
   right: -400px !important;
 }
 
+/* Sortable Table Headers */
+.data-table th {
+    position: relative;
+    user-select: none;
+}
+
+.data-table th[onclick] {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.data-table th[onclick]:hover {
+    background-color: #f1f5f9;
+}
+
+.sort-arrow {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-left: 4px;
+    opacity: 0.5;
+}
+
+.data-table th[onclick]:hover .sort-arrow {
+    opacity: 1;
+    color: #1e40af;
+}
+
 /* ========================================== */
 /* END OF FILE */
 /* ========================================== */
