@@ -140,6 +140,13 @@ async function loadProjektFromDatabase(projektId) {
  * Maps database fields to structured sections
  */
 function extractGeschaeftsmodell(projekt) {
+  // ✅ FIX: Handle revenue_streams as array instead of individual booleans
+  const revenueStreamsArray = projekt.revenue_streams || [];
+  const customStreamsArray = projekt.custom_streams || [];
+  
+  console.log('🔍 Raw revenue_streams from DB:', revenueStreamsArray);
+  console.log('🔍 Raw custom_streams from DB:', customStreamsArray);
+  
   return {
     // Section 1 - Kundenproblem & Kontext
     section1: {
@@ -181,14 +188,15 @@ function extractGeschaeftsmodell(projekt) {
     },
     
     // Section 5 - Revenue Streams ⭐ MOST IMPORTANT!
+    // ✅ FIX: Convert array to boolean flags
     section5: {
-      revenue_streams_hardware: projekt.revenue_streams_hardware || false,
-      revenue_streams_wartung: projekt.revenue_streams_wartung || false,
-      revenue_streams_training: projekt.revenue_streams_training || false,
-      revenue_streams_lizenz: projekt.revenue_streams_lizenz || false,
-      revenue_streams_subscription: projekt.revenue_streams_subscription || false,
-      custom_revenue_streams: projekt.custom_revenue_streams || [],
-      revenue_model_erklaerung: projekt.revenue_model_erklaerung || '',
+      revenue_streams_hardware: revenueStreamsArray.includes('hardware'),
+      revenue_streams_wartung: revenueStreamsArray.includes('wartung'),
+      revenue_streams_training: revenueStreamsArray.includes('training'),
+      revenue_streams_lizenz: revenueStreamsArray.includes('lizenz'),
+      revenue_streams_subscription: revenueStreamsArray.includes('subscription'),
+      custom_revenue_streams: customStreamsArray,
+      revenue_model_erklaerung: projekt.revenue_erklaerung || '',  // ✅ Different field name!
       average_deal_size: projekt.average_deal_size || '',
       sales_cycle_monate: projekt.sales_cycle_monate || '',
       vertragslaufzeit_monate: projekt.vertragslaufzeit_monate || ''
