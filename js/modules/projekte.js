@@ -393,10 +393,10 @@
     const abgeschlossen = projekte.filter(p => p.status?.toLowerCase() === 'abgeschlossen').length;
 
     // Update UI
-    helpers.setInputValue('stat-total-projects', total);
-    helpers.setInputValue('stat-active-projects', aktiv);
-    helpers.setInputValue('stat-onhold-projects', onHold);
-    helpers.setInputValue('stat-completed-projects', abgeschlossen);
+    helpers.setTextContent('stat-total-projects', total);
+    helpers.setTextContent('stat-active-projects', aktiv);
+    helpers.setTextContent('stat-onhold-projects', onHold);
+    helpers.setTextContent('stat-completed-projects', abgeschlossen);
 
     console.log('📈 Project stats updated:', { total, aktiv, onHold, abgeschlossen });
   }
@@ -615,6 +615,98 @@ window.openProjektDetail = async function(projektId) {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
   }
 
+    /**
+   * Close create projekt modal
+   */
+  window.closeCreateProjektModal = function() {
+    const modal = document.getElementById('create-projekt-modal');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  /**
+   * Create new projekt
+   */
+  window.createProjekt = async function() {
+    console.log('✅ Creating new projekt');
+
+    // Get form values
+    const name = helpers.getInputValue('new-projekt-name');
+    const beschreibung = helpers.getInputValue('new-projekt-beschreibung');
+    const status = helpers.getInputValue('new-projekt-status');
+    const owner = helpers.getInputValue('new-projekt-owner');
+    const startDatum = helpers.getInputValue('new-projekt-start');
+    const endDatum = helpers.getInputValue('new-projekt-end');
+
+    // Get division (check for custom)
+    const divisionSelect = document.getElementById('new-projekt-division');
+    const divisionCustom = document.getElementById('new-projekt-division-custom');
+    let division = divisionSelect?.value;
+    
+    if (division === 'custom') {
+      division = divisionCustom?.value || 'Andere';
+    }
+
+    // Validation
+    if (!name?.trim()) {
+      alert('Bitte geben Sie einen Projektnamen ein.');
+      return;
+    }
+
+    if (!division || division === 'custom') {
+      alert('Bitte wählen Sie eine Division oder geben Sie eine ein.');
+      return;
+    }
+
+    // Create projekt object
+    const newProjekt = {
+      name: name.trim(),
+      beschreibung: beschreibung?.trim() || '',
+      division: division,
+      status: status || 'Aktiv',
+      owner: owner?.trim() || '',
+      startDatum: startDatum || '',
+      endDatum: endDatum || '',
+      artikel: []
+    };
+
+    console.log('📝 New projekt data:', newProjekt);
+
+    // Save to Supabase
+    try {
+      const success = await api.createProject(newProjekt);
+      
+      if (success) {
+        console.log('✅ Projekt created successfully');
+        
+        // Close modal
+        closeCreateProjektModal();
+        
+        // Reload projekte
+        await api.loadProjects();
+        
+        // Re-render
+        renderProjektOverview();
+        
+        // AI Feedback
+        if (window.cfoDashboard?.aiController) {
+          window.cfoDashboard.aiController.addAIMessage({
+            level: 'success',
+            title: '✅ Projekt erstellt',
+            text: `"${newProjekt.name}" wurde erfolgreich angelegt.`,
+            timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+          });
+        }
+      } else {
+        alert('Fehler beim Erstellen des Projekts. Bitte versuchen Sie es erneut.');
+      }
+    } catch (error) {
+      console.error('Error creating projekt:', error);
+      alert('Fehler beim Erstellen des Projekts: ' + error.message);
+    }
+  };
+
   // ==========================================
   // PROJECT EDIT
   // ==========================================
@@ -786,34 +878,48 @@ window.openProjektDetail = async function(projektId) {
 
     const modalHTML = `
       <div id="delete-projekt-modal" class="modal">
-        <div class="modal-content" style="max-width: 450px;">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-            <div style="font-size: 32px;">⚠️</div>
-            <h2 style="margin: 0; color: var(--danger);">Projekt löschen?</h2>
+        <div class="modal-content" style="max-width: 480px;">
+          <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="font-size: 28px;">⚠️</div>
+              <h2 style="margin: 0; color: #0f172a; font-size: 18px;">Projekt löschen</h2>
+            </div>
+            <button class="btn-close" onclick="closeDeleteProjektModal()">✕</button>
           </div>
           
-          <p style="margin: 0 0 16px 0;">
-            Möchten Sie <strong>"${helpers.escapeHtml(projekt.name)}"</strong> wirklich löschen?
-          </p>
-          
-          ${artikelCount > 0 ? `
-            <div style="background: #fef2f2; border-left: 3px solid var(--danger); 
-                padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-              <div style="font-size: 12px; font-weight: 600; color: var(--danger); margin-bottom: 4px;">
-                ⚠️ Achtung
+          <div class="modal-body" style="padding-top: 16px;">
+            <p style="margin: 0 0 20px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+              Möchten Sie das Projekt <strong style="color: #0f172a;">"${helpers.escapeHtml(projekt.name)}"</strong> wirklich löschen?
+            </p>
+            
+            ${artikelCount > 0 ? `
+              <div style="background: linear-gradient(to right, #fef2f2 0%, #fff5f5 100%); 
+                    border: 1px solid #fecaca; border-left: 3px solid #ef4444; 
+                    padding: 12px 16px; margin-bottom: 20px; border-radius: 6px;">
+                <div style="display: flex; align-items: start; gap: 8px;">
+                  <span style="font-size: 16px; flex-shrink: 0;">⚠️</span>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 700; color: #991b1b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">
+                      Achtung
+                    </div>
+                    <div style="font-size: 13px; color: #7f1d1d; line-height: 1.5;">
+                      Alle zugehörigen <strong>${artikelCount} Artikel</strong> werden ebenfalls unwiderruflich gelöscht.
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div style="font-size: 12px;">
-                Alle zugehörigen Artikel (${artikelCount}) werden ebenfalls gelöscht.
-              </div>
-            </div>
-          ` : ''}
+            ` : ''}
+          </div>
           
-          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeDeleteProjektModal()">
               Abbrechen
             </button>
-            <button class="btn btn-danger" onclick="confirmDeleteProjekt('${projektId}')">
-              Endgültig löschen
+            <button class="btn-icon" onclick="confirmDeleteProjekt('${projektId}')" 
+                    title="Endgültig löschen" 
+                    style="width: auto; padding: 10px 16px; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0;">
+              <span style="font-size: 16px;">🗑️</span>
+              <span style="font-size: 13px; font-weight: 600; color: #475569;">Löschen</span>
             </button>
           </div>
         </div>
