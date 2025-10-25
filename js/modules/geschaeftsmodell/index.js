@@ -131,44 +131,49 @@ export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
 /**
  * Save Geschäftsmodell data
  */
-export async function saveGeschaeftsmodell() {
-  const projektId = window.cfoDashboard.currentProjekt;
+export async function saveGeschaeftsmodell() {  // ← async hinzugefügt
+  let projektId = window.cfoDashboard.currentProjekt;
   if (!projektId) {
     alert('Kein Projekt ausgewählt');
     return;
   }
 
+  // Strip 'projekt-db-' prefix if exists (for database FK)
+  if (projektId.startsWith('projekt-db-')) {
+    projektId = projektId.replace('projekt-db-', '');
+  }
+
+  console.log('💾 Using cleaned projekt ID for DB:', projektId);
+
+  // Show loading
   helpers.showToast('⏳ Speichere Geschäftsmodell...', 'info');
 
   const formData = collectFormData();
   
-  // ← DETAILED ERROR LOGGING
-  console.log('💾 Attempting to save:', {
-    projektId,
-    formData,
-    apiExists: typeof api.saveGeschaeftsmodell
-  });
+  // DEBUG: Log what we're sending
+  console.log('📤 Form Data to save:', formData);
+  console.log('📤 ProjektId:', projektId);
   
-  try {
-    const success = await api.saveGeschaeftsmodell(projektId, formData);
+  // ← NEU: Save to database
+  const success = await api.saveGeschaeftsmodell(projektId, formData);
+  
+  if (success) {
+    // Update state
+    state.updateGeschaeftsmodell(projektId, formData);
     
-    if (success) {
-      state.updateGeschaeftsmodell(projektId, formData);
-      helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
-      
-      const progress = api.calculateGeschaeftsmodellProgress(formData);
-      const progressBar = document.getElementById('gm-progress-bar');
-      const progressText = document.getElementById('gm-progress-text');
-      if (progressBar) progressBar.style.width = `${progress}%`;
-      if (progressText) progressText.textContent = `${progress}%`;
-      
-      console.log('💾 Geschäftsmodell saved:', formData);
-    } else {
-      helpers.showToast('❌ Fehler beim Speichern', 'error');
-    }
-  } catch (error) {
-    console.error('❌❌❌ SAVE ERROR DETAILS:', error);
-    helpers.showToast('❌ Fehler: ' + error.message, 'error');
+    // Show success
+    helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
+    
+    // Update progress bar
+    const progress = api.calculateGeschaeftsmodellProgress(formData);
+    const progressBar = document.getElementById('gm-progress-bar');
+    const progressText = document.getElementById('gm-progress-text');
+    if (progressBar) progressBar.style.width = `${progress}%`;
+    if (progressText) progressText.textContent = `${progress}%`;
+    
+    console.log('💾 Geschäftsmodell saved:', formData);
+  } else {
+    helpers.showToast('❌ Fehler beim Speichern', 'error');
   }
 }
 
