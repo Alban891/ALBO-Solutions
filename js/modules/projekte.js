@@ -864,6 +864,7 @@ window.openProjektDetail = async function(projektId) {
   window.filterProjekte = function() {
     const searchTerm = helpers.getInputValue('projekt-search').toLowerCase();
     const statusFilter = helpers.getInputValue('projekt-filter-status');
+    const divisionFilter = helpers.getInputValue('projekt-filter-division');
 
     const rows = document.querySelectorAll('.projekt-row, .projekt-card, .projekt-kompakt-item');
 
@@ -887,8 +888,12 @@ window.openProjektDetail = async function(projektId) {
       const projektStatus = projekt.status?.toLowerCase().replace(/\s/g, '-') || 'aktiv';
       const statusMatch = statusFilter === 'alle' || projektStatus === statusFilter;
 
-      // Show/hide row
-      row.style.display = (searchMatch && statusMatch) ? '' : 'none';
+      // Division filter (NEW!)
+      const projektDivision = projekt.division || '';
+      const divisionFilterMatch = divisionFilter === 'alle' || projektDivision === divisionFilter;
+
+      // Show/hide row - now includes division filter
+      row.style.display = (searchMatch && statusMatch && divisionFilterMatch) ? '' : 'none';
     });
 
     updateFilteredStats();
