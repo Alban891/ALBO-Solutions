@@ -401,21 +401,20 @@ body {
 /* ========================================== */
 
 .portfolio-overview-header {
-  display: flex;
+  ddisplay: flex;
   align-items: center;
-  padding: 24px 32px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--spacing-xl);
-  border-left: 4px solid var(--primary);
-  box-shadow: var(--shadow);
+  padding: 12px 20px;
+  background: linear-gradient(to right, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 3px solid #1e40af;
 }
 
 .portfolio-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-light);
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-right: auto;
@@ -423,41 +422,41 @@ body {
 
 .portfolio-stats {
   display: flex;
-  gap: 40px;
+  gap: 32px;
   align-items: center;
 }
 
 .portfolio-stat {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 
 .portfolio-stat-value {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--text);
+  color: #0f172a;
 }
 
 .portfolio-stat-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 9px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-light);
+  letter-spacing: 0.08em;
+  color: #94a3b8;
 }
 
 .portfolio-stat.portfolio-stat-success .portfolio-stat-value {
-  color: var(--success);
+  color: #059669;
 }
 
 .portfolio-stat.portfolio-stat-warning .portfolio-stat-value {
-  color: var(--warning);
+  color: #d97706;
 }
 
 .portfolio-stat.portfolio-stat-neutral .portfolio-stat-value {
-  color: var(--text-light);
+  color: #64748b;
 }
 
 /* ========================================== */
@@ -957,6 +956,207 @@ body {
 .data-table td > div[onclick]:hover {
   color: #1e40af;
   text-decoration: underline;
+}
+
+/* ========================================== */
+/* KARTEN VIEW - PROFESSIONAL PROJECT CARDS */
+/* ========================================== */
+
+.projekt-karten-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+  padding: 4px;
+}
+
+.projekt-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.projekt-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.projekt-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.projekt-card-icon {
+  font-size: 20px;
+}
+
+.projekt-card-checkbox {
+  flex-shrink: 0;
+}
+
+.projekt-card-body {
+  padding: 16px;
+  cursor: pointer;
+}
+
+.projekt-card-body:hover .projekt-card-title {
+  color: #1e40af;
+}
+
+.projekt-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+  transition: color 0.15s ease;
+  line-height: 1.4;
+}
+
+.projekt-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.projekt-card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.projekt-card-meta-label {
+  font-weight: 600;
+  color: #94a3b8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.projekt-card-meta-value {
+  font-weight: 500;
+  color: #475569;
+}
+
+.projekt-card-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+.projekt-card-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.projekt-card-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.projekt-card-btn.btn-danger:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* ========================================== */
+/* KOMPAKT VIEW - MINIMAL SCANNABLE LIST */
+/* ========================================== */
+
+.projekt-kompakt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.projekt-kompakt-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.projekt-kompakt-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateX(2px);
+}
+
+.projekt-kompakt-checkbox {
+  flex-shrink: 0;
+}
+
+.projekt-kompakt-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.projekt-kompakt-main {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.projekt-kompakt-main:hover .projekt-kompakt-name {
+  color: #1e40af;
+}
+
+.projekt-kompakt-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 2px;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.projekt-kompakt-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.projekt-kompakt-separator {
+  color: #cbd5e1;
+}
+
+.projekt-kompakt-status {
+  flex-shrink: 0;
+}
+
+.projekt-kompakt-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* ========================================== */
