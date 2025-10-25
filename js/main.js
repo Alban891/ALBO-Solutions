@@ -14,7 +14,6 @@ import * as charts from './charts.js';
 import * as cockpit from './modules/cockpit.js';
 import * as projekte from './modules/projekte.js';
 import * as artikel from './modules/artikel/artikel.js';
-import { openArtikelCreationModal } from './modules/artikel/artikel-creation-modal.js';
 import * as projektkosten from './modules/projektkosten.js';
 import geschaeftsmodellModule from './modules/geschaeftsmodell/index.js';
 
@@ -35,9 +34,6 @@ window.cfoDashboard = {
   // AI Controller (will be initialized later)
   aiController: null
 };
-
-// ✅ NEU: Make modal function globally available
-window.openArtikelCreationModal = openArtikelCreationModal;
 
 // ==========================================
 // INITIALIZATION SEQUENCE
