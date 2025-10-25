@@ -1,0 +1,324 @@
+/* ==========================================
+   ARTIKEL CREATION MODAL - CSS FIXES
+   ========================================== */
+
+/* Modal Overlay - NO transparency, proper z-index */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7); /* Dark overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000; /* Above everything */
+  backdrop-filter: blur(4px);
+}
+
+/* Modal Container - Solid white background */
+.modal-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10001;
+  overflow: hidden;
+}
+
+.modal-container.large {
+  max-width: 1100px;
+}
+
+/* Modal Header */
+.modal-header {
+  padding: 24px 30px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-icon {
+  font-size: 28px;
+}
+
+.modal-title h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  padding: 0 30px;
+}
+
+.tab-button {
+  padding: 16px 24px;
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.tab-button:hover {
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+.tab-button.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* Modal Body */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  background: white;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* AI Summary Banner */
+.ai-summary-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px 30px;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Suggestions Container */
+.suggestions-container {
+  background: white;
+}
+
+.suggestions-header {
+  padding: 24px 30px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.suggestions-list {
+  padding: 24px 30px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* Suggestion Card */
+.suggestion-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.suggestion-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Checkbox Label */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.artikel-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* Forms */
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-text {
+  background: none;
+  color: #2563eb;
+  padding: 8px 12px;
+}
+
+.btn-text:hover {
+  background: #eff6ff;
+}
+
+/* Modal Footer */
+.modal-footer {
+  padding: 20px 30px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 60px 40px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  margin: 0 auto;
+}
+
+.spinner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar Styling */
+.suggestions-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.suggestions-list::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Ensure no transparency issues */
+.modal-overlay,
+.modal-container,
+.modal-header,
+.modal-body,
+.modal-footer,
+.tabs,
+.tab-content,
+.suggestion-card {
+  opacity: 1 !important;
+}
