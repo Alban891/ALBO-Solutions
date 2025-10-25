@@ -1,5 +1,5 @@
 /**
- * Market Sizing - Simple McKinsey Templates
+ * Market Sizing - Simple Templates
  * Einfacher Zugang zu professionellen Berechnungsmethoden
  * Panel öffnet sich von rechts (wie Projektkosten-Detail)
  */
@@ -70,7 +70,7 @@ function showMethodSelection(type) {
     <div class="panel-body">
       <div class="method-selection">
         <h4>Wie möchten Sie ${type.toUpperCase()} berechnen?</h4>
-        <p class="subtitle">Wählen Sie eine McKinsey-Methode:</p>
+        <p class="subtitle">Wählen Sie eine Methode:</p>
         
         <div class="method-cards">
           
