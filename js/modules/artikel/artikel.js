@@ -4,11 +4,11 @@
  * Enterprise-grade with validation and error handling
  */
 
-import { state } from '../../state.js';
-import * as helpers from '../../helpers.js';
-import * as api from '../../api.js';
-import * as charts from '../../charts.js';
-import { openArtikelCreationModal } from './artikel-creation-modal.js';
+import { state } from '../state.js';
+import * as helpers from '../helpers.js';
+import * as api from '../api.js';
+import * as charts from '../charts.js';
+import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
 
 // ==========================================
 // ARTIKEL RENDERING
@@ -1070,33 +1070,6 @@ window.createNewArtikel = function() {
   }, 100);
 };
 
-// ==========================================
-// INTELLIGENT ARTIKEL CREATION (NEW)
-// ==========================================
-
-/**
- * Open intelligent artikel creation modal with AI suggestions
- * Replaces simple createNewArtikel with AI-powered suggestions
- */
-window.openArtikelCreationModal = function() {
-  const projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) {
-    alert('Bitte erst Projekt auswählen!');
-    return;
-  }
-  
-  const projekt = state.getProjekt(projektId);
-  if (!projekt) {
-    console.error('Projekt not found:', projektId);
-    return;
-  }
-  
-  console.log('🤖 Opening intelligent artikel creation for:', projekt.name);
-  
-  // Öffne intelligentes Modal mit KI-Analyse
-  openArtikelCreationModal(projektId);
-};
-
 window.saveQuickArtikel = async function() {
   const projektId = window.cfoDashboard.currentProjekt;
   const artikelName = document.getElementById('quick-artikel-name')?.value;
@@ -1350,4 +1323,31 @@ export default {
   renderArtikelListByProjekt,
   calculateArtikelRevenue,
   calculateArtikelDB2
+};
+// ==========================================
+// INTELLIGENT ARTIKEL CREATION (NEW)
+// ==========================================
+
+/**
+ * Wrapper function for intelligent artikel creation modal
+ * Automatically gets current projektId and passes it to the modal
+ */
+window.openArtikelCreationModal = function() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  if (!projektId) {
+    alert('Bitte erst Projekt auswählen!');
+    return;
+  }
+  
+  const projekt = state.getProjekt(projektId);
+  if (!projekt) {
+    console.error('Projekt not found:', projektId);
+    alert('Projekt nicht gefunden!');
+    return;
+  }
+  
+  console.log('🤖 Opening intelligent artikel creation for:', projekt.name);
+  
+  // Call the actual modal function with projektId
+  openArtikelCreationModalCore(projektId);
 };
