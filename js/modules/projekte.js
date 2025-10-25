@@ -392,11 +392,16 @@
     const onHold = projekte.filter(p => p.status?.toLowerCase().includes('hold')).length;
     const abgeschlossen = projekte.filter(p => p.status?.toLowerCase() === 'abgeschlossen').length;
 
-    // Update UI
-    helpers.setTextContent('stat-total-projects', total);
-    helpers.setTextContent('stat-active-projects', aktiv);
-    helpers.setTextContent('stat-onhold-projects', onHold);
-    helpers.setTextContent('stat-completed-projects', abgeschlossen);
+    // Update UI - Direct DOM manipulation
+    const totalEl = document.getElementById('stat-total-projects');
+    const aktivEl = document.getElementById('stat-active-projects');
+    const onHoldEl = document.getElementById('stat-onhold-projects');
+    const abgeschlossenEl = document.getElementById('stat-completed-projects');
+
+    if (totalEl) totalEl.textContent = total;
+    if (aktivEl) aktivEl.textContent = aktiv;
+    if (onHoldEl) onHoldEl.textContent = onHold;
+    if (abgeschlossenEl) abgeschlossenEl.textContent = abgeschlossen;
 
     console.log('📈 Project stats updated:', { total, aktiv, onHold, abgeschlossen });
   }
