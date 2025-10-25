@@ -90,10 +90,13 @@ async function loadProjektFromDatabase(projektId) {
     
     console.log('🔍 Querying Supabase for projekt:', projektId);
     
-    // Load ALL fields from projects table
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')  // ✅ ALL fields including geschaeftsmodell data!
+    // Load projekt WITH geschaeftsmodell data (separate table!)
+    const { data: projekt, error } = await supabase
+      .from('ALBO_Projects')
+      .select(`
+        *,
+        geschaeftsmodell (*)
+      `)
       .eq('id', projektId)
       .single();
     
@@ -102,16 +105,21 @@ async function loadProjektFromDatabase(projektId) {
       throw new Error(`Datenbank-Fehler: ${error.message}`);
     }
     
-    if (!data) {
+    if (!projekt) {
       throw new Error('Projekt nicht gefunden');
     }
     
-    console.log('✅ Project loaded from database:', data.name);
-    console.log('📊 Revenue streams hardware:', data.revenue_streams_hardware);
-    console.log('📊 Average deal size:', data.average_deal_size);
-    console.log('📊 Revenue model:', data.revenue_model_erklaerung?.substring(0, 100) + '...');
+    // Merge geschaeftsmodell data into projekt object
+    const gmData = projekt.geschaeftsmodell?.[0] || {};
+    const mergedData = { ...projekt, ...gmData };
     
-    return data;
+    console.log('✅ Project loaded from database:', mergedData.name);
+    console.log('📊 Geschaeftsmodell data:', gmData);
+    console.log('📊 Revenue streams hardware:', gmData.revenue_streams_hardware);
+    console.log('📊 Average deal size:', gmData.average_deal_size);
+    console.log('📊 Revenue model:', gmData.revenue_model_erklaerung?.substring(0, 100) + '...');
+    
+    return mergedData;
     
   } catch (error) {
     console.error('❌ Error loading from database:', error);
