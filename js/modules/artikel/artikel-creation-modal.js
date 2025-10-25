@@ -783,13 +783,23 @@ window.createSelectedArtikel = async function(projektId) {
   
   console.log(`📦 Creating ${checkboxes.length} articles...`);
   
+  // ✅ CREATE PERSISTENT LOG
+  window.artikelCreationLog = [];
+  const log = (msg) => {
+    console.log(msg);
+    window.artikelCreationLog.push(msg);
+    localStorage.setItem('lastArtikelCreationLog', JSON.stringify(window.artikelCreationLog));
+  };
+  
+  log(`📦 Creating ${checkboxes.length} articles...`);
+  
   const analysis = window.currentArtikelAnalysis;
   const articlesToCreate = Array.from(checkboxes).map(cb => {
     const index = parseInt(cb.dataset.index);
     return analysis.suggested_articles[index];
   });
   
-  console.log('📋 Articles to create:', articlesToCreate);
+  log('📋 Articles to create: ' + articlesToCreate.map(a => a.name).join(', '));
   
   // Show progress
   const button = document.querySelector('#create-btn-text');
@@ -802,26 +812,27 @@ window.createSelectedArtikel = async function(projektId) {
     
     for (let i = 0; i < articlesToCreate.length; i++) {
       const artikel = articlesToCreate[i];
-      console.log(`\n📝 Creating article ${i+1}/${articlesToCreate.length}: ${artikel.name}`);
+      log(`\n📝 Creating article ${i+1}/${articlesToCreate.length}: ${artikel.name}`);
       
       try {
         const result = await createArtikelFromSuggestion(projektId, artikel);
-        console.log(`✅ Article created successfully:`, result);
+        log(`✅ Article created: ${result ? result.name : 'null returned'}`);
         successCount++;
         
         if (button) button.textContent = `${successCount}/${articlesToCreate.length} erstellt...`;
       } catch (error) {
-        console.error(`❌ Failed to create article "${artikel.name}":`, error);
+        log(`❌ Failed to create "${artikel.name}": ${error.message}`);
+        log(`   Stack: ${error.stack}`);
         failCount++;
       }
     }
     
-    console.log(`\n📊 Summary: ${successCount} success, ${failCount} failed`);
+    log(`\n📊 Summary: ${successCount} success, ${failCount} failed`);
     
     if (failCount > 0) {
-      alert(`⚠️ ${successCount} Artikel erstellt, ${failCount} fehlgeschlagen. Siehe Console für Details.`);
+      alert(`⚠️ ${successCount} Artikel erstellt, ${failCount} fehlgeschlagen.\n\nNach Reload: Gib in Console ein:\nJSON.parse(localStorage.getItem('lastArtikelCreationLog'))`);
     } else {
-      console.log('✅ All articles created successfully!');
+      log('✅ All articles created successfully!');
     }
     
     // Close and reload
@@ -829,12 +840,12 @@ window.createSelectedArtikel = async function(projektId) {
     
     // Wait a bit before reload to ensure DB is updated
     setTimeout(() => {
-      console.log('🔄 Reloading page...');
+      log('🔄 Reloading page...');
       window.location.reload();
     }, 500);
     
   } catch (error) {
-    console.error('❌ Error in createSelectedArtikel:', error);
+    log(`❌ Error in createSelectedArtikel: ${error.message}`);
     alert('Fehler beim Erstellen der Artikel: ' + error.message);
     if (button) button.textContent = originalText;
   }
@@ -856,7 +867,8 @@ window.createManualArtikel = async function(projektId) {
   }
   
   console.log('✏️ Creating manual article');
-  console.log('  projektId:', cleanProjektId);
+  console.log('  projektId (with prefix):', projektId);
+  console.log('  projekt_id (clean):', cleanProjektId);
   console.log('  name:', name);
   console.log('  typ:', typ);
   
@@ -864,7 +876,8 @@ window.createManualArtikel = async function(projektId) {
     const artikelData = {
       name: name,
       typ: typ,
-      projekt_id: cleanProjektId,
+      projektId: projektId,  // ✅ For validation (with prefix!)
+      projekt_id: cleanProjektId,  // ✅ For database (without prefix!)
       release_datum: '2025-01',
       volumes: {},
       prices: {},
@@ -918,7 +931,8 @@ async function createArtikelFromSuggestion(projektId, suggestion) {
   const artikelData = {
     name: suggestion.name,
     typ: suggestion.typ,
-    projekt_id: cleanProjektId,  // ✅ CRITICAL: Must be correct UUID!
+    projektId: projektId,  // ✅ For validation (with prefix!)
+    projekt_id: cleanProjektId,  // ✅ For database (without prefix!)
     release_datum: '2025-01',
     volumes: {},
     prices: {},
@@ -941,13 +955,14 @@ async function createArtikelFromSuggestion(projektId, suggestion) {
   }
   
   console.log('  📋 Artikel data prepared:');
-  console.log('    projekt_id:', artikelData.projekt_id);
+  console.log('    projektId (for validation):', artikelData.projektId);
+  console.log('    projekt_id (for DB):', artikelData.projekt_id);
   console.log('    name:', artikelData.name);
   console.log('    typ:', artikelData.typ);
   
   try {
     // ✅ USE STATIC IMPORT (imported at top of file)
-    console.log('  💾 Calling saveArticle with projekt_id:', artikelData.projekt_id);
+    console.log('  💾 Calling saveArticle...');
     const result = await saveArticle(artikelData);
     console.log('  ✅ saveArticle returned:', result);
     
