@@ -1294,92 +1294,6 @@ body {
 }
 
 /* ========================================== */
-/* AI SIDEBAR */
-/* ========================================== */
-
-.sidebar {
-  width: 420px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 998;
-  height: calc(100vh - 120px); /* ✅ ANGEPASST von 160px auf 120px */
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.04);
-}
-
-.ai-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  padding: 24px 20px;
-  color: white;
-  border-radius: 0;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  position: relative;
-  overflow: hidden;
-  border-bottom: none;
-}
-
-.ai-header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  animation: rotateBackground 20s linear infinite;
-}
-
-@keyframes rotateBackground {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.ai-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  z-index: 1;
-}
-
-.ai-status-indicator {
-  width: 10px;
-  height: 10px;
-  background: var(--success);
-  border-radius: 50%;
-  position: relative;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-  flex-shrink: 0;
-}
-
-.ai-status-indicator::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  height: 100%;
-  background: var(--success);
-  border-radius: 50%;
-  animation: pulseEffect 2s ease-in-out infinite;
-}
-
-@keyframes pulseEffect {
-  0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(2);
-    opacity: 0;
-  }
-}
-
-/* ========================================== */
 /* PLACEHOLDER STATES */
 /* ========================================== */
 
@@ -1418,9 +1332,7 @@ body {
 /* ========================================== */
 
 @media (max-width: 1400px) {
-  .sidebar {
-    width: 320px;
-  }
+  /* Sidebar removed */
 }
 
 @media (max-width: 1024px) {
@@ -1438,10 +1350,6 @@ body {
   
   .form-section-full {
     grid-column: span 1;
-  }
-  
-  .sidebar {
-    display: none;
   }
 }
 
@@ -1552,8 +1460,7 @@ body {
   .main-navigation,
   .btn,
   .action-buttons,
-  .bulk-actions-bar,
-  .sidebar {
+  .bulk-actions-bar {
     display: none !important;
   }
   
@@ -2126,6 +2033,50 @@ body {
     margin: 20px;
     max-height: 85vh;
   }
+}
+
+/* ========================================
+   AI BUSINESS PARTNER PANEL CONTAINER
+   ======================================== */
+
+/* Fixed Panel rechts */
+#ai-partner-panel {
+  position: fixed !important;
+  right: 0 !important;
+  top: 0 !important;
+  width: 400px !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  background: white !important;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden !important;
+}
+
+/* Container muss 100% Height sein */
+#ai-partner-container {
+  height: 100% !important;
+}
+
+/* Main Content - Platz für Panel */
+.main-content {
+  margin-right: 400px !important;
+  transition: margin-right 0.3s ease;
+}
+
+/* Header - Platz für Panel */
+.dashboard-header {
+  margin-right: 400px !important;
+  transition: margin-right 0.3s ease;
+}
+
+/* Falls Panel collapsed werden soll (optional future feature) */
+body.ai-panel-hidden .main-content,
+body.ai-panel-hidden .dashboard-header {
+  margin-right: 0 !important;
+}
+
+body.ai-panel-hidden #ai-partner-panel {
+  right: -400px !important;
 }
 
 /* ========================================== */
