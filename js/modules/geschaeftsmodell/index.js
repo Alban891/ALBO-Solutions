@@ -131,38 +131,44 @@ export async function renderGeschaeftsmodell() {  // ← async hinzugefügt
 /**
  * Save Geschäftsmodell data
  */
-export async function saveGeschaeftsmodell() {  // ← async hinzugefügt
+export async function saveGeschaeftsmodell() {
   const projektId = window.cfoDashboard.currentProjekt;
   if (!projektId) {
     alert('Kein Projekt ausgewählt');
     return;
   }
 
-  // Show loading
   helpers.showToast('⏳ Speichere Geschäftsmodell...', 'info');
 
   const formData = collectFormData();
   
-  // ← NEU: Save to database
-  const success = await api.saveGeschaeftsmodell(projektId, formData);
+  // ← DETAILED ERROR LOGGING
+  console.log('💾 Attempting to save:', {
+    projektId,
+    formData,
+    apiExists: typeof api.saveGeschaeftsmodell
+  });
   
-  if (success) {
-    // Update state
-    state.updateGeschaeftsmodell(projektId, formData);
+  try {
+    const success = await api.saveGeschaeftsmodell(projektId, formData);
     
-    // Show success
-    helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
-    
-    // Update progress bar
-    const progress = api.calculateGeschaeftsmodellProgress(formData);
-    const progressBar = document.getElementById('gm-progress-bar');
-    const progressText = document.getElementById('gm-progress-text');
-    if (progressBar) progressBar.style.width = `${progress}%`;
-    if (progressText) progressText.textContent = `${progress}%`;
-    
-    console.log('💾 Geschäftsmodell saved:', formData);
-  } else {
-    helpers.showToast('❌ Fehler beim Speichern', 'error');
+    if (success) {
+      state.updateGeschaeftsmodell(projektId, formData);
+      helpers.showToast('✅ Geschäftsmodell gespeichert', 'success');
+      
+      const progress = api.calculateGeschaeftsmodellProgress(formData);
+      const progressBar = document.getElementById('gm-progress-bar');
+      const progressText = document.getElementById('gm-progress-text');
+      if (progressBar) progressBar.style.width = `${progress}%`;
+      if (progressText) progressText.textContent = `${progress}%`;
+      
+      console.log('💾 Geschäftsmodell saved:', formData);
+    } else {
+      helpers.showToast('❌ Fehler beim Speichern', 'error');
+    }
+  } catch (error) {
+    console.error('❌❌❌ SAVE ERROR DETAILS:', error);
+    helpers.showToast('❌ Fehler: ' + error.message, 'error');
   }
 }
 
