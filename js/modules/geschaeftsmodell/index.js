@@ -17,7 +17,7 @@ import {
   resetFormState,
   initializeEventListeners 
 } from './form-handler.js';
-import * as marketModal from './modals/market-detail.js';
+import * as marketModal from './modals/market-sizing.js';
 import * as competitorModule from './components/competitors.js';
 import * as assumptionsModule from './components/assumptions.js';
 
