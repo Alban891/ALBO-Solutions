@@ -1,8 +1,8 @@
 /**
  * CFO Dashboard - Geschäftsmodell Module (Modular Structure)
- * Entry Point with Supabase Integration
+ * Entry Point with Supabase Integration + KI-Analysis
  * 
- * Version: 3.1 - Database Integration
+ * Version: 3.2 - Database Integration + Working KI-Analysis
  * Sections: 8 (Kundenproblem, Markt, Zielkunden, Wettbewerb, Revenue, GTM, Lösung, Annahmen)
  */
 
@@ -247,7 +247,7 @@ export async function resetForm() {
 }
 
 // ==========================================
-// SECTION COMPLETION
+// SECTION COMPLETION & KI-ANALYSIS
 // ==========================================
 
 /**
@@ -255,20 +255,35 @@ export async function resetForm() {
  */
 export function completeSection(sectionNumber) {
   const projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) return;
+  if (!projektId) {
+    console.warn('No projekt selected');
+    return;
+  }
+
+  console.log(`🔍 Completing section ${sectionNumber}...`);
 
   // Collect section data
   const sectionData = collectFormData(sectionNumber);
+  console.log(`📦 Section ${sectionNumber} data:`, sectionData);
   
   // Mark as completed
   completedSections.add(sectionNumber);
   
-  // Trigger AI analysis
-  analyzeSection(sectionNumber, sectionData).then(analysis => {
+  // Trigger AI analysis (synchronous function, not Promise!)
+  try {
+    const analysis = analyzeSection(sectionNumber, sectionData);
+    console.log(`🤖 Analysis result for section ${sectionNumber}:`, analysis);
+    
     currentSectionAnalysis[sectionNumber] = analysis;
     displaySectionAnalysis(sectionNumber, analysis);
     updateProgress();
-  });
+    
+    // Show success toast
+    helpers.showToast(`✅ Abschnitt ${sectionNumber} analysiert`, 'success');
+  } catch (error) {
+    console.error(`❌ Error analyzing section ${sectionNumber}:`, error);
+    helpers.showToast('❌ Fehler bei der Analyse', 'error');
+  }
 }
 
 /**
@@ -276,35 +291,82 @@ export function completeSection(sectionNumber) {
  */
 function displaySectionAnalysis(sectionNumber, analysis) {
   const badge = document.getElementById(`section-${sectionNumber}-badge`);
-  if (!badge) return;
+  if (!badge) {
+    console.warn(`Badge element not found for section ${sectionNumber}`);
+    return;
+  }
 
+  const hasIssues = analysis.issues && analysis.issues.length > 0;
+  const hasTips = analysis.tips && analysis.tips.length > 0;
+  
   let statusIcon = '✅';
   let statusColor = 'var(--success)';
+  let statusText = 'Abschnitt analysiert';
   
-  if (analysis.warnings && analysis.warnings.length > 0) {
+  if (hasIssues) {
     statusIcon = '⚠️';
     statusColor = 'var(--warning)';
+    statusText = 'Verbesserungspotential gefunden';
   }
   
   badge.innerHTML = `
-    <div style="padding: 16px; background: var(--bg-secondary); border-radius: 8px; margin-top: 16px; border-left: 4px solid ${statusColor};">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-        <span style="font-size: 20px;">${statusIcon}</span>
-        <strong>KI-Analyse</strong>
+    <div style="padding: 20px; background: var(--bg-secondary); border-radius: 8px; margin-top: 20px; border-left: 4px solid ${statusColor};">
+      
+      <!-- Header -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">${statusIcon}</span>
+          <div>
+            <strong style="font-size: 16px;">KI-Analyse</strong>
+            <div style="color: var(--gray); font-size: 13px; margin-top: 2px;">${statusText}</div>
+          </div>
+        </div>
+        <div style="background: var(--bg); padding: 6px 12px; border-radius: 6px; font-weight: 600; color: ${statusColor};">
+          Score: ${analysis.quality_score}/10
+        </div>
       </div>
-      <div style="color: var(--gray); font-size: 14px;">
-        ${analysis.summary || 'Abschnitt analysiert'}
-      </div>
-      ${analysis.warnings && analysis.warnings.length > 0 ? `
-        <div style="margin-top: 12px; padding: 12px; background: var(--warning-light); border-radius: 6px;">
-          <strong style="color: var(--warning);">⚠️ Hinweise:</strong>
-          <ul style="margin: 8px 0 0 20px; color: var(--text);">
-            ${analysis.warnings.map(w => `<li>${w}</li>`).join('')}
-          </ul>
+
+      <!-- Critical Issues -->
+      ${hasIssues ? `
+        <div style="margin-top: 16px; padding: 16px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--danger);">
+          <div style="font-weight: 600; color: var(--danger); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>🚨</span> Kritische Hinweise
+          </div>
+          ${analysis.issues.map(issue => `
+            <div style="margin-bottom: 12px; padding-left: 8px;">
+              <div style="font-weight: 600; color: var(--text); margin-bottom: 4px;">${issue.title}</div>
+              <div style="color: var(--gray); font-size: 14px;">${issue.message}</div>
+            </div>
+          `).join('')}
         </div>
       ` : ''}
+
+      <!-- Tips & Recommendations -->
+      ${hasTips ? `
+        <div style="margin-top: 16px; padding: 16px; background: var(--bg); border-radius: 8px; border-left: 3px solid var(--primary);">
+          <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>💡</span> Empfehlungen
+          </div>
+          ${analysis.tips.map(tip => `
+            <div style="margin-bottom: 12px; padding-left: 8px;">
+              <div style="font-weight: 600; color: var(--text); margin-bottom: 4px;">${tip.title}</div>
+              <div style="color: var(--gray); font-size: 14px;">${tip.message}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <!-- No issues found -->
+      ${!hasIssues && !hasTips ? `
+        <div style="margin-top: 12px; padding: 12px; background: var(--success-light); border-radius: 6px; color: var(--success);">
+          ✅ Dieser Abschnitt ist gut ausgefüllt! Keine kritischen Hinweise.
+        </div>
+      ` : ''}
+
     </div>
   `;
+  
+  console.log(`✅ Analysis displayed for section ${sectionNumber}`);
 }
 
 // ==========================================
@@ -365,4 +427,4 @@ export default {
   }
 };
 
-console.log('📦 Geschäftsmodell Module (Modular + DB) loaded');
+console.log('📦 Geschäftsmodell Module (Modular + DB + KI-Analysis) loaded');
