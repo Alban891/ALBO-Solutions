@@ -1323,25 +1323,28 @@ export default {
   renderArtikelListByProjekt,
   calculateArtikelRevenue,
   calculateArtikelDB2
-};
 // ==========================================
 // INTELLIGENT ARTIKEL CREATION (NEW)
 // ==========================================
 
 /**
  * Wrapper function for intelligent artikel creation modal
- * Automatically gets current projektId and passes it to the modal
+ * Uses window.cfoDashboard directly since state.projektData may be undefined
  */
 window.openArtikelCreationModal = function() {
   const projektId = window.cfoDashboard.currentProjekt;
+  
   if (!projektId) {
     alert('Bitte erst Projekt auswählen!');
     return;
   }
   
-  const projekt = state.getProjekt(projektId);
+  // Get projekt from window.cfoDashboard.projektData (NOT from state!)
+  const projekt = window.cfoDashboard.projektData[projektId];
+  
   if (!projekt) {
     console.error('Projekt not found:', projektId);
+    console.log('Available projects:', Object.keys(window.cfoDashboard.projektData || {}));
     alert('Projekt nicht gefunden!');
     return;
   }
