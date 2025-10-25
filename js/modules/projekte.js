@@ -92,14 +92,9 @@
                         onchange="updateBulkActions()">
                 </td>
                 <td>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 16px;">📁</span>
-                    <div>
-                      <div style="font-weight: 500; color: var(--text-primary); cursor: pointer;" 
-                          onclick="openProjektDetail('${projekt.id}')">
-                        ${helpers.escapeHtml(projekt.name)}
-                      </div>
-                    </div>
+                  <div style="font-weight: 600; color: var(--text-primary); cursor: pointer;" 
+                      onclick="openProjektDetail('${projekt.id}')">
+                    ${helpers.escapeHtml(projekt.name)}
                   </div>
                 </td>
                 <td style="color: var(--text-secondary);">${helpers.escapeHtml(projekt.division || '-')}</td>
