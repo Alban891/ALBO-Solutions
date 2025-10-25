@@ -919,6 +919,409 @@ export async function updateMultipleProjectsStatus(projektIds, newStatus) {
 }
 
 // ==========================================
+// GESCHÄFTSMODELL API
+// ==========================================
+
+/**
+ * Load Geschäftsmodell for a project
+ * @param {string} projektId - Project UUID
+ * @returns {Promise<object|null>} Geschäftsmodell data or null
+ */
+export async function loadGeschaeftsmodell(projektId) {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    console.log(`📥 Loading Geschäftsmodell for projekt: ${projektId}`);
+
+    const { data, error } = await client
+      .from('geschaeftsmodell')
+      .select('*')
+      .eq('projekt_id', projektId)
+      .single();
+
+    if (error) {
+      // If error is "no rows", that's OK - just return null
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ No Geschäftsmodell found for this projekt');
+        return null;
+      }
+      throw error;
+    }
+
+    console.log('✅ Geschäftsmodell loaded successfully');
+    
+    // Flatten the data structure for easier use
+    return flattenGeschaeftsmodell(data);
+
+  } catch (error) {
+    console.error('❌ Load Geschäftsmodell error:', error);
+    state.setError('load_geschaeftsmodell', error);
+    return null;
+  }
+}
+
+/**
+ * Save Geschäftsmodell for a project
+ * @param {string} projektId - Project UUID
+ * @param {object} geschaeftsmodellData - Complete Geschäftsmodell data
+ * @returns {Promise<boolean>} Success status
+ */
+export async function saveGeschaeftsmodell(projektId, geschaeftsmodellData) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    console.log(`💾 Saving Geschäftsmodell for projekt: ${projektId}`);
+
+    // Prepare data for database
+    const dbData = prepareGeschaeftsmodellForDB(projektId, geschaeftsmodellData);
+
+    // Upsert (insert or update)
+    const { error } = await client
+      .from('geschaeftsmodell')
+      .upsert(dbData, {
+        onConflict: 'projekt_id',
+        ignoreDuplicates: false
+      });
+
+    if (error) throw error;
+
+    console.log('✅ Geschäftsmodell saved successfully');
+    
+    // Update state
+    state.updateGeschaeftsmodell(projektId, geschaeftsmodellData);
+    
+    return true;
+
+  } catch (error) {
+    console.error('❌ Save Geschäftsmodell error:', error);
+    state.setError('save_geschaeftsmodell', error);
+    return false;
+  }
+}
+
+/**
+ * Delete Geschäftsmodell for a project
+ * @param {string} projektId - Project UUID
+ * @returns {Promise<boolean>} Success status
+ */
+export async function deleteGeschaeftsmodell(projektId) {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    console.log(`🗑️ Deleting Geschäftsmodell for projekt: ${projektId}`);
+
+    const { error } = await client
+      .from('geschaeftsmodell')
+      .delete()
+      .eq('projekt_id', projektId);
+
+    if (error) throw error;
+
+    console.log('✅ Geschäftsmodell deleted successfully');
+    
+    // Update state
+    state.deleteGeschaeftsmodell(projektId);
+    
+    return true;
+
+  } catch (error) {
+    console.error('❌ Delete Geschäftsmodell error:', error);
+    state.setError('delete_geschaeftsmodell', error);
+    return false;
+  }
+}
+
+/**
+ * Calculate progress for Geschäftsmodell
+ * @param {object} geschaeftsmodellData - Geschäftsmodell data
+ * @returns {number} Progress percentage (0-100)
+ */
+export function calculateGeschaeftsmodellProgress(geschaeftsmodellData) {
+  if (!geschaeftsmodellData) return 0;
+
+  const importantFields = [
+    'kundenproblem',
+    'problemkosten',
+    'urgency',
+    'tam',
+    'sam',
+    'som',
+    'kundentyp',
+    'unternehmensgroesse',
+    'branchen',
+    'geografie',
+    'kundenprofil',
+    'buying_center',
+    'competitors',
+    'positioning',
+    'competitive_moat',
+    'revenue_streams',
+    'deal_size',
+    'sales_cycle',
+    'sales_motion',
+    'sales_team_current',
+    'lead_gen_channels',
+    'pricing_strategy',
+    'produktkategorie',
+    'value_proposition',
+    'features',
+    'assumptions'
+  ];
+
+  let filledCount = 0;
+  const totalCount = importantFields.length;
+
+  importantFields.forEach(field => {
+    const value = geschaeftsmodellData[field];
+    
+    // Check if field is filled
+    if (value !== null && value !== undefined && value !== '') {
+      // For arrays, check if not empty
+      if (Array.isArray(value) && value.length > 0) {
+        filledCount++;
+      } 
+      // For objects (JSONB), check if not empty
+      else if (typeof value === 'object' && Object.keys(value).length > 0) {
+        filledCount++;
+      }
+      // For numbers, check if > 0
+      else if (typeof value === 'number' && value > 0) {
+        filledCount++;
+      }
+      // For strings, check if not empty
+      else if (typeof value === 'string' && value.trim() !== '') {
+        filledCount++;
+      }
+    }
+  });
+
+  return Math.round((filledCount / totalCount) * 100);
+}
+
+/**
+ * Get completed sections
+ * @param {object} geschaeftsmodellData - Geschäftsmodell data
+ * @returns {string[]} Array of completed section numbers as strings
+ */
+export function getCompletedSections(geschaeftsmodellData) {
+  if (!geschaeftsmodellData) return [];
+
+  const sections = {
+    '1': ['kundenproblem', 'problemkosten', 'urgency'],
+    '2': ['tam', 'sam', 'som'],
+    '3': ['kundentyp', 'unternehmensgroesse', 'branchen', 'geografie'],
+    '4': ['competitors', 'positioning', 'competitive_moat'],
+    '5': ['revenue_streams', 'deal_size', 'sales_cycle'],
+    '6': ['sales_motion', 'sales_team_current', 'lead_gen_channels', 'pricing_strategy'],
+    '7': ['produktkategorie', 'value_proposition', 'features'],
+    '8': ['assumptions']
+  };
+
+  const completed = [];
+
+  Object.entries(sections).forEach(([sectionNum, fields]) => {
+    const allFilled = fields.every(field => {
+      const value = geschaeftsmodellData[field];
+      
+      if (value === null || value === undefined || value === '') return false;
+      if (Array.isArray(value) && value.length === 0) return false;
+      if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+      
+      return true;
+    });
+
+    if (allFilled) {
+      completed.push(sectionNum);
+    }
+  });
+
+  return completed;
+}
+
+// ==========================================
+// HELPER FUNCTIONS (INTERNAL)
+// ==========================================
+
+/**
+ * Flatten Geschäftsmodell from DB format to UI format
+ */
+function flattenGeschaeftsmodell(dbData) {
+  if (!dbData) return null;
+
+  return {
+    // Section 1
+    kundenproblem: dbData.kundenproblem,
+    problemkosten: dbData.problemkosten,
+    urgency: dbData.urgency,
+
+    // Section 2
+    tam: dbData.tam,
+    tam_source: dbData.tam_source,
+    tam_calculation: dbData.tam_calculation,
+    sam: dbData.sam,
+    sam_reasoning: dbData.sam_reasoning,
+    sam_calculation: dbData.sam_calculation,
+    som: dbData.som,
+    som_reasoning: dbData.som_reasoning,
+    som_calculation: dbData.som_calculation,
+    market_validation: dbData.market_validation,
+
+    // Section 3
+    kundentyp: dbData.kundentyp,
+    unternehmensgroesse: dbData.unternehmensgroesse,
+    branchen: dbData.branchen,
+    geografie: dbData.geografie,
+    kundenprofil: dbData.kundenprofil,
+    buying_center: dbData.buying_center,
+
+    // Section 4
+    competitors: dbData.competitors,
+    status_quo: dbData.status_quo,
+    do_nothing_cost: dbData.do_nothing_cost,
+    positioning: dbData.positioning,
+    competitive_moat: dbData.competitive_moat,
+    moat_description: dbData.moat_description,
+
+    // Section 5
+    revenue_streams: dbData.revenue_streams,
+    custom_streams: dbData.custom_streams,
+    revenue_erklaerung: dbData.revenue_erklaerung,
+    deal_size: dbData.deal_size,
+    sales_cycle: dbData.sales_cycle,
+    contract_length: dbData.contract_length,
+    churn_rate: dbData.churn_rate,
+
+    // Section 6
+    sales_motion: dbData.sales_motion,
+    sales_team_current: dbData.sales_team_current,
+    sales_team_future: dbData.sales_team_future,
+    quota_per_rep: dbData.quota_per_rep,
+    ote_per_rep: dbData.ote_per_rep,
+    lead_gen_channels: dbData.lead_gen_channels,
+    marketing_budget_pct: dbData.marketing_budget_pct,
+    cost_per_lead: dbData.cost_per_lead,
+    lead_to_opp: dbData.lead_to_opp,
+    opp_to_close: dbData.opp_to_close,
+    pricing_strategy: dbData.pricing_strategy,
+    max_discount: dbData.max_discount,
+    early_adopter_discount: dbData.early_adopter_discount,
+    onboarding_duration: dbData.onboarding_duration,
+    support_level: dbData.support_level,
+    expansion_strategy: dbData.expansion_strategy,
+
+    // Section 7
+    produktkategorie: dbData.produktkategorie,
+    value_proposition: dbData.value_proposition,
+    features: dbData.features,
+    wettbewerbsvorteil: dbData.wettbewerbsvorteil,
+
+    // Section 8
+    assumptions: dbData.assumptions,
+    risks: dbData.risks,
+    success_factors: dbData.success_factors,
+
+    // Meta
+    notizen: dbData.notizen,
+    progress: dbData.progress,
+    completed_sections: dbData.completed_sections,
+    created_at: dbData.created_at,
+    updated_at: dbData.updated_at
+  };
+}
+
+/**
+ * Prepare Geschäftsmodell data for database
+ */
+function prepareGeschaeftsmodellForDB(projektId, formData) {
+  const progress = calculateGeschaeftsmodellProgress(formData);
+  const completedSections = getCompletedSections(formData);
+
+  return {
+    projekt_id: projektId,
+
+    // Section 1
+    kundenproblem: formData.kundenproblem || null,
+    problemkosten: formData.problemkosten || null,
+    urgency: formData.urgency || null,
+
+    // Section 2
+    tam: formData.tam || null,
+    tam_source: formData.tam_source || null,
+    tam_calculation: formData.tam_calculation || null,
+    sam: formData.sam || null,
+    sam_reasoning: formData.sam_reasoning || null,
+    sam_calculation: formData.sam_calculation || null,
+    som: formData.som || null,
+    som_reasoning: formData.som_reasoning || null,
+    som_calculation: formData.som_calculation || null,
+    market_validation: formData.market_validation || [],
+
+    // Section 3
+    kundentyp: formData.kundentyp || [],
+    unternehmensgroesse: formData.unternehmensgroesse || [],
+    branchen: formData.branchen || [],
+    geografie: formData.geografie || [],
+    kundenprofil: formData.kundenprofil || null,
+    buying_center: formData.buying_center || [],
+
+    // Section 4
+    competitors: formData.competitors || null,
+    status_quo: formData.status_quo || [],
+    do_nothing_cost: formData.do_nothing_cost || null,
+    positioning: formData.positioning || null,
+    competitive_moat: formData.competitive_moat || [],
+    moat_description: formData.moat_description || null,
+
+    // Section 5
+    revenue_streams: formData.revenue_streams || [],
+    custom_streams: formData.custom_streams || [],
+    revenue_erklaerung: formData.revenue_erklaerung || null,
+    deal_size: formData.deal_size || null,
+    sales_cycle: formData.sales_cycle || null,
+    contract_length: formData.contract_length || null,
+    churn_rate: formData.churn_rate || null,
+
+    // Section 6
+    sales_motion: formData.sales_motion || null,
+    sales_team_current: formData.sales_team_current || null,
+    sales_team_future: formData.sales_team_future || null,
+    quota_per_rep: formData.quota_per_rep || null,
+    ote_per_rep: formData.ote_per_rep || null,
+    lead_gen_channels: formData.lead_gen_channels || [],
+    marketing_budget_pct: formData.marketing_budget_pct || null,
+    cost_per_lead: formData.cost_per_lead || null,
+    lead_to_opp: formData.lead_to_opp || null,
+    opp_to_close: formData.opp_to_close || null,
+    pricing_strategy: formData.pricing_strategy || null,
+    max_discount: formData.max_discount || null,
+    early_adopter_discount: formData.early_adopter_discount || null,
+    onboarding_duration: formData.onboarding_duration || null,
+    support_level: formData.support_level || null,
+    expansion_strategy: formData.expansion_strategy || [],
+
+    // Section 7
+    produktkategorie: formData.produktkategorie || null,
+    value_proposition: formData.value_proposition || null,
+    features: formData.features || [],
+    wettbewerbsvorteil: formData.wettbewerbsvorteil || [],
+
+    // Section 8
+    assumptions: formData.assumptions || null,
+    risks: formData.risks || null,
+    success_factors: formData.success_factors || [],
+
+    // Meta
+    notizen: formData.notizen || null,
+    progress: progress,
+    completed_sections: completedSections,
+    updated_at: new Date().toISOString()
+  };
+}
+
+// ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
 
@@ -963,5 +1366,11 @@ export default {
   updateKostenblockWert,
   loadPersonalPositionen,
   savePersonalPositionen,
-  deleteKostenblock
+  deleteKostenblock,
+   // Geschäftsmodell
+  loadGeschaeftsmodell,
+  saveGeschaeftsmodell,
+  deleteGeschaeftsmodell,
+  calculateGeschaeftsmodellProgress,
+  getCompletedSections
 };
