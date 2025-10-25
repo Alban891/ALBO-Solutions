@@ -216,11 +216,11 @@
         </div>
         
         <div class="projekt-card-footer">
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektDetail('${projekt.id}')">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openProjektDetail('${projekt.id}')" style="flex: 1;">
             👁️ Öffnen
           </button>
-          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProjekt('${projekt.id}')">
-            🗑️ Löschen
+          <button class="btn-icon" onclick="event.stopPropagation(); deleteProjekt('${projekt.id}')" title="Löschen" style="width: 36px; height: 36px;">
+            🗑️
           </button>
         </div>
       </div>
