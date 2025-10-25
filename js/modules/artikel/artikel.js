@@ -1323,6 +1323,7 @@ export default {
   renderArtikelListByProjekt,
   calculateArtikelRevenue,
   calculateArtikelDB2
+};
 // ==========================================
 // INTELLIGENT ARTIKEL CREATION (NEW)
 // ==========================================
