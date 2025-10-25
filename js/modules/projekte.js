@@ -16,6 +16,12 @@
 
   let currentView = 'liste'; // 'liste', 'karten', 'kompakt'
 
+  // Sorting state
+  let currentSort = {
+    field: 'name',
+    direction: 'asc'
+  };
+
   // ==========================================
   // PROJECT RENDERING - MAIN DISPATCHER
   // ==========================================
@@ -908,12 +914,6 @@ window.openProjektDetail = async function(projektId) {
     });
 
     updateFilteredStats();
-  };
-
-  // Sorting state
-  let currentSort = {
-    field: 'name',
-    direction: 'asc'
   };
 
   /**
