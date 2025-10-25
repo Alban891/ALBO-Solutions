@@ -27,7 +27,7 @@ export function renderSection2(geschaeftsmodell) {
               onclick="marketSizing.openTAMCalculator()"
             />
             <small style="color: var(--gray); display: block; margin-top: 4px;">
-              Gesamtmarkt in € - Klick für McKinsey-Template
+              Gesamtmarkt in € - Klick für Template
             </small>
           </div>
           <button 
