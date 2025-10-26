@@ -103,7 +103,23 @@ ${formatSection(sections.section6)}
 
 Analysiere dieses Geschäftsmodell GANZHEITLICH und schlage 3-7 konkrete Artikel vor.
 
-## ANALYSIERE:
+## SCHRITT 1: ARTIKEL-TYP ERKENNEN (NEU!)
+
+Bestimme zuerst den Artikel-Typ:
+
+**PACKAGE-ARTIKEL:**
+- Wenn: Verschiedene Varianten/Tiers (Small/Medium/Large, Basic/Pro/Enterprise)
+- Beispiel: "SaaS in 3 Tiers", "Consulting Packages"
+
+**HYBRID-ARTIKEL:**
+- Wenn: Mehrere Komponenten immer zusammen (Hardware + Wartung)
+- Beispiel: "Roboter + Service-Paket"
+
+**STANDARD-ARTIKEL:**
+- Wenn: Einzelnes Produkt ohne Varianten
+- Beispiel: "WAGO SR-3000"
+
+## SCHRITT 2: ANALYSIERE (WIE BISHER!)
 
 1. **PRODUKT-KONTEXT**
    - Was ist das Hauptprodukt/Service?
@@ -172,6 +188,10 @@ Analysiere dieses Geschäftsmodell GANZHEITLICH und schlage 3-7 konkrete Artikel
 Antworte AUSSCHLIESSLICH mit einem JSON-Objekt (kein Markdown, kein Text davor/danach):
 
 {
+  "artikel_type": "standard" | "hybrid" | "package",
+  "artikel_type_confidence": 0.95,
+  "artikel_type_reasoning": "Kurze Begründung warum dieser Typ",
+  
   "suggested_articles": [
     {
       "name": "Spezifischer Produkt-Name",
@@ -251,6 +271,33 @@ function parseClaudeResponse(claudeData) {
     }
     
     const analysis = JSON.parse(jsonMatch[0]);
+    
+    // ==========================================
+    // NEU: TYPE DETECTION HANDLING
+    // ==========================================
+    
+    // Set default if missing (backward compatible!)
+    if (!analysis.artikel_type) {
+      console.log('⚠️ No artikel_type in response, defaulting to standard');
+      analysis.artikel_type = 'standard';
+      analysis.artikel_type_confidence = 0.5;
+      analysis.artikel_type_reasoning = 'Kein Typ erkannt, Standard angenommen';
+    }
+    
+    // Validate type
+    if (!['standard', 'hybrid', 'package'].includes(analysis.artikel_type)) {
+      console.warn('⚠️ Invalid artikel_type:', analysis.artikel_type, '- defaulting to standard');
+      analysis.artikel_type = 'standard';
+    }
+    
+    // Log type detection (helpful for debugging)
+    console.log('🎯 Artikel Type:', analysis.artikel_type);
+    console.log('   Confidence:', analysis.artikel_type_confidence || 'N/A');
+    console.log('   Reasoning:', analysis.artikel_type_reasoning || 'N/A');
+    
+    // ==========================================
+    // BESTEHENDE LOGIK (UNVERÄNDERT!)
+    // ==========================================
     
     // Validate response structure
     if (!analysis.suggested_articles || !Array.isArray(analysis.suggested_articles)) {
