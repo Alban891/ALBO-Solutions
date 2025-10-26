@@ -82,17 +82,22 @@ export function renderArtikelListByProjekt() {
   const processedIds = new Set();
 
   alleArtikel.forEach(artikel => {
-    if (!artikel.parent_package_id) {
-      const children = alleArtikel.filter(a => a.parent_package_id === artikel.id);
-      hierarchy.push({
-        parent: artikel,
-        children: children,
-        hasChildren: children.length > 0
-      });
-      processedIds.add(artikel.id);
-      children.forEach(c => processedIds.add(c.id));
-    }
-  });
+  if (!artikel.parent_package_id) {
+    // Extract UUID from artikel.id (remove 'artikel-db-' prefix)
+    const parentUuid = artikel.id.replace('artikel-db-', '');
+    
+    // Find children by matching parent_package_id with UUID
+    const children = alleArtikel.filter(a => a.parent_package_id === parentUuid);
+    
+    hierarchy.push({
+      parent: artikel,
+      children: children,
+      hasChildren: children.length > 0
+    });
+    processedIds.add(artikel.id);
+    children.forEach(c => processedIds.add(c.id));
+  }
+});
 
   // Orphaned Children
   alleArtikel.forEach(artikel => {
