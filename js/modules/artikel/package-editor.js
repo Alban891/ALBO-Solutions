@@ -619,6 +619,30 @@ window.updateMixDistribution = function(index, value) {
   document.getElementById('mix-total').innerHTML = `Gesamt: ${getMixTotal()}%`;
 };
 
+function collectStep4Data() {
+  const state = window.packageEditorState;
+  
+  // Sammle Neukunden-Zahl aus Input
+  const newCustomersInput = document.getElementById('new-customers-year1');
+  if (newCustomersInput) {
+    state.newCustomersYear1 = parseInt(newCustomersInput.value) || 100;
+  }
+  
+  // Sammle Mix-Distribution aus Slidern
+  state.packages.forEach((pkg, index) => {
+    const mixInput = document.getElementById(`mix-${index}`);
+    if (mixInput) {
+      state.mixDistribution[index] = parseInt(mixInput.value) || 0;
+    }
+  });
+  
+  console.log('✅ Step 4 data collected:', {
+    newCustomersYear1: state.newCustomersYear1,
+    mixDistribution: state.mixDistribution,
+    mixTotal: getMixTotal()
+  });
+}
+
 // ==========================================
 // STEP 5: PREVIEW
 // ==========================================
