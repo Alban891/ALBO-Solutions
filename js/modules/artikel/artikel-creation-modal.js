@@ -681,6 +681,19 @@ function renderSuggestionCard(artikel, index) {
 }
 
 function renderManualTab(projektId) {
+  // Store projektId for later use
+  window.currentProjektId = projektId;
+  
+  setTimeout(() => {
+    // Add event listeners after render
+    document.querySelectorAll('.artikel-type-option').forEach(option => {
+      option.addEventListener('click', function() {
+        const type = this.getAttribute('data-type');
+        selectArtikelTypeManual(type);
+      });
+    });
+  }, 100);
+  
   return `
     <div style="padding: 30px;">
       <h3 style="margin: 0 0 20px;">✏️ Artikel manuell anlegen</h3>
@@ -697,7 +710,7 @@ function renderManualTab(projektId) {
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
           
           <!-- Standard -->
-          <div class="artikel-type-option" data-type="standard" onclick="selectArtikelTypeManual('standard')" style="
+          <div class="artikel-type-option" data-type="standard" style="
             border: 2px solid #e5e7eb;
             border-radius: 12px;
             padding: 20px;
@@ -713,7 +726,7 @@ function renderManualTab(projektId) {
           </div>
           
           <!-- Hybrid -->
-          <div class="artikel-type-option" data-type="hybrid" onclick="selectArtikelTypeManual('hybrid')" style="
+          <div class="artikel-type-option" data-type="hybrid" style="
             border: 2px solid #e5e7eb;
             border-radius: 12px;
             padding: 20px;
@@ -729,7 +742,7 @@ function renderManualTab(projektId) {
           </div>
           
           <!-- Package -->
-          <div class="artikel-type-option" data-type="package" onclick="selectArtikelTypeManual('package')" style="
+          <div class="artikel-type-option" data-type="package" style="
             border: 2px solid #e5e7eb;
             border-radius: 12px;
             padding: 20px;
@@ -792,23 +805,29 @@ function renderManualTab(projektId) {
         border-color: #d1d5db;
         background: #f9fafb;
       }
-      
-      .revenue-stream-checkbox input[type="checkbox"]:checked + label {
-        font-weight: 600;
-        color: #2563eb;
-      }
     </style>
   `;
 }
 
-window.selectArtikelTypeManual = function(type) {
+/**
+ * Select Artikel Type and show form
+ */
+function selectArtikelTypeManual(type) {
   console.log('🎯 User selected artikel type:', type);
   
   // Update visual selection
   document.querySelectorAll('.artikel-type-option').forEach(option => {
     option.classList.remove('selected');
+    option.style.borderColor = '#e5e7eb';
+    option.style.background = 'white';
   });
-  document.querySelector(`.artikel-type-option[data-type="${type}"]`)?.classList.add('selected');
+  
+  const selectedOption = document.querySelector(`.artikel-type-option[data-type="${type}"]`);
+  if (selectedOption) {
+    selectedOption.classList.add('selected');
+    selectedOption.style.borderColor = '#2563eb';
+    selectedOption.style.background = '#eff6ff';
+  }
   
   // Store selected type
   const hiddenField = document.getElementById('manual-artikel-mode');
@@ -833,15 +852,14 @@ window.selectArtikelTypeManual = function(type) {
       contentDiv.innerHTML = renderPackageArtikelForm();
     }
   }
-  
-  console.log('  ✅ Type stored:', type);
-};
+}
 
 /**
- * NEUE FUNKTION - renderStandardArtikelForm()
- * Standard-Artikel Form
+ * Standard Artikel Form
  */
 function renderStandardArtikelForm() {
+  const projektId = window.currentProjektId || '';
+  
   return `
     <div style="display: grid; gap: 24px;">
       
@@ -874,7 +892,6 @@ function renderStandardArtikelForm() {
           <option value="custom">➕ Eigene Kategorie</option>
         </select>
         
-        <!-- Custom Kategorie Input (hidden by default) -->
         <input 
           type="text" 
           id="manual-typ-custom" 
@@ -888,7 +905,7 @@ function renderStandardArtikelForm() {
         <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Strategie *</label>
         <div style="display: grid; gap: 12px;">
           
-          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
             <input type="radio" name="artikel-strategie" value="neu-produkt" checked style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600; margin-bottom: 2px;">Neu-Produkt</div>
@@ -896,7 +913,7 @@ function renderStandardArtikelForm() {
             </div>
           </label>
           
-          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
             <input type="radio" name="artikel-strategie" value="kannibalisierung" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600; margin-bottom: 2px;">Kannibalisierung</div>
@@ -904,7 +921,7 @@ function renderStandardArtikelForm() {
             </div>
           </label>
           
-          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
             <input type="radio" name="artikel-strategie" value="cross-selling" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600; margin-bottom: 2px;">Cross-Selling</div>
@@ -916,7 +933,7 @@ function renderStandardArtikelForm() {
       </div>
       
       <!-- Info Box -->
-      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px; margin-top: 8px;">
+      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px;">
         <div style="display: flex; gap: 12px; align-items: start;">
           <div style="font-size: 20px;">💡</div>
           <div style="font-size: 14px; color: #1e40af; line-height: 1.6;">
@@ -928,7 +945,7 @@ function renderStandardArtikelForm() {
       <!-- Submit Button -->
       <button 
         class="btn btn-primary" 
-        onclick="createManualArtikel('${window.currentProjektId || ''}')"
+        onclick="createManualArtikel('${projektId}')"
         style="width: 100%; padding: 14px; font-size: 16px;"
       >
         ✓ Artikel anlegen
@@ -939,10 +956,11 @@ function renderStandardArtikelForm() {
 }
 
 /**
- * NEUE FUNKTION - renderHybridArtikelForm()
- * Hybrid-Artikel Form (mehrere Revenue Streams)
+ * Hybrid Artikel Form
  */
 function renderHybridArtikelForm() {
+  const projektId = window.currentProjektId || '';
+  
   return `
     <div style="display: grid; gap: 24px;">
       
@@ -994,7 +1012,7 @@ function renderHybridArtikelForm() {
             <input type="checkbox" name="revenue-stream" value="one-time" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 500;">One-Time Sale</div>
-              <div style="font-size: 12px; color: #6b7280;">Einmaliger Verkauf (z.B. Hardware, Software-Lizenz)</div>
+              <div style="font-size: 12px; color: #6b7280;">Einmaliger Verkauf</div>
             </div>
           </label>
           
@@ -1002,7 +1020,7 @@ function renderHybridArtikelForm() {
             <input type="checkbox" name="revenue-stream" value="subscription" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 500;">Subscription</div>
-              <div style="font-size: 12px; color: #6b7280;">Wiederkehrend (z.B. SaaS, Maintenance)</div>
+              <div style="font-size: 12px; color: #6b7280;">Wiederkehrend</div>
             </div>
           </label>
           
@@ -1010,7 +1028,7 @@ function renderHybridArtikelForm() {
             <input type="checkbox" name="revenue-stream" value="service" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 500;">Service/Wartung</div>
-              <div style="font-size: 12px; color: #6b7280;">Laufender Support (z.B. Wartungsvertrag)</div>
+              <div style="font-size: 12px; color: #6b7280;">Laufender Support</div>
             </div>
           </label>
           
@@ -1034,7 +1052,6 @@ function renderHybridArtikelForm() {
             <input type="radio" name="artikel-strategie" value="neu-produkt" checked style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600;">Neu-Produkt</div>
-              <div style="font-size: 13px; color: #6b7280;">Neues Produkt für neuen Markt</div>
             </div>
           </label>
           
@@ -1042,7 +1059,6 @@ function renderHybridArtikelForm() {
             <input type="radio" name="artikel-strategie" value="kannibalisierung" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600;">Kannibalisierung</div>
-              <div style="font-size: 13px; color: #6b7280;">Ersetzt bestehendes Produkt</div>
             </div>
           </label>
           
@@ -1050,7 +1066,6 @@ function renderHybridArtikelForm() {
             <input type="radio" name="artikel-strategie" value="cross-selling" style="width: 18px; height: 18px;">
             <div style="flex: 1;">
               <div style="font-weight: 600;">Cross-Selling</div>
-              <div style="font-size: 13px; color: #6b7280;">Ergänzung zu bestehendem Produkt</div>
             </div>
           </label>
           
@@ -1062,7 +1077,7 @@ function renderHybridArtikelForm() {
         <div style="display: flex; gap: 12px; align-items: start;">
           <div style="font-size: 20px;">💡</div>
           <div style="font-size: 14px; color: #92400e; line-height: 1.6;">
-            <strong>Hybrid-Artikel:</strong> Mehrere Revenue Streams werden als separate Komponenten gespeichert. Du kannst sie später einzeln mit Preisen & Mengen konfigurieren.
+            <strong>Hybrid-Artikel:</strong> Mehrere Revenue Streams werden als separate Komponenten gespeichert.
           </div>
         </div>
       </div>
@@ -1070,7 +1085,7 @@ function renderHybridArtikelForm() {
       <!-- Submit Button -->
       <button 
         class="btn btn-primary" 
-        onclick="createManualArtikel('${window.currentProjektId || ''}')"
+        onclick="createManualArtikel('${projektId}')"
         style="width: 100%; padding: 14px; font-size: 16px;"
       >
         ✓ Artikel anlegen
@@ -1081,30 +1096,63 @@ function renderHybridArtikelForm() {
 }
 
 /**
- * NEUE FUNKTION - renderPackageArtikelForm()
- * Package-Artikel Form (später)
+ * Package Artikel Form
  */
 function renderPackageArtikelForm() {
+  const projektId = window.currentProjektId || '';
+  
   return `
-    <div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb;">
-      <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-      <h3 style="margin: 0 0 12px;">Package-Artikel</h3>
-      <p style="margin: 0 0 24px; color: #6b7280;">
-        Für Package-Artikel öffnet sich ein spezieller Editor
-      </p>
+    <div style="display: grid; gap: 24px;">
+      
+      <!-- Name -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Name *</label>
+        <input 
+          type="text" 
+          id="manual-name" 
+          placeholder="z.B. Consulting Packages" 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+      </div>
+      
+      <!-- Kategorie -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie *</label>
+        <select 
+          id="manual-typ" 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+          <option value="">-- Bitte wählen --</option>
+          <option value="Service">Service</option>
+          <option value="Software">Software</option>
+          <option value="Consulting">Consulting</option>
+        </select>
+      </div>
+      
+      <!-- Info -->
+      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 12px;">📦</div>
+        <div style="font-weight: 600; margin-bottom: 8px; color: #1e40af;">Package-Editor</div>
+        <div style="font-size: 14px; color: #1e40af; line-height: 1.6;">
+          Für Package-Artikel öffnet sich ein spezieller Editor mit Multi-Step Konfiguration
+        </div>
+      </div>
+      
+      <!-- Submit Button -->
       <button 
         class="btn btn-primary" 
-        onclick="createManualArtikel('${window.currentProjektId || ''}')"
-        style="padding: 12px 24px;"
+        onclick="createManualArtikel('${projektId}')"
+        style="width: 100%; padding: 14px; font-size: 16px;"
       >
-        Package-Editor öffnen →
+        📦 Package-Editor öffnen
       </button>
+      
     </div>
   `;
 }
 
 /**
- * HELPER - toggleCustomKategorie()
+ * Toggle Custom Kategorie Input
  */
 window.toggleCustomKategorie = function(value) {
   const customInput = document.getElementById('manual-typ-custom');
