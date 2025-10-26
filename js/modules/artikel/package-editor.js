@@ -11,7 +11,7 @@ import { saveArticle } from '../../api.js';
 
 window.packageEditorState = {
   projektId: null,
-  currentStep: 1,
+  currentStep: 2,
   totalSteps: 5,
   
   // Configuration
@@ -43,9 +43,9 @@ export function openPackageEditor(projektId, initialData = {}) {
   
   // Reset state
   window.packageEditorState.projektId = projektId;
-  window.packageEditorState.currentStep = 1;
+  window.packageEditorState.currentStep = 2;  // ← START BEI STEP 2!
   
-  // Apply initial data
+  // Store initial data from manual form
   if (initialData.artikel_name) {
     window.packageEditorState.artikelName = initialData.artikel_name;
   }
@@ -156,8 +156,7 @@ function renderPackageEditorModal() {
 function renderProgressSteps() {
   const state = window.packageEditorState;
   const steps = [
-    { num: 1, label: 'Basis' },
-    { num: 2, label: 'Pakete' },
+    { num: 2, label: 'Pakete' },       // ← Start hier!
     { num: 3, label: 'Komponenten' },
     { num: 4, label: 'Pricing' },
     { num: 5, label: 'Vorschau' }
@@ -201,9 +200,12 @@ window.packageEditorNextStep = function() {
 window.packageEditorPrevStep = function() {
   const state = window.packageEditorState;
   
-  if (state.currentStep > 1) {
+  if (state.currentStep > 2) {
     state.currentStep--;
     renderCurrentStep();
+  } else {
+    // Bei Step 2: Modal schließen und zurück zur Artikel-Auswahl
+    closePackageEditor();
   }
 };
 
@@ -218,11 +220,10 @@ function renderCurrentStep() {
   const progressDiv = document.getElementById('package-progress');
   if (progressDiv) progressDiv.innerHTML = renderProgressSteps();
   
-  backBtn.style.display = state.currentStep > 1 ? 'block' : 'none';
+  backBtn.style.display = state.currentStep > 2 ? 'block' : 'none';  // ← STEP 2 ist jetzt der erste!
   nextBtn.textContent = state.currentStep === state.totalSteps ? '✓ Artikel erstellen' : 'Weiter →';
   
   switch (state.currentStep) {
-    case 1: contentDiv.innerHTML = renderStep1_Basics(); break;
     case 2: contentDiv.innerHTML = renderStep2_Packages(); break;
     case 3: contentDiv.innerHTML = renderStep3_Components(); break;
     case 4: contentDiv.innerHTML = renderStep4_Pricing(); break;
@@ -497,13 +498,6 @@ function validateCurrentStep() {
   const state = window.packageEditorState;
   
   switch (state.currentStep) {
-    case 1:
-      const name = document.getElementById('package-artikel-name')?.value;
-      if (!name) { alert('Bitte Namen eingeben!'); return false; }
-      state.artikelName = name;
-      state.artikelTyp = document.getElementById('package-artikel-typ')?.value;
-      return true;
-      
     case 2:
       const names = [];
       for (let i = 0; i < state.packageCount; i++) {
