@@ -1,563 +1,9 @@
 /**
  * ALBO Solutions - Artikel Module (COMPLETE REWRITE)
- * Part 1: Core functionality, list rendering, hierarchy
+ * Part 3: Entwicklungsmodelle, Ergebnis-Vorschau, Calculations, Save, Helper Functions
  * 
- * Combines ALL features from old artikel.js + index.html sections
  * @version 4.0.0
  */
-
-import { state } from '../../state.js';
-import * as helpers from '../../helpers.js';
-import * as api from '../../api.js';
-import * as charts from '../../charts.js';
-import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
-
-// ==========================================
-// HIERARCHIE STATE
-// ==========================================
-
-if (!window.expandedPackages) {
-  window.expandedPackages = new Set();
-}
-
-window.togglePackageExpand = function(packageId) {
-  if (window.expandedPackages.has(packageId)) {
-    window.expandedPackages.delete(packageId);
-  } else {
-    window.expandedPackages.add(packageId);
-  }
-  renderArtikelListByProjekt();
-};
-
-// ==========================================
-// TYPE CONFIGURATIONS (NEW)
-// ==========================================
-
-const TYPE_CONFIGS = {
-  'Hardware': {
-    icon: '🔧',
-    labels: {
-      menge: 'MENGE (STÜCK)',
-      preis: 'PREIS (€/STÜCK)',
-      hk: 'HERSTELLKOSTEN (€/STÜCK)'
-    },
-    placeholders: {
-      menge: 'z.B. 1.000',
-      preis: 'z.B. 5.000',
-      hk: 'z.B. 2.000'
-    },
-    calculate: (menge, preis) => menge * preis
-  },
-  'Software': {
-    icon: '💿',
-    labels: {
-      menge: 'LIZENZEN (ANZAHL)',
-      preis: 'LIZENZPREIS (€/LIZENZ)',
-      hk: 'SUPPORT-KOSTEN (€/LIZENZ)'
-    },
-    placeholders: {
-      menge: 'z.B. 500',
-      preis: 'z.B. 499',
-      hk: 'z.B. 50'
-    },
-    calculate: (menge, preis) => menge * preis
-  },
-  'Software-SaaS': {
-    icon: '☁️',
-    labels: {
-      menge: 'NUTZER (ANZAHL)',
-      preis: 'MRR (€/NUTZER/MONAT)',
-      hk: 'HOSTING (€/NUTZER/MONAT)'
-    },
-    placeholders: {
-      menge: 'z.B. 100',
-      preis: 'z.B. 49',
-      hk: 'z.B. 5'
-    },
-    calculate: (menge, preis) => menge * preis * 12
-  },
-  'Consulting': {
-    icon: '👔',
-    labels: {
-      menge: 'PERSONENTAGE',
-      preis: 'TAGESSATZ (€/TAG)',
-      hk: 'PERSONALKOSTEN (€/TAG)'
-    },
-    placeholders: {
-      menge: 'z.B. 200',
-      preis: 'z.B. 1.200',
-      hk: 'z.B. 800'
-    },
-    calculate: (menge, preis) => menge * preis
-  },
-  'Service': {
-    icon: '🔧',
-    labels: {
-      menge: 'SERVICE-VERTRÄGE',
-      preis: 'JAHRESPREIS (€/VERTRAG)',
-      hk: 'SERVICE-KOSTEN (€/VERTRAG)'
-    },
-    placeholders: {
-      menge: 'z.B. 50',
-      preis: 'z.B. 10.000',
-      hk: 'z.B. 3.000'
-    },
-    calculate: (menge, preis) => menge * preis
-  }
-};
-
-// ==========================================
-// ARTIKEL RENDERING MIT HIERARCHIE
-// ==========================================
-
-export function renderArtikelListByProjekt() {
-  const projektId = window.cfoDashboard.currentProjekt;
-  if (!projektId) {
-    console.warn('No projekt selected');
-    return;
-  }
-
-  const projekt = state.getProjekt(projektId);
-  if (!projekt) {
-    console.error('Projekt not found:', projektId);
-    return;
-  }
-
-  console.log('📋 Rendering artikel for projekt:', projekt.name);
-
-  const tbody = document.getElementById('artikel-list-tbody');
-  if (!tbody) return;
-
-  const alleArtikel = state.getArtikelByProjekt(projektId);
-
-  if (alleArtikel.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align: center; padding: 40px; color: var(--gray);">
-          <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-          <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
-            Noch keine Artikel vorhanden
-          </div>
-          <div style="font-size: 14px;">
-            Erstelle den ersten Artikel für dieses Projekt
-          </div>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  // Gruppiere in Hierarchie
-  const hierarchy = [];
-  const processedIds = new Set();
-
-  alleArtikel.forEach(artikel => {
-    if (!artikel.parent_package_id) {
-      const parentUuid = artikel.id.replace('artikel-db-', '');
-      const children = alleArtikel.filter(a => a.parent_package_id === parentUuid);
-      
-      hierarchy.push({
-        parent: artikel,
-        children: children,
-        hasChildren: children.length > 0
-      });
-      processedIds.add(artikel.id);
-      children.forEach(c => processedIds.add(c.id));
-    }
-  });
-
-  // Orphaned Children
-  alleArtikel.forEach(artikel => {
-    if (!processedIds.has(artikel.id)) {
-      hierarchy.push({
-        parent: artikel,
-        children: [],
-        hasChildren: false
-      });
-    }
-  });
-
-  // Render mit Hierarchie
-  tbody.innerHTML = hierarchy.map(item => {
-    const { parent, children, hasChildren } = item;
-    const isExpanded = window.expandedPackages.has(parent.id);
-    
-    let html = '';
-    
-    // Parent Row
-    const revenue = calculateArtikelRevenue(parent.id);
-    const db2 = calculateArtikelDB2(parent.id);
-    const updatedAt = parent.updatedAt ? new Date(parent.updatedAt).toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }) : '-';
-    
-    const icon = parent.artikel_mode === 'package-parent' ? '📦' : '📦';
-    const expandButton = hasChildren ? `
-      <button 
-        onclick="window.togglePackageExpand('${parent.id}')"
-        style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px 8px;margin-right:4px;color:var(--primary);transition:transform 0.2s;${isExpanded ? 'transform:rotate(90deg);' : ''}"
-        title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
-      >▶</button>
-    ` : '<span style="width:32px;display:inline-block;"></span>';
-    
-    const packageBadge = parent.artikel_mode === 'package-parent' ? `
-      <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px;">PACKAGE</span>
-    ` : '';
-    
-    html += `
-      <tr class="artikel-row" data-artikel-id="${parent.id}">
-        <td>
-          <input type="checkbox" class="artikel-checkbox" value="${parent.id}" onchange="updateArtikelBulkActions()">
-        </td>
-        <td>
-          ${expandButton}
-          <span style="font-size:18px;">${icon}</span>
-          <div style="display:inline-block;margin-left:4px;">
-            <div style="font-weight:500;color:var(--text);">
-              ${helpers.escapeHtml(parent.name)}${packageBadge}
-            </div>
-            <div style="font-size:12px;color:var(--gray);margin-top:4px;">
-              ${helpers.escapeHtml(parent.typ || '-')}
-            </div>
-          </div>
-        </td>
-        <td>${helpers.escapeHtml(parent.kategorie || '-')}</td>
-        <td>${helpers.formatDateSafe(parent.release_datum)}</td>
-        <td style="text-align:right;font-weight:500;">
-          ${helpers.formatRevenue(revenue)}
-        </td>
-        <td style="text-align:right;">
-          ${helpers.formatPercentage(db2)}
-        </td>
-        <td>
-          <div style="font-size:11px;color:var(--text-light);">
-            ${updatedAt}
-          </div>
-        </td>
-        <td>
-          <span class="status-badge status-${(parent.status || 'aktiv').toLowerCase()}">
-            ${helpers.escapeHtml(parent.status || 'aktiv')}
-          </span>
-        </td>
-        <td>
-          <div class="action-buttons">
-            <button class="btn-icon" onclick="openArtikelDetail('${parent.id}')" title="Details">📝</button>
-            <button class="btn-icon" onclick="duplicateArtikel('${parent.id}')" title="Duplizieren">📋</button>
-            <button class="btn-icon btn-danger" onclick="deleteArtikel('${parent.id}')" title="Löschen">🗑️</button>
-          </div>
-        </td>
-      </tr>
-    `;
-    
-    // Children Rows (if expanded)
-    if (hasChildren && isExpanded) {
-      children.forEach(child => {
-        const childRevenue = calculateArtikelRevenue(child.id);
-        const childDb2 = calculateArtikelDB2(child.id);
-        
-        html += `
-          <tr class="artikel-row child-row" data-artikel-id="${child.id}" style="background:#f8fafc;">
-            <td></td>
-            <td style="padding-left:50px;">
-              <span style="font-size:16px;">↳</span>
-              <div style="display:inline-block;margin-left:8px;">
-                <div style="font-weight:400;color:var(--text);">
-                  ${helpers.escapeHtml(child.name)}
-                </div>
-                <div style="font-size:11px;color:var(--gray);margin-top:2px;">
-                  ${helpers.escapeHtml(child.typ || '-')}
-                </div>
-              </div>
-            </td>
-            <td>${helpers.escapeHtml(child.kategorie || '-')}</td>
-            <td>${helpers.formatDateSafe(child.release_datum)}</td>
-            <td style="text-align:right;">${helpers.formatRevenue(childRevenue)}</td>
-            <td style="text-align:right;">${helpers.formatPercentage(childDb2)}</td>
-            <td><div style="font-size:11px;color:var(--text-light);">-</div></td>
-            <td>
-              <span class="status-badge status-${(child.status || 'aktiv').toLowerCase()}" style="font-size:11px;">
-                ${helpers.escapeHtml(child.status || 'aktiv')}
-              </span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button class="btn-icon" onclick="openArtikelDetail('${child.id}')" title="Details" style="padding:4px;">📝</button>
-                <button class="btn-icon btn-danger" onclick="deleteArtikel('${child.id}')" title="Löschen" style="padding:4px;">🗑️</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      });
-    }
-    
-    return html;
-  }).join('');
-  
-  console.log('✅ Artikel list rendered');
-}
-
-// Export Part 1
-window.renderArtikelListByProjekt = renderArtikelListByProjekt;
-
-// ==========================================
-// ARTIKEL DETAIL VIEW (COMPLETELY NEW)
-// ==========================================
-
-window.openArtikelDetail = function(artikelId) {
-  const artikel = state.getArtikel(artikelId);
-  if (!artikel) {
-    console.error('Artikel not found:', artikelId);
-    return;
-  }
-
-  console.log('📝 Opening artikel detail (ADAPTIVE):', artikel.name);
-
-  // Set current artikel
-  window.cfoDashboard.currentArtikel = artikelId;
-  state.currentArtikel = artikelId;
-  state.artikelViewMode = 'detail';
-  state.saveState();
-
-  // Hide ALL views
-  const views = ['projekt-overview', 'projekt-detail-view', 'artikel-overview'];
-  views.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-
-  // Show artikel detail
-  const artikelDetail = document.getElementById('artikel-detail-view');
-  if (artikelDetail) artikelDetail.style.display = 'block';
-
-  // Render complete detail form (NEW)
-  renderArtikelDetailForm(artikel);
-
-  // Update navigation
-  if (window.updateArtikelNavigation) {
-    window.updateArtikelNavigation();
-  }
-  if (window.saveNavigationState) {
-    window.saveNavigationState();
-  }
-};
-
-/**
- * NEW: Render complete detail form with all sections from index.html
- */
-function renderArtikelDetailForm(artikel) {
-  const container = document.getElementById('artikel-detail-content');
-  if (!container) {
-    console.error('artikel-detail-content not found');
-    return;
-  }
-
-  const typ = artikel.typ || 'Hardware';
-  const config = TYPE_CONFIGS[typ];
-  
-  container.innerHTML = `
-    <!-- Header -->
-    <div class="detail-header">
-      <div class="breadcrumb">
-        <span onclick="switchToTab('projekte')" style="cursor: pointer;">Projekte</span> /
-        <span onclick="backToProjektDetail()" style="cursor: pointer;">${state.getProjekt(state.currentProjekt)?.name || 'Projekt'}</span> /
-        <span onclick="backToArtikelList()" style="cursor: pointer;">Artikel</span> /
-        <span>${artikel.name || 'Detail'}</span>
-      </div>
-      <div class="detail-actions">
-        <button class="btn btn-secondary" onclick="backToArtikelList()">← Zurück</button>
-        <button class="btn btn-primary" onclick="window.saveArtikelChanges()">💾 Speichern</button>
-      </div>
-    </div>
-
-    <!-- Update Info -->
-    <div id="artikel-update-info" style="display: none; padding: 10px; background: #f0f9ff; border-radius: 6px; margin: 20px;">
-    </div>
-
-    <!-- Basis-Informationen -->
-    ${renderBasisInformationen(artikel)}
-
-    <!-- Finanz-Parameter (ADAPTIVE) -->
-    ${renderFinanzParameter(artikel, config)}
-
-    <!-- Entwicklungsmodelle -->
-    ${renderEntwicklungsmodelle(artikel)}
-
-    <!-- Ergebnis-Vorschau -->
-    ${renderErgebnisVorschau(artikel, config)}
-  `;
-
-  // Load data into form
-  loadArtikelIntoForm(artikel, config);
-
-  // Setup listeners
-  setupDetailEventListeners(artikel);
-
-  // Calculate initial preview
-  setTimeout(() => berechneModelle(), 100);
-}
-
-function renderBasisInformationen(artikel) {
-  return `
-    <div class="form-section" style="background: white; padding: 24px; border-radius: 12px; margin: 20px;">
-      <h3>📋 Basis-Informationen</h3>
-      
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div class="form-group">
-          <label for="artikel-name">Name *</label>
-          <input type="text" id="artikel-name" value="${helpers.escapeHtml(artikel.name || '')}" />
-        </div>
-        
-        <div class="form-group">
-          <label for="artikel-typ">Typ *</label>
-          <select id="artikel-typ">
-            <option value="Hardware" ${artikel.typ === 'Hardware' ? 'selected' : ''}>🔧 Hardware</option>
-            <option value="Software" ${artikel.typ === 'Software' ? 'selected' : ''}>💿 Software</option>
-            <option value="Software-SaaS" ${artikel.typ === 'Software-SaaS' ? 'selected' : ''}>☁️ Software-SaaS</option>
-            <option value="Consulting" ${artikel.typ === 'Consulting' ? 'selected' : ''}>👔 Consulting</option>
-            <option value="Service" ${artikel.typ === 'Service' ? 'selected' : ''}>🔧 Service</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="kategorie">Kategorie</label>
-          <input type="text" id="kategorie" value="${helpers.escapeHtml(artikel.kategorie || '')}" />
-        </div>
-        
-        <div class="form-group">
-          <label for="geschaeftsmodell">Geschäftsmodell</label>
-          <select id="geschaeftsmodell">
-            <option value="">Bitte wählen</option>
-            <option value="Einmalverkauf" ${artikel.geschaeftsmodell === 'Einmalverkauf' ? 'selected' : ''}>Einmalverkauf</option>
-            <option value="Subscription" ${artikel.geschaeftsmodell === 'Subscription' ? 'selected' : ''}>Subscription</option>
-            <option value="Usage-based" ${artikel.geschaeftsmodell === 'Usage-based' ? 'selected' : ''}>Usage-based</option>
-            <option value="Freemium" ${artikel.geschaeftsmodell === 'Freemium' ? 'selected' : ''}>Freemium</option>
-          </select>
-        </div>
-      </div>
-      
-      <div style="margin-top: 20px;">
-        <label for="artikel-beschreibung">Beschreibung</label>
-        <textarea id="artikel-beschreibung" rows="3">${helpers.escapeHtml(artikel.beschreibung || '')}</textarea>
-      </div>
-    </div>
-  `;
-}
-
-function renderFinanzParameter(artikel, config) {
-  const typ = artikel.typ || 'Hardware';
-  
-  return `
-    <div class="form-section" style="background: white; padding: 24px; border-radius: 12px; margin: 20px;">
-      <h3>
-        💰 Finanz-Parameter & Entwicklungsmodelle
-        <span class="type-badge" style="background: linear-gradient(135deg,#3b82f6,#8b5cf6); color: white; padding: 6px 14px; border-radius: 8px; font-size: 14px; margin-left: 12px;">
-          ${config.icon} ${typ}
-        </span>
-      </h3>
-
-      <!-- Type Info Box -->
-      <div style="background: linear-gradient(135deg,#eff6ff,#f0f9ff); border: 2px solid #3b82f6; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 32px;">${config.icon}</span>
-          <div>
-            <div style="font-weight: 600; color: #1e3a8a;">Artikel-Typ: ${typ}</div>
-            <div style="color: #64748b; font-size: 14px;">Die Eingabefelder wurden automatisch angepasst.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Release & Zeitraum -->
-      <div style="display: grid; grid-template-columns: 250px 1fr; gap: 20px; margin-bottom: 24px;">
-        <div>
-          <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">
-            📅 Release / Startdatum
-          </label>
-          <input type="month" id="release-datum" 
-            value="${artikel.release_datum ? artikel.release_datum.substring(0, 7) : ''}"
-            onchange="updateZeithorizont(); updateTabellenSpalten(); berechneModelle();"
-            style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 4px;">
-        </div>
-        
-        <div>
-          <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase;">
-            Zeithorizont
-          </label>
-          <div class="zeitraum-selector" style="display: flex; gap: 8px;">
-            <button type="button" onclick="setzeZeitraum(3)" class="zeitraum-btn" id="zeitraum-btn-3"
-              style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;">
-              3 Jahre
-            </button>
-            <button type="button" onclick="setzeZeitraum(5)" class="zeitraum-btn active" id="zeitraum-btn-5"
-              style="flex: 1; padding: 10px 20px; border: 2px solid #1e3a8a; background: #1e3a8a; 
-                color: white; border-radius: 6px; font-size: 13px; cursor: pointer;">
-              5 Jahre
-            </button>
-            <button type="button" onclick="setzeZeitraum(7)" class="zeitraum-btn" id="zeitraum-btn-7"
-              style="flex: 1; padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s;">
-              7 Jahre
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Startwerte (Jahr 1) -->
-      <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-        <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 12px;">
-          📊 Startwerte (Jahr 1)
-        </div>
-
-        <div style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 10px; margin-bottom: 12px; border-radius: 4px; font-size: 11px;">
-          <strong>💡 Tipp:</strong> Tragen Sie hier Ihre Annahmen für das erste Jahr ein.
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-          <div>
-            <label for="start-menge" style="font-size: 10px; color: #1e3a8a; font-weight: 600; text-transform: uppercase;">
-              ${config.labels.menge}
-            </label>
-            <input type="text" id="start-menge" 
-              placeholder="${config.placeholders.menge}"
-              onfocus="handleInputFocus(this)"
-              onblur="handleInputBlur(this, 'menge')"
-              onchange="updateErsteZeile();"
-              oninput="updateErsteZeile();"
-              style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px;">
-          </div>
-          <div>
-            <label for="start-preis" style="font-size: 10px; color: #1e3a8a; font-weight: 600; text-transform: uppercase;">
-              ${config.labels.preis}
-            </label>
-            <input type="text" id="start-preis"
-              placeholder="${config.placeholders.preis}"
-              onfocus="handleInputFocus(this)"
-              onblur="handleInputBlur(this, 'preis')"
-              onchange="updateErsteZeile();"
-              oninput="updateErsteZeile();"
-              style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px;">
-          </div>
-          <div>
-            <label for="start-hk" style="font-size: 10px; color: #1e3a8a; font-weight: 600; text-transform: uppercase;">
-              ${config.labels.hk}
-            </label>
-            <input type="text" id="start-hk"
-              placeholder="${config.placeholders.hk}"
-              onfocus="handleInputFocus(this)"
-              onblur="handleInputBlur(this, 'hk')"
-              onchange="updateErsteZeile();"
-              oninput="updateErsteZeile();"
-              style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 4px;">
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
 
 // ==========================================
 // ENTWICKLUNGSMODELLE
@@ -1243,3 +689,503 @@ window.backToProjektDetail = function() {
 // Additional functions for delete, duplicate, etc. would go here...
 
 console.log('✅ Artikel Module v4.0.0 loaded - Complete integration achieved');
+
+// ==========================================
+// REVENUE CALCULATIONS (für Wirtschaftlichkeit)
+// ==========================================
+
+function calculateArtikelRevenue(artikelId) {
+  const artikel = state.getArtikel(artikelId);
+  if (!artikel) return 0;
+
+  let totalRevenue = 0;
+  const config = getTypeConfig(artikel.typ || 'Hardware');
+
+  Object.keys(artikel.volumes || {}).forEach(year => {
+    const volume = artikel.volumes[year] || 0;
+    const price = artikel.prices[year] || 0;
+    const revenue = config.calculate(volume, price);
+    totalRevenue += revenue / 1000; // Convert to k€
+  });
+
+  return totalRevenue;
+}
+
+function calculateArtikelDB2(artikelId) {
+  const artikel = state.getArtikel(artikelId);
+  if (!artikel) return 0;
+
+  const revenue = calculateArtikelRevenue(artikelId);
+  if (revenue === 0) return 0;
+
+  let totalCosts = 0;
+
+  Object.keys(artikel.volumes || {}).forEach(year => {
+    const volume = artikel.volumes[year] || 0;
+    const hk = artikel.hk || 0;
+    totalCosts += (volume * hk) / 1000;
+  });
+
+  const db2 = revenue - totalCosts;
+  return (db2 / revenue) * 100;
+}
+
+// FORTSETZUNG AB ZEILE 691
+// ==========================================
+// HELPER FUNCTIONS (Fortsetzung)
+// ==========================================
+
+window.updateZeithorizont = function() {
+  // Placeholder for compatibility
+  console.log('updateZeithorizont called');
+};
+
+window.updateTabellenSpalten = function() {
+  // Placeholder for compatibility  
+  console.log('updateTabellenSpalten called');
+};
+
+window.handleInputFocus = function(input) {
+  if (input.value.startsWith('z.B.')) {
+    input.value = '';
+  }
+  input.style.color = '#111827';
+};
+
+window.handleInputBlur = function(input, type) {
+  if (!input.value) {
+    input.value = input.placeholder;
+    input.style.color = '#6b7280';
+  } else {
+    if (type === 'menge') {
+      input.value = helpers.formatThousands(helpers.parseFormattedNumber(input.value));
+    } else {
+      input.value = helpers.formatDecimal(helpers.parseFormattedNumber(input.value));
+    }
+  }
+};
+
+window.formatNumberInput = function(input) {
+  const value = helpers.parseFormattedNumber(input.value);
+  input.value = helpers.formatThousands(value);
+};
+
+window.formatDecimalInput = function(input) {
+  const value = helpers.parseFormattedNumber(input.value);
+  input.value = helpers.formatDecimal(value);
+};
+
+window.backToArtikelList = function() {
+  document.getElementById('artikel-detail-view').style.display = 'none';
+  document.getElementById('artikel-overview').style.display = 'block';
+  state.artikelViewMode = 'list';
+  state.currentArtikel = null;
+  state.saveState();
+};
+
+window.backToProjektDetail = function() {
+  document.getElementById('artikel-detail-view').style.display = 'none';
+  document.getElementById('artikel-overview').style.display = 'none';
+  document.getElementById('projekt-detail-view').style.display = 'block';
+  state.artikelViewMode = null;
+  state.currentArtikel = null;
+  state.saveState();
+};
+
+// ==========================================
+// BULK ACTIONS
+// ==========================================
+
+window.updateArtikelBulkActions = function() {
+  const checkboxes = document.querySelectorAll('.artikel-checkbox:checked');
+  const bulkActionsDiv = document.getElementById('artikel-bulk-actions');
+  const selectedCountSpan = document.getElementById('artikel-selected-count');
+  
+  if (checkboxes.length > 0) {
+    if (bulkActionsDiv) bulkActionsDiv.style.display = 'block';
+    if (selectedCountSpan) selectedCountSpan.textContent = checkboxes.length;
+  } else {
+    if (bulkActionsDiv) bulkActionsDiv.style.display = 'none';
+  }
+  
+  console.log(`${checkboxes.length} artikel selected`);
+};
+
+window.selectAllArtikel = function() {
+  const checkboxes = document.querySelectorAll('.artikel-checkbox');
+  const allChecked = document.querySelectorAll('.artikel-checkbox:checked').length === checkboxes.length;
+  
+  checkboxes.forEach(cb => {
+    cb.checked = !allChecked;
+  });
+  
+  updateArtikelBulkActions();
+};
+
+window.bulkDeleteArtikel = async function() {
+  const checkboxes = document.querySelectorAll('.artikel-checkbox:checked');
+  const artikelIds = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (artikelIds.length === 0) return;
+  
+  if (!confirm(`Wirklich ${artikelIds.length} Artikel löschen?`)) return;
+  
+  for (const artikelId of artikelIds) {
+    await api.deleteArticle(artikelId);
+    state.deleteArtikel(artikelId);
+  }
+  
+  renderArtikelListByProjekt();
+  updateArtikelBulkActions();
+};
+
+window.bulkUpdateArtikelStatus = function(status) {
+  const checkboxes = document.querySelectorAll('.artikel-checkbox:checked');
+  const artikelIds = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (artikelIds.length === 0) return;
+  
+  artikelIds.forEach(artikelId => {
+    const artikel = state.getArtikel(artikelId);
+    if (artikel) {
+      artikel.status = status;
+      artikel.updatedAt = new Date().toISOString();
+      state.setArtikel(artikelId, artikel);
+      api.updateArticle(artikelId, artikel);
+    }
+  });
+  
+  renderArtikelListByProjekt();
+  updateArtikelBulkActions();
+};
+
+// ==========================================
+// DELETE ARTIKEL
+// ==========================================
+
+window.deleteArtikel = async function(artikelId) {
+  const artikel = state.getArtikel(artikelId);
+  if (!artikel) return;
+  
+  if (!confirm(`Artikel "${artikel.name}" wirklich löschen?`)) return;
+  
+  try {
+    // Delete from Supabase
+    if (api.deleteArticle) {
+      const success = await api.deleteArticle(artikelId);
+      if (!success) {
+        console.error('Failed to delete from Supabase');
+        return;
+      }
+    }
+    
+    // Delete from local state
+    state.deleteArtikel(artikelId);
+    state.saveState();
+    
+    // Update UI
+    renderArtikelListByProjekt();
+    
+    // Show success message
+    if (window.cfoDashboard?.aiController) {
+      window.cfoDashboard.aiController.addAIMessage({
+        level: 'success',
+        title: '✅ Artikel gelöscht',
+        text: `"${artikel.name}" wurde erfolgreich gelöscht.`,
+        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+      });
+    }
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('Fehler beim Löschen: ' + err.message);
+  }
+};
+
+// ==========================================
+// DUPLICATE ARTIKEL
+// ==========================================
+
+window.duplicateArtikel = async function(artikelId) {
+  const original = state.getArtikel(artikelId);
+  if (!original) {
+    console.error('Original artikel not found');
+    return;
+  }
+  
+  try {
+    // Create duplicate
+    const duplicate = {
+      ...original,
+      id: `artikel-db-${helpers.generateId()}`,
+      name: original.name + ' (Kopie)',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Remove parent package info for duplicate
+    delete duplicate.parent_package_id;
+    delete duplicate.artikel_mode;
+    
+    // Save to Supabase
+    if (api.saveArticle) {
+      const saved = await api.saveArticle(duplicate);
+      if (saved && saved.id) {
+        duplicate.id = saved.id;
+      }
+    }
+    
+    // Save to local state
+    state.setArtikel(duplicate.id, duplicate);
+    state.saveState();
+    
+    // Update UI
+    renderArtikelListByProjekt();
+    
+    // Show success
+    if (window.cfoDashboard?.aiController) {
+      window.cfoDashboard.aiController.addAIMessage({
+        level: 'success',
+        title: '✅ Artikel dupliziert',
+        text: `"${duplicate.name}" wurde erfolgreich erstellt.`,
+        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+      });
+    }
+  } catch (err) {
+    console.error('Duplicate failed:', err);
+    alert('Fehler beim Duplizieren: ' + err.message);
+  }
+};
+
+// ==========================================
+// CREATE ARTIKEL
+// ==========================================
+
+window.openArtikelCreationModal = function() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  if (!projektId) {
+    console.error('No projekt selected');
+    return;
+  }
+  
+  // Use imported function if available
+  if (openArtikelCreationModalCore) {
+    openArtikelCreationModalCore(projektId);
+  } else {
+    // Fallback: Create simple modal
+    createSimpleArtikelModal(projektId);
+  }
+};
+
+function createSimpleArtikelModal(projektId) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  
+  modal.innerHTML = `
+    <div style="background:white;padding:30px;border-radius:12px;width:500px;max-width:90%;">
+      <h2 style="margin:0 0 20px;">📦 Neuen Artikel erstellen</h2>
+      
+      <div style="margin-bottom:20px;">
+        <label>Name *</label>
+        <input type="text" id="new-artikel-name" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:4px;" />
+      </div>
+      
+      <div style="margin-bottom:20px;">
+        <label>Typ</label>
+        <select id="new-artikel-typ" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:4px;">
+          <option value="Hardware">🔧 Hardware</option>
+          <option value="Software">💿 Software</option>
+          <option value="Software-SaaS">☁️ Software-SaaS</option>
+          <option value="Consulting">👔 Consulting</option>
+          <option value="Service">🔧 Service</option>
+        </select>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="this.closest('.modal').remove()" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:6px;background:white;cursor:pointer;">
+          Abbrechen
+        </button>
+        <button onclick="createNewArtikel('${projektId}')" style="padding:10px 20px;border:none;border-radius:6px;background:#3b82f6;color:white;cursor:pointer;">
+          Erstellen
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Focus name input
+  setTimeout(() => {
+    document.getElementById('new-artikel-name')?.focus();
+  }, 100);
+}
+
+window.createNewArtikel = async function(projektId) {
+  const nameInput = document.getElementById('new-artikel-name');
+  const typInput = document.getElementById('new-artikel-typ');
+  
+  if (!nameInput?.value) {
+    alert('Bitte Namen eingeben');
+    return;
+  }
+  
+  const newArtikel = {
+    id: `artikel-db-${helpers.generateId()}`,
+    name: nameInput.value,
+    typ: typInput?.value || 'Hardware',
+    projekt_id: projektId,
+    status: 'aktiv',
+    kategorie: '',
+    beschreibung: '',
+    geschaeftsmodell: 'Einmalverkauf',
+    release_datum: new Date().toISOString().substring(0, 7) + '-01',
+    start_menge: 100,
+    start_preis: 1000,
+    start_hk: 500,
+    zeitraum: 5,
+    mengen_modell: 'konservativ',
+    preis_modell: 'konstant',
+    kosten_modell: 'lernkurve',
+    volumes: {},
+    prices: {},
+    hk: 500,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  try {
+    // Save to Supabase
+    if (api.saveArticle) {
+      const saved = await api.saveArticle(newArtikel);
+      if (saved && saved.id) {
+        newArtikel.id = saved.id;
+      }
+    }
+    
+    // Save to local state
+    state.setArtikel(newArtikel.id, newArtikel);
+    state.saveState();
+    
+    // Close modal
+    document.querySelector('.modal')?.remove();
+    
+    // Open detail view
+    openArtikelDetail(newArtikel.id);
+    
+  } catch (err) {
+    console.error('Create failed:', err);
+    alert('Fehler beim Erstellen: ' + err.message);
+  }
+};
+
+// ==========================================
+// PACKAGE FUNCTIONS
+// ==========================================
+
+window.toggleArtikelAsPackage = function(artikelId) {
+  const artikel = state.getArtikel(artikelId);
+  if (!artikel) return;
+  
+  if (artikel.artikel_mode === 'package-parent') {
+    // Remove package mode
+    delete artikel.artikel_mode;
+    
+    // Unlink all children
+    const children = state.getArtikelByProjekt(artikel.projekt_id)
+      .filter(a => a.parent_package_id === artikelId.replace('artikel-db-', ''));
+    
+    children.forEach(child => {
+      delete child.parent_package_id;
+      state.setArtikel(child.id, child);
+      api.updateArticle(child.id, child);
+    });
+  } else {
+    // Set as package
+    artikel.artikel_mode = 'package-parent';
+  }
+  
+  artikel.updatedAt = new Date().toISOString();
+  state.setArtikel(artikelId, artikel);
+  api.updateArticle(artikelId, artikel);
+  
+  renderArtikelListByProjekt();
+};
+
+window.addArtikelToPackage = function(childId, parentId) {
+  const child = state.getArtikel(childId);
+  const parent = state.getArtikel(parentId);
+  
+  if (!child || !parent) return;
+  
+  // Set parent as package if not already
+  if (parent.artikel_mode !== 'package-parent') {
+    parent.artikel_mode = 'package-parent';
+    parent.updatedAt = new Date().toISOString();
+    state.setArtikel(parentId, parent);
+    api.updateArticle(parentId, parent);
+  }
+  
+  // Link child to parent
+  child.parent_package_id = parentId.replace('artikel-db-', '');
+  child.updatedAt = new Date().toISOString();
+  state.setArtikel(childId, child);
+  api.updateArticle(childId, child);
+  
+  renderArtikelListByProjekt();
+};
+
+// ==========================================
+// NAVIGATION STATE
+// ==========================================
+
+window.updateArtikelNavigation = function() {
+  // Update breadcrumb
+  const artikelNameEl = document.getElementById('breadcrumb-artikel-name');
+  if (artikelNameEl) {
+    const artikel = state.getArtikel(state.currentArtikel);
+    if (artikel) {
+      artikelNameEl.textContent = artikel.name;
+    }
+  }
+  
+  const projektNameEl = document.getElementById('breadcrumb-projekt-name');
+  if (projektNameEl) {
+    const projekt = state.getProjekt(state.currentProjekt);
+    if (projekt) {
+      projektNameEl.textContent = projekt.name;
+    }
+  }
+};
+
+window.saveNavigationState = function() {
+  // Save current navigation state
+  const navState = {
+    view: 'artikel-detail',
+    projektId: state.currentProjekt,
+    artikelId: state.currentArtikel,
+    timestamp: new Date().toISOString()
+  };
+  
+  localStorage.setItem('albo-nav-state', JSON.stringify(navState));
+};
+
+// ==========================================
+// EXPORTS
+// ==========================================
+
+window.renderArtikelListByProjekt = renderArtikelListByProjekt;
+
+console.log('✅ Artikel Module v5.0.0 loaded - Complete integration achieved');
+
+export default {
+  renderArtikelListByProjekt,
+  calculateArtikelRevenue,
+  calculateArtikelDB2,
+  openArtikelDetail,
+  deleteArtikel,
+  duplicateArtikel,
+  openArtikelCreationModal,
+  togglePackageExpand,
+  toggleArtikelAsPackage,
+  addArtikelToPackage
+};
