@@ -9,6 +9,8 @@ import * as helpers from '../../helpers.js';
 import * as api from '../../api.js';
 import * as charts from '../../charts.js';
 import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
+import IntegrationPatch from './artikel-integration-patch.js';
+IntegrationPatch.integrateAdaptiveSystem();
 
 // ==========================================
 // HIERARCHIE STATE
