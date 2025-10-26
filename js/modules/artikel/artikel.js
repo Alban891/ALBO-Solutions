@@ -1316,6 +1316,263 @@ window.updateArtikelBulkActions = function() {
 };
 
 // ==========================================
+// STATE
+// ==========================================
+
+window.expandedPackages = new Set();
+
+// ==========================================
+// DATEN LADEN & GRUPPIEREN
+// ==========================================
+
+async function loadArtikelHierarchy(projektId) {
+  console.log('📦 Loading artikel hierarchy for projekt:', projektId);
+  
+  // Hole alle Artikel
+  const { data: alleArtikel, error } = await window.supabase
+    .from('ALBO_Artikel')  // ✅ KORREKT: ALBO_Artikel
+    .select('*')
+    .eq('project_id', projektId)  // ✅ KORREKT: project_id
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error loading artikel:', error);
+    return [];
+  }
+  
+  // Gruppiere in Hierarchie
+  const hierarchy = [];
+  const processedIds = new Set();
+  
+  alleArtikel.forEach(artikel => {
+    // Package-Parents und Standalone-Artikel
+    if (!artikel.parent_package_id) {
+      const children = alleArtikel.filter(a => a.parent_package_id === artikel.id);
+      
+      hierarchy.push({
+        parent: artikel,
+        children: children,
+        isPackage: artikel.artikel_mode === 'package-parent',
+        hasChildren: children.length > 0
+      });
+      
+      processedIds.add(artikel.id);
+      children.forEach(c => processedIds.add(c.id));
+    }
+  });
+  
+  // Orphaned Children (Children ohne Parent) - sollte nicht vorkommen
+  alleArtikel.forEach(artikel => {
+    if (!processedIds.has(artikel.id)) {
+      console.warn('⚠️ Orphaned child artikel found:', artikel.name);
+      hierarchy.push({
+        parent: artikel,
+        children: [],
+        isPackage: false,
+        hasChildren: false,
+        isOrphaned: true
+      });
+    }
+  });
+  
+  console.log('✅ Artikel hierarchy loaded:', hierarchy);
+  return hierarchy;
+}
+
+// ==========================================
+// RENDERING
+// ==========================================
+
+function renderArtikelHierarchy(hierarchy) {
+  return hierarchy.map(item => {
+    const { parent, children, hasChildren, isPackage } = item;
+    const isExpanded = window.expandedPackages.has(parent.id);
+    
+    // Parent Row
+    let html = renderArtikelRow(parent, {
+      hasChildren: hasChildren,
+      isExpanded: isExpanded,
+      isParent: true
+    });
+    
+    // Children Rows (wenn expanded)
+    if (isExpanded && children.length > 0) {
+      html += children.map((child, index) => {
+        return renderArtikelRow(child, {
+          isChild: true,
+          isLastChild: index === children.length - 1
+        });
+      }).join('');
+    }
+    
+    return html;
+  }).join('');
+}
+
+// ==========================================
+// ROW RENDERING
+// ==========================================
+
+function renderArtikelRow(artikel, options = {}) {
+  const { hasChildren, isExpanded, isParent, isChild, isLastChild } = options;
+  
+  // Icon basierend auf Artikel-Typ
+  const icon = artikel.artikel_mode === 'package-parent' ? '📦' : 
+               artikel.artikel_mode === 'package-child' ? '📄' :
+               artikel.artikel_mode === 'hybrid' ? '🔀' : '📦';
+  
+  // Expand/Collapse Button (nur für Parents mit Children)
+  const expandButton = hasChildren ? `
+    <button 
+      onclick="togglePackageExpand('${artikel.id}')"
+      style="
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        margin-right: 8px;
+      "
+      title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
+    >
+      ${isExpanded ? '▼' : '▶'}
+    </button>
+  ` : '<span style="width: 28px; display: inline-block;"></span>';
+  
+  // Einrückung für Children
+  const indent = isChild ? 'padding-left: 48px;' : '';
+  
+  // Visual Tree Line
+  const treeLine = isChild ? `
+    <span style="
+      position: absolute;
+      left: 24px;
+      top: 0;
+      bottom: ${isLastChild ? '50%' : '0'};
+      width: 2px;
+      background: #d1d5db;
+    "></span>
+    <span style="
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      width: 16px;
+      height: 2px;
+      background: #d1d5db;
+    "></span>
+  ` : '';
+  
+  return `
+    <tr style="
+      position: relative;
+      ${isChild ? 'background: #f9fafb;' : ''}
+    ">
+      <td style="padding: 12px; ${indent}">
+        ${treeLine}
+        ${isParent ? expandButton : ''}
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <span style="font-size: 20px;">${icon}</span>
+          <span style="font-weight: ${isChild ? '400' : '600'};">
+            ${artikel.name}
+          </span>
+          ${artikel.artikel_mode === 'package-parent' ? `
+            <span style="
+              background: #dbeafe;
+              color: #1e40af;
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 11px;
+              font-weight: 600;
+            ">
+              PACKAGE
+            </span>
+          ` : ''}
+          ${isChild && artikel.mix_percentage ? `
+            <span style="
+              background: #f3f4f6;
+              color: #6b7280;
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 11px;
+            ">
+              ${artikel.mix_percentage}% Mix
+            </span>
+          ` : ''}
+        </span>
+      </td>
+      <td>${artikel.typ || '-'}</td>
+      <td>${artikel.release_datum || '-'}</td>
+      <td>${formatCurrency(artikel.start_preis || 0)}</td>
+      <td>
+        <span class="status-badge status-${artikel.status?.toLowerCase() || 'aktiv'}">
+          ${artikel.status || 'AKTIV'}
+        </span>
+      </td>
+      <td>
+        <!-- Action buttons -->
+        <button onclick="openArtikelDetails('${artikel.id}')">📊</button>
+        <button onclick="editArtikel('${artikel.id}')">✏️</button>
+        <button onclick="deleteArtikel('${artikel.id}')">🗑️</button>
+      </td>
+    </tr>
+  `;
+}
+
+// ==========================================
+// EXPAND/COLLAPSE
+// ==========================================
+
+window.togglePackageExpand = function(packageId) {
+  if (window.expandedPackages.has(packageId)) {
+    window.expandedPackages.delete(packageId);
+  } else {
+    window.expandedPackages.add(packageId);
+  }
+  
+  // Re-render
+  loadAndRenderArtikel();
+};
+
+// ==========================================
+// MAIN RENDER FUNCTION
+// ==========================================
+
+async function loadAndRenderArtikel() {
+  const projektId = window.state.currentProjekt.id;
+  
+  // Show loading
+  document.getElementById('artikel-list').innerHTML = `
+    <tr><td colspan="6" style="text-align: center; padding: 40px;">
+      <div style="font-size: 32px; margin-bottom: 8px;">⏳</div>
+      <div>Lade Artikel...</div>
+    </td></tr>
+  `;
+  
+  // Load hierarchy
+  const hierarchy = await loadArtikelHierarchy(projektId);
+  
+  // Render
+  const html = renderArtikelHierarchy(hierarchy);
+  document.getElementById('artikel-list').innerHTML = html;
+}
+
+// ==========================================
+// HELPER
+// ==========================================
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0
+  }).format(value);
+}
+
+// ==========================================
 // EXPORTS
 // ==========================================
 
