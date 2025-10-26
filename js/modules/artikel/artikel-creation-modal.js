@@ -699,7 +699,7 @@ function renderManualTab(projektId) {
       <h3 style="margin: 0 0 20px;">✏️ Artikel manuell anlegen</h3>
       
       <!-- SCHRITT 1: ARTIKEL-TYP -->
-      <div style="margin-bottom: 30px;">
+      <div id="artikel-type-selection" style="margin-bottom: 30px;">
         <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px;">
           Schritt 1: Artikel-Typ wählen
         </label>
@@ -852,7 +852,38 @@ function selectArtikelTypeManual(type) {
       contentDiv.innerHTML = renderPackageArtikelForm();
     }
   }
+  
+  // Scroll to details
+  setTimeout(() => {
+    detailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
 }
+
+/**
+ * Reset selection and go back to type selection
+ */
+window.resetArtikelTypeSelection = function() {
+  console.log('🔙 Reset artikel type selection');
+  
+  // Hide details section
+  const detailsSection = document.getElementById('artikel-details-section');
+  if (detailsSection) {
+    detailsSection.style.display = 'none';
+  }
+  
+  // Clear selection
+  document.querySelectorAll('.artikel-type-option').forEach(option => {
+    option.classList.remove('selected');
+    option.style.borderColor = '#e5e7eb';
+    option.style.background = 'white';
+  });
+  
+  // Scroll to top
+  const typeSelection = document.getElementById('artikel-type-selection');
+  if (typeSelection) {
+    typeSelection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
 
 /**
  * Standard Artikel Form
@@ -942,14 +973,23 @@ function renderStandardArtikelForm() {
         </div>
       </div>
       
-      <!-- Submit Button -->
-      <button 
-        class="btn btn-primary" 
-        onclick="createManualArtikel('${projektId}')"
-        style="width: 100%; padding: 14px; font-size: 16px;"
-      >
-        ✓ Artikel anlegen
-      </button>
+      <!-- Buttons -->
+      <div style="display: flex; gap: 12px;">
+        <button 
+          class="btn btn-secondary" 
+          onclick="resetArtikelTypeSelection()"
+          style="padding: 14px 24px; font-size: 16px;"
+        >
+          ← Zurück
+        </button>
+        <button 
+          class="btn btn-primary" 
+          onclick="createManualArtikel('${projektId}')"
+          style="flex: 1; padding: 14px; font-size: 16px;"
+        >
+          ✓ Artikel anlegen
+        </button>
+      </div>
       
     </div>
   `;
@@ -1082,70 +1122,94 @@ function renderHybridArtikelForm() {
         </div>
       </div>
       
-      <!-- Submit Button -->
-      <button 
-        class="btn btn-primary" 
-        onclick="createManualArtikel('${projektId}')"
-        style="width: 100%; padding: 14px; font-size: 16px;"
-      >
-        ✓ Artikel anlegen
-      </button>
+      <!-- Buttons -->
+      <div style="display: flex; gap: 12px;">
+        <button 
+          class="btn btn-secondary" 
+          onclick="resetArtikelTypeSelection()"
+          style="padding: 14px 24px; font-size: 16px;"
+        >
+          ← Zurück
+        </button>
+        <button 
+          class="btn btn-primary" 
+          onclick="createManualArtikel('${projektId}')"
+          style="flex: 1; padding: 14px; font-size: 16px;"
+        >
+          ✓ Artikel anlegen
+        </button>
+      </div>
       
     </div>
   `;
 }
 
 /**
- * Package Artikel Form
+ * Package Artikel Form - SIMPLIFIED
+ * Only ask for Package Name (umbrella term like project name)
  */
 function renderPackageArtikelForm() {
   const projektId = window.currentProjektId || '';
   
+  // Try to get project name as default
+  const projektName = window.state?.currentProjekt?.name || '';
+  
   return `
     <div style="display: grid; gap: 24px;">
       
-      <!-- Name -->
+      <!-- Package Name (Oberbegriff) -->
       <div>
-        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Name *</label>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Package-Bezeichnung *</label>
         <input 
           type="text" 
           id="manual-name" 
-          placeholder="z.B. Consulting Packages" 
+          value="${projektName}"
+          placeholder="z.B. Cyber Security Consulting" 
           style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
         >
-      </div>
-      
-      <!-- Kategorie -->
-      <div>
-        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie *</label>
-        <select 
-          id="manual-typ" 
-          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
-        >
-          <option value="">-- Bitte wählen --</option>
-          <option value="Service">Service</option>
-          <option value="Software">Software</option>
-          <option value="Consulting">Consulting</option>
-        </select>
-      </div>
-      
-      <!-- Info -->
-      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center;">
-        <div style="font-size: 48px; margin-bottom: 12px;">📦</div>
-        <div style="font-weight: 600; margin-bottom: 8px; color: #1e40af;">Package-Editor</div>
-        <div style="font-size: 14px; color: #1e40af; line-height: 1.6;">
-          Für Package-Artikel öffnet sich ein spezieller Editor mit Multi-Step Konfiguration
+        <div style="margin-top: 6px; font-size: 13px; color: #6b7280;">
+          💡 Dies ist der Oberbegriff für alle Pakete (z.B. Projektname). Die einzelnen Pakete (S/M/L) definierst du im nächsten Schritt.
         </div>
       </div>
       
-      <!-- Submit Button -->
-      <button 
-        class="btn btn-primary" 
-        onclick="createManualArtikel('${projektId}')"
-        style="width: 100%; padding: 14px; font-size: 16px;"
-      >
-        📦 Package-Editor öffnen
-      </button>
+      <!-- Hidden Kategorie (wird automatisch gesetzt) -->
+      <input type="hidden" id="manual-typ" value="Package">
+      
+      <!-- Info Box -->
+      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px;">
+        <div style="display: flex; gap: 12px; align-items: start;">
+          <div style="font-size: 32px;">📦</div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #1e40af;">Package-Editor</div>
+            <div style="font-size: 14px; color: #1e40af; line-height: 1.6; margin-bottom: 12px;">
+              Im nächsten Schritt öffnet sich der Package-Editor, wo du:
+            </div>
+            <ul style="margin: 0; padding-left: 20px; color: #1e40af; line-height: 1.8; font-size: 14px;">
+              <li>Anzahl der Pakete festlegst (z.B. 3: Small, Medium, Large)</li>
+              <li>Komponenten pro Paket definierst</li>
+              <li>Pricing & Customer Journey konfigurierst</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Buttons -->
+      <div style="display: flex; gap: 12px;">
+        <button 
+          class="btn btn-secondary" 
+          onclick="resetArtikelTypeSelection()"
+          style="padding: 14px 24px; font-size: 16px;"
+        >
+          ← Zurück
+        </button>
+        <button 
+          class="btn btn-primary" 
+          onclick="createManualArtikel('${projektId}')"
+          style="flex: 1; padding: 14px; font-size: 16px;"
+        >
+          📦 Package-Editor öffnen →
+        </button>
+      </div>
       
     </div>
   `;
