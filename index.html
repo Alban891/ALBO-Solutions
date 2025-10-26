@@ -459,6 +459,9 @@
                         <button class="detail-tab active" onclick="switchProjektTab('artikel')">
                             Artikel
                         </button>
+                        <button class="detail-tab" onclick="switchProjektTab('revenue-model')">
+                            Revenue Model
+                        </button>
                         <button class="detail-tab" onclick="switchProjektTab('projektkosten')">
                             Projektkosten
                         </button>
@@ -571,6 +574,13 @@
                             </table>
                         </div>
 
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- PROJEKT TAB: REVENUE MODEL -->
+                    <!-- ========================================== -->
+                    <div id="projekt-tab-revenue-model" class="projekt-tab-content">
+                        <!-- Wird von revenue-model.js gefüllt -->
                     </div>
 
                     <!-- ========================================== -->
@@ -1539,6 +1549,13 @@
         console.log('✅ AI Business Partner ready');
     }).catch(error => {
         console.error('❌ Failed to load AI Partner:', error);
+    });
+
+    // Revenue Model Module
+    import('./js/modules/revenue-model/revenue-model.js').then(() => {
+        console.log('✅ Revenue Model module loaded');
+    }).catch(error => {
+        console.error('❌ Failed to load Revenue Model:', error);
     });
 
     </script>
