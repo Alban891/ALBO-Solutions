@@ -11,11 +11,31 @@ import * as charts from '../../charts.js';
 import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
 
 // ==========================================
-// ARTIKEL RENDERING
+// HIERARCHIE STATE
+// ==========================================
+
+if (!window.expandedPackages) {
+  window.expandedPackages = new Set();
+}
+
+/**
+ * Toggle package expand/collapse
+ */
+window.togglePackageExpand = function(packageId) {
+  if (window.expandedPackages.has(packageId)) {
+    window.expandedPackages.delete(packageId);
+  } else {
+    window.expandedPackages.add(packageId);
+  }
+  renderArtikelListByProjekt(); // Re-render
+};
+
+// ==========================================
+// ARTIKEL RENDERING MIT HIERARCHIE
 // ==========================================
 
 /**
- * Render artikel list for current project
+ * Render artikel list for current project WITH HIERARCHY
  */
 export function renderArtikelListByProjekt() {
   const projektId = window.cfoDashboard.currentProjekt;
@@ -35,12 +55,12 @@ export function renderArtikelListByProjekt() {
   const tbody = document.getElementById('artikel-list-tbody');
   if (!tbody) return;
 
-  const artikel = state.getArtikelByProjekt(projektId);
+  const alleArtikel = state.getArtikelByProjekt(projektId);
 
-  if (artikel.length === 0) {
+  if (alleArtikel.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 40px; color: var(--gray);">
+        <td colspan="9" style="text-align: center; padding: 40px; color: var(--gray);">
           <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
           <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
             Noch keine Artikel vorhanden
@@ -54,12 +74,51 @@ export function renderArtikelListByProjekt() {
     return;
   }
 
-  tbody.innerHTML = artikel.map(art => {
-    const revenue = calculateArtikelRevenue(art.id);
-    const db2 = calculateArtikelDB2(art.id);
+  // ==========================================
+  // GRUPPIERE IN HIERARCHIE
+  // ==========================================
+  
+  const hierarchy = [];
+  const processedIds = new Set();
+
+  alleArtikel.forEach(artikel => {
+    if (!artikel.parent_package_id) {
+      const children = alleArtikel.filter(a => a.parent_package_id === artikel.id);
+      hierarchy.push({
+        parent: artikel,
+        children: children,
+        hasChildren: children.length > 0
+      });
+      processedIds.add(artikel.id);
+      children.forEach(c => processedIds.add(c.id));
+    }
+  });
+
+  // Orphaned Children
+  alleArtikel.forEach(artikel => {
+    if (!processedIds.has(artikel.id)) {
+      hierarchy.push({
+        parent: artikel,
+        children: [],
+        hasChildren: false
+      });
+    }
+  });
+
+  // ==========================================
+  // RENDER MIT HIERARCHIE
+  // ==========================================
+  
+  tbody.innerHTML = hierarchy.map(item => {
+    const { parent, children, hasChildren } = item;
+    const isExpanded = window.expandedPackages.has(parent.id);
     
-    // Formatiere das Update-Datum
-    const updatedAt = art.updatedAt ? new Date(art.updatedAt).toLocaleString('de-DE', {
+    let html = '';
+    
+    // === PARENT ROW ===
+    const revenue = calculateArtikelRevenue(parent.id);
+    const db2 = calculateArtikelDB2(parent.id);
+    const updatedAt = parent.updatedAt ? new Date(parent.updatedAt).toLocaleString('de-DE', {
       day: '2-digit',
       month: '2-digit', 
       year: 'numeric',
@@ -67,51 +126,135 @@ export function renderArtikelListByProjekt() {
       minute: '2-digit'
     }) : '-';
     
-    return `
-      <tr class="artikel-row" data-artikel-id="${art.id}">
+    const icon = parent.artikel_mode === 'package-parent' ? '📦' : '📦';
+    const expandButton = hasChildren ? `
+      <button 
+        onclick="window.togglePackageExpand('${parent.id}')"
+        style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px 8px;margin-right:4px;color:var(--primary);transition:transform 0.2s;${isExpanded ? 'transform:rotate(90deg);' : ''}"
+        title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
+      >▶</button>
+    ` : '<span style="width:32px;display:inline-block;"></span>';
+    
+    const packageBadge = parent.artikel_mode === 'package-parent' ? `
+      <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px;">PACKAGE</span>
+    ` : '';
+    
+    html += `
+      <tr class="artikel-row" data-artikel-id="${parent.id}">
         <td>
-          <input type="checkbox" class="artikel-checkbox" value="${art.id}" 
-                 onchange="updateArtikelBulkActions()">
+          <input type="checkbox" class="artikel-checkbox" value="${parent.id}" onchange="updateArtikelBulkActions()">
         </td>
         <td>
-          <div style="font-weight: 500; color: var(--text);">${helpers.escapeHtml(art.name)}</div>
-          <div style="font-size: 12px; color: var(--gray); margin-top: 4px;">
-            ${helpers.escapeHtml(art.typ || '-')}
+          ${expandButton}
+          <span style="font-size:18px;">${icon}</span>
+          <div style="display:inline-block;margin-left:4px;">
+            <div style="font-weight:500;color:var(--text);">
+              ${helpers.escapeHtml(parent.name)}${packageBadge}
+            </div>
+            <div style="font-size:12px;color:var(--gray);margin-top:4px;">
+              ${helpers.escapeHtml(parent.typ || '-')}
+            </div>
           </div>
         </td>
-        <td>${helpers.escapeHtml(art.kategorie || '-')}</td>
-        <td>${helpers.formatDateSafe(art.release_datum)}</td>
-        <td style="text-align: right; font-weight: 500;">
+        <td>${helpers.escapeHtml(parent.kategorie || '-')}</td>
+        <td>${helpers.formatDateSafe(parent.release_datum)}</td>
+        <td style="text-align:right;font-weight:500;">
           ${helpers.formatRevenue(revenue)}
         </td>
-        <td style="text-align: right;">
+        <td style="text-align:right;">
           ${helpers.formatPercentage(db2)}
         </td>
         <td>
-          <div style="font-size: 11px; color: var(--text-light);">
+          <div style="font-size:11px;color:var(--text-light);">
             ${updatedAt}
           </div>
         </td>
         <td>
-          <span class="status-badge status-${(art.status || 'aktiv').toLowerCase()}">
-            ${helpers.escapeHtml(art.status || 'aktiv')}
+          <span class="status-badge status-${(parent.status || 'aktiv').toLowerCase()}">
+            ${helpers.escapeHtml(parent.status || 'aktiv')}
           </span>
         </td>
         <td>
           <div class="action-buttons">
-            <button class="btn-icon" onclick="openArtikelDetail('${art.id}')" title="Details">
-              📝
-            </button>
-            <button class="btn-icon" onclick="duplicateArtikel('${art.id}')" title="Duplizieren">
-              📋
-            </button>
-            <button class="btn-icon btn-danger" onclick="deleteArtikel('${art.id}')" title="Löschen">
-              🗑️
-            </button>
+            <button class="btn-icon" onclick="openArtikelDetail('${parent.id}')" title="Details">📝</button>
+            <button class="btn-icon" onclick="duplicateArtikel('${parent.id}')" title="Duplizieren">📋</button>
+            <button class="btn-icon btn-danger" onclick="deleteArtikel('${parent.id}')" title="Löschen">🗑️</button>
           </div>
         </td>
       </tr>
     `;
+    
+    // === CHILDREN ROWS (wenn expanded) ===
+    if (isExpanded && children.length > 0) {
+      children.forEach((child, index) => {
+        const childRevenue = calculateArtikelRevenue(child.id);
+        const childDb2 = calculateArtikelDB2(child.id);
+        const childUpdatedAt = child.updatedAt ? new Date(child.updatedAt).toLocaleString('de-DE', {
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : '-';
+        
+        const isLast = index === children.length - 1;
+        const treeLine = `
+          <span style="position:absolute;left:40px;top:0;bottom:${isLast ? '50%' : '0'};width:1px;background:#d1d5db;"></span>
+          <span style="position:absolute;left:40px;top:50%;width:20px;height:1px;background:#d1d5db;"></span>
+        `;
+        
+        const mixBadge = child.mix_percentage ? `
+          <span style="background:#f3f4f6;color:#6b7280;padding:2px 8px;border-radius:4px;font-size:11px;margin-left:8px;">${child.mix_percentage}% Mix</span>
+        ` : '';
+        
+        html += `
+          <tr class="artikel-row" data-artikel-id="${child.id}" style="position:relative;background:#f9fafb;">
+            <td>
+              <input type="checkbox" class="artikel-checkbox" value="${child.id}" onchange="updateArtikelBulkActions()">
+            </td>
+            <td style="padding-left:60px;">
+              ${treeLine}
+              <span style="font-size:18px;">📄</span>
+              <div style="display:inline-block;margin-left:4px;">
+                <div style="font-weight:400;color:var(--text);">
+                  ${helpers.escapeHtml(child.name)}${mixBadge}
+                </div>
+                <div style="font-size:12px;color:var(--gray);margin-top:4px;padding-left:32px;">
+                  ${helpers.escapeHtml(child.typ || '-')}
+                </div>
+              </div>
+            </td>
+            <td>${helpers.escapeHtml(child.kategorie || '-')}</td>
+            <td>${helpers.formatDateSafe(child.release_datum)}</td>
+            <td style="text-align:right;font-weight:500;">
+              ${helpers.formatRevenue(childRevenue)}
+            </td>
+            <td style="text-align:right;">
+              ${helpers.formatPercentage(childDb2)}
+            </td>
+            <td>
+              <div style="font-size:11px;color:var(--text-light);">
+                ${childUpdatedAt}
+              </div>
+            </td>
+            <td>
+              <span class="status-badge status-${(child.status || 'aktiv').toLowerCase()}">
+                ${helpers.escapeHtml(child.status || 'aktiv')}
+              </span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-icon" onclick="openArtikelDetail('${child.id}')" title="Details">📝</button>
+                <button class="btn-icon" onclick="duplicateArtikel('${child.id}')" title="Duplizieren">📋</button>
+                <button class="btn-icon btn-danger" onclick="deleteArtikel('${child.id}')" title="Löschen">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+    }
+    
+    return html;
   }).join('');
 }
 
