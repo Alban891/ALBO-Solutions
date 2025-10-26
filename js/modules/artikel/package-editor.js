@@ -40,10 +40,27 @@ window.packageEditorState = {
 
 export function openPackageEditor(projektId, initialData = {}) {
   console.log('📦 Opening Package Editor for projekt:', projektId);
+  console.log('   Type:', typeof projektId);
+  console.log('   Initial data:', initialData);
   
-  // Reset state
-  window.packageEditorState.projektId = projektId;
-  window.packageEditorState.currentStep = 2;  // ← START BEI STEP 2!
+  // Validate projekt ID
+  if (!projektId) {
+    console.error('❌ No projektId provided!');
+    alert('Fehler: Keine Projekt-ID übergeben!');
+    return;
+  }
+  
+  // Clean projekt ID immediately
+  let cleanProjektId = projektId;
+  if (typeof projektId === 'string' && projektId.includes('projekt-db-')) {
+    cleanProjektId = projektId.replace('projekt-db-', '');
+  }
+  
+  console.log('   Clean ID:', cleanProjektId);
+  
+  // Reset state with CLEANED ID
+  window.packageEditorState.projektId = cleanProjektId;  // ← WICHTIG!
+  window.packageEditorState.currentStep = 2;
   
   // Store initial data from manual form
   if (initialData.artikel_name) {
@@ -737,7 +754,7 @@ function validateCurrentStep() {
 // ==========================================
 
 async function savePackageArtikel() {
-  const state = window.packageEditorState;
+  const state = window.packageEditorState;  // ← Zeile 716: BLEIBT!
   
   console.log('💾 Saving package artikel...');
   
@@ -752,11 +769,20 @@ async function savePackageArtikel() {
   // Collect final data
   collectStep4Data();
   
-  // Clean projekt ID
+  // Validate projekt ID BEFORE cleaning
+  if (!state.projektId) {
+    console.error('❌ No projektId in state!', state);
+    alert('Fehler: Keine Projekt-ID im State! Bitte schließe das Modal und öffne es erneut.');
+    return;
+  }
+  
+  // Clean projekt ID (falls noch nicht clean)
   let cleanProjektId = state.projektId;
   if (typeof state.projektId === 'string' && state.projektId.includes('projekt-db-')) {
     cleanProjektId = state.projektId.replace('projekt-db-', '');
   }
+  
+  console.log('💾 Saving package artikel with projekt ID:', cleanProjektId);
   
   try {
     const nextBtn = document.getElementById('package-next-btn');
