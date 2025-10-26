@@ -6,7 +6,7 @@
  */
 
 import RevenueModels from './revenue-models.js';
-import * as helpers from './helpers.js';
+import * as helpers from '../../helpers.js';
 
 // ============================================
 // MAIN CALCULATION FUNCTION
