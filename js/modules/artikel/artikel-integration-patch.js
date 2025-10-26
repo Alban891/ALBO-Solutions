@@ -10,9 +10,9 @@
  * 3. Add event listener for artikel-typ change
  */
 
-import RevenueModels from '../revenue-models.js';
-import AdaptiveRenderer from '../artikel-adaptive-renderer.js';
-import Calculator from '../artikel-calculator.js';
+import RevenueModels from './revenue-models.js';
+import AdaptiveRenderer from './artikel-adaptive-renderer.js';
+import Calculator from './artikel-calculator.js';
 import * as helpers from '../../helpers.js';
 import { state } from '../../state.js';
 
