@@ -757,92 +757,37 @@
                     <!-- ALLE INHALTE AUF EINER SEITE (KEINE TABS!) -->
                     <!-- ========================================== -->
                     
-                    <!-- Basis-Informationen & Markt -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-                        
-                        <!-- LINKE SPALTE: Basis-Informationen -->
-                        <div class="form-section">
-                            <h3>📝 Basis-Informationen</h3>
-                            
-                            <div class="form-group">
-                                <label>Artikelname *</label>
+                    <!-- Vereinfachte Basis-Informationen -->
+                    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #1e3a8a;">
+                        <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; display: block;">
+                                    📦 ARTIKELNAME *
+                                </label>
                                 <input type="text" id="artikel-name" 
-                                    placeholder="z.B. Smart Sensor X1" required>
+                                    placeholder="z.B. Smart Sensor X1" 
+                                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;"
+                                    required>
                             </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Typ *</label>
-                                    <select id="artikel-typ">
-                                        <option value="">Bitte wählen...</option>
-                                        <option value="Hardware">Hardware</option>
-                                        <option value="Software-Perpetual">Software (Perpetual)</option>
-                                        <option value="Software-Subscription">Software (SaaS)</option>
-                                        <option value="Beratung">Beratung</option>
-                                        <option value="Service">Service</option>
-                                        <option value="Wartung">Wartung</option>
-                                        <option value="Training">Training</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Kategorie</label>
-                                    <input type="text" id="kategorie" 
-                                        placeholder="z.B. IoT Sensor">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Beschreibung</label>
-                                <textarea id="artikel-beschreibung" rows="3" 
-                                        placeholder="Kurze Produktbeschreibung..."></textarea>
-                            </div>
-                        </div>
-
-                        <!-- RECHTE SPALTE: Markt & Strategie -->
-                        <div class="form-section">
-                            <h3>🎯 Markt & Strategie</h3>
-
-                            <div class="form-group">
-                                <label>Geschäftsmodell</label>
-                                <select id="geschaeftsmodell">
+                            
+                            <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+                                <label style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; display: block;">
+                                    📋 TYP *
+                                </label>
+                                <select id="artikel-typ" 
+                                        style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
                                     <option value="">Bitte wählen...</option>
-                                    <option value="einmalverkauf">Einmalverkauf</option>
-                                    <option value="subscription">Subscription</option>
-                                    <option value="freemium">Freemium</option>
-                                    <option value="lizenz">Lizenzmodell</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Zielmarkt</label>
-                                <input type="text" id="zielmarkt" 
-                                    placeholder="z.B. DACH Region, B2B">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Strategie</label>
-                                <select id="strategie">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="innovator">Innovator/First Mover</option>
-                                    <option value="fast-follower">Fast Follower</option>
-                                    <option value="cost-leader">Cost Leader</option>
-                                    <option value="niche">Nische/Spezialist</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Investment-Typ</label>
-                                <select id="investment-typ">
-                                    <option value="">Bitte wählen...</option>
-                                    <option value="growth">Growth</option>
-                                    <option value="efficiency">Efficiency</option>
-                                    <option value="innovation">Innovation</option>
-                                    <option value="maintenance">Maintenance</option>
+                                    <option value="Hardware">🔧 Hardware</option>
+                                    <option value="Software-Perpetual">💿 Software (Perpetual)</option>
+                                    <option value="Software-Subscription">☁️ Software (SaaS)</option>
+                                    <option value="Beratung">💼 Beratung</option>
+                                    <option value="Service">🛠️ Service</option>
+                                    <option value="Wartung">🔄 Wartung</option>
+                                    <option value="Training">🎓 Training</option>
                                 </select>
                             </div>
                         </div>
-                    </div>
+</div>
                     
                     <!-- ========================================== -->
                     <!-- FINANZ-PARAMETER & ENTWICKLUNGSMODELLE -->
