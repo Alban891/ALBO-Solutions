@@ -797,9 +797,9 @@ async function savePackageArtikel() {
     console.log('📦 Step 1: Creating parent article...');
     
     const parentArtikelData = {
-      name: state.artikelName,
-      typ: 'Package',
-      project_id: cleanProjektId,  // ✅ KORREKT: project_id
+        name: state.artikelName,
+        typ: 'Package',
+        projektId: cleanProjektId,  // ← RICHTIG!
       
       // Package-Parent specific
       artikel_mode: 'package-parent',
@@ -863,7 +863,7 @@ async function savePackageArtikel() {
       const childArtikelData = {
         name: childArtikelName,
         typ: state.artikelTyp,
-        project_id: cleanProjektId,  // ✅ KORREKT: project_id
+        projektId: cleanProjektId,  // ← RICHTIG!
         
         // Package-Child specific
         artikel_mode: 'package-child',
