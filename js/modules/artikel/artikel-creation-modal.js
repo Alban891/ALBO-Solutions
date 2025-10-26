@@ -11,7 +11,7 @@
 import { analyzeGeschaeftsmodellWithClaude } from './artikel-ai-complete.js';
 import { state } from '../../state.js';
 import { saveArticle } from '../../api.js';  // ✅ BACK TO STATIC IMPORT!
-import { openPackageEditor } from './package-editor/package-editor-main.js';
+import { openPackageEditor } from './package-editor.js';
 
 // ==========================================
 // MAIN ENTRY POINT
