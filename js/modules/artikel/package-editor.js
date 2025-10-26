@@ -356,42 +356,220 @@ function renderComponentsList(packageIndex) {
   const components = state.packages[packageIndex].components;
   
   if (components.length === 0) {
-    return `<div style="padding: 40px; text-align: center; color: #9ca3af; background: #f9fafb; border-radius: 8px; border: 2px dashed #e5e7eb;">Noch keine Komponenten</div>`;
+    return `
+      <div style="padding: 40px; text-align: center; color: #9ca3af; background: #f9fafb; border-radius: 8px; border: 2px dashed #e5e7eb;">
+        <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+        <div style="font-weight: 500;">Noch keine Komponenten</div>
+        <div style="font-size: 13px; margin-top: 4px;">Klicke "➕ Komponente" um zu starten</div>
+      </div>
+    `;
   }
   
   return components.map((comp, compIndex) => `
-    <div class="component-item">
+    <div class="component-item" style="animation: fadeIn 0.3s ease;">
       <div style="flex: 1;">
-        <div style="font-weight: 600;">${comp.name}</div>
-        <div style="font-size: 12px; color: #6b7280;">${comp.type} • ${formatCurrency(comp.price)}</div>
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${comp.name}</div>
+        <div style="font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 8px;">
+          <span style="background: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-weight: 500;">${comp.type}</span>
+          ${comp.description ? `<span>• ${comp.description}</span>` : ''}
+        </div>
       </div>
-      <button onclick="removeComponent(${packageIndex}, ${compIndex})" style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; cursor: pointer;">🗑️</button>
+      <button 
+        onclick="removeComponent(${packageIndex}, ${compIndex})"
+        style="padding: 6px 12px; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;"
+        onmouseover="this.style.background='#fecaca'"
+        onmouseout="this.style.background='#fee2e2'"
+      >
+        🗑️ Löschen
+      </button>
     </div>
+    
+    <style>
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    </style>
   `).join('');
 }
 
 window.addComponentToPackage = function(packageIndex) {
   const state = window.packageEditorState;
-  const name = prompt('Komponenten-Name:', 'z.B. Basis-Analyse');
-  if (!name) return;
   
-  const type = prompt('Typ:', 'Service');
-  const price = parseFloat(prompt('Preis in EUR:', '5000'));
+  // Check if form already exists
+  const existingForm = document.getElementById(`component-form-${packageIndex}`);
+  if (existingForm) {
+    existingForm.remove();
+  }
   
+  // Create inline form
+  const formHtml = `
+    <div id="component-form-${packageIndex}" style="background: #f9fafb; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; margin-bottom: 16px; animation: slideDown 0.3s ease;">
+      <h4 style="margin: 0 0 16px; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 20px;">➕</span>
+        Neue Komponente hinzufügen
+      </h4>
+      
+      <div style="display: grid; gap: 16px;">
+        
+        <!-- Name -->
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px;">
+            Komponenten-Name *
+          </label>
+          <input 
+            type="text" 
+            id="new-component-name-${packageIndex}" 
+            placeholder="z.B. Basis-Analyse, Security Audit, Training"
+            style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+            onkeypress="if(event.key==='Enter') saveNewComponent(${packageIndex})"
+          >
+        </div>
+        
+        <!-- Type -->
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px;">
+            Typ *
+          </label>
+          <select 
+            id="new-component-type-${packageIndex}"
+            style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;"
+          >
+            <option value="Service">Service</option>
+            <option value="Software">Software</option>
+            <option value="Hardware">Hardware</option>
+            <option value="Consulting">Consulting</option>
+            <option value="Training">Training</option>
+            <option value="Support">Support</option>
+            <option value="License">License</option>
+          </select>
+        </div>
+        
+        <!-- Beschreibung (optional) -->
+        <div>
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px;">
+            Beschreibung (optional)
+          </label>
+          <textarea 
+            id="new-component-desc-${packageIndex}" 
+            placeholder="Kurze Beschreibung der Komponente..."
+            rows="2"
+            style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; resize: vertical; font-family: inherit;"
+          ></textarea>
+        </div>
+        
+        <!-- Info -->
+        <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px; font-size: 13px; color: #92400e;">
+          💡 Preise und Details konfigurierst du später im Wirtschaftlichkeits-Tab
+        </div>
+        
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button 
+            onclick="cancelAddComponent(${packageIndex})"
+            class="btn btn-secondary"
+            style="padding: 10px 20px; font-size: 14px;"
+          >
+            Abbrechen
+          </button>
+          <button 
+            onclick="saveNewComponent(${packageIndex})"
+            class="btn btn-primary"
+            style="padding: 10px 20px; font-size: 14px;"
+          >
+            ✓ Hinzufügen
+          </button>
+        </div>
+        
+      </div>
+    </div>
+    
+    <style>
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  `;
+  
+  // Insert form before component list
+  const container = document.getElementById(`package-${packageIndex}-components`);
+  if (container) {
+    container.insertAdjacentHTML('beforebegin', formHtml);
+    
+    // Focus on name input
+    setTimeout(() => {
+      document.getElementById(`new-component-name-${packageIndex}`)?.focus();
+    }, 100);
+  }
+};
+
+// ==========================================
+// NEUE KOMPONENTE SPEICHERN
+// ==========================================
+
+window.saveNewComponent = function(packageIndex) {
+  const state = window.packageEditorState;
+  
+  const name = document.getElementById(`new-component-name-${packageIndex}`)?.value.trim();
+  const type = document.getElementById(`new-component-type-${packageIndex}`)?.value;
+  const description = document.getElementById(`new-component-desc-${packageIndex}`)?.value.trim();
+  
+  if (!name) {
+    alert('❌ Bitte gib einen Komponenten-Namen ein!');
+    document.getElementById(`new-component-name-${packageIndex}`)?.focus();
+    return;
+  }
+  
+  // Add component (without price!)
   state.packages[packageIndex].components.push({
-    id: name.toLowerCase().replace(/\s+/g, '-'),
+    id: name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now(),
     name: name,
     type: type,
-    pricing_type: 'one-time',
-    price: price || 0
+    description: description || '',
+    pricing_type: 'one-time', // Default, wird später konfiguriert
+    price: 0 // Wird später im Wirtschaftlichkeits-Tab konfiguriert
   });
   
+  console.log(`✅ Component added to package ${packageIndex}:`, name);
+  
+  // Remove form
+  document.getElementById(`component-form-${packageIndex}`)?.remove();
+  
+  // Re-render components list
   document.getElementById(`package-${packageIndex}-components`).innerHTML = renderComponentsList(packageIndex);
 };
 
+// ==========================================
+// ABBRECHEN
+// ==========================================
+
+window.cancelAddComponent = function(packageIndex) {
+  document.getElementById(`component-form-${packageIndex}`)?.remove();
+};
+
 window.removeComponent = function(packageIndex, componentIndex) {
-  window.packageEditorState.packages[packageIndex].components.splice(componentIndex, 1);
-  document.getElementById(`package-${packageIndex}-components`).innerHTML = renderComponentsList(packageIndex);
+  const state = window.packageEditorState;
+  const component = state.packages[packageIndex].components[componentIndex];
+  
+  if (confirm(`Möchtest du "${component.name}" wirklich löschen?`)) {
+    state.packages[packageIndex].components.splice(componentIndex, 1);
+    
+    // Re-render
+    document.getElementById(`package-${packageIndex}-components`).innerHTML = renderComponentsList(packageIndex);
+  }
 };
 
 // ==========================================
