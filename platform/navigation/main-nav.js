@@ -556,10 +556,23 @@ z.B. 'M&A Bewertung für Target erstellen'"
             </div>
         `;
         
-        // Initialize Prompts Engine with context
+        // ✅ FIX: Call initPromptsTab() to create AND initialize the engine
         setTimeout(() => {
-            if (window.promptsEngine) {
-                window.promptsEngine.init(context);
+            if (window.initPromptsTab) {
+                console.log('🎯 Calling initPromptsTab() from main-nav.js');
+                window.initPromptsTab();
+                
+                // If context provided, apply it after initialization
+                if (context) {
+                    setTimeout(() => {
+                        if (window.promptsEngine) {
+                            console.log('📝 Applying context to PromptsEngine:', context);
+                            window.promptsEngine.applyContext(context);
+                        }
+                    }, 50);
+                }
+            } else {
+                console.error('❌ initPromptsTab() function not found! Make sure prompts.js is loaded.');
             }
         }, 100);
     }
@@ -571,13 +584,21 @@ z.B. 'M&A Bewertung für Target erstellen'"
         // First switch to prompts tab
         this.switchSection('prompts');
         
-        // Then initialize with context after DOM is ready
+        // ✅ FIX: Call initPromptsTab() and then apply context
         setTimeout(() => {
-            if (window.promptsEngine) {
-                console.log('🎯 Initializing Prompts Engine with context:', context);
-                window.promptsEngine.init(context);
+            if (window.initPromptsTab) {
+                console.log('🎯 Calling initPromptsTab() with context:', context);
+                window.initPromptsTab();
+                
+                // Apply context after initialization
+                setTimeout(() => {
+                    if (window.promptsEngine && context) {
+                        console.log('📝 Applying context to PromptsEngine');
+                        window.promptsEngine.applyContext(context);
+                    }
+                }, 50);
             } else {
-                console.error('❌ promptsEngine not found!');
+                console.error('❌ initPromptsTab() function not found!');
             }
         }, 200);
     }
