@@ -717,48 +717,166 @@ async function savePackageArtikel() {
   
   console.log('💾 Saving package artikel...');
   
+  // Validate
+  if (getMixTotal() !== 100) {
+    alert('❌ Mix-Verteilung muss 100% ergeben!');
+    state.currentStep = 4;
+    renderCurrentStep();
+    return;
+  }
+  
+  // Collect final data
+  collectStep4Data();
+  
+  // Clean projekt ID
   let cleanProjektId = state.projektId;
   if (typeof state.projektId === 'string' && state.projektId.includes('projekt-db-')) {
     cleanProjektId = state.projektId.replace('projekt-db-', '');
   }
   
-  const packageConfig = {
-    package_count: state.packageCount,
-    package_names: state.packageNames,
-    packages: state.packages,
-    mix_distribution: state.mixDistribution,
-    new_customers_year1: state.newCustomersYear1
-  };
-  
-  const artikelData = {
-    name: state.artikelName,
-    typ: state.artikelTyp,
-    projektId: state.projektId,
-    projekt_id: cleanProjektId,
-    artikel_mode: 'package',
-    package_config: packageConfig,
-    release_datum: '2025-01',
-    zeitraum: 5,
-    volumes: {},
-    prices: {},
-    start_menge: state.newCustomersYear1
-  };
-  
   try {
     const nextBtn = document.getElementById('package-next-btn');
+    const originalText = nextBtn.textContent;
     nextBtn.textContent = 'Speichere...';
     nextBtn.disabled = true;
     
-    await saveArticle(artikelData);
+    // ==========================================
+    // STEP 1: Create Parent Article
+    // ==========================================
     
+    console.log('📦 Step 1: Creating parent article...');
+    
+    const parentArtikelData = {
+      name: state.artikelName,
+      typ: 'Package',
+      project_id: cleanProjektId,  // ✅ KORREKT: project_id
+      
+      // Package-Parent specific
+      artikel_mode: 'package-parent',
+      package_config: {
+        package_count: state.packageCount,
+        package_names: state.packageNames,
+        mix_distribution: state.mixDistribution,
+        new_customers_year1: state.newCustomersYear1,
+        new_customers_growth: state.customerGrowth,
+        upsell_rates: state.upsellRates,
+        churn_rates: state.churnRates
+      },
+      
+      // Standard fields
+      release_datum: '2025-01',
+      zeitraum: 5,
+      volumes: {},
+      prices: {},
+      start_menge: state.newCustomersYear1,
+      start_preis: 0,
+      start_hk: 0
+    };
+    
+    const parentResult = await saveArticle(parentArtikelData);
+    console.log('✅ Parent article saved:', parentResult);
+    
+    const parentId = parentResult.id;
+    
+    // ==========================================
+    // STEP 2: Create Child Articles (Packages)
+    // ==========================================
+    
+    console.log('📦 Step 2: Creating child articles for each package...');
+    
+    const childResults = [];
+    
+    for (let i = 0; i < state.packages.length; i++) {
+      const pkg = state.packages[i];
+      
+      console.log(`  📄 Creating article for package: ${pkg.name}`);
+      
+      // Build full article name
+      const childArtikelName = `${state.artikelName} - ${pkg.name}`;
+      
+      // Build revenue streams from components
+      const revenueStreams = {};
+      pkg.components.forEach(comp => {
+        const streamKey = comp.pricing_type || 'one-time';
+        if (!revenueStreams[streamKey]) {
+          revenueStreams[streamKey] = [];
+        }
+        revenueStreams[streamKey].push({
+          id: comp.id,
+          name: comp.name,
+          type: comp.type,
+          description: comp.description || '',
+          price: 0 // Will be configured later
+        });
+      });
+      
+      const childArtikelData = {
+        name: childArtikelName,
+        typ: state.artikelTyp,
+        project_id: cleanProjektId,  // ✅ KORREKT: project_id
+        
+        // Package-Child specific
+        artikel_mode: 'package-child',
+        parent_package_id: parentId,
+        package_name: pkg.name,
+        package_index: i,
+        
+        // Hybrid fields (for components)
+        revenue_streams: revenueStreams,
+        components: pkg.components,
+        
+        // Distribution info
+        mix_percentage: state.mixDistribution[i] || 0,
+        churn_rate: state.churnRates[i] || 10,
+        
+        // Standard fields
+        release_datum: '2025-01',
+        zeitraum: 5,
+        volumes: {},
+        prices: {},
+        start_menge: Math.round(state.newCustomersYear1 * (state.mixDistribution[i] || 0) / 100),
+        start_preis: 0,
+        start_hk: 0
+      };
+      
+      const childResult = await saveArticle(childArtikelData);
+      console.log(`  ✅ Child article saved: ${pkg.name}`, childResult);
+      
+      childResults.push(childResult);
+    }
+    
+    // ==========================================
+    // SUCCESS
+    // ==========================================
+    
+    console.log('✅ Package artikel complete!');
+    console.log('  Parent:', parentResult);
+    console.log('  Children:', childResults);
+    
+    // Close modal
     closePackageEditor();
-    alert('✅ Package-Artikel erfolgreich erstellt!');
     
-    setTimeout(() => window.location.reload(), 500);
+    // Show success message
+    alert(`✅ Package-Artikel erfolgreich erstellt!\n\n` +
+          `📦 Parent: ${state.artikelName}\n` +
+          `📄 ${state.packages.length} Pakete: ${state.packageNames.join(', ')}\n` +
+          `🧩 ${state.packages.reduce((sum, pkg) => sum + pkg.components.length, 0)} Komponenten gesamt`);
+    
+    // Reload page
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
     
   } catch (error) {
-    console.error('❌ Error:', error);
-    alert('Fehler: ' + error.message);
+    console.error('❌ Error saving package artikel:', error);
+    alert('Fehler beim Speichern: ' + error.message);
+    
+    // Re-enable button
+    const nextBtn = document.getElementById('package-next-btn');
+    if (nextBtn) {
+      nextBtn.disabled = false;
+      nextBtn.textContent = '✓ Artikel erstellen';
+    }
   }
 }
 
