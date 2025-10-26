@@ -685,7 +685,7 @@ function renderManualTab(projektId) {
     <div style="padding: 30px;">
       <h3 style="margin: 0 0 20px;">✏️ Artikel manuell anlegen</h3>
       
-      <!-- SCHRITT 1: ARTIKEL-TYP WÄHLEN (NEU!) -->
+      <!-- SCHRITT 1: ARTIKEL-TYP -->
       <div style="margin-bottom: 30px;">
         <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px;">
           Schritt 1: Artikel-Typ wählen
@@ -708,7 +708,7 @@ function renderManualTab(projektId) {
             <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
             <div style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">Standard</div>
             <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
-              Ein einzelnes Produkt ohne Varianten
+              Ein Produkt, ein Revenue Stream
             </div>
           </div>
           
@@ -724,7 +724,7 @@ function renderManualTab(projektId) {
             <div style="font-size: 32px; margin-bottom: 8px;">🔀</div>
             <div style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">Hybrid</div>
             <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
-              Mehrere Komponenten zusammen
+              Mehrere Revenue Streams
             </div>
           </div>
           
@@ -747,35 +747,18 @@ function renderManualTab(projektId) {
         </div>
       </div>
       
-      <!-- SCHRITT 2: ARTIKEL DETAILS (Zeige nur wenn Typ gewählt) -->
+      <!-- SCHRITT 2: ARTIKEL DETAILS -->
       <div id="artikel-details-section" style="display: none;">
         <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px;">
           Schritt 2: Artikel Details
         </label>
         
-        <div style="display: grid; gap: 20px;">
-          <div>
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Name *</label>
-            <input type="text" id="manual-name" placeholder="z.B. Premium Roboter System" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
-          </div>
-          
-          <div>
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie *</label>
-            <select id="manual-typ" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
-              <option value="Hardware">Hardware</option>
-              <option value="Software">Software</option>
-              <option value="Service">Service</option>
-              <option value="Consulting">Consulting</option>
-              <option value="Subscription">Subscription</option>
-            </select>
-          </div>
-          
-          <!-- Hidden field for artikel_mode -->
-          <input type="hidden" id="manual-artikel-mode" value="standard">
-          
-          <button class="btn btn-primary" onclick="createManualArtikel('${projektId}')">
-            ➕ Artikel anlegen
-          </button>
+        <!-- Hidden field for artikel_mode -->
+        <input type="hidden" id="manual-artikel-mode" value="standard">
+        
+        <!-- Dynamic content based on type -->
+        <div id="artikel-details-content">
+          <!-- Will be filled by selectArtikelTypeManual() -->
         </div>
       </div>
     </div>
@@ -792,9 +775,346 @@ function renderManualTab(projektId) {
         background: #eff6ff !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
       }
+      
+      .revenue-stream-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+      }
+      
+      .revenue-stream-checkbox:hover {
+        border-color: #d1d5db;
+        background: #f9fafb;
+      }
+      
+      .revenue-stream-checkbox input[type="checkbox"]:checked + label {
+        font-weight: 600;
+        color: #2563eb;
+      }
     </style>
   `;
 }
+
+window.selectArtikelTypeManual = function(type) {
+  console.log('🎯 User selected artikel type:', type);
+  
+  // Update visual selection
+  document.querySelectorAll('.artikel-type-option').forEach(option => {
+    option.classList.remove('selected');
+  });
+  document.querySelector(`.artikel-type-option[data-type="${type}"]`)?.classList.add('selected');
+  
+  // Store selected type
+  const hiddenField = document.getElementById('manual-artikel-mode');
+  if (hiddenField) {
+    hiddenField.value = type;
+  }
+  
+  // Show details section
+  const detailsSection = document.getElementById('artikel-details-section');
+  if (detailsSection) {
+    detailsSection.style.display = 'block';
+  }
+  
+  // Render type-specific content
+  const contentDiv = document.getElementById('artikel-details-content');
+  if (contentDiv) {
+    if (type === 'standard') {
+      contentDiv.innerHTML = renderStandardArtikelForm();
+    } else if (type === 'hybrid') {
+      contentDiv.innerHTML = renderHybridArtikelForm();
+    } else if (type === 'package') {
+      contentDiv.innerHTML = renderPackageArtikelForm();
+    }
+  }
+  
+  console.log('  ✅ Type stored:', type);
+};
+
+/**
+ * NEUE FUNKTION - renderStandardArtikelForm()
+ * Standard-Artikel Form
+ */
+function renderStandardArtikelForm() {
+  return `
+    <div style="display: grid; gap: 24px;">
+      
+      <!-- Name -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Name *</label>
+        <input 
+          type="text" 
+          id="manual-name" 
+          placeholder="z.B. WAGO SR-3000 Roboter" 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+      </div>
+      
+      <!-- Kategorie -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie *</label>
+        <select 
+          id="manual-typ" 
+          onchange="toggleCustomKategorie(this.value)"
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+          <option value="">-- Bitte wählen --</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Software">Software</option>
+          <option value="Service">Service</option>
+          <option value="Consulting">Consulting</option>
+          <option value="Subscription">Subscription</option>
+          <option value="License">License</option>
+          <option value="custom">➕ Eigene Kategorie</option>
+        </select>
+        
+        <!-- Custom Kategorie Input (hidden by default) -->
+        <input 
+          type="text" 
+          id="manual-typ-custom" 
+          placeholder="Eigene Kategorie eingeben..." 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; margin-top: 12px; display: none;"
+        >
+      </div>
+      
+      <!-- Artikel-Strategie -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Strategie *</label>
+        <div style="display: grid; gap: 12px;">
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+            <input type="radio" name="artikel-strategie" value="neu-produkt" checked style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; margin-bottom: 2px;">Neu-Produkt</div>
+              <div style="font-size: 13px; color: #6b7280;">Neues Produkt für neuen Markt</div>
+            </div>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+            <input type="radio" name="artikel-strategie" value="kannibalisierung" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; margin-bottom: 2px;">Kannibalisierung</div>
+              <div style="font-size: 13px; color: #6b7280;">Ersetzt bestehendes Produkt</div>
+            </div>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#d1d5db'" onmouseout="this.style.borderColor='#e5e7eb'">
+            <input type="radio" name="artikel-strategie" value="cross-selling" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; margin-bottom: 2px;">Cross-Selling</div>
+              <div style="font-size: 13px; color: #6b7280;">Ergänzung zu bestehendem Produkt</div>
+            </div>
+          </label>
+          
+        </div>
+      </div>
+      
+      <!-- Info Box -->
+      <div style="background: #eff6ff; border: 2px solid #3b82f6; border-radius: 12px; padding: 16px; margin-top: 8px;">
+        <div style="display: flex; gap: 12px; align-items: start;">
+          <div style="font-size: 20px;">💡</div>
+          <div style="font-size: 14px; color: #1e40af; line-height: 1.6;">
+            <strong>Hinweis:</strong> Preise, Mengen und Modelle konfigurierst du später im Wirtschaftlichkeits-Tab.
+          </div>
+        </div>
+      </div>
+      
+      <!-- Submit Button -->
+      <button 
+        class="btn btn-primary" 
+        onclick="createManualArtikel('${window.currentProjektId || ''}')"
+        style="width: 100%; padding: 14px; font-size: 16px;"
+      >
+        ✓ Artikel anlegen
+      </button>
+      
+    </div>
+  `;
+}
+
+/**
+ * NEUE FUNKTION - renderHybridArtikelForm()
+ * Hybrid-Artikel Form (mehrere Revenue Streams)
+ */
+function renderHybridArtikelForm() {
+  return `
+    <div style="display: grid; gap: 24px;">
+      
+      <!-- Name -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Name *</label>
+        <input 
+          type="text" 
+          id="manual-name" 
+          placeholder="z.B. Software-Lösung mit Support" 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+      </div>
+      
+      <!-- Basis-Kategorie -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Basis-Kategorie *</label>
+        <select 
+          id="manual-typ" 
+          onchange="toggleCustomKategorie(this.value)"
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px;"
+        >
+          <option value="">-- Bitte wählen --</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Software">Software</option>
+          <option value="Service">Service</option>
+          <option value="Consulting">Consulting</option>
+          <option value="custom">➕ Eigene Kategorie</option>
+        </select>
+        
+        <input 
+          type="text" 
+          id="manual-typ-custom" 
+          placeholder="Eigene Kategorie..." 
+          style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; margin-top: 12px; display: none;"
+        >
+      </div>
+      
+      <!-- Revenue Streams -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Revenue Streams * (mehrere möglich)</label>
+        <p style="margin: 0 0 12px; font-size: 13px; color: #6b7280;">
+          Welche Umsatzströme hat dieser Artikel?
+        </p>
+        
+        <div style="display: grid; gap: 10px;">
+          
+          <label class="revenue-stream-checkbox">
+            <input type="checkbox" name="revenue-stream" value="one-time" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">One-Time Sale</div>
+              <div style="font-size: 12px; color: #6b7280;">Einmaliger Verkauf (z.B. Hardware, Software-Lizenz)</div>
+            </div>
+          </label>
+          
+          <label class="revenue-stream-checkbox">
+            <input type="checkbox" name="revenue-stream" value="subscription" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">Subscription</div>
+              <div style="font-size: 12px; color: #6b7280;">Wiederkehrend (z.B. SaaS, Maintenance)</div>
+            </div>
+          </label>
+          
+          <label class="revenue-stream-checkbox">
+            <input type="checkbox" name="revenue-stream" value="service" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">Service/Wartung</div>
+              <div style="font-size: 12px; color: #6b7280;">Laufender Support (z.B. Wartungsvertrag)</div>
+            </div>
+          </label>
+          
+          <label class="revenue-stream-checkbox">
+            <input type="checkbox" name="revenue-stream" value="consulting" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 500;">Consulting/Training</div>
+              <div style="font-size: 12px; color: #6b7280;">Beratung und Schulungen</div>
+            </div>
+          </label>
+          
+        </div>
+      </div>
+      
+      <!-- Artikel-Strategie -->
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Strategie *</label>
+        <div style="display: grid; gap: 12px;">
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
+            <input type="radio" name="artikel-strategie" value="neu-produkt" checked style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600;">Neu-Produkt</div>
+              <div style="font-size: 13px; color: #6b7280;">Neues Produkt für neuen Markt</div>
+            </div>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
+            <input type="radio" name="artikel-strategie" value="kannibalisierung" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600;">Kannibalisierung</div>
+              <div style="font-size: 13px; color: #6b7280;">Ersetzt bestehendes Produkt</div>
+            </div>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer;">
+            <input type="radio" name="artikel-strategie" value="cross-selling" style="width: 18px; height: 18px;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600;">Cross-Selling</div>
+              <div style="font-size: 13px; color: #6b7280;">Ergänzung zu bestehendem Produkt</div>
+            </div>
+          </label>
+          
+        </div>
+      </div>
+      
+      <!-- Info Box -->
+      <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px;">
+        <div style="display: flex; gap: 12px; align-items: start;">
+          <div style="font-size: 20px;">💡</div>
+          <div style="font-size: 14px; color: #92400e; line-height: 1.6;">
+            <strong>Hybrid-Artikel:</strong> Mehrere Revenue Streams werden als separate Komponenten gespeichert. Du kannst sie später einzeln mit Preisen & Mengen konfigurieren.
+          </div>
+        </div>
+      </div>
+      
+      <!-- Submit Button -->
+      <button 
+        class="btn btn-primary" 
+        onclick="createManualArtikel('${window.currentProjektId || ''}')"
+        style="width: 100%; padding: 14px; font-size: 16px;"
+      >
+        ✓ Artikel anlegen
+      </button>
+      
+    </div>
+  `;
+}
+
+/**
+ * NEUE FUNKTION - renderPackageArtikelForm()
+ * Package-Artikel Form (später)
+ */
+function renderPackageArtikelForm() {
+  return `
+    <div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 12px; border: 2px dashed #e5e7eb;">
+      <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+      <h3 style="margin: 0 0 12px;">Package-Artikel</h3>
+      <p style="margin: 0 0 24px; color: #6b7280;">
+        Für Package-Artikel öffnet sich ein spezieller Editor
+      </p>
+      <button 
+        class="btn btn-primary" 
+        onclick="createManualArtikel('${window.currentProjektId || ''}')"
+        style="padding: 12px 24px;"
+      >
+        Package-Editor öffnen →
+      </button>
+    </div>
+  `;
+}
+
+/**
+ * HELPER - toggleCustomKategorie()
+ */
+window.toggleCustomKategorie = function(value) {
+  const customInput = document.getElementById('manual-typ-custom');
+  if (customInput) {
+    customInput.style.display = value === 'custom' ? 'block' : 'none';
+    if (value === 'custom') {
+      customInput.focus();
+    }
+  }
+};
 
 window.selectArtikelTypeManual = function(type) {
   console.log('🎯 User selected artikel type:', type);
