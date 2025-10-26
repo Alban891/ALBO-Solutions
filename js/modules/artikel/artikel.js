@@ -2,6 +2,8 @@
  * CFO Dashboard - Artikel Module
  * Complete article lifecycle: Create, Read, Update, Delete, Render
  * Enterprise-grade with validation and error handling
+ * 
+ * VERSION 2.0: Mit hierarchischer Package-Ansicht
  */
 
 import { state } from '../../state.js';
@@ -15,7 +17,7 @@ import { openArtikelCreationModal as openArtikelCreationModalCore } from './arti
 // ==========================================
 
 /**
- * Render artikel list for current project
+ * Render artikel list for current project (ALTE VERSION - bleibt für Kompatibilität)
  */
 export function renderArtikelListByProjekt() {
   const projektId = window.cfoDashboard.currentProjekt;
@@ -114,6 +116,358 @@ export function renderArtikelListByProjekt() {
     `;
   }).join('');
 }
+
+// ==========================================
+// HIERARCHISCHE ARTIKEL-LISTE (NEU)
+// ==========================================
+
+// STATE FÜR EXPANDED PACKAGES
+if (!window.expandedPackages) {
+  window.expandedPackages = new Set();
+}
+
+/**
+ * Render artikel list WITH HIERARCHY (NEUE VERSION)
+ * Zeigt Package-Parents mit expandierbaren Children
+ */
+export function renderArtikelHierarchy() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  if (!projektId) {
+    console.warn('No projekt selected');
+    return;
+  }
+
+  const projekt = state.getProjekt(projektId);
+  if (!projekt) {
+    console.error('Projekt not found:', projektId);
+    return;
+  }
+
+  console.log('📦 Rendering artikel hierarchy for projekt:', projekt.name);
+
+  const tbody = document.getElementById('artikel-list-tbody');
+  if (!tbody) return;
+
+  const alleArtikel = state.getArtikelByProjekt(projektId);
+
+  if (alleArtikel.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align: center; padding: 40px; color: var(--gray);">
+          <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+          <div style="font-size: 16px; font-weight: 500; margin-bottom: 8px;">
+            Noch keine Artikel vorhanden
+          </div>
+          <div style="font-size: 14px;">
+            Erstelle den ersten Artikel für dieses Projekt
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  // ==========================================
+  // GRUPPIERE IN HIERARCHIE
+  // ==========================================
+  
+  const hierarchy = [];
+  const processedIds = new Set();
+
+  alleArtikel.forEach(artikel => {
+    // Package-Parents und Standalone-Artikel (haben keinen parent_package_id)
+    if (!artikel.parent_package_id) {
+      const children = alleArtikel.filter(a => a.parent_package_id === artikel.id);
+      
+      hierarchy.push({
+        parent: artikel,
+        children: children,
+        isPackage: artikel.artikel_mode === 'package-parent',
+        hasChildren: children.length > 0
+      });
+      
+      processedIds.add(artikel.id);
+      children.forEach(c => processedIds.add(c.id));
+    }
+  });
+
+  // Orphaned Children (sollte nicht vorkommen)
+  alleArtikel.forEach(artikel => {
+    if (!processedIds.has(artikel.id)) {
+      console.warn('⚠️ Orphaned child artikel found:', artikel.name);
+      hierarchy.push({
+        parent: artikel,
+        children: [],
+        isPackage: false,
+        hasChildren: false,
+        isOrphaned: true
+      });
+    }
+  });
+
+  console.log('✅ Artikel hierarchy built:', hierarchy.length, 'groups');
+
+  // ==========================================
+  // RENDER HIERARCHIE
+  // ==========================================
+  
+  tbody.innerHTML = hierarchy.map(item => {
+    const { parent, children, hasChildren } = item;
+    const isExpanded = window.expandedPackages.has(parent.id);
+    
+    let html = '';
+    
+    // Parent Row
+    html += renderArtikelRowHierarchical(parent, {
+      hasChildren: hasChildren,
+      isExpanded: isExpanded,
+      isParent: true,
+      isChild: false
+    });
+    
+    // Children Rows (wenn expanded)
+    if (isExpanded && children.length > 0) {
+      html += children.map((child, index) => {
+        return renderArtikelRowHierarchical(child, {
+          hasChildren: false,
+          isExpanded: false,
+          isParent: false,
+          isChild: true,
+          isLastChild: index === children.length - 1,
+          childIndex: index + 1,
+          totalChildren: children.length
+        });
+      }).join('');
+    }
+    
+    return html;
+  }).join('');
+}
+
+/**
+ * Render single artikel row with hierarchy support
+ */
+function renderArtikelRowHierarchical(artikel, options = {}) {
+  const { hasChildren, isExpanded, isParent, isChild, isLastChild, childIndex, totalChildren } = options;
+  
+  // Calculate values
+  const revenue = calculateArtikelRevenue(artikel.id);
+  const db2 = calculateArtikelDB2(artikel.id);
+  
+  // Format update date
+  const updatedAt = artikel.updatedAt ? new Date(artikel.updatedAt).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : '-';
+  
+  // Icon basierend auf Artikel-Typ
+  const icon = artikel.artikel_mode === 'package-parent' ? '📦' : 
+               artikel.artikel_mode === 'package-child' ? '📄' :
+               artikel.artikel_mode === 'hybrid' ? '🔀' : '📦';
+  
+  // Expand/Collapse Button (nur für Parents mit Children)
+  const expandButton = hasChildren && isParent ? `
+    <button 
+      onclick="window.togglePackageExpand('${artikel.id}')"
+      style="
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-right: 4px;
+        color: var(--primary);
+        transition: transform 0.2s;
+        ${isExpanded ? 'transform: rotate(90deg);' : ''}
+      "
+      title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
+    >
+      ▶
+    </button>
+  ` : '<span style="width: 32px; display: inline-block;"></span>';
+  
+  // Visual Tree Line für Children
+  const treeLine = isChild ? `
+    <span style="
+      position: absolute;
+      left: 40px;
+      top: 0;
+      bottom: ${isLastChild ? '50%' : '0'};
+      width: 1px;
+      background: #d1d5db;
+    "></span>
+    <span style="
+      position: absolute;
+      left: 40px;
+      top: 50%;
+      width: 20px;
+      height: 1px;
+      background: #d1d5db;
+    "></span>
+  ` : '';
+  
+  // Einrückung für Children
+  const indent = isChild ? 'padding-left: 60px !important;' : '';
+  
+  // Background für Children
+  const childBackground = isChild ? 'background: #f9fafb;' : '';
+  
+  // Package Badge
+  const packageBadge = artikel.artikel_mode === 'package-parent' ? `
+    <span style="
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    ">
+      PACKAGE
+    </span>
+  ` : '';
+  
+  // Mix Percentage Badge (nur für Children)
+  const mixBadge = isChild && artikel.mix_percentage ? `
+    <span style="
+      background: #f3f4f6;
+      color: #6b7280;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 8px;
+    ">
+      ${artikel.mix_percentage}% Mix
+    </span>
+  ` : '';
+  
+  // Child Index Badge
+  const childIndexBadge = isChild ? `
+    <span style="
+      background: #e5e7eb;
+      color: #6b7280;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 4px;
+    ">
+      ${childIndex}/${totalChildren}
+    </span>
+  ` : '';
+  
+  // Render Row
+  return `
+    <tr class="artikel-row" data-artikel-id="${artikel.id}" style="
+      position: relative;
+      ${childBackground}
+      transition: background 0.15s;
+    ">
+      <td>
+        <input type="checkbox" class="artikel-checkbox" value="${artikel.id}" 
+               onchange="updateArtikelBulkActions()">
+      </td>
+      <td style="${indent}">
+        ${treeLine}
+        ${isParent ? expandButton : ''}
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-size: 18px;">${icon}</span>
+          <span style="font-weight: ${isChild ? '400' : '500'}; color: var(--text);">
+            ${helpers.escapeHtml(artikel.name)}
+          </span>
+          ${packageBadge}
+          ${mixBadge}
+          ${childIndexBadge}
+        </div>
+        <div style="font-size: 12px; color: var(--gray); margin-top: 4px; ${isChild ? 'padding-left: 32px;' : ''}">
+          ${helpers.escapeHtml(artikel.typ || '-')}
+        </div>
+      </td>
+      <td>${helpers.escapeHtml(artikel.kategorie || '-')}</td>
+      <td>${helpers.formatDateSafe(artikel.release_datum)}</td>
+      <td style="text-align: right; font-weight: 500;">
+        ${helpers.formatRevenue(revenue)}
+      </td>
+      <td style="text-align: right;">
+        ${helpers.formatPercentage(db2)}
+      </td>
+      <td>
+        <div style="font-size: 11px; color: var(--text-light);">
+          ${updatedAt}
+        </div>
+      </td>
+      <td>
+        <span class="status-badge status-${(artikel.status || 'aktiv').toLowerCase()}">
+          ${helpers.escapeHtml(artikel.status || 'aktiv')}
+        </span>
+      </td>
+      <td>
+        <div class="action-buttons">
+          <button class="btn-icon" onclick="openArtikelDetail('${artikel.id}')" title="Details">
+            📝
+          </button>
+          <button class="btn-icon" onclick="duplicateArtikel('${artikel.id}')" title="Duplizieren">
+            📋
+          </button>
+          <button class="btn-icon btn-danger" onclick="deleteArtikel('${artikel.id}')" title="Löschen">
+            🗑️
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+/**
+ * Toggle package expand/collapse
+ */
+window.togglePackageExpand = function(packageId) {
+  console.log('📦 Toggle expand for package:', packageId);
+  
+  if (window.expandedPackages.has(packageId)) {
+    window.expandedPackages.delete(packageId);
+    console.log('📦 Collapsed:', packageId);
+  } else {
+    window.expandedPackages.add(packageId);
+    console.log('📦 Expanded:', packageId);
+  }
+  
+  // Re-render mit neuer Hierarchie-Funktion
+  renderArtikelHierarchy();
+};
+
+/**
+ * Expand all packages
+ */
+window.expandAllPackages = function() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  if (!projektId) return;
+  
+  const alleArtikel = state.getArtikelByProjekt(projektId);
+  
+  alleArtikel.forEach(artikel => {
+    if (artikel.artikel_mode === 'package-parent') {
+      window.expandedPackages.add(artikel.id);
+    }
+  });
+  
+  renderArtikelHierarchy();
+  console.log('📦 Expanded all packages');
+};
+
+/**
+ * Collapse all packages
+ */
+window.collapseAllPackages = function() {
+  window.expandedPackages.clear();
+  renderArtikelHierarchy();
+  console.log('📦 Collapsed all packages');
+};
+
+console.log('✅ Artikel Hierarchy Extension loaded');
 
 // ==========================================
 // ARTIKEL DETAIL VIEW
@@ -249,862 +603,411 @@ function loadArtikelIntoForm(artikel) {
     if (kostenRadio) kostenRadio.checked = true;
   }
 
-  // Zeitraum - MIT KORREKTER BUTTON-AKTIVIERUNG
-  const zeitraum = artikel.zeitraum || 5;  // Default: 5 Jahre
-  
-  // Alle Buttons zurücksetzen
-  document.querySelectorAll('.zeitraum-btn').forEach(btn => {
-    btn.classList.remove('active');
-    btn.style.background = 'white';
-    btn.style.color = '#374151';
-    btn.style.border = '1px solid #e5e7eb';
-    btn.style.fontWeight = '500';
-  });
-  
-  // Den korrekten Button aktivieren
-  const targetBtn = document.getElementById(`zeitraum-btn-${zeitraum}`);
-  if (targetBtn) {
-    targetBtn.classList.add('active');
-    targetBtn.style.background = '#1e3a8a';
-    targetBtn.style.color = 'white';
-    targetBtn.style.border = '2px solid #1e3a8a';
-    targetBtn.style.fontWeight = '600';
-  }
-  
-  // Tabellen-Spalten anpassen
-  if (window.updateTabellenSpalten) {
-    window.updateTabellenSpalten(zeitraum);
-  }
+  // Growth rates
+  helpers.setInputValue('mengen-wachstum', artikel.mengen_wachstum || 0);
+  helpers.setInputValue('preis-wachstum', artikel.preis_wachstum || 0);
+  helpers.setInputValue('kosten-wachstum', artikel.kosten_wachstum || 0);
 
-  // Load year data into table
-  loadYearDataIntoTable(artikel);
-
-  console.log('✅ Artikel loaded into form');
+  // Load forecast table
+  loadArtikelForecastTable(artikel);
 }
 
 /**
- * Load year data (volumes, prices) into table
+ * Load forecast table with artikel data
  */
-function loadYearDataIntoTable(artikel) {
-  const startYear = artikel.tableStartYear || parseInt((artikel.release_datum || '2025-01').split('-')[0]);
-  const zeitraum = artikel.zeitraum || 5;
+function loadArtikelForecastTable(artikel) {
+  const years = Array.from({ length: 10 }, (_, i) => 2025 + i);
+  const tbody = document.getElementById('artikel-forecast-tbody');
+  
+  if (!tbody) return;
 
-  for (let i = 1; i <= zeitraum; i++) {
-    const year = startYear + i - 1;
+  tbody.innerHTML = years.map(year => {
+    const volume = artikel.volumes?.[year] || 0;
+    const price = artikel.prices?.[year] || 0;
+    const revenue = (volume * price) / 1000;
+    const hk = artikel.hk || 0;
+    const costs = (volume * hk) / 1000;
+    const db = revenue - costs;
 
-    // Menge
-    const mengeInput = document.getElementById(`menge-jahr-${i}`);
-    if (mengeInput && artikel.volumes && artikel.volumes[year]) {
-      mengeInput.value = helpers.formatThousands(artikel.volumes[year]);
-    }
-
-    // Preis
-    const preisInput = document.getElementById(`preis-jahr-${i}`);
-    if (preisInput && artikel.prices && artikel.prices[year]) {
-      preisInput.value = helpers.formatDecimal(artikel.prices[year]);
-    }
-
-    // HK
-    const hkInput = document.getElementById(`hk-jahr-${i}`);
-    if (hkInput && artikel.hk) {
-      hkInput.value = helpers.formatDecimal(artikel.hk);
-    }
-  }
-
-  console.log('✅ Year data loaded into table');
+    return `
+      <tr>
+        <td>${year}</td>
+        <td>
+          <input 
+            type="text" 
+            class="input-field input-sm text-right" 
+            value="${helpers.formatThousands(volume)}"
+            onchange="updateArtikelForecast('${artikel.id}', ${year}, 'volume', this.value)"
+            placeholder="0"
+          >
+        </td>
+        <td>
+          <input 
+            type="text" 
+            class="input-field input-sm text-right" 
+            value="${helpers.formatDecimal(price, 2)}"
+            onchange="updateArtikelForecast('${artikel.id}', ${year}, 'price', this.value)"
+            placeholder="0,00"
+          >
+        </td>
+        <td class="text-right font-medium">${helpers.formatRevenue(revenue)}</td>
+        <td class="text-right">${helpers.formatRevenue(costs)}</td>
+        <td class="text-right font-medium ${db < 0 ? 'text-red-600' : 'text-green-600'}">
+          ${helpers.formatRevenue(db)}
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
-// ==========================================
-// ARTIKEL SAVE
-// ==========================================
+/**
+ * Update forecast value
+ */
+window.updateArtikelForecast = function(artikelId, year, type, value) {
+  const artikel = state.getArtikel(artikelId);
+  if (!artikel) return;
+
+  const numValue = helpers.parseGermanNumber(value);
+
+  if (type === 'volume') {
+    if (!artikel.volumes) artikel.volumes = {};
+    artikel.volumes[year] = numValue;
+  } else if (type === 'price') {
+    if (!artikel.prices) artikel.prices = {};
+    artikel.prices[year] = numValue;
+  }
+
+  // Save to database
+  api.saveArticle(artikel).then(() => {
+    // Reload table
+    loadArtikelForecastTable(artikel);
+    
+    // Update charts
+    if (window.updateAllCharts) {
+      window.updateAllCharts();
+    }
+  });
+};
 
 /**
- * Save artikel changes to database
+ * Save artikel changes
  */
 window.saveArtikelChanges = async function() {
   const artikelId = window.cfoDashboard.currentArtikel;
-  if (!artikelId) {
+  const artikel = state.getArtikel(artikelId);
+  
+  if (!artikel) {
     console.error('No artikel selected');
     return;
   }
 
-  console.log('💾 Saving artikel:', artikelId);
+  console.log('💾 Saving artikel:', artikel.name);
 
-  try {
-    // Collect form data
-    const artikelData = collectArtikelFormData();
+  // Collect form values
+  artikel.name = helpers.getInputValue('artikel-name');
+  artikel.typ = helpers.getInputValue('artikel-typ');
+  artikel.kategorie = helpers.getInputValue('kategorie');
+  artikel.geschaeftsmodell = helpers.getInputValue('geschaeftsmodell');
+  artikel.zielmarkt = helpers.getInputValue('zielmarkt');
+  artikel.strategie = helpers.getInputValue('strategie');
+  artikel.investment_typ = helpers.getInputValue('investment-typ');
+  artikel.beschreibung = helpers.getInputValue('artikel-beschreibung');
+  artikel.release_datum = helpers.getInputValue('release-datum');
 
-    // Validate
-    if (!artikelData.name || artikelData.name.trim() === '') {
-      alert('Bitte Artikelname eingeben!');
-      return;
-    }
-
-    // Get existing artikel
-    const existingArtikel = state.getArtikel(artikelId);
-    if (!existingArtikel) {
-      console.error('Artikel not found');
-      return;
-    }
-
-    // Merge data
-    const updatedArtikel = {
-      ...existingArtikel,
-      ...artikelData
-    };
-
-    // Update in database
-    const success = await api.updateArticle(artikelId, updatedArtikel);
-
-    if (success) {
-      console.log('✅ Artikel saved');
-
-      // Update charts
-      charts.updateAllCharts();
-
-      // 🆕 ALBO Event: Artikel gespeichert
-      document.dispatchEvent(new CustomEvent('artikel-saved', {
-        detail: {
-          artikel: updatedArtikel,
-          artikelId: artikelId
-        }
-      }));
-  
-      // Show success message
-      if (window.cfoDashboard.aiController) {
-        window.cfoDashboard.aiController.addAIMessage({
-          level: 'success',
-          title: '✅ Artikel gespeichert',
-          text: `"${artikelData.name}" wurde erfolgreich aktualisiert.`,
-          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-        });
-      }
-  
-      // Return to list
-      closeArtikelDetail();
-    } else {
-      alert('Fehler beim Speichern. Bitte erneut versuchen.');
-    }
-
-  } catch (error) {
-    console.error('❌ Save failed:', error);
-    alert('Fehler beim Speichern: ' + error.message);
-  }
-};
-
-/**
- * Collect form data into artikel object
- */
-function collectArtikelFormData() {
-  // Basic info
-  const data = {
-    name: helpers.getInputValue('artikel-name'),
-    typ: helpers.getInputValue('artikel-typ'),
-    kategorie: helpers.getInputValue('kategorie'),
-    geschaeftsmodell: helpers.getInputValue('geschaeftsmodell'),
-    zielmarkt: helpers.getInputValue('zielmarkt'),
-    strategie: helpers.getInputValue('strategie'),
-    investment_typ: helpers.getInputValue('investment-typ'),
-    beschreibung: helpers.getInputValue('artikel-beschreibung'),
-    release_datum: helpers.getInputValue('release-datum'),
-    annahmen: helpers.getInputValue('annahmen')
-  };
-
-  // Start values - Beispielwerte ignorieren
-  const mengeValue = helpers.getInputValue('start-menge');
-  const preisValue = helpers.getInputValue('start-preis');
-  const hkValue = helpers.getInputValue('start-hk');
-  
-  data.start_menge = (mengeValue && !mengeValue.startsWith('z.B.')) 
-    ? helpers.parseFormattedNumber(mengeValue) || 0 
+  // Start values
+  const startMengeValue = helpers.getInputValue('start-menge');
+  artikel.start_menge = startMengeValue && startMengeValue !== 'z.B. 1.000' 
+    ? helpers.parseGermanNumber(startMengeValue) 
     : 0;
-  data.start_preis = (preisValue && !preisValue.startsWith('z.B.')) 
-    ? helpers.parseFormattedNumber(preisValue) || 0 
+
+  const startPreisValue = helpers.getInputValue('start-preis');
+  artikel.start_preis = startPreisValue && startPreisValue !== 'z.B. 50,00'
+    ? helpers.parseGermanNumber(startPreisValue)
     : 0;
-  data.start_hk = (hkValue && !hkValue.startsWith('z.B.')) 
-    ? helpers.parseFormattedNumber(hkValue) || 0 
+
+  const startHKValue = helpers.getInputValue('start-hk');
+  artikel.start_hk = startHKValue && startHKValue !== 'z.B. 20,00'
+    ? helpers.parseGermanNumber(startHKValue)
     : 0;
+
+  artikel.hk = artikel.start_hk;
 
   // Models
   const mengenModell = document.querySelector('input[name="mengen-modell"]:checked');
+  if (mengenModell) artikel.mengen_modell = mengenModell.value;
+
   const preisModell = document.querySelector('input[name="preis-modell"]:checked');
+  if (preisModell) artikel.preis_modell = preisModell.value;
+
   const kostenModell = document.querySelector('input[name="kosten-modell"]:checked');
+  if (kostenModell) artikel.kosten_modell = kostenModell.value;
 
-  data.mengen_modell = mengenModell?.value || 'realistisch';
-  data.preis_modell = preisModell?.value || 'konstant';
-  data.kosten_modell = kostenModell?.value || 'lernkurve';
+  // Growth rates
+  artikel.mengen_wachstum = parseFloat(helpers.getInputValue('mengen-wachstum')) || 0;
+  artikel.preis_wachstum = parseFloat(helpers.getInputValue('preis-wachstum')) || 0;
+  artikel.kosten_wachstum = parseFloat(helpers.getInputValue('kosten-wachstum')) || 0;
 
-  // Zeitraum - FIX: Aus Button-Text extrahieren
-  const zeitraumBtn = document.querySelector('.zeitraum-btn.active');
-  if (zeitraumBtn) {
-    const btnText = zeitraumBtn.textContent;
-    const match = btnText.match(/(\d+)/);
-    data.zeitraum = match ? parseInt(match[1]) : 5;
-  } else {
-    data.zeitraum = 5; // Default
-  }
+  // Update timestamp
+  artikel.updatedAt = new Date().toISOString();
 
-  // Year data - sicherer
-  const releaseDatum = data.release_datum || new Date().toISOString().substring(0, 7);
-  const startYear = parseInt(releaseDatum.split('-')[0]);
-  
-  data.volumes = {};
-  data.prices = {};
+  // Save to database
+  const saved = await api.saveArticle(artikel);
 
-  // Nur Felder sammeln die existieren
-  for (let i = 1; i <= 7; i++) { // Bis zu 7 Jahre möglich
-    const mengeInput = document.getElementById(`menge-jahr-${i}`);
-    const preisInput = document.getElementById(`preis-jahr-${i}`);
-    
-    if (mengeInput && mengeInput.value) {
-      const year = startYear + i - 1;
-      data.volumes[year] = helpers.parseFormattedNumber(mengeInput.value) || 0;
+  if (saved) {
+    console.log('✅ Artikel saved');
+
+    // Show success message
+    const updateInfo = document.getElementById('artikel-update-info');
+    if (updateInfo) {
+      const dateStr = new Date(artikel.updatedAt).toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      updateInfo.innerHTML = `<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ${dateStr}`;
+      updateInfo.style.display = 'block';
     }
-    
-    if (preisInput && preisInput.value) {
-      const year = startYear + i - 1;
-      data.prices[year] = helpers.parseFormattedNumber(preisInput.value) || 0;
+
+    // Update charts
+    charts.updateAllCharts();
+
+    // AI Feedback
+    if (window.cfoDashboard.aiController) {
+      window.cfoDashboard.aiController.addAIMessage({
+        level: 'success',
+        title: '✅ Artikel gespeichert',
+        text: `Änderungen an "${artikel.name}" wurden gespeichert.`,
+        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+      });
     }
-  }
-
-  // HK und table_start_year
-  data.hk = data.start_hk || 0;
-  data.table_start_year = startYear;
-
-  console.log('📊 Collected data:', data);
-  return data;
-}
-
-// ==========================================
-// WIRTSCHAFTLICHKEIT HELPERS
-// ==========================================
-
-/**
- * Set planning horizon (3, 5, or 7 years)
- */
-window.setzeZeitraum = function(jahre) {
-  console.log('📅 Setting Zeitraum to:', jahre);
-  
-  // Alle Buttons zurücksetzen
-  document.querySelectorAll('.zeitraum-btn').forEach(btn => {
-    btn.classList.remove('active');
-    btn.style.background = 'white';
-    btn.style.color = '#374151';
-    btn.style.border = '1px solid #e5e7eb';
-    btn.style.fontWeight = '500';
-  });
-  
-  // Den korrekten Button aktivieren
-  const targetBtn = document.getElementById(`zeitraum-btn-${jahre}`);
-  if (targetBtn) {
-    targetBtn.classList.add('active');
-    targetBtn.style.background = '#1e3a8a';
-    targetBtn.style.color = 'white';
-    targetBtn.style.border = '2px solid #1e3a8a';
-    targetBtn.style.fontWeight = '600';
-  }
-  
-  // Zeitraum speichern
-  const artikelId = window.cfoDashboard.currentArtikel;
-  if (artikelId) {
-    const artikel = state.getArtikel(artikelId);
-    if (artikel) {
-      artikel.zeitraum = jahre;
-      state.setArtikel(artikelId, artikel);
-      state.saveState();
-    }
-  }
-
-  // Prüfe und aktualisiere Projekt-Ende wenn nötig
-  const releaseDatum = document.getElementById('release-datum')?.value || '2025-01';
-  const releaseYear = parseInt(releaseDatum.split('-')[0]);
-  const artikelEnde = releaseYear + jahre - 1;
-  
-  // Hole aktuelles Projekt-Ende
-  const projektEndeInput = document.getElementById('projekt-ende');
-  if (projektEndeInput) {
-    const projektEndeYear = parseInt(projektEndeInput.value.split('-')[0]);
-    
-    // Wenn Artikel länger läuft als Projekt, erweitere Projekt
-    if (artikelEnde > projektEndeYear) {
-      projektEndeInput.value = `${artikelEnde}-12`;
-      
-      // Zeige Info-Message
-      if (window.cfoDashboard?.aiController) {
-        window.cfoDashboard.aiController.addAIMessage({
-          level: 'info',
-          title: '📅 Projektzeitraum angepasst',
-          text: `Projektende wurde auf ${artikelEnde} erweitert, um den Artikel-Zeitraum abzudecken.`,
-          timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
-        });
-      }
-    }
-  }
-  
-  // Tabellen-Spalten anpassen
-  updateTabellenSpalten(jahre);
-}  // <- HIER war die schließende Klammer an der falschen Stelle
-
-/**
- * Tabellen-Spalten basierend auf Zeitraum anzeigen/verstecken
- */
-window.updateTabellenSpalten = function(jahre) {
-  const zeitraum = jahre || getCurrentZeitraum();
-  
-  // Alle Jahr-Spalten durchgehen
-  for (let i = 1; i <= 7; i++) {
-    const cols = document.querySelectorAll('.jahr-col.jahr-' + i);
-    cols.forEach(col => {
-      col.style.display = i <= zeitraum ? '' : 'none';
-    });
-  }
-  
-  // Jahr-Header mit tatsächlichen Jahren aktualisieren
-  const releaseDatum = document.getElementById('release-datum')?.value || '2025-01';
-  const startYear = parseInt(releaseDatum.split('-')[0]);
-  
-  for (let i = 1; i <= zeitraum; i++) {
-    const header = document.querySelector('.jahr-header-' + i);
-    if (header) {
-      // Jahr 1 bekommt speziellen Hinweis
-      if (i === 1) {
-        header.textContent = (startYear + i - 1) + ' (Start)';
-      } else {
-        header.textContent = startYear + i - 1;
-      }
-    }
-  }
-  
-  // Nach Update auch Startwerte in Jahr 1 setzen
-  updateErsteZeile();
-}
-
-/**
- * Aktuellen Zeitraum ermitteln
- */
-function getCurrentZeitraum() {
-  const activeBtn = document.querySelector('.zeitraum-btn.active');
-  if (activeBtn) {
-    const text = activeBtn.textContent;
-    const match = text.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 5;
-  }
-  return 5; // Default
-}
-
-/**
- * Update erste Zeile der Tabelle mit Startwerten
- */
-/**
- * Update erste Zeile der Tabelle mit Startwerten
- * Startwerte werden IMMER in Jahr 1 übernommen
- */
-window.updateErsteZeile = function() {
-  // Werte aus Inputs holen, aber Beispielwerte ignorieren
-  const mengeValue = helpers.getInputValue('start-menge');
-  const preisValue = helpers.getInputValue('start-preis');
-  const hkValue = helpers.getInputValue('start-hk');
-  
-  let startMenge = 0;
-  let startPreis = 0;
-  let startHK = 0;
-  
-  // Nur übernehmen wenn kein Beispielwert
-  if (mengeValue && !mengeValue.startsWith('z.B.')) {
-    startMenge = helpers.parseFormattedNumber(mengeValue) || 0;
-  }
-  if (preisValue && !preisValue.startsWith('z.B.')) {
-    startPreis = helpers.parseFormattedNumber(preisValue) || 0;
-  }
-  if (hkValue && !hkValue.startsWith('z.B.')) {
-    startHK = helpers.parseFormattedNumber(hkValue) || 0;
-  }
-  
-  // IMMER in erste Spalte (Jahr 1) der Ergebnis-Vorschau übernehmen
-  const mengeInput = document.getElementById('menge-jahr-1');
-  const preisInput = document.getElementById('preis-jahr-1');
-  const hkInput = document.getElementById('hk-jahr-1');
-  
-  if (mengeInput) {
-    mengeInput.value = startMenge > 0 ? helpers.formatThousands(startMenge) : '';
-    mengeInput.readOnly = true; // Jahr 1 ist immer readonly
-    mengeInput.style.background = '#f9fafb'; // Grauer Hintergrund
-  }
-  if (preisInput) {
-    preisInput.value = startPreis > 0 ? helpers.formatDecimal(startPreis) : '';
-    preisInput.readOnly = true;
-    preisInput.style.background = '#f9fafb';
-  }
-  if (hkInput) {
-    hkInput.value = startHK > 0 ? helpers.formatDecimal(startHK) : '';
-    hkInput.readOnly = true;
-    hkInput.style.background = '#f9fafb';
-  }
-  // 🆕 ALBO Event: Basisannahmen komplett (wenn alle 3 Werte > 0)
-  if (startMenge > 0 && startPreis > 0 && startHK > 0) {
-    document.dispatchEvent(new CustomEvent('basisannahmen-complete', {
-      detail: {
-        menge: startMenge,
-        preis: startPreis,
-        hk: startHK,
-        artikel: window.cfoDashboard.currentArtikel,
-        projekt: window.cfoDashboard.currentProjekt
-      }
-    }));
-  }
-}
-
-/**
- * Berechne Modelle basierend auf gewählten Einstellungen
- */
-/**
- * Berechne Modelle basierend auf gewählten Einstellungen
- * Jahr 1 = Startwerte (immer identisch)
- * Modelle greifen erst ab Jahr 2
- */
-window.berechneModelle = function() {
-  console.log('📊 Berechne Modelle...');
-  
-  // Werte aus Inputs holen, aber Beispielwerte ignorieren
-  let startMenge = 0;
-  let startPreis = 0;
-  let startHK = 0;
-  
-  const mengeValue = helpers.getInputValue('start-menge');
-  const preisValue = helpers.getInputValue('start-preis');
-  const hkValue = helpers.getInputValue('start-hk');
-  
-  // Nur übernehmen wenn kein Beispielwert und nicht leer
-  if (mengeValue && !mengeValue.startsWith('z.B.')) {
-    startMenge = helpers.parseFormattedNumber(mengeValue) || 0;
-  }
-  if (preisValue && !preisValue.startsWith('z.B.')) {
-    startPreis = helpers.parseFormattedNumber(preisValue) || 0;
-  }
-  if (hkValue && !hkValue.startsWith('z.B.')) {
-    startHK = helpers.parseFormattedNumber(hkValue) || 0;
-  }
-  
-  // Wenn keine Startwerte, abbrechen
-  if (startMenge === 0 && startPreis === 0 && startHK === 0) {
-    console.log('⚠️ Keine Startwerte vorhanden');
-    return;
-  }
-  
-  const mengenModell = document.querySelector('input[name="mengen-modell"]:checked')?.value || 'realistisch';
-  const preisModell = document.querySelector('input[name="preis-modell"]:checked')?.value || 'konstant';
-  const kostenModell = document.querySelector('input[name="kosten-modell"]:checked')?.value || 'lernkurve';
-  
-  const zeitraum = getCurrentZeitraum();
-  
-  console.log('Startwerte:', { startMenge, startPreis, startHK });
-  console.log('Modelle:', { mengenModell, preisModell, kostenModell });
-  
-  // IMMER Jahr 1 mit Startwerten setzen
-  updateErsteZeile();
-  
-  // Berechne ab Jahr 2 basierend auf den Modellen
-  for (let jahr = 2; jahr <= zeitraum; jahr++) {
-    // Mengenberechnung (ab Jahr 2)
-    let menge = startMenge;
-    if (mengenModell !== 'manuell') {
-      switch(mengenModell) {
-        case 'konservativ':
-          // +15% p.a.
-          menge = startMenge * Math.pow(1.15, jahr - 1);
-          break;
-        case 'realistisch': 
-          // S-Kurve
-          const t = (jahr - 1) / (zeitraum - 1);
-          menge = startMenge * (1 + 4 * (1 / (1 + Math.exp(-10 * (t - 0.5)))));
-          break;
-        case 'optimistisch': 
-          // Hockey-Stick
-          if (jahr <= 3) {
-            menge = startMenge * (1 + 0.5 * (jahr - 1));
-          } else {
-            menge = startMenge * Math.pow(2.5, jahr - 3) * 2;
-          }
-          break;
-      }
-      
-      const mengeInput = document.getElementById(`menge-jahr-${jahr}`);
-      if (mengeInput) {
-        mengeInput.value = helpers.formatThousands(Math.round(menge));
-        mengeInput.readOnly = false;
-        mengeInput.style.background = 'white';
-      }
-    }
-    
-    // Preisberechnung (ab Jahr 2)
-    let preis = startPreis;
-    if (preisModell !== 'manuell') {
-      switch(preisModell) {
-        case 'konstant':
-          preis = startPreis;
-          break;
-        case 'inflation':
-          // +2% p.a.
-          preis = startPreis * Math.pow(1.02, jahr - 1);
-          break;
-        case 'premium':
-          // +5% p.a.
-          preis = startPreis * Math.pow(1.05, jahr - 1);
-          break;
-        case 'skimming':
-          // -3% p.a.
-          preis = startPreis * Math.pow(0.97, jahr - 1);
-          break;
-      }
-      
-      const preisInput = document.getElementById(`preis-jahr-${jahr}`);
-      if (preisInput) {
-        preisInput.value = helpers.formatDecimal(preis);
-        preisInput.readOnly = false;
-        preisInput.style.background = 'white';
-      }
-    }
-    
-    // Kostenberechnung (ab Jahr 2)
-    let hk = startHK;
-    if (kostenModell !== 'manuell') {
-      switch(kostenModell) {
-        case 'konstant':
-          hk = startHK;
-          break;
-        case 'lernkurve':
-          // -5% bei Verdopplung der kumulierten Menge
-          let kumulierteMenge = startMenge;
-          for (let j = 2; j <= jahr; j++) {
-            kumulierteMenge += startMenge * Math.pow(1.15, j - 1);
-          }
-          const verdopplungen = Math.log2(kumulierteMenge / startMenge);
-          hk = startHK * Math.pow(0.95, verdopplungen);
-          break;
-        case 'inflation':
-          // +3% p.a.
-          hk = startHK * Math.pow(1.03, jahr - 1);
-          break;
-        case 'skaleneffekte':
-          // Stufenweise Reduktion basierend auf aktueller Menge
-          if (menge > 10000) hk = startHK * 0.7;
-          else if (menge > 5000) hk = startHK * 0.8;
-          else if (menge > 2000) hk = startHK * 0.9;
-          else hk = startHK;
-          break;
-      }
-      
-      const hkInput = document.getElementById(`hk-jahr-${jahr}`);
-      if (hkInput) {
-        hkInput.value = helpers.formatDecimal(hk);
-        hkInput.readOnly = false;
-        hkInput.style.background = 'white';
-      }
-    }
-  }
-  
-  console.log('✅ Modelle berechnet (Jahr 1 = Startwerte, ab Jahr 2 = Modelle)');
-  
-  // 🆕 ALBO Event: Modelle berechnet
-  document.dispatchEvent(new CustomEvent('modelle-berechnet', {
-    detail: {
-      artikel: window.cfoDashboard.currentArtikel,
-      projekt: window.cfoDashboard.currentProjekt,
-      mengenModell: mengenModell,
-      preisModell: preisModell,
-      kostenModell: kostenModell,
-      zeitraum: zeitraum,
-      startwerte: {
-        menge: startMenge,
-        preis: startPreis,
-        hk: startHK
-      }
-    }
-  }));
-}
-
-/**
- * Reset alle Modelle auf Standardwerte
- */
-window.resetModelle = function() {
-  console.log('🔄 Reset Modelle...');
-  
-  // Reset Radio Buttons auf Defaults
-  const mengenRadio = document.querySelector('input[name="mengen-modell"][value="realistisch"]');
-  const preisRadio = document.querySelector('input[name="preis-modell"][value="konstant"]');
-  const kostenRadio = document.querySelector('input[name="kosten-modell"][value="lernkurve"]');
-  
-  if (mengenRadio) mengenRadio.checked = true;
-  if (preisRadio) preisRadio.checked = true;
-  if (kostenRadio) kostenRadio.checked = true;
-  
-  // Reset Startwerte auf Beispielwerte
-  const startMengeInput = document.getElementById('start-menge');
-  const startPreisInput = document.getElementById('start-preis');
-  const startHKInput = document.getElementById('start-hk');
-  
-  if (startMengeInput) {
-    startMengeInput.value = 'z.B. 1.000';
-    startMengeInput.style.color = '#6b7280';
-  }
-  if (startPreisInput) {
-    startPreisInput.value = 'z.B. 50,00';
-    startPreisInput.style.color = '#6b7280';
-  }
-  if (startHKInput) {
-    startHKInput.value = 'z.B. 20,00';
-    startHKInput.style.color = '#6b7280';
-  }
-  
-  // Zeitraum auf 5 Jahre
-  setzeZeitraum(5);
-  
-  // Berechne neu
-  berechneModelle();
-}
-
-/**
- * Modell anwenden (wird von Radio-Buttons aufgerufen)
- */
-window.applyModell = function(typ, modell) {
-  console.log(`Applying ${modell} model for ${typ}`);
-  // Berechnung wird durch berechneModelle() ausgeführt
-}
-
-/**
- * Update Zeithorizont basierend auf Release-Datum
- */
-window.updateZeithorizont = function() {
-  const releaseDatum = document.getElementById('release-datum')?.value;
-  if (releaseDatum) {
-    updateTabellenSpalten();
-  }
-}
-
-/**
- * Format number input helper
- */
-window.formatNumberInput = function(input) {
-  if (!input || !input.value) return;
-  
-  // Beispielwert nicht formatieren
-  if (input.value.startsWith('z.B.')) return;
-  
-  let value = input.value.replace(/\./g, '').replace(',', '.');
-  const numValue = parseFloat(value);
-  
-  if (!isNaN(numValue)) {
-    input.value = helpers.formatThousands(numValue);
-  }
-}
-
-/**
- * Format decimal input helper
- */
-window.formatDecimalInput = function(input, decimals = 2) {
-  if (!input || !input.value) return;
-  
-  // Beispielwert nicht formatieren
-  if (input.value.startsWith('z.B.')) return;
-  
-  let value = input.value.replace(/\./g, '').replace(',', '.');
-  const numValue = parseFloat(value);
-  
-  if (!isNaN(numValue)) {
-    input.value = helpers.formatDecimal(numValue, decimals);
-  }
-}
-
-// ==========================================
-// PLACEHOLDER & BEISPIELWERT HANDLING
-// ==========================================
-
-/**
- * Handle input focus - clear placeholder if it's a default value
- */
-window.handleInputFocus = function(input) {
-  if (input.value === 'z.B. 1.000' || 
-      input.value === 'z.B. 50,00' || 
-      input.value === 'z.B. 20,00') {
-    input.value = '';
-    input.style.color = '#111827';
-  }
-}
-
-/**
- * Handle input blur - restore placeholder if empty
- */
-window.handleInputBlur = function(input, type) {
-  if (input.value.trim() === '') {
-    switch(type) {
-      case 'menge':
-        input.value = 'z.B. 1.000';
-        break;
-      case 'preis':
-        input.value = 'z.B. 50,00';
-        break;
-      case 'hk':
-        input.value = 'z.B. 20,00';
-        break;
-    }
-    input.style.color = '#6b7280';
-  } else {
-    if (type === 'menge') {
-      formatNumberInput(input);
-    } else {
-      formatDecimalInput(input);
-    }
-    input.style.color = '#111827';
-  }
-}
-
-/**
- * Close artikel detail view
- */
-window.closeArtikelDetail = function() {
-  console.log('🔙 Closing artikel detail');
-
-  const artikelDetail = document.getElementById('artikel-detail-view');
-  const projektDetail = document.getElementById('projekt-detail-view');
-
-  // Hide artikel detail
-  if (artikelDetail) artikelDetail.style.display = 'none';
-
-  // Show projekt detail
-  if (projektDetail) projektDetail.style.display = 'block';
-
-  // ✓ CRITICAL: Update navigation state
-  window.cfoDashboard.currentArtikel = null;
-  state.currentArtikel = null;
-  state.artikelViewMode = 'list';
-  state.artikelDetailScroll = 0;
-  state.saveState();
-  
-  console.log('💾 Cleared artikel from state');
-
-  // Switch to artikel tab
-  if (window.switchProjektTab) {
-    window.switchProjektTab('artikel');
-  }
-
-  // Re-render list
-  renderArtikelListByProjekt();
-
-  // Save state
-  if (window.saveNavigationState) {
-    window.saveNavigationState();
   }
 };
 
+/**
+ * Apply forecast model to artikel
+ */
+window.applyArtikelForecastModel = function() {
+  const artikelId = window.cfoDashboard.currentArtikel;
+  const artikel = state.getArtikel(artikelId);
+  
+  if (!artikel) return;
+
+  console.log('📊 Applying forecast model to:', artikel.name);
+
+  const startYear = parseInt(artikel.release_datum?.substring(0, 4)) || 2025;
+  const years = Array.from({ length: 10 }, (_, i) => startYear + i);
+
+  // Initialize if not exists
+  if (!artikel.volumes) artikel.volumes = {};
+  if (!artikel.prices) artikel.prices = {};
+
+  // Apply models
+  years.forEach((year, index) => {
+    // Volume model
+    if (artikel.mengen_modell === 'konstant') {
+      artikel.volumes[year] = artikel.start_menge || 0;
+    } else if (artikel.mengen_modell === 'linear') {
+      const growth = artikel.mengen_wachstum || 0;
+      artikel.volumes[year] = (artikel.start_menge || 0) * (1 + (growth / 100) * index);
+    } else if (artikel.mengen_modell === 'exponentiell') {
+      const growth = artikel.mengen_wachstum || 0;
+      artikel.volumes[year] = (artikel.start_menge || 0) * Math.pow(1 + growth / 100, index);
+    }
+
+    // Price model
+    if (artikel.preis_modell === 'konstant') {
+      artikel.prices[year] = artikel.start_preis || 0;
+    } else if (artikel.preis_modell === 'linear') {
+      const growth = artikel.preis_wachstum || 0;
+      artikel.prices[year] = (artikel.start_preis || 0) * (1 + (growth / 100) * index);
+    } else if (artikel.preis_modell === 'exponentiell') {
+      const growth = artikel.preis_wachstum || 0;
+      artikel.prices[year] = (artikel.start_preis || 0) * Math.pow(1 + growth / 100, index);
+    }
+  });
+
+  // Save to database
+  api.saveArticle(artikel).then(() => {
+    console.log('✅ Forecast model applied');
+
+    // Reload table
+    loadArtikelForecastTable(artikel);
+
+    // Update charts
+    charts.updateAllCharts();
+
+    // AI Feedback
+    if (window.cfoDashboard.aiController) {
+      window.cfoDashboard.aiController.addAIMessage({
+        level: 'success',
+        title: '📊 Forecast-Modell angewendet',
+        text: `Prognose für "${artikel.name}" wurde aktualisiert.`,
+        timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
+      });
+    }
+  });
+};
+
 // ==========================================
-// ARTIKEL CREATE
+// ARTIKEL NAVIGATION
 // ==========================================
 
 /**
- * Create new artikel
+ * Navigate to previous artikel
  */
-window.createNewArtikel = function() {
+window.navigateToPreviousArtikel = function() {
   const projektId = window.cfoDashboard.currentProjekt;
+  const currentArtikelId = window.cfoDashboard.currentArtikel;
+  
+  const alleArtikel = state.getArtikelByProjekt(projektId);
+  const currentIndex = alleArtikel.findIndex(a => a.id === currentArtikelId);
+  
+  if (currentIndex > 0) {
+    const previousArtikel = alleArtikel[currentIndex - 1];
+    openArtikelDetail(previousArtikel.id);
+  }
+};
+
+/**
+ * Navigate to next artikel
+ */
+window.navigateToNextArtikel = function() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  const currentArtikelId = window.cfoDashboard.currentArtikel;
+  
+  const alleArtikel = state.getArtikelByProjekt(projektId);
+  const currentIndex = alleArtikel.findIndex(a => a.id === currentArtikelId);
+  
+  if (currentIndex < alleArtikel.length - 1) {
+    const nextArtikel = alleArtikel[currentIndex + 1];
+    openArtikelDetail(nextArtikel.id);
+  }
+};
+
+/**
+ * Back to artikel overview
+ */
+window.backToArtikelOverview = function() {
+  console.log('⬅️ Back to artikel overview');
+
+  // Clear current artikel
+  window.cfoDashboard.currentArtikel = null;
+  state.currentArtikel = null;
+  state.artikelViewMode = 'overview';
+  state.saveState();
+
+  // Show artikel overview
+  const artikelOverview = document.getElementById('artikel-overview');
+  const artikelDetail = document.getElementById('artikel-detail-view');
+
+  if (artikelOverview) artikelOverview.style.display = 'block';
+  if (artikelDetail) artikelDetail.style.display = 'none';
+
+  // Refresh list
+  renderArtikelHierarchy();
+};
+
+// ==========================================
+// ARTIKEL CREATION
+// ==========================================
+
+/**
+ * Open quick create modal (ALTE VERSION - bleibt für Kompatibilität)
+ */
+window.openArtikelQuickCreate = function() {
+  const projektId = window.cfoDashboard.currentProjekt;
+  
   if (!projektId) {
-    alert('Bitte zuerst ein Projekt auswählen!');
+    alert('Bitte erst Projekt auswählen!');
     return;
   }
 
-  const modalHTML = `
-    <div id="artikel-quick-create-modal" class="modal" style="display: flex; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
-      <div class="modal-content" style="background: white; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-          <h2 style="margin: 0; color: #1e3a8a; font-size: 18px;">➕ Neuen Artikel anlegen - Quick Create</h2>
+  console.log('➕ Opening artikel quick create');
+
+  const modal = document.createElement('div');
+  modal.id = 'artikel-quick-create-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2>➕ Neuer Artikel</h2>
+        <button class="btn-close" onclick="closeArtikelQuickCreate()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Artikel-Name *</label>
+          <input type="text" id="quick-artikel-name" class="input-field" placeholder="z.B. Premium Package">
         </div>
-        
-        <div class="modal-body" style="padding: 20px;">
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Artikel-Bezeichnung *</label>
-            <input type="text" id="quick-artikel-name" 
-                   placeholder="z.B. Smart Sensor System" 
-                   style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
-                          border-radius: 4px; font-size: 14px;">
-          </div>
-          
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Typ *</label>
-            <select id="quick-artikel-typ" 
-                    style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
-                           border-radius: 4px; font-size: 14px; background: white;">
-              <option value="Neu-Produkt">Neu-Produkt</option>
-              <option value="Cross-Selling">Cross-Selling</option>
-              <option value="Kannibalisierung">Kannibalisierung</option>
-            </select>
-          </div>
-          
-          <div class="form-group" style="margin-bottom: 16px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Release-Datum *</label>
-            <input type="month" id="quick-artikel-release" 
-                   value="${new Date().toISOString().substring(0,7)}"
-                   style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; 
-                          border-radius: 4px; font-size: 14px;">
-          </div>
+        <div class="form-group">
+          <label>Typ</label>
+          <select id="quick-artikel-typ" class="input-field">
+            <option value="">-- Auswählen --</option>
+            <option value="Package">Package</option>
+            <option value="Consulting">Consulting</option>
+            <option value="Software">Software</option>
+            <option value="Hardware">Hardware</option>
+            <option value="Service">Service</option>
+          </select>
         </div>
-        
-        <div class="modal-footer" style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px;">
-          <button onclick="closeArtikelQuickCreate()" 
-                  style="padding: 10px 20px; border: 1px solid #e5e7eb; background: white; 
-                         border-radius: 6px; cursor: pointer;">
-            Abbrechen
-          </button>
-          <button onclick="saveQuickArtikel()" 
-                  style="padding: 10px 20px; background: #1e3a8a; color: white; 
-                         border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
-            🚀 Artikel anlegen
-          </button>
+        <div class="form-group">
+          <label>Release-Datum</label>
+          <input type="month" id="quick-release-datum" class="input-field">
         </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeArtikelQuickCreate()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="createArtikelQuick()">Erstellen</button>
       </div>
     </div>
   `;
 
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.body.appendChild(modal);
   
-  // Focus auf Name-Feld
+  // Focus name field
   setTimeout(() => {
     document.getElementById('quick-artikel-name')?.focus();
   }, 100);
 };
 
-window.saveQuickArtikel = async function() {
+/**
+ * Create artikel from quick modal
+ */
+window.createArtikelQuick = async function() {
   const projektId = window.cfoDashboard.currentProjekt;
-  const artikelName = document.getElementById('quick-artikel-name')?.value;
-  const effektTyp = document.getElementById('quick-artikel-typ')?.value;
-  const releaseDatum = document.getElementById('quick-artikel-release')?.value;
+  const artikelName = document.getElementById('quick-artikel-name')?.value?.trim();
   
-  if (!artikelName || artikelName.trim() === '') {
-    alert('Bitte Artikelname eingeben!');
+  if (!artikelName) {
+    alert('Bitte Artikel-Name eingeben!');
     return;
   }
-  
-  console.log('💾 Creating artikel:', artikelName, effektTyp, releaseDatum);
-  
+
+  console.log('➕ Creating artikel:', artikelName);
+
   try {
     const newArtikel = {
+      id: helpers.generateId('artikel'),
+      project_id: projektId,
       name: artikelName,
-      projektId: projektId,
-      projekt_id: projektId,
-      typ: '',
-      kategorie: effektTyp,
-      geschaeftsmodell: '',
-      zielmarkt: '',
-      strategie: '',
-      investment_typ: '',
+      typ: document.getElementById('quick-artikel-typ')?.value || '',
+      release_datum: document.getElementById('quick-release-datum')?.value || '2025-01',
+      status: 'aktiv',
+      geschaeftsmodell: 'B2B',
+      zielmarkt: 'DACH',
+      strategie: 'wachstum',
+      investment_typ: 'maintainer',
+      kategorie: '',
       beschreibung: '',
-      release_datum: releaseDatum,
-      annahmen: '',
-      // GEÄNDERTE BEISPIELWERTE
-      start_menge: 1000,  // Geändert von 100 zu 1000
-      start_preis: 50,    // Geändert von 1000 zu 50
-      start_hk: 20,       // Geändert von 600 zu 20
-      mengen_modell: 'realistisch',
+      start_menge: 0,
+      start_preis: 0,
+      start_hk: 0,
+      mengen_modell: 'konstant',
       preis_modell: 'konstant',
-      kosten_modell: 'lernkurve',
-      zeitraum: 5,
+      kosten_modell: 'konstant',
+      mengen_wachstum: 0,
+      preis_wachstum: 0,
+      kosten_wachstum: 0,
       volumes: {},
       prices: {},
       hk: 20  // Geändert von 600 zu 20
@@ -1123,7 +1026,7 @@ window.saveQuickArtikel = async function() {
       await api.loadArticles(projektId);
       
       // Dann erst re-render
-      renderArtikelListByProjekt();
+      renderArtikelHierarchy();
       
       // Alternativ: Direkt den neuen Artikel zum State hinzufügen
       const artikelId = 'artikel-db-' + saved.id;
@@ -1134,8 +1037,8 @@ window.saveQuickArtikel = async function() {
       
       // Force re-render der Tabelle
       const tbody = document.getElementById('projekt-artikel-list-tbody');
-      if (tbody && window.renderArtikelListByProjekt) {
-        window.renderArtikelListByProjekt();
+      if (tbody && window.renderArtikelHierarchy) {
+        window.renderArtikelHierarchy();
         const sourceBody = document.getElementById('artikel-list-tbody');
         if (sourceBody) {
           tbody.innerHTML = sourceBody.innerHTML;
@@ -1184,7 +1087,7 @@ window.deleteArtikel = function(artikelId) {
       console.log('✅ Artikel deleted');
 
       // Re-render list
-      renderArtikelListByProjekt();
+      renderArtikelHierarchy();
 
       // Update charts
       charts.updateAllCharts();
@@ -1231,7 +1134,7 @@ window.duplicateArtikel = async function(artikelId) {
       console.log('✅ Artikel duplicated');
 
       // Re-render list
-      renderArtikelListByProjekt();
+      renderArtikelHierarchy();
 
       // AI Feedback
       if (window.cfoDashboard.aiController) {
@@ -1316,271 +1219,16 @@ window.updateArtikelBulkActions = function() {
 };
 
 // ==========================================
-// STATE
-// ==========================================
-
-window.expandedPackages = new Set();
-
-// ==========================================
-// DATEN LADEN & GRUPPIEREN
-// ==========================================
-
-async function loadArtikelHierarchy(projektId) {
-  console.log('📦 Loading artikel hierarchy for projekt:', projektId);
-  
-  // Hole alle Artikel
-  const { data: alleArtikel, error } = await window.supabase
-    .from('ALBO_Artikel')  // ✅ KORREKT: ALBO_Artikel
-    .select('*')
-    .eq('project_id', projektId)  // ✅ KORREKT: project_id
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error loading artikel:', error);
-    return [];
-  }
-  
-  // Gruppiere in Hierarchie
-  const hierarchy = [];
-  const processedIds = new Set();
-  
-  alleArtikel.forEach(artikel => {
-    // Package-Parents und Standalone-Artikel
-    if (!artikel.parent_package_id) {
-      const children = alleArtikel.filter(a => a.parent_package_id === artikel.id);
-      
-      hierarchy.push({
-        parent: artikel,
-        children: children,
-        isPackage: artikel.artikel_mode === 'package-parent',
-        hasChildren: children.length > 0
-      });
-      
-      processedIds.add(artikel.id);
-      children.forEach(c => processedIds.add(c.id));
-    }
-  });
-  
-  // Orphaned Children (Children ohne Parent) - sollte nicht vorkommen
-  alleArtikel.forEach(artikel => {
-    if (!processedIds.has(artikel.id)) {
-      console.warn('⚠️ Orphaned child artikel found:', artikel.name);
-      hierarchy.push({
-        parent: artikel,
-        children: [],
-        isPackage: false,
-        hasChildren: false,
-        isOrphaned: true
-      });
-    }
-  });
-  
-  console.log('✅ Artikel hierarchy loaded:', hierarchy);
-  return hierarchy;
-}
-
-// ==========================================
-// RENDERING
-// ==========================================
-
-function renderArtikelHierarchy(hierarchy) {
-  return hierarchy.map(item => {
-    const { parent, children, hasChildren, isPackage } = item;
-    const isExpanded = window.expandedPackages.has(parent.id);
-    
-    // Parent Row
-    let html = renderArtikelRow(parent, {
-      hasChildren: hasChildren,
-      isExpanded: isExpanded,
-      isParent: true
-    });
-    
-    // Children Rows (wenn expanded)
-    if (isExpanded && children.length > 0) {
-      html += children.map((child, index) => {
-        return renderArtikelRow(child, {
-          isChild: true,
-          isLastChild: index === children.length - 1
-        });
-      }).join('');
-    }
-    
-    return html;
-  }).join('');
-}
-
-// ==========================================
-// ROW RENDERING
-// ==========================================
-
-function renderArtikelRow(artikel, options = {}) {
-  const { hasChildren, isExpanded, isParent, isChild, isLastChild } = options;
-  
-  // Icon basierend auf Artikel-Typ
-  const icon = artikel.artikel_mode === 'package-parent' ? '📦' : 
-               artikel.artikel_mode === 'package-child' ? '📄' :
-               artikel.artikel_mode === 'hybrid' ? '🔀' : '📦';
-  
-  // Expand/Collapse Button (nur für Parents mit Children)
-  const expandButton = hasChildren ? `
-    <button 
-      onclick="togglePackageExpand('${artikel.id}')"
-      style="
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 4px;
-        margin-right: 8px;
-      "
-      title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
-    >
-      ${isExpanded ? '▼' : '▶'}
-    </button>
-  ` : '<span style="width: 28px; display: inline-block;"></span>';
-  
-  // Einrückung für Children
-  const indent = isChild ? 'padding-left: 48px;' : '';
-  
-  // Visual Tree Line
-  const treeLine = isChild ? `
-    <span style="
-      position: absolute;
-      left: 24px;
-      top: 0;
-      bottom: ${isLastChild ? '50%' : '0'};
-      width: 2px;
-      background: #d1d5db;
-    "></span>
-    <span style="
-      position: absolute;
-      left: 24px;
-      top: 50%;
-      width: 16px;
-      height: 2px;
-      background: #d1d5db;
-    "></span>
-  ` : '';
-  
-  return `
-    <tr style="
-      position: relative;
-      ${isChild ? 'background: #f9fafb;' : ''}
-    ">
-      <td style="padding: 12px; ${indent}">
-        ${treeLine}
-        ${isParent ? expandButton : ''}
-        <span style="
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        ">
-          <span style="font-size: 20px;">${icon}</span>
-          <span style="font-weight: ${isChild ? '400' : '600'};">
-            ${artikel.name}
-          </span>
-          ${artikel.artikel_mode === 'package-parent' ? `
-            <span style="
-              background: #dbeafe;
-              color: #1e40af;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 11px;
-              font-weight: 600;
-            ">
-              PACKAGE
-            </span>
-          ` : ''}
-          ${isChild && artikel.mix_percentage ? `
-            <span style="
-              background: #f3f4f6;
-              color: #6b7280;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 11px;
-            ">
-              ${artikel.mix_percentage}% Mix
-            </span>
-          ` : ''}
-        </span>
-      </td>
-      <td>${artikel.typ || '-'}</td>
-      <td>${artikel.release_datum || '-'}</td>
-      <td>${formatCurrency(artikel.start_preis || 0)}</td>
-      <td>
-        <span class="status-badge status-${artikel.status?.toLowerCase() || 'aktiv'}">
-          ${artikel.status || 'AKTIV'}
-        </span>
-      </td>
-      <td>
-        <!-- Action buttons -->
-        <button onclick="openArtikelDetails('${artikel.id}')">📊</button>
-        <button onclick="editArtikel('${artikel.id}')">✏️</button>
-        <button onclick="deleteArtikel('${artikel.id}')">🗑️</button>
-      </td>
-    </tr>
-  `;
-}
-
-// ==========================================
-// EXPAND/COLLAPSE
-// ==========================================
-
-window.togglePackageExpand = function(packageId) {
-  if (window.expandedPackages.has(packageId)) {
-    window.expandedPackages.delete(packageId);
-  } else {
-    window.expandedPackages.add(packageId);
-  }
-  
-  // Re-render
-  loadAndRenderArtikel();
-};
-
-// ==========================================
-// MAIN RENDER FUNCTION
-// ==========================================
-
-async function loadAndRenderArtikel() {
-  const projektId = window.state.currentProjekt.id;
-  
-  // Show loading
-  document.getElementById('artikel-list').innerHTML = `
-    <tr><td colspan="6" style="text-align: center; padding: 40px;">
-      <div style="font-size: 32px; margin-bottom: 8px;">⏳</div>
-      <div>Lade Artikel...</div>
-    </td></tr>
-  `;
-  
-  // Load hierarchy
-  const hierarchy = await loadArtikelHierarchy(projektId);
-  
-  // Render
-  const html = renderArtikelHierarchy(hierarchy);
-  document.getElementById('artikel-list').innerHTML = html;
-}
-
-// ==========================================
-// HELPER
-// ==========================================
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0
-  }).format(value);
-}
-
-// ==========================================
 // EXPORTS
 // ==========================================
 
 export default {
-  renderArtikelListByProjekt,
+  renderArtikelListByProjekt,      // ← ALT (bleibt für Kompatibilität)
+  renderArtikelHierarchy,          // ← NEU ✅
   calculateArtikelRevenue,
   calculateArtikelDB2
 };
+
 // ==========================================
 // INTELLIGENT ARTIKEL CREATION (NEW)
 // ==========================================
