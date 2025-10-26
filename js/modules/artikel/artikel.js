@@ -24,10 +24,6 @@ console.log('✅ Adaptive Artikel System loaded!');
 // HIERARCHIE STATE
 // ==========================================
 
-// ==========================================
-// HIERARCHIE STATE
-// ==========================================
-
 if (!window.expandedPackages) {
   window.expandedPackages = new Set();
 }
