@@ -400,30 +400,43 @@ export async function saveArticle(artikelData) {
     const cleanProjektId = (artikelData.projekt_id || artikelData.projektId || '').replace('projekt-db-', '');
     
     const dataToSave = {
-      project_id: cleanProjektId,
-      name: artikelData.name,
-      typ: artikelData.typ,
-      kategorie: artikelData.kategorie,
-      geschaeftsmodell: artikelData.geschaeftsmodell,
-      zielmarkt: artikelData.zielmarkt,
-      strategie: artikelData.strategie,
-      investment_typ: artikelData.investment_typ,
-      beschreibung: artikelData.beschreibung,
-      release_datum: artikelData.release_datum ?
-        (artikelData.release_datum.length === 7 ? artikelData.release_datum + '-01' : artikelData.release_datum) :
-        null,
-      annahmen: artikelData.annahmen,
-      volumes: artikelData.volumes || {},
-      prices: artikelData.prices || {},
-      hk: artikelData.hk || 0,
-      start_menge: artikelData.start_menge || 0,
-      start_preis: artikelData.start_preis || 0,
-      start_hk: artikelData.start_hk || 0,
-      mengen_modell: artikelData.mengen_modell,
-      preis_modell: artikelData.preis_modell,
-      kosten_modell: artikelData.kosten_modell,
-      zeitraum: artikelData.zeitraum || 5
-    };
+  project_id: cleanProjektId,
+  name: artikelData.name,
+  typ: artikelData.typ,
+  kategorie: artikelData.kategorie,
+  geschaeftsmodell: artikelData.geschaeftsmodell,
+  zielmarkt: artikelData.zielmarkt,
+  strategie: artikelData.strategie,
+  investment_typ: artikelData.investment_typ,
+  beschreibung: artikelData.beschreibung,
+  release_datum: artikelData.release_datum ?
+    (artikelData.release_datum.length === 7 ? artikelData.release_datum + '-01' : artikelData.release_datum) :
+    null,
+  annahmen: artikelData.annahmen,
+  volumes: artikelData.volumes || {},
+  prices: artikelData.prices || {},
+  hk: artikelData.hk || 0,
+  start_menge: artikelData.start_menge || 0,
+  start_preis: artikelData.start_preis || 0,
+  start_hk: artikelData.start_hk || 0,
+  mengen_modell: artikelData.mengen_modell,
+  preis_modell: artikelData.preis_modell,
+  kosten_modell: artikelData.kosten_modell,
+  zeitraum: artikelData.zeitraum || 5,
+  
+  // Package & Hierarchy fields
+  artikel_mode: artikelData.artikel_mode || null,
+  parent_package_id: artikelData.parent_package_id || null,
+  package_name: artikelData.package_name || null,
+  package_index: artikelData.package_index !== undefined ? artikelData.package_index : null,
+  mix_percentage: artikelData.mix_percentage || null,
+  package_config: artikelData.package_config || null,
+  
+  // Hybrid/Revenue Stream fields
+  revenue_streams: artikelData.revenue_streams || null,
+  components: artikelData.components || null,
+  churn_rate: artikelData.churn_rate || null
+};
 
     const { data, error } = await client
       .from('ALBO_Artikel')
