@@ -592,47 +592,50 @@ class PromptsEngine {
                         </div>
                     </div>
 
-                    <!-- Progress -->
-                    <div class="progress-indicator" id="progress-${prompt.id}" style="margin-top: 20px;">
-                        ⏺️ Bitte ausfüllen (0/${extractedQuestions.length})
-                    </div>
-
-                    <!-- Actions -->
-                    <div style="display: flex; gap: 12px; margin-top: 24px;">
-                        <button class="btn btn-primary" style="flex: 1;" onclick="window.promptsEngine.executePrompt('${prompt.id}')">
-                            ▶️ Prompt ausführen
-                        </button>
-                    </div>
-                    <div style="display: flex; gap: 12px; margin-top: 12px;">
-                        <button class="btn btn-secondary" onclick="window.promptsEngine.copyPromptCode('${prompt.id}')">
-                            📋 Kopieren
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.promptsEngine.addToQueue('${prompt.id}')">
-                            ➕ Task Queue
-                        </button>
+                    <!-- Progress (hidden, shown in preview panel) -->
+                    <div style="display: none;">
+                        <div class="progress-indicator" id="progress-${prompt.id}">
+                            ⏺️ Bitte ausfüllen (0/${extractedQuestions.length})
+                        </div>
                     </div>
                 </div>
 
-                <!-- RIGHT: Live Preview Panel -->
+                <!-- RIGHT: Sticky Preview Panel -->
                 <div class="prompt-preview-panel">
-                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f1f5f9; color: #1a202c;">
-                        📖 Prompt Live-Preview
-                    </h3>
+                    <div class="preview-header">
+                        <div class="preview-title">📄 Prompt Live-Preview</div>
+                        <div class="preview-progress">
+                            <span id="progress-text-${prompt.id}">0/${extractedQuestions.length}</span>
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill-mini" id="progress-fill-${prompt.id}" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <div style="font-size: 14px; line-height: 1.8; color: #334155; white-space: pre-wrap; font-family: inherit;" id="preview-${prompt.id}">
+                    <div id="completion-status-${prompt.id}" class="completion-status incomplete">
+                        ⚠️ Bitte alle Fragen ausfüllen
+                    </div>
+                    
+                    <div class="preview-content" id="preview-content-${prompt.id}">
                         ${this.renderPreviewWithPlaceholders(prompt, fullPromptText, extractedQuestions)}
                     </div>
+                    
+                    <div class="preview-actions">
+                        <button class="btn-preview btn-preview-copy" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
+                            📋 Copy
+                        </button>
+                        <button class="btn-preview btn-preview-execute" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                            ⚡ Generate
+                        </button>
+                    </div>
 
-                    <!-- 🆕 TRANSPARENCY BOX -->
-                    <div style="margin-top: 24px; padding: 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px;">
-                        <div style="font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                            <span>🔍</span> 100% Transparenz (Explainable AI)
+                    <!-- TRANSPARENCY BOX -->
+                    <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #1e40af; margin-bottom: 6px;">
+                            🔍 100% Transparenz
                         </div>
-                        <div style="font-size: 13px; color: #1e3a8a; line-height: 1.7;">
-                            ✅ Sie sehen <strong>exakt</strong>, was an die AI gesendet wird<br>
-                            ✅ Ihre Eingaben werden <strong>live</strong> im Prompt angezeigt<br>
-                            ✅ Keine versteckten Anweisungen - <strong>100% Glass Box</strong><br>
-                            ✅ Context Cards helfen Ihnen, <strong>bessere Eingaben</strong> zu machen
+                        <div style="font-size: 11px; color: #1e3a8a; line-height: 1.5;">
+                            Sie sehen exakt, was an die AI gesendet wird. Ihre Eingaben werden live angezeigt.
                         </div>
                     </div>
                 </div>
@@ -926,6 +929,9 @@ updateLivePreviewWithValidation(promptId, fieldIndex, value, questionText) {
         const extractedQuestions = this.extractQuestionsFromPrompt(prompt);
         this.updateProgress(promptId, extractedQuestions.length);
         this.updateQualityScore(promptId, extractedQuestions.length);
+        
+        // 🆕 Update Preview Panel Progress
+        this.updatePreviewProgress(promptId, extractedQuestions.length);
     }
 }
 
@@ -1837,6 +1843,191 @@ renderPreview(prompt, fullPromptText) {
     // 🆕 Quality Score Update
     updateQualityScore(promptId, totalFields) {
         // ... siehe BUSINESS_PARTNER_UPGRADE.js
+    }
+
+    /* ========================================== */
+    /* 🆕 EXECUTE & COPY FUNKTIONEN */
+    /* ========================================== */
+
+    /**
+     * Update Preview Panel Progress
+     */
+    updatePreviewProgress(promptId, totalQuestions) {
+        // Count filled questions
+        let filledCount = 0;
+        for (let i = 0; i < totalQuestions; i++) {
+            const input = document.getElementById(`input-${promptId}-${i}`);
+            if (input && input.value.trim()) {
+                filledCount++;
+            }
+        }
+
+        // Update progress text
+        const progressText = document.getElementById(`progress-text-${promptId}`);
+        if (progressText) {
+            progressText.textContent = `${filledCount}/${totalQuestions}`;
+        }
+
+        // Update progress bar
+        const progressFill = document.getElementById(`progress-fill-${promptId}`);
+        if (progressFill) {
+            const percentage = (filledCount / totalQuestions) * 100;
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        // Update completion status and execute button
+        const executeBtn = document.getElementById(`execute-btn-${promptId}`);
+        const completionStatus = document.getElementById(`completion-status-${promptId}`);
+
+        if (filledCount === totalQuestions) {
+            if (executeBtn) executeBtn.disabled = false;
+            if (completionStatus) {
+                completionStatus.className = 'completion-status complete';
+                completionStatus.textContent = '✅ Bereit zur Ausführung!';
+            }
+        } else {
+            if (executeBtn) executeBtn.disabled = true;
+            if (completionStatus) {
+                completionStatus.className = 'completion-status incomplete';
+                const remaining = totalQuestions - filledCount;
+                completionStatus.textContent = `⚠️ Noch ${remaining} Frage${remaining > 1 ? 'n' : ''} offen`;
+            }
+        }
+    }
+
+    /**
+     * Copy Prompt to Clipboard
+     */
+    copyPrompt(promptId) {
+        const previewContent = document.getElementById(`preview-content-${promptId}`);
+        if (!previewContent) {
+            console.error('Preview content not found');
+            return;
+        }
+
+        const text = previewContent.textContent;
+
+        navigator.clipboard.writeText(text).then(() => {
+            // Success notification
+            const btn = event.target.closest('.btn-preview-copy');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Kopiert!';
+                btn.style.background = '#d1fae5';
+                btn.style.color = '#065f46';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                }, 2000);
+            }
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            alert('❌ Kopieren fehlgeschlagen. Bitte manuell kopieren.');
+        });
+    }
+
+    /**
+     * Execute Prompt - Show Modal
+     */
+    executePrompt(promptId) {
+        const previewContent = document.getElementById(`preview-content-${promptId}`);
+        if (!previewContent) return;
+
+        const prompt = previewContent.textContent;
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'execution-modal';
+        modal.innerHTML = `
+            <div class="execution-modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">⚡ Prompt ausführen</h2>
+                    <p class="modal-subtitle">Wähle deine Methode</p>
+                </div>
+                
+                <div class="execution-options">
+                    <div class="execution-option" onclick="window.promptsEngine.openInClaude('${promptId}')">
+                        <div class="option-icon">🤖</div>
+                        <div class="option-content">
+                            <div class="option-title">In Claude.ai öffnen</div>
+                            <div class="option-description">
+                                Öffnet neuen Tab mit Claude - Prompt wird in Zwischenablage kopiert
+                            </div>
+                            <span class="option-badge recommended">Empfohlen</span>
+                        </div>
+                    </div>
+                    
+                    <div class="execution-option" onclick="window.promptsEngine.copyAndClose('${promptId}')">
+                        <div class="option-icon">📋</div>
+                        <div class="option-content">
+                            <div class="option-title">Prompt kopieren</div>
+                            <div class="option-description">
+                                Für eigene AI-Umgebung (ChatGPT, etc.)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="this.closest('.execution-modal').remove()">
+                        Abbrechen
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    /**
+     * Open in Claude.ai
+     */
+    openInClaude(promptId) {
+        const previewContent = document.getElementById(`preview-content-${promptId}`);
+        if (!previewContent) return;
+
+        const prompt = previewContent.textContent;
+
+        // Close modal
+        const modal = document.querySelector('.execution-modal');
+        if (modal) modal.remove();
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(prompt).then(() => {
+            // Open Claude.ai
+            window.open('https://claude.ai/new', '_blank');
+            
+            // Show notification
+            alert('✅ Prompt kopiert!\n\nFüge ihn in Claude ein mit Ctrl+V (oder Cmd+V auf Mac)');
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            // Still open Claude even if copy fails
+            window.open('https://claude.ai/new', '_blank');
+            alert('⚠️ Bitte kopiere den Prompt manuell');
+        });
+    }
+
+    /**
+     * Copy and Close Modal
+     */
+    copyAndClose(promptId) {
+        this.copyPrompt(promptId);
+        
+        const modal = document.querySelector('.execution-modal');
+        if (modal) {
+            setTimeout(() => {
+                modal.remove();
+            }, 100);
+        }
     }
 }
 
