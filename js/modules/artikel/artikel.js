@@ -9,8 +9,20 @@ import * as helpers from '../../helpers.js';
 import * as api from '../../api.js';
 import * as charts from '../../charts.js';
 import { openArtikelCreationModal as openArtikelCreationModalCore } from './artikel-creation-modal.js';
+
+// ==========================================
+// NEW: ADAPTIVE REVENUE MODELS  ⬅️ HIER EINFÜGEN!
+// ==========================================
 import IntegrationPatch from './artikel-integration-patch.js';
+
+// Integrate adaptive system
 IntegrationPatch.integrateAdaptiveSystem();
+
+console.log('✅ Adaptive Artikel System loaded!');
+
+// ==========================================
+// HIERARCHIE STATE
+// ==========================================
 
 // ==========================================
 // HIERARCHIE STATE
