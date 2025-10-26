@@ -1,13 +1,10 @@
 /**
- * ALBO Solutions - Artikel Integration Patch
+ * ALBO Solutions - Artikel Integration Patch (FIXED)
  * 
  * This file contains the updated functions to integrate
  * the new adaptive revenue models into existing artikel.js
  * 
- * INTEGRATION STEPS:
- * 1. Import this file in artikel.js
- * 2. Replace loadArtikelIntoForm with loadArtikelIntoFormAdaptive
- * 3. Add event listener for artikel-typ change
+ * FIX: Makes AdaptiveRenderer and RevenueModels globally available
  */
 
 import RevenueModels from './revenue-models.js';
@@ -93,7 +90,9 @@ function renderAdaptiveFinanzSection(artikel) {
   
   // Replace content with adaptive renderer
   try {
-    const adaptiveHTML = AdaptiveRenderer.renderFinanzParameterByType(artikel);
+    // Use global AdaptiveRenderer if available, otherwise use imported one
+    const renderer = window.AdaptiveRenderer || AdaptiveRenderer;
+    const adaptiveHTML = renderer.renderFinanzParameterByType(artikel);
     finanzSection.outerHTML = adaptiveHTML;
     console.log('✅ Adaptive UI rendered successfully');
   } catch (error) {
@@ -145,7 +144,8 @@ function setupTypeChangeListener() {
     
     // Show info message
     if (window.cfoDashboard?.aiController) {
-      const model = RevenueModels.getRevenueModel(newType);
+      const models = window.RevenueModels || RevenueModels;
+      const model = models.getRevenueModel(newType);
       window.cfoDashboard.aiController.addAIMessage({
         level: 'info',
         title: '🔄 Artikel-Typ geändert',
@@ -192,7 +192,8 @@ export function saveArtikelChangesAdaptive() {
   artikel.release_datum = helpers.getInputValue('release-datum');
 
   // Get revenue model for this type
-  const model = RevenueModels.getRevenueModel(artikel.typ);
+  const models = window.RevenueModels || RevenueModels;
+  const model = models.getRevenueModel(artikel.typ);
   
   // Collect type-specific start values
   model.metriken.forEach(function(metrik) {
@@ -295,11 +296,12 @@ function collectForecastData(artikel, model) {
 }
 
 // ============================================
-// INTEGRATION FUNCTION
+// INTEGRATION FUNCTION (FIXED!)
 // ============================================
 
 /**
  * Call this to integrate the adaptive system into existing artikel.js
+ * FIXED: Now makes all dependencies globally available
  */
 export function integrateAdaptiveSystem() {
   console.log('🔧 Integrating adaptive artikel system...');
@@ -315,15 +317,35 @@ export function integrateAdaptiveSystem() {
   window.saveArtikelChanges = saveArtikelChangesAdaptive;
   console.log('✅ Replaced saveArtikelChanges');
   
-  // Make calculator globally available - FIXED!
+  // Make calculator globally available
   window.berechneErgebnisVorschau = Calculator.calculateArtikelForecast;
   console.log('✅ Made berechneErgebnisVorschau global');
   
+  // ⭐ NEW: Make AdaptiveRenderer globally available
+  window.AdaptiveRenderer = AdaptiveRenderer;
+  console.log('✅ Made AdaptiveRenderer global');
+  
+  // ⭐ NEW: Make RevenueModels globally available
+  window.RevenueModels = RevenueModels;
+  console.log('✅ Made RevenueModels global');
+  
+  // ⭐ NEW: Make Calculator globally available
+  window.Calculator = Calculator;
+  console.log('✅ Made Calculator global');
+  
   console.log('🎉 Adaptive system integration complete!');
+  console.log('📦 Global objects available:', {
+    loadArtikelIntoForm: typeof window.loadArtikelIntoForm,
+    saveArtikelChanges: typeof window.saveArtikelChanges,
+    berechneErgebnisVorschau: typeof window.berechneErgebnisVorschau,
+    AdaptiveRenderer: typeof window.AdaptiveRenderer,
+    RevenueModels: typeof window.RevenueModels,
+    Calculator: typeof window.Calculator
+  });
 }
 
 export default {
-  loadArtikelIntoFormAdaptive: loadArtikelIntoFormAdaptive,
-  saveArtikelChangesAdaptive: saveArtikelChangesAdaptive,
-  integrateAdaptiveSystem: integrateAdaptiveSystem
+  loadArtikelIntoFormAdaptive,
+  saveArtikelChangesAdaptive,
+  integrateAdaptiveSystem
 };
