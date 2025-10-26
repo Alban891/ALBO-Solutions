@@ -684,28 +684,145 @@ function renderManualTab(projektId) {
     <div style="padding: 30px;">
       <h3 style="margin: 0 0 20px;">✏️ Artikel manuell anlegen</h3>
       
-      <div style="display: grid; gap: 20px;">
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-weight: 500;">Name *</label>
-          <input type="text" id="manual-name" placeholder="z.B. Premium Roboter System" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
-        </div>
+      <!-- SCHRITT 1: ARTIKEL-TYP WÄHLEN (NEU!) -->
+      <div style="margin-bottom: 30px;">
+        <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px;">
+          Schritt 1: Artikel-Typ wählen
+        </label>
+        <p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">
+          Wähle den passenden Typ für deinen Artikel
+        </p>
         
-        <div>
-          <label style="display: block; margin-bottom: 8px; font-weight: 500;">Typ *</label>
-          <select id="manual-typ" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
-            <option value="Hardware">Hardware</option>
-            <option value="Software">Software</option>
-            <option value="Service">Service</option>
-          </select>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          
+          <!-- Standard -->
+          <div class="artikel-type-option" data-type="standard" onclick="selectArtikelTypeManual('standard')" style="
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+          ">
+            <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+            <div style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">Standard</div>
+            <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+              Ein einzelnes Produkt ohne Varianten
+            </div>
+          </div>
+          
+          <!-- Hybrid -->
+          <div class="artikel-type-option" data-type="hybrid" onclick="selectArtikelTypeManual('hybrid')" style="
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+          ">
+            <div style="font-size: 32px; margin-bottom: 8px;">🔀</div>
+            <div style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">Hybrid</div>
+            <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+              Mehrere Komponenten zusammen
+            </div>
+          </div>
+          
+          <!-- Package -->
+          <div class="artikel-type-option" data-type="package" onclick="selectArtikelTypeManual('package')" style="
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+          ">
+            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+            <div style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">Package</div>
+            <div style="font-size: 12px; color: #6b7280; line-height: 1.4;">
+              Varianten (S/M/L, Basic/Pro)
+            </div>
+          </div>
+          
         </div>
+      </div>
+      
+      <!-- SCHRITT 2: ARTIKEL DETAILS (Zeige nur wenn Typ gewählt) -->
+      <div id="artikel-details-section" style="display: none;">
+        <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 15px;">
+          Schritt 2: Artikel Details
+        </label>
         
-        <button class="btn btn-primary" onclick="createManualArtikel('${projektId}')">
-          ➕ Artikel anlegen
-        </button>
+        <div style="display: grid; gap: 20px;">
+          <div>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Name *</label>
+            <input type="text" id="manual-name" placeholder="z.B. Premium Roboter System" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
+          </div>
+          
+          <div>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Kategorie *</label>
+            <select id="manual-typ" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;">
+              <option value="Hardware">Hardware</option>
+              <option value="Software">Software</option>
+              <option value="Service">Service</option>
+              <option value="Consulting">Consulting</option>
+              <option value="Subscription">Subscription</option>
+            </select>
+          </div>
+          
+          <!-- Hidden field for artikel_mode -->
+          <input type="hidden" id="manual-artikel-mode" value="standard">
+          
+          <button class="btn btn-primary" onclick="createManualArtikel('${projektId}')">
+            ➕ Artikel anlegen
+          </button>
+        </div>
       </div>
     </div>
+    
+    <style>
+      .artikel-type-option:hover {
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+      }
+      
+      .artikel-type-option.selected {
+        border-color: #2563eb !important;
+        background: #eff6ff !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+    </style>
   `;
 }
+
+window.selectArtikelTypeManual = function(type) {
+  console.log('🎯 User selected artikel type:', type);
+  
+  // Update visual selection
+  document.querySelectorAll('.artikel-type-option').forEach(option => {
+    option.classList.remove('selected');
+  });
+  document.querySelector(`.artikel-type-option[data-type="${type}"]`)?.classList.add('selected');
+  
+  // Store selected type
+  const hiddenField = document.getElementById('manual-artikel-mode');
+  if (hiddenField) {
+    hiddenField.value = type;
+  }
+  
+  // Show details section
+  const detailsSection = document.getElementById('artikel-details-section');
+  if (detailsSection) {
+    detailsSection.style.display = 'block';
+    
+    // Smooth scroll to details
+    detailsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  
+  // Log for debugging
+  console.log('  ✅ Type stored:', type);
+  console.log('  ✅ Details section shown');
+};
 
 function getConfidenceBadge(confidence) {
   const percentage = Math.round(confidence * 100);
