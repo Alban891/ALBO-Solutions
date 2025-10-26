@@ -11,7 +11,7 @@
  * - Universal development models for Price/Cost
  */
 
-import CONFIG from './config.js';
+// No external dependencies needed
 
 // ============================================
 // SINGLE-TYPE REVENUE MODELS
