@@ -11,6 +11,7 @@
 import { analyzeGeschaeftsmodellWithClaude } from './artikel-ai-complete.js';
 import { state } from '../../state.js';
 import { saveArticle } from '../../api.js';  // ✅ BACK TO STATIC IMPORT!
+import { openPackageEditor } from './package-editor.js';
 
 // ==========================================
 // MAIN ENTRY POINT
@@ -971,10 +972,27 @@ window.createSelectedArtikel = async function(projektId) {
 window.createManualArtikel = async function(projektId) {
   const name = document.getElementById('manual-name')?.value;
   const typ = document.getElementById('manual-typ')?.value;
+  const artikelMode = document.getElementById('manual-artikel-mode')?.value;  // ← NEU!
   
   if (!name || !typ) {
     alert('Bitte fülle alle Felder aus!');
     return;
+  }
+  
+  // ✅ CHECK FOR PACKAGE MODE
+  if (artikelMode === 'package') {
+    console.log('📦 Opening Package Editor...');
+    
+    // Close current modal
+    closeArtikelCreationModal();
+    
+    // Open package editor with initial data
+    openPackageEditor(projektId, {
+      artikel_name: name,
+      artikel_typ: typ
+    });
+    
+    return;  // ← STOP HERE, Package Editor takes over
   }
   
   // Clean projekt ID
