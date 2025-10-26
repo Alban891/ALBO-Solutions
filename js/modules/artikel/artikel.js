@@ -83,10 +83,10 @@ export function renderArtikelListByProjekt() {
 
   alleArtikel.forEach(artikel => {
   if (!artikel.parent_package_id) {
-    // Extract UUID from artikel.id (remove 'artikel-db-' prefix)
+    // ✅ FÜGE DIESE ZEILE HINZU:
     const parentUuid = artikel.id.replace('artikel-db-', '');
     
-    // Find children by matching parent_package_id with UUID
+    // ✅ ÄNDERE DIESE ZEILE:
     const children = alleArtikel.filter(a => a.parent_package_id === parentUuid);
     
     hierarchy.push({
