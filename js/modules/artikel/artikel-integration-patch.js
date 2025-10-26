@@ -38,7 +38,7 @@ export function loadArtikelIntoFormAdaptive(artikel) {
         hour: '2-digit',
         minute: '2-digit'
       });
-      updateInfo.innerHTML = `<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ${dateStr}`;
+      updateInfo.innerHTML = '<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ' + dateStr;
       updateInfo.style.display = 'block';
     }
   }
@@ -72,31 +72,37 @@ export function loadArtikelIntoFormAdaptive(artikel) {
 
 function renderAdaptiveFinanzSection(artikel) {
   // Find the Finanz-Parameter section in HTML
-  const finanzSection = document.querySelector('.form-section h3');
+  const finanzSections = document.querySelectorAll('.form-section');
+  let finanzSection = null;
   
-  if (!finanzSection || !finanzSection.textContent.includes('Finanz-Parameter')) {
-    console.error('❌ Finanz-Parameter section not found in HTML!');
-    return;
+  for (const section of finanzSections) {
+    const h3 = section.querySelector('h3');
+    if (h3 && h3.textContent.includes('Finanz-Parameter')) {
+      finanzSection = section;
+      break;
+    }
   }
   
-  // Get the parent section
-  const parentSection = finanzSection.closest('.form-section');
-  
-  if (!parentSection) {
-    console.error('❌ Parent section not found!');
+  if (!finanzSection) {
+    console.error('❌ Finanz-Parameter section not found in HTML!');
+    console.log('Available sections:', finanzSections.length);
     return;
   }
   
   console.log('🎨 Rendering adaptive Finanz-Parameter section...');
   
   // Replace content with adaptive renderer
-  const adaptiveHTML = AdaptiveRenderer.renderFinanzParameterByType(artikel);
-  parentSection.outerHTML = adaptiveHTML;
-  
-  console.log('✅ Adaptive UI rendered successfully');
+  try {
+    const adaptiveHTML = AdaptiveRenderer.renderFinanzParameterByType(artikel);
+    finanzSection.outerHTML = adaptiveHTML;
+    console.log('✅ Adaptive UI rendered successfully');
+  } catch (error) {
+    console.error('❌ Error rendering adaptive UI:', error);
+    return;
+  }
   
   // After rendering, calculate and update preview
-  setTimeout(() => {
+  setTimeout(function() {
     if (window.berechneErgebnisVorschau) {
       window.berechneErgebnisVorschau();
     }
@@ -143,7 +149,7 @@ function setupTypeChangeListener() {
       window.cfoDashboard.aiController.addAIMessage({
         level: 'info',
         title: '🔄 Artikel-Typ geändert',
-        text: `Die Finanz-Parameter wurden an den Typ "${model.name}" angepasst.`,
+        text: 'Die Finanz-Parameter wurden an den Typ "' + model.name + '" angepasst.',
         timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
       });
     }
@@ -189,10 +195,10 @@ export function saveArtikelChangesAdaptive() {
   const model = RevenueModels.getRevenueModel(artikel.typ);
   
   // Collect type-specific start values
-  model.metriken.forEach(metrik => {
-    const input = document.getElementById(`start-${metrik.id}`);
+  model.metriken.forEach(function(metrik) {
+    const input = document.getElementById('start-' + metrik.id);
     if (input && input.value && !input.value.startsWith('z.B.')) {
-      artikel[`start_${metrik.id}`] = helpers.parseFormattedNumber(input.value);
+      artikel['start_' + metrik.id] = helpers.parseFormattedNumber(input.value);
     }
   });
   
@@ -226,9 +232,9 @@ export function saveArtikelChangesAdaptive() {
 
   // Save to Supabase (if API available)
   if (window.saveArticle) {
-    window.saveArticle(artikel).then(() => {
+    window.saveArticle(artikel).then(function() {
       console.log('✅ Saved to Supabase');
-    }).catch(err => {
+    }).catch(function(err) {
       console.error('❌ Supabase save failed:', err);
     });
   }
@@ -243,7 +249,7 @@ export function saveArtikelChangesAdaptive() {
       hour: '2-digit',
       minute: '2-digit'
     });
-    updateInfo.innerHTML = `<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ${dateStr}`;
+    updateInfo.innerHTML = '<span style="color: var(--success);">✓</span> Zuletzt gespeichert: ' + dateStr;
     updateInfo.style.display = 'block';
   }
 
@@ -251,7 +257,7 @@ export function saveArtikelChangesAdaptive() {
     window.cfoDashboard.aiController.addAIMessage({
       level: 'success',
       title: '💾 Artikel gespeichert',
-      text: `Änderungen an "${artikel.name}" wurden erfolgreich gespeichert.`,
+      text: 'Änderungen an "' + artikel.name + '" wurden erfolgreich gespeichert.',
       timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})
     });
   }
@@ -268,14 +274,14 @@ function collectForecastData(artikel, model) {
   const metriken = model.metriken;
   
   // Initialize data objects
-  metriken.forEach(metrik => {
+  metriken.forEach(function(metrik) {
     if (!artikel[metrik.id]) artikel[metrik.id] = {};
   });
   
   // Collect values from table
   for (let i = 1; i <= zeitraum; i++) {
-    metriken.forEach(metrik => {
-      const input = document.getElementById(`${metrik.id}-jahr-${i}`);
+    metriken.forEach(function(metrik) {
+      const input = document.getElementById(metrik.id + '-jahr-' + i);
       if (input && input.value) {
         const year = artikel.release_datum ? 
           parseInt(artikel.release_datum.split('-')[0]) + i - 1 : 
@@ -298,27 +304,26 @@ function collectForecastData(artikel, model) {
 export function integrateAdaptiveSystem() {
   console.log('🔧 Integrating adaptive artikel system...');
   
+  // Store original functions
+  const originalLoadArtikelIntoForm = window.loadArtikelIntoForm;
+  const originalSaveArtikelChanges = window.saveArtikelChanges;
+  
   // Replace global functions
-  if (window.loadArtikelIntoForm) {
-    window.loadArtikelIntoForm = loadArtikelIntoFormAdaptive;
-    console.log('✅ Replaced loadArtikelIntoForm');
-  }
+  window.loadArtikelIntoForm = loadArtikelIntoFormAdaptive;
+  console.log('✅ Replaced loadArtikelIntoForm');
   
-  if (window.saveArtikelChanges) {
-    window.saveArtikelChanges = saveArtikelChangesAdaptive;
-    console.log('✅ Replaced saveArtikelChanges');
-  }
+  window.saveArtikelChanges = saveArtikelChangesAdaptive;
+  console.log('✅ Replaced saveArtikelChanges');
   
-  // Make calculator globally available
-  window.berechneErgebnisVorschau = function() {
-    Calculator.calculateArtikelForecast;
-  };
+  // Make calculator globally available - FIXED!
+  window.berechneErgebnisVorschau = Calculator.calculateArtikelForecast;
+  console.log('✅ Made berechneErgebnisVorschau global');
   
   console.log('🎉 Adaptive system integration complete!');
 }
 
 export default {
-  loadArtikelIntoFormAdaptive,
-  saveArtikelChangesAdaptive,
-  integrateAdaptiveSystem
+  loadArtikelIntoFormAdaptive: loadArtikelIntoFormAdaptive,
+  saveArtikelChangesAdaptive: saveArtikelChangesAdaptive,
+  integrateAdaptiveSystem: integrateAdaptiveSystem
 };
