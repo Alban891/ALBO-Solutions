@@ -1,15 +1,9 @@
 /**
- * PACKAGE MODEL
- * Good/Better/Best Package-Varianten mit Komponenten
- * 
- * Use Case: Cyber Security Consulting Small/Medium/Large
- * 
- * Features:
- * - Mehrere Package-Varianten (S/M/L)
- * - Mix-Planung (z.B. 50% Small, 30% Medium, 20% Large)
- * - Komponenten-Attach Rates
- * - Aggregierte Revenue-Berechnung
+ * PACKAGE MODEL - COMPACT VERSION
+ * Kompaktes Design, Auto-Calculate, Always-Visible Forecast
  */
+
+import { renderForecastTable } from './forecast-table.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
@@ -22,9 +16,9 @@ export function renderPackageModel(artikel, containerId) {
     return;
   }
   
-  console.log('📦 Rendering Package Model for:', artikel.name);
+  console.log('📊 Rendering Package Model (Compact) for:', artikel.name);
   
-  // Initialize package data
+  // Initialize data
   if (!artikel.package_model_data) {
     artikel.package_model_data = initializePackageData(artikel);
   }
@@ -32,236 +26,154 @@ export function renderPackageModel(artikel, containerId) {
   const data = artikel.package_model_data;
   
   container.innerHTML = `
-    <div class="package-model-container">
+    <div class="package-model-compact">
       
-      <!-- Header -->
-      <div class="package-header">
-        <div>
-          <h2 class="package-title">📦 ${artikel.name}</h2>
-          <p class="package-subtitle">Good/Better/Best Package Revenue Model</p>
-        </div>
-        <div class="package-badge">Package Model</div>
-      </div>
-      
-      <!-- Zeitrahmen -->
-      <div class="section-card">
-        <h3 class="section-title">⏱️ Zeitrahmen</h3>
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">Startdatum</label>
-            <input 
-              type="month" 
-              id="pkg-date" 
-              value="${data.release_date}"
-              class="form-input"
-            >
+      <!-- Zeitliche Rahmendaten -->
+      <div class="section-compact">
+        <h3 class="section-title-compact">📅 Zeitliche Rahmendaten</h3>
+        <div class="input-row-compact">
+          <div class="input-group-compact">
+            <label>Release / Startdatum</label>
+            <input type="month" id="pkg-date" value="${data.release_date}" class="input-compact">
           </div>
-          <div class="input-group">
-            <label class="input-label">Planungshorizont</label>
-            <div class="horizon-buttons">
-              <button class="horizon-btn ${data.time_horizon === 3 ? 'active' : ''}" data-years="3">3 Jahre</button>
-              <button class="horizon-btn ${data.time_horizon === 5 ? 'active' : ''}" data-years="5">5 Jahre</button>
-              <button class="horizon-btn ${data.time_horizon === 7 ? 'active' : ''}" data-years="7">7 Jahre</button>
+          <div class="input-group-compact">
+            <label>Zeithorizont</label>
+            <div class="horizon-compact">
+              <button class="btn-horizon ${data.time_horizon === 3 ? 'active' : ''}" data-years="3">3J</button>
+              <button class="btn-horizon ${data.time_horizon === 5 ? 'active' : ''}" data-years="5">5J</button>
+              <button class="btn-horizon ${data.time_horizon === 7 ? 'active' : ''}" data-years="7">7J</button>
             </div>
           </div>
         </div>
       </div>
       
       <!-- Package Varianten -->
-      <div class="section-card">
-        <h3 class="section-title">📊 Package Varianten & Mix</h3>
-        <p class="section-hint">Definiere die drei Varianten und ihre Verteilung</p>
+      <div class="section-compact">
+        <h3 class="section-title-compact">📦 Package Varianten</h3>
         
         <div class="variants-grid">
-          ${renderVariantCard('small', 'Small', data.variants.small, '#10b981')}
-          ${renderVariantCard('medium', 'Medium', data.variants.medium, '#3b82f6')}
-          ${renderVariantCard('large', 'Large', data.variants.large, '#8b5cf6')}
+          <!-- Small -->
+          <div class="variant-card">
+            <label class="variant-label">Small Package</label>
+            <input type="number" id="pkg-small-price" value="${data.price_small}" class="input-compact" placeholder="5000">
+            <span class="input-hint">Preis (€)</span>
+            <input type="number" id="pkg-small-cost" value="${data.cost_small}" class="input-compact" placeholder="2000">
+            <span class="input-hint">HK (€)</span>
+          </div>
+          
+          <!-- Medium -->
+          <div class="variant-card">
+            <label class="variant-label">Medium Package</label>
+            <input type="number" id="pkg-medium-price" value="${data.price_medium}" class="input-compact" placeholder="10000">
+            <span class="input-hint">Preis (€)</span>
+            <input type="number" id="pkg-medium-cost" value="${data.cost_medium}" class="input-compact" placeholder="4000">
+            <span class="input-hint">HK (€)</span>
+          </div>
+          
+          <!-- Large -->
+          <div class="variant-card">
+            <label class="variant-label">Large Package</label>
+            <input type="number" id="pkg-large-price" value="${data.price_large}" class="input-compact" placeholder="20000">
+            <span class="input-hint">Preis (€)</span>
+            <input type="number" id="pkg-large-cost" value="${data.cost_large}" class="input-compact" placeholder="8000">
+            <span class="input-hint">HK (€)</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Mengen & Mix -->
+      <div class="section-compact">
+        <h3 class="section-title-compact">📊 Startwerte (Jahr 1)</h3>
+        <div class="input-row-compact">
+          <div class="input-group-compact">
+            <label>Gesamt-Volumen</label>
+            <input type="number" id="pkg-volume" value="${data.volume_year1}" class="input-compact" placeholder="100">
+          </div>
+          <div class="input-group-compact">
+            <label>Mix Small (%)</label>
+            <input type="number" id="pkg-mix-small" value="${data.mix_small}" class="input-compact" placeholder="50" max="100">
+          </div>
+          <div class="input-group-compact">
+            <label>Mix Medium (%)</label>
+            <input type="number" id="pkg-mix-medium" value="${data.mix_medium}" class="input-compact" placeholder="30" max="100">
+          </div>
+          <div class="input-group-compact">
+            <label>Mix Large (%)</label>
+            <input type="number" id="pkg-mix-large" value="${data.mix_large}" class="input-compact" placeholder="20" max="100">
+          </div>
         </div>
         
-        <!-- Mix Verteilung -->
-        <div class="mix-section">
-          <h4 style="margin: 0 0 12px; font-size: 14px; color: #1f2937;">Mix-Verteilung (Jahr 1)</h4>
-          <div class="mix-sliders">
-            ${renderMixSlider('small', 'Small', data.mix.small, '#10b981')}
-            ${renderMixSlider('medium', 'Medium', data.mix.medium, '#3b82f6')}
-            ${renderMixSlider('large', 'Large', data.mix.large, '#8b5cf6')}
+        <!-- Quick KPIs -->
+        <div class="kpis-inline">
+          <span class="kpi-inline">
+            <strong>Umsatz J1:</strong> 
+            <span id="kpi-revenue">-</span>
+          </span>
+          <span class="kpi-inline">
+            <strong>DB2 J1:</strong> 
+            <span id="kpi-db2" class="kpi-positive">-</span>
+          </span>
+          <span class="kpi-inline">
+            <strong>Ø Marge:</strong> 
+            <span id="kpi-margin">-</span>
+          </span>
+        </div>
+      </div>
+      
+      <!-- Entwicklungsmodelle -->
+      <div class="section-compact">
+        <h3 class="section-title-compact">📈 Entwicklungsmodelle</h3>
+        
+        <div class="models-compact">
+          <!-- Mengenentwicklung -->
+          <div class="model-row">
+            <label class="model-label-compact">Mengenentwicklung</label>
+            <div class="model-radios">
+              <label><input type="radio" name="pkg-volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="pkg-volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}> Konservativ</label>
+              <label><input type="radio" name="pkg-volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}> Realistisch</label>
+              <label><input type="radio" name="pkg-volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}> Optimistisch</label>
+            </div>
           </div>
-          <div class="mix-total" id="mix-total">
-            Gesamt: <span id="mix-sum">${data.mix.small + data.mix.medium + data.mix.large}</span>%
+          
+          <!-- Preisentwicklung -->
+          <div class="model-row">
+            <label class="model-label-compact">Preisentwicklung</label>
+            <div class="model-radios">
+              <label><input type="radio" name="pkg-price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="pkg-price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}> Inflation</label>
+              <label><input type="radio" name="pkg-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}> Premium</label>
+            </div>
+          </div>
+          
+          <!-- Kostenentwicklung -->
+          <div class="model-row">
+            <label class="model-label-compact">Kostenentwicklung</label>
+            <div class="model-radios">
+              <label><input type="radio" name="pkg-cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="pkg-cost-model" value="inflation" ${data.cost_model === 'inflation' ? 'checked' : ''}> Inflation</label>
+              <label><input type="radio" name="pkg-cost-model" value="learning" ${data.cost_model === 'learning' ? 'checked' : ''}> Learning</label>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- Komponenten-Attach Rates -->
-      ${renderComponentsSection(artikel, data)}
-      
-      <!-- Volumenentwicklung -->
-      <div class="section-card">
-        <h3 class="section-title">📈 Volumenentwicklung</h3>
-        <div class="input-row">
-          <div class="input-group">
-            <label class="input-label">Gesamtvolumen Jahr 1</label>
-            <input 
-              type="number" 
-              id="pkg-total-volume" 
-              value="${data.total_volume_year1}"
-              class="form-input"
-              placeholder="100"
-            >
-            <span class="input-hint">Anzahl verkaufter Packages</span>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Wachstumsmodell</label>
-            <select id="pkg-growth-model" class="form-select">
-              <option value="konservativ" ${data.growth_model === 'konservativ' ? 'selected' : ''}>Konservativ (+5% p.a.)</option>
-              <option value="realistisch" ${data.growth_model === 'realistisch' ? 'selected' : ''}>Realistisch (S-Kurve)</option>
-              <option value="optimistisch" ${data.growth_model === 'optimistisch' ? 'selected' : ''}>Optimistisch (+15% p.a.)</option>
-              <option value="hockey-stick" ${data.growth_model === 'hockey-stick' ? 'selected' : ''}>Hockey-Stick</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Actions -->
-      <div class="action-buttons">
-        <button class="btn btn-secondary" onclick="window.resetPackageModel()">
-          🔄 Zurücksetzen
-        </button>
-        <button class="btn btn-primary" onclick="window.calculatePackageModel()">
-          📊 Berechnen & Vorschau
-        </button>
-      </div>
-      
-      <!-- Preview -->
-      <div id="package-preview" class="preview-container"></div>
+      <!-- Forecast Table Container -->
+      <div id="forecast-table-container"></div>
       
     </div>
     
-    ${renderPackageStyles()}
+    ${renderCompactStyles()}
   `;
   
   // Attach event listeners
   attachPackageEventListeners(artikel);
-}
-
-// ==========================================
-// VARIANT CARD
-// ==========================================
-
-function renderVariantCard(variantKey, variantName, variantData, color) {
-  return `
-    <div class="variant-card" style="border-color: ${color};">
-      <div class="variant-header" style="background: ${color};">
-        <h4 class="variant-title">${variantName}</h4>
-      </div>
-      <div class="variant-body">
-        <div class="variant-input-group">
-          <label class="variant-label">Preis (€)</label>
-          <input 
-            type="number" 
-            id="pkg-price-${variantKey}" 
-            value="${variantData.price}"
-            class="variant-input"
-            placeholder="0"
-            step="100"
-          >
-        </div>
-        <div class="variant-input-group">
-          <label class="variant-label">Herstellkosten (€)</label>
-          <input 
-            type="number" 
-            id="pkg-cost-${variantKey}" 
-            value="${variantData.cost}"
-            class="variant-input"
-            placeholder="0"
-            step="100"
-          >
-        </div>
-        <div class="variant-kpi">
-          <span class="variant-kpi-label">DB2:</span>
-          <span class="variant-kpi-value" id="db2-${variantKey}" style="color: ${color};">
-            ${formatCurrency(variantData.price - variantData.cost)}
-          </span>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// MIX SLIDER
-// ==========================================
-
-function renderMixSlider(variantKey, variantName, value, color) {
-  return `
-    <div class="mix-slider-group">
-      <div class="mix-slider-header">
-        <label class="mix-label">${variantName}</label>
-        <span class="mix-value" id="mix-value-${variantKey}">${value}%</span>
-      </div>
-      <input 
-        type="range" 
-        id="mix-slider-${variantKey}" 
-        min="0" 
-        max="100" 
-        value="${value}"
-        class="mix-slider"
-        style="--slider-color: ${color};"
-      >
-    </div>
-  `;
-}
-
-// ==========================================
-// COMPONENTS SECTION
-// ==========================================
-
-function renderComponentsSection(artikel, data) {
-  // Check if artikel has components
-  const components = artikel.components || [];
   
-  if (components.length === 0) {
-    return `
-      <div class="section-card">
-        <h3 class="section-title">🔧 Komponenten</h3>
-        <div style="padding: 20px; text-align: center; color: #9ca3af;">
-          <p>Keine Komponenten definiert</p>
-          <p style="font-size: 12px; margin-top: 8px;">Komponenten können in den Artikel-Stammdaten hinzugefügt werden</p>
-        </div>
-      </div>
-    `;
-  }
+  // Store artikel reference
+  window._currentArtikel = artikel;
   
-  return `
-    <div class="section-card">
-      <h3 class="section-title">🔧 Komponenten-Attach Rates</h3>
-      <p class="section-hint">Wie oft wird jede Komponente zusätzlich zum Package verkauft?</p>
-      
-      <div class="components-grid">
-        ${components.map((comp, idx) => `
-          <div class="component-card">
-            <div class="component-header">
-              <span class="component-icon">📦</span>
-              <span class="component-name">${comp.name || `Komponente ${idx + 1}`}</span>
-            </div>
-            <div class="component-body">
-              <label class="component-label">Attach Rate (%)</label>
-              <input 
-                type="number" 
-                id="attach-rate-${idx}" 
-                value="${data.attach_rates[idx] || 50}"
-                class="component-input"
-                min="0"
-                max="100"
-                placeholder="50"
-              >
-              <span class="component-hint">z.B. 80% = bei 80% der Packages dabei</span>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
+  // AUTO-CALCULATE
+  autoCalculateForecast();
 }
 
 // ==========================================
@@ -273,26 +185,34 @@ function initializePackageData(artikel) {
     release_date: artikel.release_datum || new Date().toISOString().slice(0, 7),
     time_horizon: artikel.zeitraum || 5,
     
-    variants: {
-      small: { price: 5000, cost: 2000 },
-      medium: { price: 10000, cost: 4000 },
-      large: { price: 20000, cost: 8000 }
-    },
+    price_small: 5000,
+    price_medium: 10000,
+    price_large: 20000,
+    cost_small: 2000,
+    cost_medium: 4000,
+    cost_large: 8000,
     
-    mix: {
-      small: 50,
-      medium: 30,
-      large: 20
-    },
+    volume_year1: 100,
+    mix_small: 50,
+    mix_medium: 30,
+    mix_large: 20,
     
-    total_volume_year1: 100,
-    growth_model: 'realistisch',
+    volume_model: 'konservativ',
+    price_model: 'konstant',
+    cost_model: 'konstant',
     
-    attach_rates: (artikel.components || []).map(() => 50),
-    
-    calculated: false,
-    forecast: null
+    calculated: false
   };
+}
+
+// ==========================================
+// AUTO-CALCULATE
+// ==========================================
+
+function autoCalculateForecast() {
+  setTimeout(() => {
+    window.calculatePackageForecast();
+  }, 100);
 }
 
 // ==========================================
@@ -301,181 +221,185 @@ function initializePackageData(artikel) {
 
 function attachPackageEventListeners(artikel) {
   // Horizon buttons
-  document.querySelectorAll('.horizon-btn').forEach(btn => {
+  document.querySelectorAll('.btn-horizon').forEach(btn => {
     btn.addEventListener('click', function() {
-      document.querySelectorAll('.horizon-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
+      window.calculatePackageForecast();
     });
   });
   
-  // Variant prices - real-time DB2 update
-  ['small', 'medium', 'large'].forEach(variant => {
-    const priceInput = document.getElementById(`pkg-price-${variant}`);
-    const costInput = document.getElementById(`pkg-cost-${variant}`);
-    
-    if (priceInput && costInput) {
-      const updateDB2 = () => {
-        const price = parseFloat(priceInput.value) || 0;
-        const cost = parseFloat(costInput.value) || 0;
-        const db2 = price - cost;
-        const db2Element = document.getElementById(`db2-${variant}`);
-        if (db2Element) {
-          db2Element.textContent = formatCurrency(db2);
-        }
-      };
-      
-      priceInput.addEventListener('input', updateDB2);
-      costInput.addEventListener('input', updateDB2);
+  // Real-time KPI updates
+  const inputs = [
+    'pkg-volume', 'pkg-small-price', 'pkg-medium-price', 'pkg-large-price',
+    'pkg-small-cost', 'pkg-medium-cost', 'pkg-large-cost',
+    'pkg-mix-small', 'pkg-mix-medium', 'pkg-mix-large'
+  ];
+  
+  inputs.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', updateKPIs);
+      input.addEventListener('blur', () => window.calculatePackageForecast());
     }
   });
   
-  // Mix sliders - enforce 100% total
-  ['small', 'medium', 'large'].forEach(variant => {
-    const slider = document.getElementById(`mix-slider-${variant}`);
-    if (slider) {
-      slider.addEventListener('input', function() {
-        updateMixValues();
-      });
-    }
+  // Radio buttons - auto-recalculate
+  document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', () => window.calculatePackageForecast());
   });
+  
+  // Initial KPI update
+  updateKPIs();
 }
 
-function updateMixValues() {
-  const small = parseInt(document.getElementById('mix-slider-small').value) || 0;
-  const medium = parseInt(document.getElementById('mix-slider-medium').value) || 0;
-  const large = parseInt(document.getElementById('mix-slider-large').value) || 0;
+function updateKPIs() {
+  const volume = parseFloat(document.getElementById('pkg-volume')?.value) || 0;
+  const mixSmall = parseFloat(document.getElementById('pkg-mix-small')?.value) || 0;
+  const mixMedium = parseFloat(document.getElementById('pkg-mix-medium')?.value) || 0;
+  const mixLarge = parseFloat(document.getElementById('pkg-mix-large')?.value) || 0;
   
-  const total = small + medium + large;
+  const priceSmall = parseFloat(document.getElementById('pkg-small-price')?.value) || 0;
+  const priceMedium = parseFloat(document.getElementById('pkg-medium-price')?.value) || 0;
+  const priceLarge = parseFloat(document.getElementById('pkg-large-price')?.value) || 0;
   
-  // Update displays
-  document.getElementById('mix-value-small').textContent = `${small}%`;
-  document.getElementById('mix-value-medium').textContent = `${medium}%`;
-  document.getElementById('mix-value-large').textContent = `${large}%`;
-  document.getElementById('mix-sum').textContent = total;
+  const costSmall = parseFloat(document.getElementById('pkg-small-cost')?.value) || 0;
+  const costMedium = parseFloat(document.getElementById('pkg-medium-cost')?.value) || 0;
+  const costLarge = parseFloat(document.getElementById('pkg-large-cost')?.value) || 0;
   
-  // Visual feedback if not 100%
-  const totalElement = document.getElementById('mix-total');
-  if (total !== 100) {
-    totalElement.style.color = '#ef4444';
-    totalElement.style.fontWeight = '700';
-  } else {
-    totalElement.style.color = '#10b981';
-    totalElement.style.fontWeight = '600';
-  }
+  // Calculate volumes
+  const volSmall = volume * (mixSmall / 100);
+  const volMedium = volume * (mixMedium / 100);
+  const volLarge = volume * (mixLarge / 100);
+  
+  // Calculate revenue & costs
+  const revSmall = volSmall * priceSmall;
+  const revMedium = volMedium * priceMedium;
+  const revLarge = volLarge * priceLarge;
+  const revenue = revSmall + revMedium + revLarge;
+  
+  const costSmallTotal = volSmall * costSmall;
+  const costMediumTotal = volMedium * costMedium;
+  const costLargeTotal = volLarge * costLarge;
+  const totalCost = costSmallTotal + costMediumTotal + costLargeTotal;
+  
+  const db2 = revenue - totalCost;
+  const margin = revenue > 0 ? (db2 / revenue) * 100 : 0;
+  
+  document.getElementById('kpi-revenue').textContent = formatCurrency(revenue);
+  document.getElementById('kpi-db2').textContent = formatCurrency(db2);
+  document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
 }
 
 // ==========================================
 // CALCULATION
 // ==========================================
 
-window.calculatePackageModel = function() {
-  console.log('📊 Calculating Package Model...');
+window.calculatePackageForecast = function() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
   
-  // Collect data
+  // Collect input data
   const data = {
-    release_date: document.getElementById('pkg-date').value,
-    time_horizon: parseInt(document.querySelector('.horizon-btn.active')?.dataset.years) || 5,
+    release_date: document.getElementById('pkg-date')?.value || '2025-01',
+    time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
     
-    variants: {
-      small: {
-        price: parseFloat(document.getElementById('pkg-price-small').value) || 0,
-        cost: parseFloat(document.getElementById('pkg-cost-small').value) || 0
-      },
-      medium: {
-        price: parseFloat(document.getElementById('pkg-price-medium').value) || 0,
-        cost: parseFloat(document.getElementById('pkg-cost-medium').value) || 0
-      },
-      large: {
-        price: parseFloat(document.getElementById('pkg-price-large').value) || 0,
-        cost: parseFloat(document.getElementById('pkg-cost-large').value) || 0
-      }
-    },
+    price_small: parseFloat(document.getElementById('pkg-small-price')?.value) || 0,
+    price_medium: parseFloat(document.getElementById('pkg-medium-price')?.value) || 0,
+    price_large: parseFloat(document.getElementById('pkg-large-price')?.value) || 0,
     
-    mix: {
-      small: parseInt(document.getElementById('mix-slider-small').value) || 0,
-      medium: parseInt(document.getElementById('mix-slider-medium').value) || 0,
-      large: parseInt(document.getElementById('mix-slider-large').value) || 0
-    },
+    cost_small: parseFloat(document.getElementById('pkg-small-cost')?.value) || 0,
+    cost_medium: parseFloat(document.getElementById('pkg-medium-cost')?.value) || 0,
+    cost_large: parseFloat(document.getElementById('pkg-large-cost')?.value) || 0,
     
-    total_volume_year1: parseInt(document.getElementById('pkg-total-volume').value) || 0,
-    growth_model: document.getElementById('pkg-growth-model').value
+    volume_year1: parseFloat(document.getElementById('pkg-volume')?.value) || 0,
+    mix_small: parseFloat(document.getElementById('pkg-mix-small')?.value) || 0,
+    mix_medium: parseFloat(document.getElementById('pkg-mix-medium')?.value) || 0,
+    mix_large: parseFloat(document.getElementById('pkg-mix-large')?.value) || 0,
+    
+    volume_model: document.querySelector('input[name="pkg-volume-model"]:checked')?.value || 'konstant',
+    price_model: document.querySelector('input[name="pkg-price-model"]:checked')?.value || 'konstant',
+    cost_model: document.querySelector('input[name="pkg-cost-model"]:checked')?.value || 'konstant'
   };
   
   // Validate
-  const mixTotal = data.mix.small + data.mix.medium + data.mix.large;
-  if (mixTotal !== 100) {
-    alert(`⚠️ Mix muss 100% ergeben (aktuell: ${mixTotal}%)`);
-    return;
-  }
-  
-  if (!data.total_volume_year1) {
-    alert('⚠️ Bitte Gesamtvolumen eingeben!');
+  if (!data.volume_year1) {
+    console.log('⚠️ Waiting for complete input...');
     return;
   }
   
   // Calculate forecast
-  const forecast = calculatePackageForecast(data);
+  const forecast = calculateForecast(data);
   
-  // Render preview
-  renderPackagePreview(forecast, data);
+  // Render forecast table
+  renderForecastTable(forecast, 'forecast-table-container');
   
-  console.log('✅ Package Model berechnet');
+  // Save to artikel
+  artikel.package_model_data = {
+    ...artikel.package_model_data,
+    ...data,
+    calculated: true,
+    forecast: forecast
+  };
 };
 
-function calculatePackageForecast(data) {
+function calculateForecast(data) {
   const years = data.time_horizon;
   const startYear = parseInt(data.release_date.split('-')[0]);
   
   const forecast = {
+    name: window._currentArtikel?.name || 'Package',
+    type: 'package',
     years: [],
-    volumes: { total: [], small: [], medium: [], large: [] },
-    revenues: { total: [], small: [], medium: [], large: [] },
-    costs: { total: [], small: [], medium: [], large: [] },
-    db2: { total: [], small: [], medium: [], large: [] }
+    volume: [],
+    price: [],
+    cost: [],
+    revenue: [],
+    totalCost: [],
+    db2: [],
+    db2Margin: []
   };
   
   for (let i = 0; i < years; i++) {
     const year = startYear + i;
     forecast.years.push(year);
     
-    // Calculate total volume for this year
-    const totalVolume = calculateVolume(data.total_volume_year1, data.growth_model, i);
-    forecast.volumes.total.push(totalVolume);
+    // Calculate total volume
+    const baseVolume = data.volume_year1;
+    const volume = calculateVolume(baseVolume, data.volume_model, i);
     
-    // Distribute by variant
-    const volumeSmall = totalVolume * (data.mix.small / 100);
-    const volumeMedium = totalVolume * (data.mix.medium / 100);
-    const volumeLarge = totalVolume * (data.mix.large / 100);
+    // Calculate volumes per variant
+    const volSmall = volume * (data.mix_small / 100);
+    const volMedium = volume * (data.mix_medium / 100);
+    const volLarge = volume * (data.mix_large / 100);
     
-    forecast.volumes.small.push(volumeSmall);
-    forecast.volumes.medium.push(volumeMedium);
-    forecast.volumes.large.push(volumeLarge);
+    // Calculate prices (apply price model)
+    const priceSmall = calculatePrice(data.price_small, data.price_model, i);
+    const priceMedium = calculatePrice(data.price_medium, data.price_model, i);
+    const priceLarge = calculatePrice(data.price_large, data.price_model, i);
     
-    // Calculate revenues
-    const revSmall = volumeSmall * data.variants.small.price;
-    const revMedium = volumeMedium * data.variants.medium.price;
-    const revLarge = volumeLarge * data.variants.large.price;
+    // Calculate costs (apply cost model)
+    const costSmall = calculateCost(data.cost_small, data.cost_model, i);
+    const costMedium = calculateCost(data.cost_medium, data.cost_model, i);
+    const costLarge = calculateCost(data.cost_large, data.cost_model, i);
     
-    forecast.revenues.small.push(revSmall);
-    forecast.revenues.medium.push(revMedium);
-    forecast.revenues.large.push(revLarge);
-    forecast.revenues.total.push(revSmall + revMedium + revLarge);
+    // Weighted average price & cost
+    const avgPrice = (volSmall * priceSmall + volMedium * priceMedium + volLarge * priceLarge) / volume;
+    const avgCost = (volSmall * costSmall + volMedium * costMedium + volLarge * costLarge) / volume;
     
-    // Calculate costs
-    const costSmall = volumeSmall * data.variants.small.cost;
-    const costMedium = volumeMedium * data.variants.medium.cost;
-    const costLarge = volumeLarge * data.variants.large.cost;
+    // Calculate outputs
+    const revenue = volSmall * priceSmall + volMedium * priceMedium + volLarge * priceLarge;
+    const totalCost = volSmall * costSmall + volMedium * costMedium + volLarge * costLarge;
+    const db2 = revenue - totalCost;
+    const db2Margin = revenue > 0 ? (db2 / revenue) * 100 : 0;
     
-    forecast.costs.small.push(costSmall);
-    forecast.costs.medium.push(costMedium);
-    forecast.costs.large.push(costLarge);
-    forecast.costs.total.push(costSmall + costMedium + costLarge);
-    
-    // Calculate DB2
-    forecast.db2.small.push(revSmall - costSmall);
-    forecast.db2.medium.push(revMedium - costMedium);
-    forecast.db2.large.push(revLarge - costLarge);
-    forecast.db2.total.push((revSmall - costSmall) + (revMedium - costMedium) + (revLarge - costLarge));
+    forecast.volume.push(volume);
+    forecast.price.push(avgPrice);
+    forecast.cost.push(avgCost);
+    forecast.revenue.push(revenue);
+    forecast.totalCost.push(totalCost);
+    forecast.db2.push(db2);
+    forecast.db2Margin.push(db2Margin);
   }
   
   return forecast;
@@ -483,186 +407,46 @@ function calculatePackageForecast(data) {
 
 function calculateVolume(startVolume, model, yearIndex) {
   switch (model) {
+    case 'konstant':
+      return startVolume;
     case 'konservativ':
       return startVolume * Math.pow(1.05, yearIndex);
-    
     case 'realistisch':
-      const t = yearIndex;
-      const maxYears = 5;
-      const growthPhase = Math.min(t / (maxYears * 0.4), 1);
-      const maturePhase = t > (maxYears * 0.4) ? (t - maxYears * 0.4) / (maxYears * 0.3) : 0;
-      const declinePhase = t > (maxYears * 0.7) ? (t - maxYears * 0.7) / (maxYears * 0.3) : 0;
-      
-      let multiplier = 1;
-      if (growthPhase < 1) {
-        multiplier = 1 + growthPhase * 0.5;
-      } else if (maturePhase < 1) {
-        multiplier = 1.5 + maturePhase * 0.3;
-      } else {
-        multiplier = 1.8 - declinePhase * 0.2;
-      }
-      return startVolume * multiplier;
-    
+      const t = yearIndex / 5;
+      const multiplier = 1 / (1 + Math.exp(-10 * (t - 0.5)));
+      return startVolume * (1 + multiplier * 0.5);
     case 'optimistisch':
       return startVolume * Math.pow(1.15, yearIndex);
-    
-    case 'hockey-stick':
-      if (yearIndex <= 1) {
-        return startVolume * Math.pow(1.10, yearIndex);
-      } else {
-        return startVolume * 1.10 * Math.pow(1.40, yearIndex - 1);
-      }
-    
     default:
       return startVolume;
   }
 }
 
-// ==========================================
-// PREVIEW RENDERING
-// ==========================================
-
-function renderPackagePreview(forecast, data) {
-  const container = document.getElementById('package-preview');
-  if (!container) return;
-  
-  container.innerHTML = `
-    <div class="preview-section">
-      <h3 class="preview-title">📊 Package Revenue Forecast</h3>
-      
-      <!-- Summary Cards -->
-      <div class="summary-cards">
-        <div class="summary-card" style="border-color: #10b981;">
-          <div class="summary-label">Small Packages (${data.mix.small}%)</div>
-          <div class="summary-value" style="color: #10b981;">
-            ${formatCurrency(forecast.revenues.small.reduce((a, b) => a + b, 0))}
-          </div>
-          <div class="summary-hint">Gesamt über ${forecast.years.length} Jahre</div>
-        </div>
-        
-        <div class="summary-card" style="border-color: #3b82f6;">
-          <div class="summary-label">Medium Packages (${data.mix.medium}%)</div>
-          <div class="summary-value" style="color: #3b82f6;">
-            ${formatCurrency(forecast.revenues.medium.reduce((a, b) => a + b, 0))}
-          </div>
-          <div class="summary-hint">Gesamt über ${forecast.years.length} Jahre</div>
-        </div>
-        
-        <div class="summary-card" style="border-color: #8b5cf6;">
-          <div class="summary-label">Large Packages (${data.mix.large}%)</div>
-          <div class="summary-value" style="color: #8b5cf6;">
-            ${formatCurrency(forecast.revenues.large.reduce((a, b) => a + b, 0))}
-          </div>
-          <div class="summary-hint">Gesamt über ${forecast.years.length} Jahre</div>
-        </div>
-        
-        <div class="summary-card" style="border-color: #1e3a8a; background: #eff6ff;">
-          <div class="summary-label">GESAMT Revenue</div>
-          <div class="summary-value" style="color: #1e3a8a; font-size: 28px;">
-            ${formatCurrency(forecast.revenues.total.reduce((a, b) => a + b, 0))}
-          </div>
-          <div class="summary-hint">Über ${forecast.years.length} Jahre</div>
-        </div>
-      </div>
-      
-      <!-- Forecast Table -->
-      <div class="forecast-table-container">
-        <table class="forecast-table">
-          <thead>
-            <tr>
-              <th>Jahr</th>
-              ${forecast.years.map(year => `<th>${year}</th>`).join('')}
-              <th style="background: #f3f4f6;">Σ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Volumen -->
-            <tr style="background: #fafafa;">
-              <td colspan="${forecast.years.length + 2}" style="font-weight: 600; padding: 8px;">Volumen (Anzahl Packages)</td>
-            </tr>
-            <tr>
-              <td>Small</td>
-              ${forecast.volumes.small.map(v => `<td>${formatNumber(v, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.volumes.small.reduce((a, b) => a + b, 0), 0)}</td>
-            </tr>
-            <tr>
-              <td>Medium</td>
-              ${forecast.volumes.medium.map(v => `<td>${formatNumber(v, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.volumes.medium.reduce((a, b) => a + b, 0), 0)}</td>
-            </tr>
-            <tr>
-              <td>Large</td>
-              ${forecast.volumes.large.map(v => `<td>${formatNumber(v, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.volumes.large.reduce((a, b) => a + b, 0), 0)}</td>
-            </tr>
-            <tr style="background: #f9fafb; font-weight: 600;">
-              <td>GESAMT</td>
-              ${forecast.volumes.total.map(v => `<td>${formatNumber(v, 0)}</td>`).join('')}
-              <td style="font-weight: 700;">${formatNumber(forecast.volumes.total.reduce((a, b) => a + b, 0), 0)}</td>
-            </tr>
-            
-            <!-- Revenue -->
-            <tr style="background: #fafafa;">
-              <td colspan="${forecast.years.length + 2}" style="font-weight: 600; padding: 8px;">Umsatz (T€)</td>
-            </tr>
-            <tr>
-              <td>Small</td>
-              ${forecast.revenues.small.map(r => `<td>${formatNumber(r / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.revenues.small.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr>
-              <td>Medium</td>
-              ${forecast.revenues.medium.map(r => `<td>${formatNumber(r / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.revenues.medium.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr>
-              <td>Large</td>
-              ${forecast.revenues.large.map(r => `<td>${formatNumber(r / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600;">${formatNumber(forecast.revenues.large.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr style="background: #dbeafe; font-weight: 600;">
-              <td>GESAMT</td>
-              ${forecast.revenues.total.map(r => `<td>${formatNumber(r / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 700; color: #1e3a8a;">${formatNumber(forecast.revenues.total.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            
-            <!-- DB2 -->
-            <tr style="background: #fafafa;">
-              <td colspan="${forecast.years.length + 2}" style="font-weight: 600; padding: 8px;">DB2 (T€)</td>
-            </tr>
-            <tr>
-              <td>Small</td>
-              ${forecast.db2.small.map(db => `<td style="color: #10b981;">${formatNumber(db / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600; color: #10b981;">${formatNumber(forecast.db2.small.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr>
-              <td>Medium</td>
-              ${forecast.db2.medium.map(db => `<td style="color: #3b82f6;">${formatNumber(db / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600; color: #3b82f6;">${formatNumber(forecast.db2.medium.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr>
-              <td>Large</td>
-              ${forecast.db2.large.map(db => `<td style="color: #8b5cf6;">${formatNumber(db / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 600; color: #8b5cf6;">${formatNumber(forecast.db2.large.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-            <tr style="background: #dcfce7; font-weight: 600;">
-              <td>GESAMT</td>
-              ${forecast.db2.total.map(db => `<td style="color: #059669;">${formatNumber(db / 1000, 0)}</td>`).join('')}
-              <td style="font-weight: 700; color: #059669;">${formatNumber(forecast.db2.total.reduce((a, b) => a + b, 0) / 1000, 0)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
+function calculatePrice(startPrice, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return startPrice;
+    case 'inflation':
+      return startPrice * Math.pow(1.02, yearIndex);
+    case 'premium':
+      return startPrice * Math.pow(1.05, yearIndex);
+    default:
+      return startPrice;
+  }
 }
 
-window.resetPackageModel = function() {
-  const confirmed = confirm('Möchten Sie alle Eingaben zurücksetzen?');
-  if (!confirmed) return;
-  
-  location.reload();
-};
+function calculateCost(startCost, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return startCost;
+    case 'inflation':
+      return startCost * Math.pow(1.02, yearIndex);
+    case 'learning':
+      return startCost * Math.pow(0.95, yearIndex);
+    default:
+      return startCost;
+  }
+}
 
 // ==========================================
 // HELPER FUNCTIONS
@@ -688,126 +472,83 @@ function formatNumber(value, decimals = 0) {
 // STYLES
 // ==========================================
 
-function renderPackageStyles() {
+function renderCompactStyles() {
   return `
     <style>
-      .package-model-container {
-        padding: 24px;
+      .package-model-compact {
+        padding: 12px;
         background: #f9fafb;
-        min-height: 600px;
       }
       
-      .package-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e5e7eb;
-      }
-      
-      .package-title {
-        margin: 0;
-        font-size: 24px;
-        color: #1f2937;
-      }
-      
-      .package-subtitle {
-        margin: 4px 0 0;
-        color: #6b7280;
-        font-size: 14px;
-      }
-      
-      .package-badge {
-        padding: 8px 16px;
-        background: #8b5cf6;
-        color: white;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      
-      .section-card {
+      .section-compact {
         background: white;
         border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
       }
       
-      .section-title {
-        margin: 0 0 16px;
-        font-size: 16px;
+      .section-title-compact {
+        margin: 0 0 10px;
+        font-size: 14px;
         font-weight: 600;
         color: #1f2937;
       }
       
-      .section-hint {
-        margin: -8px 0 16px;
-        color: #6b7280;
-        font-size: 13px;
-      }
-      
-      .input-row {
+      .input-row-compact {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
       }
       
-      .input-group {
+      .input-group-compact {
         display: flex;
         flex-direction: column;
       }
       
-      .input-label {
-        margin-bottom: 6px;
-        font-size: 13px;
+      .input-group-compact label {
+        margin-bottom: 4px;
+        font-size: 11px;
         font-weight: 600;
         color: #374151;
       }
       
-      .form-input, .form-select {
-        padding: 10px 12px;
+      .input-compact {
+        padding: 6px 8px;
         border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 14px;
+        border-radius: 4px;
+        font-size: 13px;
       }
       
-      .form-input:focus, .form-select:focus {
+      .input-compact:focus {
         outline: none;
         border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
       }
       
-      .input-hint {
-        margin-top: 4px;
-        font-size: 11px;
-        color: #9ca3af;
-      }
-      
-      .horizon-buttons {
+      .horizon-compact {
         display: flex;
-        gap: 8px;
+        gap: 4px;
       }
       
-      .horizon-btn {
+      .btn-horizon {
         flex: 1;
-        padding: 10px;
-        border: 2px solid #d1d5db;
-        border-radius: 6px;
+        padding: 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
         background: white;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
       }
       
-      .horizon-btn:hover {
+      .btn-horizon:hover {
         border-color: #3b82f6;
         background: #eff6ff;
       }
       
-      .horizon-btn.active {
+      .btn-horizon.active {
         border-color: #2563eb;
         background: #2563eb;
         color: white;
@@ -816,344 +557,110 @@ function renderPackageStyles() {
       /* Variants Grid */
       .variants-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
       }
       
       .variant-card {
-        border: 2px solid;
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      
-      .variant-header {
-        padding: 12px;
-        color: white;
-        text-align: center;
-      }
-      
-      .variant-title {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-      }
-      
-      .variant-body {
-        padding: 16px;
-      }
-      
-      .variant-input-group {
-        margin-bottom: 12px;
-      }
-      
-      .variant-label {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #6b7280;
-      }
-      
-      .variant-input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 14px;
-      }
-      
-      .variant-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-      }
-      
-      .variant-kpi {
-        padding: 12px;
-        background: #f9fafb;
-        border-radius: 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .variant-kpi-label {
-        font-size: 12px;
-        color: #6b7280;
-        font-weight: 600;
-      }
-      
-      .variant-kpi-value {
-        font-size: 18px;
-        font-weight: 700;
-      }
-      
-      /* Mix Section */
-      .mix-section {
-        padding: 20px;
-        background: #f9fafb;
-        border-radius: 8px;
-      }
-      
-      .mix-sliders {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        margin-bottom: 16px;
-      }
-      
-      .mix-slider-group {
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .mix-slider-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 6px;
-      }
-      
-      .mix-label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-      }
-      
-      .mix-value {
-        font-size: 13px;
-        font-weight: 700;
-        color: #1f2937;
-      }
-      
-      .mix-slider {
-        width: 100%;
-        height: 8px;
-        border-radius: 4px;
-        outline: none;
-        -webkit-appearance: none;
-        background: #e5e7eb;
-      }
-      
-      .mix-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--slider-color, #3b82f6);
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      }
-      
-      .mix-slider::-moz-range-thumb {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--slider-color, #3b82f6);
-        cursor: pointer;
-        border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      }
-      
-      .mix-total {
-        padding: 12px;
-        background: white;
-        border: 2px solid #e5e7eb;
-        border-radius: 6px;
-        text-align: center;
-        font-size: 14px;
-        font-weight: 600;
-        color: #6b7280;
-      }
-      
-      /* Components */
-      .components-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 16px;
-      }
-      
-      .component-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      
-      .component-header {
-        padding: 10px 12px;
-        background: #f9fafb;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      
-      .component-icon {
-        font-size: 16px;
-      }
-      
-      .component-name {
-        font-size: 13px;
-        font-weight: 600;
-        color: #1f2937;
-      }
-      
-      .component-body {
-        padding: 12px;
-      }
-      
-      .component-label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #6b7280;
-      }
-      
-      .component-input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        font-size: 14px;
-      }
-      
-      .component-hint {
-        display: block;
-        margin-top: 4px;
-        font-size: 11px;
-        color: #9ca3af;
-      }
-      
-      /* Action Buttons */
-      .action-buttons {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-        margin-bottom: 24px;
-      }
-      
-      .btn {
-        padding: 12px 24px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      
-      .btn-secondary {
-        background: #f3f4f6;
-        color: #374151;
-        border: 1px solid #d1d5db;
-      }
-      
-      .btn-secondary:hover {
-        background: #e5e7eb;
-      }
-      
-      .btn-primary {
-        background: #2563eb;
-        color: white;
-      }
-      
-      .btn-primary:hover {
-        background: #1d4ed8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-      }
-      
-      /* Preview */
-      .preview-container {
-        margin-top: 24px;
-      }
-      
-      .preview-section {
-        background: white;
-        border: 2px solid #3b82f6;
-        border-radius: 12px;
-        padding: 24px;
-      }
-      
-      .preview-title {
-        margin: 0 0 24px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #1f2937;
-      }
-      
-      .summary-cards {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-      }
-      
-      .summary-card {
-        padding: 16px;
-        background: white;
-        border: 2px solid;
-        border-radius: 8px;
-        text-align: center;
-      }
-      
-      .summary-label {
-        font-size: 12px;
-        color: #6b7280;
-        margin-bottom: 8px;
-        font-weight: 600;
-      }
-      
-      .summary-value {
-        font-size: 22px;
-        font-weight: 700;
-        margin-bottom: 4px;
-      }
-      
-      .summary-hint {
-        font-size: 11px;
-        color: #9ca3af;
-      }
-      
-      /* Forecast Table */
-      .forecast-table-container {
-        overflow-x: auto;
-      }
-      
-      .forecast-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-      }
-      
-      .forecast-table th {
         padding: 10px;
         background: #f9fafb;
         border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      
+      .variant-label {
+        font-size: 12px;
         font-weight: 600;
-        text-align: center;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+      
+      .input-hint {
+        font-size: 10px;
+        color: #6b7280;
+        margin-top: -4px;
+      }
+      
+      /* Inline KPIs */
+      .kpis-inline {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
+        margin-top: 8px;
+        border-top: 1px solid #e5e7eb;
         font-size: 12px;
       }
       
-      .forecast-table td {
-        padding: 8px;
-        border: 1px solid #e5e7eb;
-        text-align: right;
+      .kpi-inline strong {
+        color: #6b7280;
+        font-weight: 600;
       }
       
-      .forecast-table td:first-child {
-        text-align: left;
-        font-weight: 500;
-        background: #fafafa;
+      .kpi-positive {
+        color: #059669;
+        font-weight: 600;
       }
       
-      @media (max-width: 1200px) {
+      /* Models */
+      .models-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .model-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      
+      .model-label-compact {
+        min-width: 140px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+      }
+      
+      .model-radios {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      
+      .model-radios label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: #1f2937;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      
+      .model-radios input[type="radio"] {
+        cursor: pointer;
+      }
+      
+      @media (max-width: 768px) {
+        .input-row-compact {
+          grid-template-columns: 1fr;
+        }
+        
         .variants-grid {
           grid-template-columns: 1fr;
         }
         
-        .summary-cards {
-          grid-template-columns: repeat(2, 1fr);
+        .kpis-inline {
+          flex-direction: column;
+          gap: 6px;
+        }
+        
+        .model-row {
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
     </style>
