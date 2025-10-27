@@ -162,7 +162,7 @@ function renderCleanHierarchy(hierarchy) {
                             <div style="margin-bottom: 12px;">
                                 <!-- Variante (S/M/L) -->
                                 <div onclick="selectArtikel('${v.variant.id}')"
-                                     data-artikel-id="${node.main.id}"
+                                     data-artikel-id="${v.variant.id}"
                                      style="padding: 10px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; margin-bottom: 6px;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <span>📦</span>
@@ -175,7 +175,7 @@ function renderCleanHierarchy(hierarchy) {
                                     <div style="margin-left: 20px;">
                                         ${v.components.map(comp => `
                                             <div onclick="selectArtikel('${comp.id}')"
-                                                 data-artikel-id="${node.main.id}"
+                                                 data-artikel-id="${comp.id}"
                                                  style="padding: 8px 12px; background: #fafafa; border-left: 2px solid #e5e7eb; margin-bottom: 2px; cursor: pointer; font-size: 14px;"
                                                  onmouseover="this.style.background='#f3f4f6'"
                                                  onmouseout="this.style.background='#fafafa'">
@@ -199,7 +199,7 @@ function renderCleanHierarchy(hierarchy) {
             // Einzelner Artikel (Robotor, Sensor, etc.)
             return `
                 <div onclick="selectArtikel('${node.artikel.id}')"
-                     data-artikel-id="${node.main.id}"
+                     data-artikel-id="${node.artikel.id}"
                      style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; margin-bottom: 8px;"
                      onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#fafafa'"
                      onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
@@ -249,4 +249,5 @@ window.selectArtikel = function(artikelId) {
     // ✅ HIER KOMMT MEIN ROUTER INS SPIEL!
     renderRevenueModel(artikel, 'detail-container');
 };
+
 
