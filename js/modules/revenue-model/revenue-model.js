@@ -2,6 +2,7 @@
 
 import { renderRevenueModel } from './revenue-model-router.js';
 import { renderMultiArtikelPlanning } from './hardware-model-multi.js';
+import { renderArtikelDropdown } from './artikel-dropdown-selector.js';
 
 console.log('💰 Revenue Model Module initialisiert');
 
@@ -423,3 +424,4 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
+
