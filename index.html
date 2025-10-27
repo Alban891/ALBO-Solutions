@@ -782,36 +782,29 @@
 
         // Special handling for different tabs
         if (tabName === 'artikel') {
-        console.log('🧩 Loading Artikel-Tab...');
-        const projektId = window.cfoDashboard.currentProjekt;
-    
-        if (projektId && window.renderArtikelListByProjekt) {
-            try {
-                window.renderArtikelListByProjekt(projektId);
-                console.log('✅ Artikel-Liste gerendert für Projekt:', projektId);
-            } catch (err) {
-                console.error('❌ Fehler beim Rendern der Artikelliste:', err);
+            console.log('🧩 Loading Artikel-Tab...');
+            const projektId = window.cfoDashboard.currentProjekt;
+        
+            if (projektId && window.renderArtikelListByProjekt) {
+                try {
+                    window.renderArtikelListByProjekt(projektId);
+                    console.log('✅ Artikel-Liste gerendert für Projekt:', projektId);
+                } catch (err) {
+                    console.error('❌ Fehler beim Rendern der Artikelliste:', err);
+                }
+            } else {
+                console.warn('⚠️ Kein Projekt gesetzt oder renderArtikelListByProjekt nicht verfügbar');
             }
-        } else {
-            console.warn('⚠️ Kein Projekt gesetzt oder renderArtikelListByProjekt nicht verfügbar');
-        }
-    
-        // State aktualisieren
-        if (window.state) {
-            window.state.artikelViewMode = 'list';
-            window.state.currentArtikel = null;
-            window.state.saveState();
-        }
-    }
-
-            
-            // Set artikel view mode to list
+        
+            // State aktualisieren
             if (window.state) {
                 window.state.artikelViewMode = 'list';
                 window.state.currentArtikel = null;
                 window.state.saveState();
             }
+        
         }
+
         else if (tabName === 'uebersicht') {
             // Import und render Übersicht (Executive Summary)
             import('./js/modules/uebersicht.js').then(module => {
