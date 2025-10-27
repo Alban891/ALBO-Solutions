@@ -17,10 +17,17 @@ function initRevenueModel() {
     const container = document.getElementById('projekt-tab-revenue-model');
     if (!container) return;
     
-    // Verwende window.cfoDashboard.state statt import
-    const state = window.cfoDashboard?.state;
+    // Debug: Finde den State
+    console.log('Suche State...');
+    console.log('window.state:', window.state);
+    console.log('window.projektState:', window.projektState);
+    console.log('window.cfoDashboard:', window.cfoDashboard);
+    
+    // Versuche verschiedene State-Locations
+    const state = window.state || window.projektState || window.cfoDashboard?.state;
+    
     if (!state) {
-        container.innerHTML = '<p style="text-align:center; padding:40px;">State nicht verfügbar</p>';
+        container.innerHTML = '<p style="text-align:center; padding:40px;">State nicht gefunden. Check Console für Debug-Info.</p>';
         return;
     }
     
@@ -30,14 +37,27 @@ function initRevenueModel() {
         return;
     }
     
-    // Artikel aus State laden
-    const artikel = state.getArtikelByProjekt(projektId);
+    console.log('Projekt ID:', projektId);
+    
+    // Versuche Artikel zu laden
+    let artikel = null;
+    
+    // Probiere verschiedene Methoden
+    if (typeof state.getArtikelByProjekt === 'function') {
+        artikel = state.getArtikelByProjekt(projektId);
+    } else if (state.artikel) {
+        // Falls direkter Zugriff
+        artikel = Object.values(state.artikel).filter(a => a.projekt_id === projektId);
+    }
+    
+    console.log('Gefundene Artikel:', artikel);
     
     if (!artikel || artikel.length === 0) {
         container.innerHTML = `
             <div style="padding: 40px; text-align: center;">
                 <h3>Keine Artikel vorhanden</h3>
                 <p>Bitte erstelle zuerst Artikel im Artikel-Tab</p>
+                <small style="color:#999;">Debug: ProjektID = ${projektId}</small>
             </div>
         `;
         return;
@@ -46,7 +66,7 @@ function initRevenueModel() {
     // HTML mit Artikel-Daten generieren
     container.innerHTML = `
         <div style="padding: 24px;">
-            <h3>💰 Revenue Model - ${artikel.length} Artikel</h3>
+            <h3>💰 Revenue Model - ${artikel.length} Artikel gefunden</h3>
             
             <!-- Artikel-Liste -->
             <div style="margin-top: 24px;">
