@@ -28,8 +28,8 @@ function initRevenueModel() {
         return;
     }
     
-    // Baue Package-Hierarchie auf
-    const hierarchy = buildPackageHierarchy(artikel);
+    // Baue Hierarchie basierend auf parent_package_id
+    const hierarchy = buildHierarchyFromParentIds(artikel);
     
     container.innerHTML = `
         <div style="display: flex; height: calc(100vh - 300px); gap: 24px; padding: 24px;">
@@ -40,7 +40,7 @@ function initRevenueModel() {
                     <h3 style="margin: 0; font-size: 16px;">📋 Artikel-Struktur</h3>
                 </div>
                 <div id="artikel-tree" style="padding: 16px; overflow-y: auto; max-height: calc(100% - 60px);">
-                    ${renderPackageHierarchy(hierarchy)}
+                    ${renderHierarchy(hierarchy)}
                 </div>
             </div>
             
@@ -50,7 +50,6 @@ function initRevenueModel() {
                     <div style="text-align: center; padding: 80px 40px; color: #9ca3af;">
                         <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
                         <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
-                        <p style="font-size: 14px;">Klicken Sie links auf einen Artikel oder Package</p>
                     </div>
                 </div>
             </div>
@@ -61,98 +60,141 @@ function initRevenueModel() {
 }
 
 // ============================================
-// PACKAGE HIERARCHIE AUFBAUEN
+// HIERARCHIE AUS PARENT_PACKAGE_ID AUFBAUEN
 // ============================================
 
-function buildPackageHierarchy(artikel) {
+function buildHierarchyFromParentIds(artikel) {
     const hierarchy = [];
     const processed = new Set();
     
-    // Finde alle Parent-Packages (die ohne parent_package_id)
-    const parentPackages = artikel.filter(a => 
-        a.artikel_mode === 'package-parent' || 
-        (a.name && a.name.includes('Consulting') && !a.name.includes('-'))
-    );
+    // Schritt 1: Finde alle Top-Level Artikel (keine parent_package_id)
+    const topLevel = artikel.filter(a => !a.parent_package_id);
     
-    parentPackages.forEach(parent => {
-        // Finde die Package-Varianten (Small, Medium, Large)
-        const variants = artikel.filter(a => 
-            a.name && a.name.startsWith(parent.name.split(' - ')[0]) && 
-            (a.name.includes('Small') || a.name.includes('Medium') || a.name.includes('Large'))
+    topLevel.forEach(parent => {
+        // Prüfe ob es ein Package-System ist (hat Children)
+        const parentIdVariants = [
+            parent.id,
+            parent.id.replace('artikel-db-', ''),
+            'artikel-db-' + parent.id
+        ];
+        
+        const children = artikel.filter(child => 
+            child.parent_package_id && 
+            parentIdVariants.includes(child.parent_package_id)
         );
         
-        if (variants.length > 0) {
-            // Es ist ein Package-System mit Varianten
-            const node = {
-                type: 'package-parent',
-                artikel: parent,
-                variants: variants.map(v => ({
-                    artikel: v,
-                    komponenten: getPackageKomponenten(v) // Diese müssten aus den Package-Definitionen kommen
-                }))
-            };
-            hierarchy.push(node);
-            processed.add(parent.id);
-            variants.forEach(v => processed.add(v.id));
-        } else {
-            // Normales Package oder Standard-Artikel
+        if (children.length > 0) {
+            // Es ist ein Package mit Kindern
+            // Prüfe ob die Kinder selbst auch Kinder haben (nested packages)
+            const enrichedChildren = children.map(child => {
+                const childIdVariants = [
+                    child.id,
+                    child.id.replace('artikel-db-', ''),
+                    'artikel-db-' + child.id
+                ];
+                
+                const grandChildren = artikel.filter(gc => 
+                    gc.parent_package_id && 
+                    childIdVariants.includes(gc.parent_package_id)
+                );
+                
+                return {
+                    artikel: child,
+                    children: grandChildren
+                };
+            });
+            
             hierarchy.push({
-                type: 'standard',
+                type: 'package',
+                artikel: parent,
+                children: enrichedChildren
+            });
+            
+            processed.add(parent.id);
+            children.forEach(c => processed.add(c.id));
+            enrichedChildren.forEach(ec => {
+                ec.children.forEach(gc => processed.add(gc.id));
+            });
+            
+        } else if (parent.name && parent.name.includes('Consulting') && !parent.name.includes(' - ')) {
+            // Spezialfall: Hauptpackage ohne direkte Kinder (Varianten sind separate Artikel)
+            const variants = topLevel.filter(v => 
+                v.name && v.name.startsWith(parent.name) && 
+                (v.name.includes(' - Small') || v.name.includes(' - Medium') || v.name.includes(' - Large'))
+            );
+            
+            const variantsWithChildren = variants.map(v => {
+                const vIdVariants = [
+                    v.id,
+                    v.id.replace('artikel-db-', ''),
+                    'artikel-db-' + v.id
+                ];
+                
+                const vChildren = artikel.filter(child => 
+                    child.parent_package_id && 
+                    vIdVariants.includes(child.parent_package_id)
+                );
+                
+                return {
+                    artikel: v,
+                    children: vChildren
+                };
+            });
+            
+            if (variants.length > 0) {
+                hierarchy.push({
+                    type: 'package-system',
+                    artikel: parent,
+                    children: variantsWithChildren
+                });
+                
+                processed.add(parent.id);
+                variants.forEach(v => processed.add(v.id));
+                variantsWithChildren.forEach(vc => {
+                    vc.children.forEach(c => processed.add(c.id));
+                });
+            } else {
+                // Einzelner Artikel
+                hierarchy.push({
+                    type: 'single',
+                    artikel: parent
+                });
+                processed.add(parent.id);
+            }
+        } else {
+            // Einzelner Artikel ohne Kinder
+            hierarchy.push({
+                type: 'single',
                 artikel: parent
             });
             processed.add(parent.id);
         }
     });
     
-    // Rest der Artikel (nicht in Packages)
-    artikel.filter(a => !processed.has(a.id)).forEach(art => {
-        hierarchy.push({
-            type: 'standard',
-            artikel: art
-        });
+    // Füge nicht verarbeitete Artikel hinzu
+    artikel.filter(a => !processed.has(a.id)).forEach(a => {
+        if (!a.parent_package_id) {
+            hierarchy.push({
+                type: 'single',
+                artikel: a
+            });
+        }
     });
     
     return hierarchy;
 }
 
 // ============================================
-// PACKAGE KOMPONENTEN (aus Package-Definition)
+// RENDER HIERARCHIE
 // ============================================
 
-function getPackageKomponenten(packageArtikel) {
-    // Hier würden normalerweise die Komponenten aus der Package-Definition kommen
-    // Für Demo hardcoded basierend auf Package-Name
-    if (packageArtikel.name.includes('Small')) {
-        return [
-            { name: 'Einmalige Risikoanalyse', typ: 'Service', beschreibung: 'Der Kunde erhält eine einmalige Risikoanalyse' }
-        ];
-    } else if (packageArtikel.name.includes('Medium')) {
-        return [
-            { name: 'Hardware-Verkauf', typ: 'Hardware', beschreibung: 'PFC Controller' },
-            { name: 'Software-Verkauf', typ: 'Software', beschreibung: 'Lizenz für Datenanalyse' },
-            { name: 'Consulting', typ: 'Service', beschreibung: 'Berater-Team für Umsetzung' }
-        ];
-    } else if (packageArtikel.name.includes('Large')) {
-        return [
-            { name: 'Hardware-Verkauf', typ: 'Hardware', beschreibung: 'PFC Controller Premium' },
-            { name: 'Software-Verkauf', typ: 'Software', beschreibung: 'Enterprise Lizenz' },
-            { name: 'Consulting', typ: 'Service', beschreibung: 'Dediziertes Berater-Team' },
-            { name: 'Monatliche Risikoanalyse', typ: 'Service', beschreibung: 'Kontinuierliche Überwachung' }
-        ];
-    }
-    return [];
-}
-
-// ============================================
-// RENDER PACKAGE HIERARCHIE
-// ============================================
-
-function renderPackageHierarchy(hierarchy) {
+function renderHierarchy(hierarchy) {
     return hierarchy.map(node => {
-        if (node.type === 'package-parent') {
+        if (node.type === 'package-system') {
+            // Package mit Varianten (S/M/L)
             return `
-                <div class="package-tree" style="margin-bottom: 20px;">
-                    <!-- Parent Package -->
+                <div style="margin-bottom: 24px;">
+                    <!-- Hauptpackage -->
                     <div onclick="selectArtikel('${node.artikel.id}')" 
                          style="padding: 12px; background: #1e3a8a; color: white; border-radius: 8px; cursor: pointer; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -164,45 +206,74 @@ function renderPackageHierarchy(hierarchy) {
                         </div>
                     </div>
                     
-                    <!-- Package Varianten -->
-                    <div style="margin-left: 20px;">
-                        ${node.variants.map(variant => `
-                            <div style="margin-bottom: 12px;">
-                                <!-- Variante (S/M/L) -->
-                                <div onclick="selectArtikel('${variant.artikel.id}')"
-                                     style="padding: 10px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; margin-bottom: 4px;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <span>📦</span>
-                                        <strong>${variant.artikel.name.split(' - ').pop()}</strong>
-                                    </div>
+                    <!-- Varianten -->
+                    ${node.children.map(variant => `
+                        <div style="margin-left: 20px; margin-bottom: 12px;">
+                            <!-- Variante (S/M/L) -->
+                            <div onclick="selectArtikel('${variant.artikel.id}')"
+                                 style="padding: 10px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; margin-bottom: 6px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span>📦</span>
+                                    <strong>${variant.artikel.name.split(' - ').pop()}</strong>
                                 </div>
-                                
-                                <!-- Komponenten der Variante -->
-                                ${variant.komponenten.length > 0 ? `
-                                    <div style="margin-left: 20px;">
-                                        ${variant.komponenten.map(komp => `
-                                            <div onclick="selectKomponente('${variant.artikel.id}', '${komp.name}')"
-                                                 style="padding: 8px 12px; background: #fafafa; border-left: 2px solid #e5e7eb; margin-bottom: 2px; cursor: pointer; font-size: 14px;"
-                                                 onmouseover="this.style.background='#f3f4f6'"
-                                                 onmouseout="this.style.background='#fafafa'">
-                                                <div style="display: flex; align-items: center; gap: 6px;">
-                                                    <span style="color: #9ca3af; font-size: 12px;">└</span>
-                                                    <span>${komp.name}</span>
-                                                    <span style="background: #e5e7eb; color: #6b7280; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-left: auto;">
-                                                        ${komp.typ}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                ` : ''}
                             </div>
-                        `).join('')}
+                            
+                            <!-- Komponenten der Variante -->
+                            ${variant.children.length > 0 ? `
+                                <div style="margin-left: 20px;">
+                                    ${variant.children.map(comp => `
+                                        <div onclick="selectArtikel('${comp.id}')"
+                                             style="padding: 8px 12px; background: #fafafa; border-left: 2px solid #e5e7eb; margin-bottom: 2px; cursor: pointer; font-size: 14px;"
+                                             onmouseover="this.style.background='#f3f4f6'"
+                                             onmouseout="this.style.background='#fafafa'">
+                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                <span style="color: #9ca3af; font-size: 12px;">└</span>
+                                                <span>${comp.name || 'Komponente'}</span>
+                                                <span style="background: ${getTypeColor(comp.typ)}; color: white; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-left: auto;">
+                                                    ${comp.typ || 'Service'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else if (node.type === 'package') {
+            // Einfaches Package mit direkten Kindern
+            return `
+                <div style="margin-bottom: 16px;">
+                    <div onclick="selectArtikel('${node.artikel.id}')"
+                         style="padding: 12px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 8px; cursor: pointer; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>📦</span>
+                            <strong>${node.artikel.name}</strong>
+                            <span style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: auto;">
+                                PACKAGE
+                            </span>
+                        </div>
                     </div>
+                    
+                    ${node.children.map(child => `
+                        <div style="margin-left: 20px;">
+                            <div onclick="selectArtikel('${child.artikel.id}')"
+                                 style="padding: 8px 12px; background: #fafafa; border-left: 2px solid #e5e7eb; margin-bottom: 2px; cursor: pointer;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="color: #9ca3af;">└</span>
+                                    <span>${child.artikel.name}</span>
+                                    <span style="background: ${getTypeColor(child.artikel.typ)}; color: white; padding: 1px 6px; border-radius: 3px; font-size: 11px; margin-left: auto;">
+                                        ${child.artikel.typ || 'Standard'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             `;
         } else {
-            // Standard-Artikel
+            // Einzelner Artikel
             return `
                 <div onclick="selectArtikel('${node.artikel.id}')"
                      style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; margin-bottom: 8px;"
@@ -211,7 +282,7 @@ function renderPackageHierarchy(hierarchy) {
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span>📦</span>
                         <strong>${node.artikel.name}</strong>
-                        <span style="background: #e5e7eb; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: auto;">
+                        <span style="background: ${getTypeColor(node.artikel.typ)}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-left: auto;">
                             ${node.artikel.typ || 'Standard'}
                         </span>
                     </div>
@@ -221,9 +292,18 @@ function renderPackageHierarchy(hierarchy) {
     }).join('');
 }
 
-// ============================================
-// SELECTION HANDLERS  
-// ============================================
+// Helper für Typ-Farben
+function getTypeColor(typ) {
+    const colors = {
+        'Hardware': '#ef4444',
+        'Software': '#3b82f6',
+        'Software-Perpetual': '#6366f1',
+        'Service': '#10b981',
+        'Beratung': '#14b8a6',
+        'Package': '#8b5cf6'
+    };
+    return colors[typ] || '#6b7280';
+}
 
 window.selectArtikel = function(artikelId) {
     const artikel = window.revenueModelArtikel.find(a => a.id === artikelId);
@@ -231,20 +311,7 @@ window.selectArtikel = function(artikelId) {
     
     const container = document.getElementById('detail-container');
     container.innerHTML = `
-        <h2 style="margin: 0 0 24px;">
-            ${artikel.name}
-            <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 6px; font-size: 14px; margin-left: 12px;">
-                ${artikel.typ || 'Package'}
-            </span>
-        </h2>
-        <p>... Release, Zeithorizont, Startwerte, Entwicklungsmodelle ...</p>
-    `;
-};
-
-window.selectKomponente = function(packageId, komponentName) {
-    const container = document.getElementById('detail-container');
-    container.innerHTML = `
-        <h2 style="margin: 0 0 24px;">Komponente: ${komponentName}</h2>
-        <p>Detail-Konfiguration für diese Komponente...</p>
+        <h2>${artikel.name}</h2>
+        <p>Details werden geladen...</p>
     `;
 };
