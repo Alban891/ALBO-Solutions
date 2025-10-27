@@ -782,18 +782,28 @@
 
         // Special handling for different tabs
         if (tabName === 'artikel') {
-            // Render artikel list for this projekt
-            const projektId = window.cfoDashboard.currentProjekt;
-            if (projektId) {
-                const tbody = document.getElementById('projekt-artikel-list-tbody');
-                if (tbody && window.renderArtikelListByProjekt) {
-                    window.renderArtikelListByProjekt();
-                    const sourceBody = document.getElementById('artikel-list-tbody');
-                    if (sourceBody) {
-                        tbody.innerHTML = sourceBody.innerHTML;
-                    }
-                }
+        console.log('🧩 Loading Artikel-Tab...');
+        const projektId = window.cfoDashboard.currentProjekt;
+    
+        if (projektId && window.renderArtikelListByProjekt) {
+            try {
+                window.renderArtikelListByProjekt(projektId);
+                console.log('✅ Artikel-Liste gerendert für Projekt:', projektId);
+            } catch (err) {
+                console.error('❌ Fehler beim Rendern der Artikelliste:', err);
             }
+        } else {
+            console.warn('⚠️ Kein Projekt gesetzt oder renderArtikelListByProjekt nicht verfügbar');
+        }
+    
+        // State aktualisieren
+        if (window.state) {
+            window.state.artikelViewMode = 'list';
+            window.state.currentArtikel = null;
+            window.state.saveState();
+        }
+    }
+
             
             // Set artikel view mode to list
             if (window.state) {
