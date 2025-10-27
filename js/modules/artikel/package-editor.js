@@ -772,11 +772,11 @@ async function savePackageArtikel() {
   // Validate projekt ID
   if (!state.projektId) {
     console.error('❌ No projektId in state!', state);
-    alert('Fehler: Keine Projekt-ID im State! Bitte schließe das Modal und öffne es erneut.');
+    alert('Fehler: Keine Projekt-ID im State!');
     return;
   }
   
-  // Clean projekt ID (falls noch nicht clean)
+  // Clean projekt ID
   let cleanProjektId = state.projektId;
   if (typeof state.projektId === 'string' && state.projektId.includes('projekt-db-')) {
     cleanProjektId = state.projektId.replace('projekt-db-', '');
@@ -786,13 +786,11 @@ async function savePackageArtikel() {
   
   try {
     const nextBtn = document.getElementById('package-next-btn');
-    const originalText = nextBtn.textContent;
     nextBtn.textContent = 'Speichere...';
     nextBtn.disabled = true;
     
     // ==========================================
-    // NEU: Erstelle NUR die Package-Varianten!
-    // KEIN Parent mehr!
+    // ERSTELLE NUR DIE PACKAGE-VARIANTEN!
     // ==========================================
     
     console.log('📦 Creating package variants (NO PARENT)...');
@@ -802,9 +800,8 @@ async function savePackageArtikel() {
     for (let i = 0; i < state.packages.length; i++) {
       const pkg = state.packages[i];
       
-      console.log(`  📄 Creating article for package: ${pkg.name}`);
+      console.log(`  📄 Creating article: ${pkg.name}`);
       
-      // Build full article name
       const childArtikelName = `${state.artikelName} - ${pkg.name}`;
       
       // Build revenue streams from components
@@ -819,15 +816,9 @@ async function savePackageArtikel() {
           name: comp.name,
           type: comp.type,
           description: comp.description || '',
-          price: 0 // Will be configured later
+          price: 0
         });
       });
-      
-      // ==========================================
-      // NEU: artikel_mode = 'package' (nicht 'package-child')
-      // KEIN parent_package_id mehr!
-      // Config wird direkt im Artikel gespeichert
-      // ==========================================
       
       const childArtikelData = {
         name: childArtikelName,
@@ -837,22 +828,17 @@ async function savePackageArtikel() {
         // NEU: artikel_mode = 'package' (standalone!)
         artikel_mode: 'package',
         
-        // KEIN parent_package_id mehr!
-        // Stattdessen: Package-Config direkt hier
+        // Config direkt im Artikel
         package_config: {
           package_name: pkg.name,
           package_index: i,
           package_count: state.packageCount,
           all_package_names: state.packageNames,
-          
-          // Customer Journey Daten
           mix_percentage: state.mixDistribution[i] || 0,
           churn_rate: state.churnRates[i] || 10,
           new_customers_year1: state.newCustomersYear1,
           customer_growth: state.customerGrowth,
           upsell_rates: state.upsellRates,
-          
-          // Components
           components: pkg.components,
           revenue_streams: revenueStreams
         },
@@ -868,36 +854,25 @@ async function savePackageArtikel() {
       };
       
       const childResult = await saveArticle(childArtikelData);
-      console.log(`  ✅ Package article saved: ${pkg.name}`, childResult);
+      console.log(`  ✅ Package saved: ${pkg.name}`, childResult);
       
       childResults.push(childResult);
     }
     
-    // ==========================================
-    // SUCCESS
-    // ==========================================
+    console.log('✅ All packages created!');
     
-    console.log('✅ Package artikel complete (WITHOUT PARENT)!');
-    console.log('  Created packages:', childResults);
-    
-    // Close modal
     closePackageEditor();
     
-    // Show success message
-    alert(`✅ Package-Artikel erfolgreich erstellt!\n\n` +
-          `📄 ${state.packages.length} Pakete: ${state.packageNames.join(', ')}\n` +
-          `🧩 ${state.packages.reduce((sum, pkg) => sum + pkg.components.length, 0)} Komponenten gesamt`);
+    alert(`✅ Package-Artikel erstellt!\n\n📄 ${state.packages.length} Pakete: ${state.packageNames.join(', ')}`);
     
-    // Reload page
     setTimeout(() => {
       window.location.reload();
     }, 1000);
     
   } catch (error) {
-    console.error('❌ Error saving package artikel:', error);
-    alert('Fehler beim Speichern: ' + error.message);
+    console.error('❌ Error:', error);
+    alert('Fehler: ' + error.message);
     
-    // Re-enable button
     const nextBtn = document.getElementById('package-next-btn');
     if (nextBtn) {
       nextBtn.disabled = false;
@@ -923,4 +898,5 @@ function formatCurrency(value) {
 // ==========================================
 
 export default { openPackageEditor };
+
 
