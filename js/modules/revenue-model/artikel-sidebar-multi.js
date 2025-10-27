@@ -1,375 +1,519 @@
 /**
- * ARTIKEL SIDEBAR WITH MULTI-SELECTION
- * Enables combining multiple articles for joint planning
+ * ARTIKEL DROPDOWN SELECTOR
+ * Kompakter Ersatz für große Sidebar
+ * Mit Multi-Mode Support
  */
 
 // ==========================================
-// RENDER ARTIKEL SIDEBAR WITH CHECKBOXES
+// RENDER DROPDOWN SELECTOR
 // ==========================================
 
-export function renderArtikelSidebarWithMultiSelect(artikelData) {
-  const selectedIds = window.selectedArtikelIds || [];
-  const isMultiMode = window.isMultiPlanningMode || false;
-  
-  return `
-    <div class="artikel-sidebar-enhanced">
-      
-      <!-- Header with Mode Toggle -->
-      <div class="sidebar-header">
-        <h3 class="sidebar-title">📋 Artikel-Struktur</h3>
-        
-        <!-- Multi-Planning Toggle -->
-        <button 
-          class="mode-toggle ${isMultiMode ? 'active' : ''}"
-          onclick="window.toggleMultiPlanningMode()"
-          title="Multi-Artikel Planung aktivieren"
-        >
-          ${isMultiMode ? '☑️ Multi' : '☐ Multi'}
-        </button>
-      </div>
-      
-      <!-- Artikel List -->
-      <div class="artikel-list-enhanced">
-        ${artikelData.map(artikel => renderArtikelItemWithCheckbox(artikel)).join('')}
-      </div>
-      
-      <!-- Multi-Planning Action -->
-      ${selectedIds.length > 0 ? `
-        <div class="multi-action-bar">
-          <div class="selection-badge">
-            ${selectedIds.length} ausgewählt
-          </div>
-          <button 
-            class="btn-plan-multi"
-            onclick="window.startMultiPlanning()"
-          >
-            📊 Kombiniert planen
-          </button>
-        </div>
-      ` : ''}
-      
-    </div>
-    
-    ${renderSidebarStyles()}
-  `;
-}
-
-function renderArtikelItemWithCheckbox(artikel) {
-  const isMultiMode = window.isMultiPlanningMode || false;
-  const isSelected = (window.selectedArtikelIds || []).includes(artikel.id);
-  const isActive = window.currentArtikelId === artikel.id;
-  
-  const categoryColors = {
-    'Software': '#3b82f6',
-    'Package': '#8b5cf6',
-    'Hardware': '#dc2626',
-    'Service': '#10b981'
-  };
-  
-  const categoryColor = categoryColors[artikel.category] || '#6b7280';
-  
-  return `
-    <div class="artikel-item-enhanced ${isActive ? 'active' : ''}" data-artikel-id="${artikel.id}">
-      
-      <!-- Checkbox (only visible in multi-mode) -->
-      ${isMultiMode ? `
-        <div class="artikel-checkbox">
-          <input 
-            type="checkbox" 
-            id="cb-${artikel.id}"
-            ${isSelected ? 'checked' : ''}
-            onclick="window.toggleArtikelSelection('${artikel.id}')"
-          >
-        </div>
-      ` : ''}
-      
-      <!-- Artikel Info (clickable) -->
-      <div 
-        class="artikel-info"
-        onclick="${isMultiMode ? '' : `window.selectSingleArtikel('${artikel.id}')`}"
-        style="${isMultiMode ? 'cursor: default;' : 'cursor: pointer;'}"
-      >
-        <div class="artikel-icon-name">
-          <span class="artikel-icon">${getArtikelIcon(artikel.category)}</span>
-          <span class="artikel-name">${artikel.name}</span>
-        </div>
-        <span 
-          class="artikel-badge" 
-          style="background: ${categoryColor};"
-        >
-          ${artikel.category}
-        </span>
-      </div>
-      
-    </div>
-  `;
-}
-
-function getArtikelIcon(category) {
-  const icons = {
-    'Hardware': '📦',
-    'Software': '💿',
-    'Package': '📦',
-    'Service': '🔧'
-  };
-  return icons[category] || '📋';
-}
-
-// ==========================================
-// WINDOW FUNCTIONS
-// ==========================================
-
-window.toggleMultiPlanningMode = function() {
-  window.isMultiPlanningMode = !window.isMultiPlanningMode;
-  
-  if (!window.isMultiPlanningMode) {
-    // Exit multi mode - clear selections
-    window.selectedArtikelIds = [];
-  }
-  
-  // Re-render sidebar
-  refreshArtikelSidebar();
-  
-  console.log('Multi-Planning Mode:', window.isMultiPlanningMode);
-};
-
-window.toggleArtikelSelection = function(artikelId) {
-  if (!window.selectedArtikelIds) {
-    window.selectedArtikelIds = [];
-  }
-  
-  const index = window.selectedArtikelIds.indexOf(artikelId);
-  
-  if (index > -1) {
-    // Remove
-    window.selectedArtikelIds.splice(index, 1);
-  } else {
-    // Add
-    window.selectedArtikelIds.push(artikelId);
-  }
-  
-  console.log('Selected IDs:', window.selectedArtikelIds);
-  
-  // Re-render sidebar to show updated selection
-  refreshArtikelSidebar();
-};
-
-window.selectSingleArtikel = function(artikelId) {
-  window.currentArtikelId = artikelId;
-  
-  const artikel = window.revenueModelArtikel?.find(a => a.id === artikelId);
-  if (!artikel) return;
-  
-  // Render single artikel view
-  if (window.renderHardwareModel) {
-    window.renderHardwareModel(artikel, 'detail-container');
-  }
-  
-  // Update active state in sidebar
-  document.querySelectorAll('.artikel-item-enhanced').forEach(item => {
-    item.classList.remove('active');
-  });
-  
-  const activeItem = document.querySelector(`.artikel-item-enhanced[data-artikel-id="${artikelId}"]`);
-  if (activeItem) {
-    activeItem.classList.add('active');
-  }
-};
-
-window.startMultiPlanning = function() {
-  const selectedIds = window.selectedArtikelIds || [];
-  
-  if (selectedIds.length === 0) {
-    alert('Bitte wähle mindestens einen Artikel aus!');
+export function renderArtikelDropdown(artikelList, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) {
+    console.error('❌ Container not found:', containerId);
     return;
   }
   
-  console.log('Starting multi-planning for:', selectedIds);
+  container.innerHTML = `
+    <div class="artikel-selector">
+      
+      <!-- Single Mode: Dropdown -->
+      <div class="selector-single" id="selector-single">
+        <label class="selector-label">📦 Artikel auswählen</label>
+        <select class="artikel-dropdown" id="artikel-dropdown">
+          <option value="">-- Bitte wählen --</option>
+          ${artikelList.map(artikel => `
+            <option value="${artikel.id}" data-type="${artikel.type}">
+              ${getArtikelIcon(artikel.type)} ${artikel.name}
+            </option>
+          `).join('')}
+        </select>
+      </div>
+      
+      <!-- Multi Mode Toggle -->
+      <div class="selector-multi-toggle">
+        <label class="checkbox-label">
+          <input type="checkbox" id="multi-mode-checkbox" class="checkbox-input">
+          <span class="checkbox-text">☑ Multi-Mode</span>
+          <span class="checkbox-hint">(Mehrere Artikel kombiniert planen)</span>
+        </label>
+      </div>
+      
+      <!-- Multi Mode: Checkboxen -->
+      <div class="selector-multi" id="selector-multi" style="display: none;">
+        <label class="selector-label">📦 Artikel auswählen (mehrere möglich)</label>
+        <div class="artikel-checkboxes">
+          ${artikelList.map(artikel => `
+            <label class="artikel-checkbox-item">
+              <input type="checkbox" 
+                     class="artikel-checkbox" 
+                     value="${artikel.id}" 
+                     data-name="${artikel.name}"
+                     data-type="${artikel.type}">
+              <span class="checkbox-content">
+                <span class="checkbox-icon">${getArtikelIcon(artikel.type)}</span>
+                <span class="checkbox-name">${artikel.name}</span>
+                <span class="checkbox-badge">${getTypeName(artikel.type)}</span>
+              </span>
+            </label>
+          `).join('')}
+        </div>
+        
+        <!-- Selected Counter -->
+        <div class="selected-counter" id="selected-counter" style="display: none;">
+          <span class="counter-text">
+            <strong id="selected-count">0</strong> Artikel ausgewählt
+          </span>
+          <button class="btn-clear" onclick="window.clearArtikelSelection()">
+            ✕ Alle abwählen
+          </button>
+        </div>
+      </div>
+      
+      <!-- Action Button -->
+      <div class="selector-actions">
+        <button class="btn-load-model" id="btn-load-model" disabled>
+          📊 Revenue Model laden
+        </button>
+      </div>
+      
+    </div>
+    
+    ${renderDropdownStyles()}
+  `;
   
-  // Render multi-artikel view
-  if (window.renderMultiArtikelPlanning) {
-    window.renderMultiArtikelPlanning(selectedIds, 'detail-container');
+  // Attach event listeners
+  attachDropdownEventListeners();
+  
+  console.log('✅ Artikel Dropdown rendered');
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+
+function attachDropdownEventListeners() {
+  // Multi-Mode Toggle
+  const multiModeCheckbox = document.getElementById('multi-mode-checkbox');
+  if (multiModeCheckbox) {
+    multiModeCheckbox.addEventListener('change', toggleMultiMode);
   }
+  
+  // Single Mode Dropdown
+  const dropdown = document.getElementById('artikel-dropdown');
+  if (dropdown) {
+    dropdown.addEventListener('change', onSingleArtikelChange);
+  }
+  
+  // Multi Mode Checkboxes
+  document.querySelectorAll('.artikel-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', onMultiArtikelChange);
+  });
+  
+  // Load Model Button
+  const loadBtn = document.getElementById('btn-load-model');
+  if (loadBtn) {
+    loadBtn.addEventListener('click', loadRevenueModel);
+  }
+}
+
+// ==========================================
+// MULTI-MODE TOGGLE
+// ==========================================
+
+function toggleMultiMode(event) {
+  const isMulti = event.target.checked;
+  
+  const singleSelector = document.getElementById('selector-single');
+  const multiSelector = document.getElementById('selector-multi');
+  
+  if (isMulti) {
+    // Switch to Multi Mode
+    singleSelector.style.display = 'none';
+    multiSelector.style.display = 'block';
+    
+    // Clear single selection
+    document.getElementById('artikel-dropdown').value = '';
+    
+    console.log('🔄 Switched to Multi-Mode');
+  } else {
+    // Switch to Single Mode
+    singleSelector.style.display = 'block';
+    multiSelector.style.display = 'none';
+    
+    // Clear multi selection
+    document.querySelectorAll('.artikel-checkbox').forEach(cb => cb.checked = false);
+    updateSelectedCounter();
+    
+    console.log('🔄 Switched to Single-Mode');
+  }
+  
+  // Disable load button
+  document.getElementById('btn-load-model').disabled = true;
+}
+
+// ==========================================
+// SINGLE MODE
+// ==========================================
+
+function onSingleArtikelChange(event) {
+  const selectedId = event.target.value;
+  const loadBtn = document.getElementById('btn-load-model');
+  
+  if (selectedId) {
+    loadBtn.disabled = false;
+    console.log('📦 Selected artikel:', selectedId);
+  } else {
+    loadBtn.disabled = true;
+  }
+}
+
+// ==========================================
+// MULTI MODE
+// ==========================================
+
+function onMultiArtikelChange() {
+  updateSelectedCounter();
+  
+  const selectedCount = document.querySelectorAll('.artikel-checkbox:checked').length;
+  const loadBtn = document.getElementById('btn-load-model');
+  
+  loadBtn.disabled = selectedCount === 0;
+}
+
+function updateSelectedCounter() {
+  const selectedCheckboxes = document.querySelectorAll('.artikel-checkbox:checked');
+  const count = selectedCheckboxes.length;
+  
+  const counter = document.getElementById('selected-counter');
+  const countDisplay = document.getElementById('selected-count');
+  
+  if (count > 0) {
+    counter.style.display = 'flex';
+    countDisplay.textContent = count;
+  } else {
+    counter.style.display = 'none';
+  }
+}
+
+window.clearArtikelSelection = function() {
+  document.querySelectorAll('.artikel-checkbox').forEach(cb => cb.checked = false);
+  updateSelectedCounter();
+  document.getElementById('btn-load-model').disabled = true;
 };
 
-function refreshArtikelSidebar() {
-  // This should be called from main app to re-render sidebar
-  // For now, just log
-  console.log('Sidebar refresh needed');
+// ==========================================
+// LOAD REVENUE MODEL
+// ==========================================
+
+function loadRevenueModel() {
+  const isMulti = document.getElementById('multi-mode-checkbox').checked;
   
-  // Trigger custom event that main app can listen to
-  window.dispatchEvent(new CustomEvent('revenuemodel:refreshSidebar'));
+  if (isMulti) {
+    // Multi Mode
+    const selected = Array.from(document.querySelectorAll('.artikel-checkbox:checked'))
+      .map(cb => ({
+        id: cb.value,
+        name: cb.dataset.name,
+        type: cb.dataset.type
+      }));
+    
+    console.log('📊 Loading Revenue Model for:', selected);
+    
+    if (window.onLoadRevenueModel) {
+      window.onLoadRevenueModel(selected, true);
+    }
+  } else {
+    // Single Mode
+    const dropdown = document.getElementById('artikel-dropdown');
+    const selectedOption = dropdown.options[dropdown.selectedIndex];
+    
+    if (selectedOption.value) {
+      const artikel = {
+        id: selectedOption.value,
+        name: selectedOption.text.trim().substring(2), // Remove emoji
+        type: selectedOption.dataset.type
+      };
+      
+      console.log('📊 Loading Revenue Model for:', artikel);
+      
+      if (window.onLoadRevenueModel) {
+        window.onLoadRevenueModel([artikel], false);
+      }
+    }
+  }
+}
+
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
+
+function getArtikelIcon(type) {
+  const icons = {
+    'hardware': '📦',
+    'package': '📊',
+    'software': '💿',
+    'services': '👔'
+  };
+  return icons[type] || '📈';
+}
+
+function getTypeName(type) {
+  const names = {
+    'hardware': 'Hardware',
+    'package': 'Package',
+    'software': 'Software',
+    'services': 'Services'
+  };
+  return names[type] || type;
 }
 
 // ==========================================
 // STYLES
 // ==========================================
 
-function renderSidebarStyles() {
+function renderDropdownStyles() {
   return `
     <style>
-      /* ===== ENHANCED SIDEBAR ===== */
-      .artikel-sidebar-enhanced {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        background: white;
-      }
-      
-      .sidebar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+      .artikel-selector {
         padding: 16px;
-        border-bottom: 2px solid #e5e7eb;
-      }
-      
-      .sidebar-title {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1f2937;
-      }
-      
-      .mode-toggle {
-        padding: 6px 12px;
-        border: 2px solid #d1d5db;
-        border-radius: 6px;
         background: white;
-        font-size: 11px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+      
+      /* Labels */
+      .selector-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
         font-weight: 600;
-        color: #6b7280;
+        color: #374151;
+      }
+      
+      /* Dropdown */
+      .artikel-dropdown {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        background: white;
         cursor: pointer;
         transition: all 0.2s;
       }
       
-      .mode-toggle:hover {
+      .artikel-dropdown:hover {
         border-color: #3b82f6;
-        background: #eff6ff;
-        color: #2563eb;
       }
       
-      .mode-toggle.active {
-        border-color: #2563eb;
-        background: #2563eb;
-        color: white;
+      .artikel-dropdown:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       }
       
-      /* ===== ARTIKEL LIST ===== */
-      .artikel-list-enhanced {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px;
+      /* Multi-Mode Toggle */
+      .selector-multi-toggle {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e5e7eb;
       }
       
-      .artikel-item-enhanced {
+      .checkbox-label {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 10px;
-        margin-bottom: 6px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        transition: all 0.2s;
+        cursor: pointer;
       }
       
-      .artikel-item-enhanced:hover {
-        border-color: #3b82f6;
-        background: #eff6ff;
-      }
-      
-      .artikel-item-enhanced.active {
-        border-color: #2563eb;
-        background: #dbeafe;
-      }
-      
-      .artikel-checkbox {
-        display: flex;
-        align-items: center;
-        padding-left: 4px;
-      }
-      
-      .artikel-checkbox input[type="checkbox"] {
+      .checkbox-input {
         width: 18px;
         height: 18px;
         cursor: pointer;
       }
       
-      .artikel-info {
-        flex: 1;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .artikel-icon-name {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .artikel-icon {
-        font-size: 18px;
-      }
-      
-      .artikel-name {
+      .checkbox-text {
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         color: #1f2937;
       }
       
-      .artikel-badge {
-        padding: 4px 10px;
-        border-radius: 12px;
+      .checkbox-hint {
+        font-size: 11px;
+        color: #6b7280;
+        margin-left: 4px;
+      }
+      
+      /* Multi Mode Checkboxes */
+      .selector-multi {
+        margin-top: 12px;
+      }
+      
+      .artikel-checkboxes {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 8px;
+        background: #f9fafb;
+        border-radius: 6px;
+      }
+      
+      .artikel-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .artikel-checkbox-item:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+      
+      .artikel-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      
+      .checkbox-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+      }
+      
+      .checkbox-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      
+      .checkbox-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1f2937;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .checkbox-badge {
+        padding: 2px 6px;
+        background: #e0e7ff;
+        color: #3730a3;
+        border-radius: 8px;
         font-size: 10px;
         font-weight: 600;
-        color: white;
-        white-space: nowrap;
+        text-transform: uppercase;
+        flex-shrink: 0;
       }
       
-      /* ===== MULTI-ACTION BAR ===== */
-      .multi-action-bar {
-        padding: 16px;
-        background: #f9fafb;
-        border-top: 2px solid #e5e7eb;
+      /* Selected Counter */
+      .selected-counter {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding: 10px 12px;
+        background: #dbeafe;
+        border-radius: 6px;
       }
       
-      .selection-badge {
-        padding: 8px;
-        background: #dbeafe;
-        border: 2px solid #3b82f6;
-        border-radius: 6px;
-        text-align: center;
+      .counter-text {
+        font-size: 13px;
+        color: #1e3a8a;
+      }
+      
+      .btn-clear {
+        padding: 6px 12px;
+        border: 1px solid #3b82f6;
+        border-radius: 4px;
+        background: white;
         font-size: 12px;
         font-weight: 600;
-        color: #1e40af;
+        color: #2563eb;
+        cursor: pointer;
+        transition: all 0.2s;
       }
       
-      .btn-plan-multi {
+      .btn-clear:hover {
+        background: #eff6ff;
+      }
+      
+      /* Action Button */
+      .selector-actions {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      
+      .btn-load-model {
         width: 100%;
         padding: 12px;
         border: none;
         border-radius: 6px;
         background: #2563eb;
         color: white;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
       }
       
-      .btn-plan-multi:hover {
+      .btn-load-model:hover:not(:disabled) {
         background: #1d4ed8;
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
       }
       
-      .btn-plan-multi:active {
-        transform: translateY(0);
+      .btn-load-model:disabled {
+        background: #d1d5db;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      
+      /* Scrollbar */
+      .artikel-checkboxes::-webkit-scrollbar {
+        width: 6px;
+      }
+      
+      .artikel-checkboxes::-webkit-scrollbar-track {
+        background: #f3f4f6;
+        border-radius: 3px;
+      }
+      
+      .artikel-checkboxes::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 3px;
+      }
+      
+      .artikel-checkboxes::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+      
+      /* Responsive */
+      @media (max-width: 768px) {
+        .artikel-checkboxes {
+          grid-template-columns: 1fr;
+        }
+        
+        .selected-counter {
+          flex-direction: column;
+          gap: 8px;
+          align-items: stretch;
+        }
       }
     </style>
   `;
@@ -380,5 +524,5 @@ function renderSidebarStyles() {
 // ==========================================
 
 export default {
-  renderArtikelSidebarWithMultiSelect
+  renderArtikelDropdown
 };
