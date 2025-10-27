@@ -1404,7 +1404,7 @@ window.createSelectedArtikel = async function(projektId) {
 window.createManualArtikel = async function(projektId) {
   const name = document.getElementById('manual-name')?.value;
   const typ = document.getElementById('manual-typ')?.value;
-  const artikelMode = document.getElementById('manual-artikel-mode')?.value;  // ← NEU!
+  const artikelMode = document.getElementById('manual-artikel-mode')?.value;
   
   if (!name || !typ) {
     alert('Bitte fülle alle Felder aus!');
@@ -1414,37 +1414,111 @@ window.createManualArtikel = async function(projektId) {
   // ✅ CHECK FOR PACKAGE MODE
   if (artikelMode === 'package') {
     console.log('📦 Opening Package Editor...');
-    
-    // Close current modal
     closeArtikelCreationModal();
-    
-    // Open package editor with initial data
     openPackageEditor(projektId, {
       artikel_name: name,
       artikel_typ: typ
     });
-    
-    return;  // ← STOP HERE, Package Editor takes over
+    return;
   }
   
-  // Clean projekt ID
+  // ==========================================
+  // ✅ NEU: CHECK FOR HYBRID MODE
+  // ==========================================
+  if (artikelMode === 'hybrid') {
+    console.log('🔀 Creating Hybrid Article...');
+    
+    // Sammle ausgewählte Revenue Streams
+    const checkedStreams = Array.from(
+      document.querySelectorAll('input[name="revenue-stream"]:checked')
+    ).map(cb => cb.value);
+    
+    console.log('  Selected streams:', checkedStreams);
+    
+    if (checkedStreams.length === 0) {
+      alert('Bitte wähle mindestens einen Revenue Stream aus!');
+      return;
+    }
+    
+    // Clean projekt ID
+    let cleanProjektId = projektId;
+    if (typeof projektId === 'string' && projektId.includes('projekt-db-')) {
+      cleanProjektId = projektId.replace('projekt-db-', '');
+    }
+    
+    try {
+      const results = [];
+      
+      // Erstelle für jeden Revenue Stream einen separaten Artikel
+      for (const stream of checkedStreams) {
+        const streamName = getStreamDisplayName(stream);
+        const artikelName = `${name} - ${streamName}`;
+        
+        console.log(`  📝 Creating: ${artikelName}`);
+        
+        const artikelData = {
+          name: artikelName,
+          typ: typ,
+          projektId: projektId,
+          projekt_id: cleanProjektId,
+          
+          // NEU: artikel_mode = 'hybrid' (standalone!)
+          artikel_mode: 'hybrid',
+          
+          // Config direkt im Artikel
+          hybrid_config: {
+            base_name: name,  // Original name ohne Stream-Suffix
+            revenue_stream: stream,
+            revenue_stream_display: streamName
+          },
+          
+          release_datum: '2025-01',
+          zeitraum: 5,
+          volumes: {},
+          prices: {},
+          start_menge: 0,
+          start_preis: 0,
+          start_hk: 0
+        };
+        
+        const result = await saveArticle(artikelData);
+        console.log(`  ✅ Created: ${artikelName}`, result);
+        results.push(result);
+      }
+      
+      console.log('✅ All hybrid articles created:', results);
+      
+      closeArtikelCreationModal();
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Error creating hybrid articles:', error);
+      alert('Fehler: ' + error.message);
+    }
+    
+    return;
+  }
+  
+  // ==========================================
+  // STANDARD ARTIKEL (unverändert)
+  // ==========================================
+  
   let cleanProjektId = projektId;
   if (typeof projektId === 'string' && projektId.includes('projekt-db-')) {
     cleanProjektId = projektId.replace('projekt-db-', '');
   }
   
-  console.log('✏️ Creating manual article');
-  console.log('  projektId (with prefix):', projektId);
-  console.log('  projekt_id (clean):', cleanProjektId);
-  console.log('  name:', name);
-  console.log('  typ:', typ);
+  console.log('✏️ Creating standard article');
   
   try {
     const artikelData = {
       name: name,
       typ: typ,
-      projektId: projektId,  // ✅ For validation (with prefix!)
-      projekt_id: cleanProjektId,  // ✅ For database (without prefix!)
+      projektId: projektId,
+      projekt_id: cleanProjektId,
       release_datum: '2025-01',
       volumes: {},
       prices: {},
@@ -1454,24 +1528,33 @@ window.createManualArtikel = async function(projektId) {
       start_hk: 0
     };
     
-    console.log('  💾 Calling saveArticle...');
-    
-    // ✅ USE STATIC IMPORT (imported at top of file)
     const result = await saveArticle(artikelData);
+    console.log('✅ Article created:', result);
     
-    console.log('  ✅ Article created:', result);
-    
-    window.closeArtikelCreationModal();
+    closeArtikelCreationModal();
     
     setTimeout(() => {
       window.location.reload();
     }, 500);
     
   } catch (error) {
-    console.error('  ❌ Error:', error);
+    console.error('❌ Error:', error);
     alert('Fehler: ' + error.message);
   }
 };
+
+// ==========================================
+// HELPER: Stream Display Names
+// ==========================================
+function getStreamDisplayName(stream) {
+  const names = {
+    'one-time': 'One Time',
+    'subscription': 'Subscription',
+    'service': 'Service',
+    'consulting': 'Consulting'
+  };
+  return names[stream] || stream;
+}
 
 async function createArtikelFromSuggestion(projektId, suggestion) {
   console.log('📝 createArtikelFromSuggestion called');
@@ -1540,3 +1623,4 @@ async function createArtikelFromSuggestion(projektId, suggestion) {
     throw error;
   }
 }
+
