@@ -313,8 +313,8 @@ window.openArtikelDetail = function(artikelId) {
   // Show ONLY artikel detail
   if (artikelDetail) artikelDetail.style.display = 'block';
 
- // Render detail-UI dynamisch
-  renderArtikelDetail(artikel);
+  // Load artikel data into form
+  loadArtikelIntoForm(artikel);
 
   // Update navigation (breadcrumb, buttons, position)
   if (window.updateArtikelNavigation) {
@@ -1474,148 +1474,6 @@ window.updateArtikelBulkActions = function() {
 };
 
 // ==========================================
-// DYNAMIC DETAIL RENDERING (aus index.html verschoben)
-// ==========================================
-
-export function renderArtikelDetail(artikel) {
-  const container = document.getElementById('artikel-detail-container');
-  if (!container) return;
-
-  // Kompletten alten HTML-Block (Basisinfos + Preis-/Mengenmodell) generieren
-  container.innerHTML = `
-    <div class="form-section" style="padding:20px;">
-      <h3>📦 Artikel Basis-Informationen</h3>
-
-      <div class="form-group">
-        <label>Artikelname *</label>
-        <input id="artikel-name" type="text" placeholder="z.B. Smart Sensor X1" 
-               oninput="updateErsteZeile()" required>
-      </div>
-
-      <div class="form-group">
-        <label>Typ *</label>
-        <select id="artikel-typ">
-          <option value="">Bitte wählen...</option>
-          <option value="Hardware">💻 Hardware</option>
-          <option value="Software-Perpetual">🖥️ Software (Perpetual)</option>
-          <option value="Software-Subscription">☁️ Software (SaaS)</option>
-          <option value="Beratung">💼 Beratung</option>
-          <option value="Service">🧰 Service</option>
-          <option value="Wartung">🔧 Wartung</option>
-          <option value="Training">🎓 Training</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="form-section" style="padding:20px;">
-      <h3>💰 Startwerte (Jahr 1)</h3>
-
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
-        <div>
-          <label>Menge (Stk.)</label>
-          <input id="start-menge" type="text" value="z.B. 1.000"
-                 oninput="updateErsteZeile()" onfocus="handleInputFocus(this)"
-                 onblur="handleInputBlur(this, 'menge')">
-        </div>
-        <div>
-          <label>Preis (€)</label>
-          <input id="start-preis" type="text" value="z.B. 50,00"
-                 oninput="updateErsteZeile()" onfocus="handleInputFocus(this)"
-                 onblur="handleInputBlur(this, 'preis')">
-        </div>
-        <div>
-          <label>Herstellkosten (€)</label>
-          <input id="start-hk" type="text" value="z.B. 20,00"
-                 oninput="updateErsteZeile()" onfocus="handleInputFocus(this)"
-                 onblur="handleInputBlur(this, 'hk')">
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section" style="padding:20px;">
-      <h3>📈 Finanzparameter & Entwicklungsmodelle</h3>
-
-      <div>
-        <label>📅 Release / Startdatum</label>
-        <input id="release-datum" type="month" onchange="updateZeithorizont();updateTabellenSpalten();berechneModelle();">
-      </div>
-
-      <div>
-        <label>Zeithorizont</label>
-        <div class="zeitraum-selector">
-          <button type="button" id="zeitraum-btn-3" class="zeitraum-btn" onclick="setzeZeitraum(3)">3 Jahre</button>
-          <button type="button" id="zeitraum-btn-5" class="zeitraum-btn active" onclick="setzeZeitraum(5)">5 Jahre</button>
-          <button type="button" id="zeitraum-btn-7" class="zeitraum-btn" onclick="setzeZeitraum(7)">7 Jahre</button>
-        </div>
-      </div>
-
-      <h4>Modelle</h4>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
-        <div>
-          <label>Mengenmodell</label>
-          <div>
-            <input type="radio" name="mengen-modell" value="konservativ" onchange="berechneModelle()"> Konservativ<br>
-            <input type="radio" name="mengen-modell" value="realistisch" checked onchange="berechneModelle()"> Realistisch<br>
-            <input type="radio" name="mengen-modell" value="optimistisch" onchange="berechneModelle()"> Optimistisch
-          </div>
-        </div>
-        <div>
-          <label>Preismodell</label>
-          <div>
-            <input type="radio" name="preis-modell" value="konstant" checked onchange="berechneModelle()"> Konstant<br>
-            <input type="radio" name="preis-modell" value="inflation" onchange="berechneModelle()"> Inflation (+2%)<br>
-            <input type="radio" name="preis-modell" value="skimming" onchange="berechneModelle()"> Skimming (-3%)
-          </div>
-        </div>
-        <div>
-          <label>Kostenmodell</label>
-          <div>
-            <input type="radio" name="kosten-modell" value="lernkurve" checked onchange="berechneModelle()"> Lernkurve<br>
-            <input type="radio" name="kosten-modell" value="inflation" onchange="berechneModelle()"> Inflation (+3%)<br>
-            <input type="radio" name="kosten-modell" value="skaleneffekte" onchange="berechneModelle()"> Skaleneffekte
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-section" style="padding:20px;">
-      <h3>📊 Ergebnisvorschau</h3>
-      <table id="vorschau-tabelle" class="table">
-        <thead>
-          <tr>
-            <th>Jahr</th>
-            <th>Menge</th>
-            <th>Preis (€)</th>
-            <th>HK (€)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${[1,2,3,4,5,6,7].map(i => `
-            <tr class="jahr-col jahr-${i}" ${i>5?'style="display:none"':''}>
-              <td class="jahr-header-${i}">${2025+i-1}</td>
-              <td><input id="menge-jahr-${i}" type="text" class="menge-input"></td>
-              <td><input id="preis-jahr-${i}" type="text" class="preis-input"></td>
-              <td><input id="hk-jahr-${i}" type="text" class="hk-input"></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div style="margin-top:16px;">
-        <button onclick="berechneModelle()" class="btn-primary">Berechnen 🔄</button>
-        <button onclick="resetModelle()" class="btn-secondary">Reset</button>
-      </div>
-    </div>
-  `;
-
-  // Optional: vorhandene Artikeldaten laden
-  if (artikel) {
-    loadArtikelIntoForm(artikel);
-  }
-}
-
-
-// ==========================================
 // EXPORTS
 // ==========================================
 
@@ -1655,4 +1513,3 @@ window.openArtikelCreationModal = function() {
   // Call the actual modal function with projektId
   openArtikelCreationModalCore(projektId);
 };
-
