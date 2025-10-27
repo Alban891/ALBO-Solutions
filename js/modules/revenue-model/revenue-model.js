@@ -1,5 +1,7 @@
 // js/modules/revenue-model/revenue-model.js
 
+import { renderRevenueModel } from './revenue-model-router.js';
+
 console.log('💰 Revenue Model Module initialisiert');
 
 // Tab-Switch erweitern
@@ -142,7 +144,8 @@ function renderCleanHierarchy(hierarchy) {
             return `
                 <div style="margin-bottom: 24px;">
                     <!-- Hauptpackage mit blauem Hintergrund -->
-                    <div onclick="selectArtikel('${node.main.id}')" 
+                    <div onclick="selectArtikel('${node.main.id}')"
+                         data-artikel-id="${node.main.id}"
                          style="padding: 12px; background: #1e3a8a; color: white; border-radius: 8px; cursor: pointer; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span>📦</span>
@@ -159,6 +162,7 @@ function renderCleanHierarchy(hierarchy) {
                             <div style="margin-bottom: 12px;">
                                 <!-- Variante (S/M/L) -->
                                 <div onclick="selectArtikel('${v.variant.id}')"
+                                     data-artikel-id="${node.main.id}"
                                      style="padding: 10px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; margin-bottom: 6px;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <span>📦</span>
@@ -171,6 +175,7 @@ function renderCleanHierarchy(hierarchy) {
                                     <div style="margin-left: 20px;">
                                         ${v.components.map(comp => `
                                             <div onclick="selectArtikel('${comp.id}')"
+                                                 data-artikel-id="${node.main.id}"
                                                  style="padding: 8px 12px; background: #fafafa; border-left: 2px solid #e5e7eb; margin-bottom: 2px; cursor: pointer; font-size: 14px;"
                                                  onmouseover="this.style.background='#f3f4f6'"
                                                  onmouseout="this.style.background='#fafafa'">
@@ -194,6 +199,7 @@ function renderCleanHierarchy(hierarchy) {
             // Einzelner Artikel (Robotor, Sensor, etc.)
             return `
                 <div onclick="selectArtikel('${node.artikel.id}')"
+                     data-artikel-id="${node.main.id}"
                      style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; margin-bottom: 8px;"
                      onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#fafafa'"
                      onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
@@ -227,19 +233,20 @@ window.selectArtikel = function(artikelId) {
     const artikel = window.revenueModelArtikel.find(a => a.id === artikelId);
     if (!artikel) return;
     
-    // Highlight selected
-    document.querySelectorAll('#artikel-tree > div div').forEach(el => {
+    console.log('📊 Artikel ausgewählt:', artikel.name);
+    
+    // Highlight selected in tree
+    document.querySelectorAll('#artikel-tree [data-artikel-id]').forEach(el => {
         el.style.outline = 'none';
     });
-    event.currentTarget.style.outline = '2px solid #3b82f6';
-    event.currentTarget.style.outlineOffset = '2px';
     
-    const container = document.getElementById('detail-container');
-    container.innerHTML = `
-        <h2>${artikel.name}</h2>
-        <span style="background: ${getTypeColor(artikel.typ)}; color: white; padding: 4px 12px; border-radius: 6px;">
-            ${artikel.typ}
-        </span>
-        <p style="margin-top: 20px;">Details werden geladen...</p>
-    `;
+    const currentElement = document.querySelector(`[data-artikel-id="${artikelId}"]`);
+    if (currentElement) {
+        currentElement.style.outline = '2px solid #3b82f6';
+        currentElement.style.outlineOffset = '2px';
+    }
+    
+    // ✅ HIER KOMMT MEIN ROUTER INS SPIEL!
+    renderRevenueModel(artikel, 'detail-container');
 };
+
