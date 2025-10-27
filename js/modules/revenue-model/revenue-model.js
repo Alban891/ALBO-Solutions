@@ -1,8 +1,5 @@
 // js/modules/revenue-model/revenue-model.js
 
-import { state } from '../../../state.js';
-import * as helpers from '../../../helpers.js';
-
 console.log('💰 Revenue Model Module initialisiert');
 
 // Tab-Switch erweitern
@@ -19,6 +16,13 @@ if (window.switchProjektTab) {
 function initRevenueModel() {
     const container = document.getElementById('projekt-tab-revenue-model');
     if (!container) return;
+    
+    // Verwende window.cfoDashboard.state statt import
+    const state = window.cfoDashboard?.state;
+    if (!state) {
+        container.innerHTML = '<p style="text-align:center; padding:40px;">State nicht verfügbar</p>';
+        return;
+    }
     
     const projektId = window.cfoDashboard?.currentProjekt;
     if (!projektId) {
@@ -44,7 +48,7 @@ function initRevenueModel() {
         <div style="padding: 24px;">
             <h3>💰 Revenue Model - ${artikel.length} Artikel</h3>
             
-            <!-- Artikel-Liste mit Entwicklungsmodellen -->
+            <!-- Artikel-Liste -->
             <div style="margin-top: 24px;">
                 ${artikel.map((art, idx) => `
                     <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
@@ -54,17 +58,6 @@ function initRevenueModel() {
                     </div>
                 `).join('')}
             </div>
-            
-            <!-- Placeholder für Tabelle -->
-            <div style="margin-top: 32px; padding: 20px; background: #f9fafb; border-radius: 8px;">
-                <h4>Konsolidierte Tabelle (in Entwicklung)</h4>
-                <p>Hier erscheint bald die Gesamtübersicht aller Revenue Streams</p>
-            </div>
         </div>
     `;
-}
-
-// Initial load wenn Tab bereits aktiv
-if (document.getElementById('projekt-tab-revenue-model')?.classList.contains('active')) {
-    initRevenueModel();
 }
