@@ -2,20 +2,6 @@
 
 console.log('💰 Revenue Model Module initialisiert');
 
-// ============================================
-// CALCULATOR LADEN
-// ============================================
-
-// Lade den Calculator dynamisch
-const calculatorScript = document.createElement('script');
-calculatorScript.type = 'module';
-calculatorScript.textContent = `
-    import { calculateArtikelForecast } from '../artikel/artikel-calculator.js';
-    window.calculateArtikelForecast = calculateArtikelForecast;
-    console.log('✅ Calculator verfügbar');
-`;
-document.head.appendChild(calculatorScript);
-
 // Tab-Switch erweitern
 if (window.switchProjektTab) {
     const original = window.switchProjektTab;
@@ -26,10 +12,6 @@ if (window.switchProjektTab) {
         }
     };
 }
-
-// ============================================
-// HAUPTFUNKTION
-// ============================================
 
 function initRevenueModel() {
     const container = document.getElementById('projekt-tab-revenue-model');
@@ -46,239 +28,247 @@ function initRevenueModel() {
         return;
     }
     
-    // Store artikel data globally for calculator
-    window.revenueModelArtikel = artikel;
+    // Analysiere Struktur
+    const tree = buildArtikelTree(artikel);
     
     container.innerHTML = `
+        <div style="display: flex; height: calc(100vh - 300px); gap: 24px; padding: 24px;">
+            
+            <!-- LINKE SEITE: ARTIKEL-BAUM -->
+            <div style="width: 350px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto;">
+                <div style="background: #1e3a8a; color: white; padding: 16px; position: sticky; top: 0; z-index: 10;">
+                    <h3 style="margin: 0; font-size: 16px;">📋 Artikel-Struktur</h3>
+                </div>
+                <div id="artikel-tree" style="padding: 16px;">
+                    ${renderArtikelTree(tree)}
+                </div>
+            </div>
+            
+            <!-- RECHTE SEITE: DETAIL-ANSICHT -->
+            <div style="flex: 1; background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto;">
+                <div id="detail-container" style="padding: 24px;">
+                    <div style="text-align: center; padding: 80px 40px; color: #9ca3af;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                        <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
+                        <p style="font-size: 14px;">Klicken Sie links auf einen Artikel, um die Details zu bearbeiten</p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- KONSOLIDIERTE TABELLE UNTEN -->
         <div style="padding: 24px;">
-            <h2 style="margin:0 0 24px;">💰 Revenue Model - Detailkalkulation</h2>
-            
-            <!-- Artikel Details -->
-            <div id="artikel-details">
-                ${artikel.map(art => renderArtikelDetail(art)).join('')}
+            <div id="consolidated-table" style="margin-top: 24px;">
+                ${renderConsolidatedTable(artikel)}
             </div>
-            
-            <!-- Konsolidierte Tabelle -->
-            ${renderConsolidatedResults(artikel)}
         </div>
     `;
-}
-
-// ============================================
-// RENDER ARTIKEL DETAIL (WIE IM SCREENSHOT)
-// ============================================
-
-function renderArtikelDetail(art) {
-    // Bestimme Typ-spezifische Labels
-    const labels = getLabelsForType(art.typ);
     
-    return `
-        <div class="artikel-detail-card" data-artikel-id="${art.id}" 
-             style="background:white; border:2px solid #e5e7eb; border-radius:12px; margin-bottom:24px; overflow:hidden;">
-            
-            <!-- Header -->
-            <div style="background:#f9fafb; padding:20px; border-bottom:1px solid #e5e7eb;">
-                <h3 style="margin:0; font-size:18px;">
-                    📦 ${art.name || 'Unbenannt'}
-                    <span style="background:#dbeafe; color:#1e40af; padding:4px 12px; border-radius:4px; font-size:14px; margin-left:12px;">
-                        ${art.typ || 'Hardware'}
-                    </span>
-                </h3>
-            </div>
-            
-            <!-- Content -->
-            <div style="padding:24px;">
-                
-                <!-- Finanz-Parameter Section -->
-                <div style="background:#fafafa; border-radius:8px; padding:20px; margin-bottom:20px;">
-                    <h4 style="margin:0 0 20px; font-size:16px; color:#1e3a8a;">
-                        💰 Finanz-Parameter & Entwicklungsmodelle
-                    </h4>
-                    
-                    <!-- Release & Zeithorizont -->
-                    <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px; margin-bottom:24px;">
-                        <div>
-                            <label style="font-size:11px; color:#6b7280; display:block; margin-bottom:6px; font-weight:600;">
-                                📅 RELEASE / STARTDATUM
-                            </label>
-                            <input type="month" 
-                                   value="${art.release_datum || '2025-01'}" 
-                                   id="release-${art.id}"
-                                   onchange="updateArtikelData('${art.id}', 'release_datum', this.value)"
-                                   style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:4px;">
-                        </div>
-                        <div>
-                            <label style="font-size:11px; color:#6b7280; display:block; margin-bottom:6px; font-weight:600;">
-                                ZEITHORIZONT
-                            </label>
-                            <div style="display:flex; gap:8px;">
-                                <button class="zeit-btn" onclick="setZeitraum('${art.id}', 3)" 
-                                        style="flex:1; padding:8px; border:1px solid #e5e7eb; background:white; border-radius:4px; cursor:pointer;">
-                                    3 Jahre
-                                </button>
-                                <button class="zeit-btn active" onclick="setZeitraum('${art.id}', 5)"
-                                        style="flex:1; padding:8px; border:1px solid #e5e7eb; background:#1e3a8a; color:white; border-radius:4px; cursor:pointer;">
-                                    5 Jahre
-                                </button>
-                                <button class="zeit-btn" onclick="setZeitraum('${art.id}', 7)"
-                                        style="flex:1; padding:8px; border:1px solid #e5e7eb; background:white; border-radius:4px; cursor:pointer;">
-                                    7 Jahre
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Startwerte -->
-                    <div style="margin-bottom:24px;">
-                        <h5 style="margin:0 0 12px; font-size:14px;">📊 Startwerte (Jahr 1)</h5>
-                        
-                        <div style="background:#fffbeb; border:1px solid #f59e0b; border-radius:6px; padding:10px; margin-bottom:12px;">
-                            <p style="margin:0; font-size:12px; color:#92400e;">
-                                💡 Tipp: Tragen Sie hier Ihre Annahmen für das erste Jahr ein.
-                            </p>
-                        </div>
-                        
-                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-                            <div>
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">
-                                    ${labels.metrik1.toUpperCase()}
-                                </label>
-                                <input type="text" 
-                                       value="${art.start_menge || 'z.B. 1.000'}"
-                                       onfocus="clearPlaceholder(this)"
-                                       onblur="updateStartValue('${art.id}', 'menge', this.value)"
-                                       style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:4px; margin-top:4px;">
-                            </div>
-                            <div>
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">
-                                    ${labels.metrik2.toUpperCase()}
-                                </label>
-                                <input type="text"
-                                       value="${art.start_preis || 'z.B. 50,00'}"
-                                       onfocus="clearPlaceholder(this)"
-                                       onblur="updateStartValue('${art.id}', 'preis', this.value)"
-                                       style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:4px; margin-top:4px;">
-                            </div>
-                            <div>
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">
-                                    ${labels.metrik3.toUpperCase()}
-                                </label>
-                                <input type="text"
-                                       value="${art.start_hk || 'z.B. 20,00'}"
-                                       onfocus="clearPlaceholder(this)"
-                                       onblur="updateStartValue('${art.id}', 'hk', this.value)"
-                                       style="width:100%; padding:8px; border:1px solid #e5e7eb; border-radius:4px; margin-top:4px;">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Entwicklungsmodelle -->
-                    <div style="margin-bottom:24px;">
-                        <h5 style="margin:0 0 12px; font-size:14px;">📈 ENTWICKLUNGSMODELLE</h5>
-                        
-                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-                            <!-- Mengenentwicklung -->
-                            <div style="background:white; border:1px solid #e5e7eb; padding:12px; border-radius:6px;">
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">MENGENENTWICKLUNG</label>
-                                <select onchange="updateModel('${art.id}', 'mengen_modell', this.value)"
-                                        style="width:100%; padding:6px; margin-top:6px; border:1px solid #e5e7eb; border-radius:4px;">
-                                    <option value="konservativ">Konservativ (+15% p.a.)</option>
-                                    <option value="realistisch" selected>Realistisch (S-Kurve)</option>
-                                    <option value="optimistisch">Optimistisch (Hockey-Stick)</option>
-                                    <option value="manuell">Manuell</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Preisentwicklung -->
-                            <div style="background:white; border:1px solid #e5e7eb; padding:12px; border-radius:6px;">
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">PREISENTWICKLUNG</label>
-                                <select onchange="updateModel('${art.id}', 'preis_modell', this.value)"
-                                        style="width:100%; padding:6px; margin-top:6px; border:1px solid #e5e7eb; border-radius:4px;">
-                                    <option value="konstant" selected>Konstant (0% p.a.)</option>
-                                    <option value="inflation">Inflation (+2% p.a.)</option>
-                                    <option value="premium">Premium (+5% p.a.)</option>
-                                    <option value="skimming">Skimming (-3% p.a.)</option>
-                                    <option value="manuell">Manuell</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Kostenentwicklung -->
-                            <div style="background:white; border:1px solid #e5e7eb; padding:12px; border-radius:6px;">
-                                <label style="font-size:11px; color:#6b7280; font-weight:600;">KOSTENENTWICKLUNG</label>
-                                <select onchange="updateModel('${art.id}', 'kosten_modell', this.value)"
-                                        style="width:100%; padding:6px; margin-top:6px; border:1px solid #e5e7eb; border-radius:4px;">
-                                    <option value="konstant">Konstant (0% p.a.)</option>
-                                    <option value="lernkurve" selected>Lernkurve (-5% bei 2x)</option>
-                                    <option value="inflation">Inflation (+3% p.a.)</option>
-                                    <option value="skaleneffekte">Skaleneffekte (Stufen)</option>
-                                    <option value="manuell">Manuell</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Berechnen Button -->
-                    <div style="text-align:center;">
-                        <button onclick="calculateAndUpdate('${art.id}')"
-                                style="padding:12px 32px; background:#1e3a8a; color:white; border:none; border-radius:6px; cursor:pointer; font-size:14px; font-weight:600;">
-                            Berechnen & Vorschau aktualisieren
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Ergebnis-Vorschau -->
-                <div id="preview-${art.id}">
-                    <!-- Wird nach Berechnung gefüllt -->
-                </div>
-            </div>
-        </div>
-    `;
+    // Store artikel globally
+    window.revenueModelArtikel = artikel;
 }
 
 // ============================================
-// HILFSFUNKTIONEN
+// BAUM-STRUKTUR AUFBAUEN
 // ============================================
 
-function getLabelsForType(typ) {
-    // Typ-spezifische Labels
-    const typeLabels = {
-        'Hardware': { metrik1: 'Menge (Stück)', metrik2: 'Preis (€/Stück)', metrik3: 'HK (€/Stück)' },
-        'Software': { metrik1: 'Lizenzen', metrik2: 'Preis (€/Lizenz)', metrik3: 'Kosten (€/Lizenz)' },
-        'Service': { metrik1: 'Personentage', metrik2: 'Tagessatz (€/Tag)', metrik3: 'Kosten (€/Tag)' },
-        'Beratung': { metrik1: 'Beratertage', metrik2: 'Tagessatz (€/Tag)', metrik3: 'Kostensatz (€/Tag)' }
-    };
+function buildArtikelTree(artikel) {
+    const tree = [];
+    const processed = new Set();
     
-    return typeLabels[typ] || typeLabels['Hardware'];
-}
-
-function renderConsolidatedResults(artikel) {
-    // Placeholder für konsolidierte Tabelle
-    return `
-        <div style="margin-top:40px; border-top:3px solid #1e3a8a; padding-top:40px;">
-            <h3>📊 Konsolidierte Ergebnisse</h3>
-            <div id="consolidated-results">
-                <!-- Wird nach Berechnungen gefüllt -->
-            </div>
-        </div>
-    `;
-}
-
-// Global Functions
-window.clearPlaceholder = function(input) {
-    if (input.value.startsWith('z.B.')) {
-        input.value = '';
-    }
-};
-
-window.calculateAndUpdate = function(artikelId) {
-    console.log('Berechne für Artikel:', artikelId);
-    // Hier Calculator aufrufen
-    if (window.calculateArtikelForecast) {
-        const artikel = window.revenueModelArtikel.find(a => a.id === artikelId);
-        if (artikel) {
-            const forecast = window.calculateArtikelForecast(artikel);
-            console.log('Forecast:', forecast);
-            // Update UI mit Ergebnissen
+    // 1. Finde Packages (Parent-Child)
+    artikel.forEach(art => {
+        if (!art.parent_package_id && !processed.has(art.id)) {
+            const children = artikel.filter(a => 
+                a.parent_package_id === art.id || 
+                a.parent_package_id === art.id.replace('artikel-db-', '')
+            );
+            
+            if (children.length > 0) {
+                // Es ist ein Package
+                tree.push({
+                    type: 'package',
+                    artikel: art,
+                    children: children
+                });
+                processed.add(art.id);
+                children.forEach(c => processed.add(c.id));
+            }
         }
-    }
+    });
+    
+    // 2. Finde Hybrid-Artikel (mit mehreren Streams)
+    artikel.forEach(art => {
+        if (!processed.has(art.id)) {
+            if (art.geschaeftsmodell === 'Hybrid' || art.revenue_streams?.length > 1) {
+                tree.push({
+                    type: 'hybrid',
+                    artikel: art,
+                    streams: art.revenue_streams || [
+                        { name: 'Lizenzverkauf', type: 'one-time' },
+                        { name: 'Wartung', type: 'recurring' }
+                    ]
+                });
+                processed.add(art.id);
+            }
+        }
+    });
+    
+    // 3. Rest als Standard
+    artikel.forEach(art => {
+        if (!processed.has(art.id)) {
+            tree.push({
+                type: 'standard',
+                artikel: art
+            });
+        }
+    });
+    
+    return tree;
+}
+
+// ============================================
+// RENDER BAUM
+// ============================================
+
+function renderArtikelTree(tree) {
+    return tree.map((node, idx) => {
+        if (node.type === 'package') {
+            return `
+                <div class="tree-node" style="margin-bottom: 16px;">
+                    <div class="tree-package" onclick="selectArtikel('${node.artikel.id}')" 
+                         style="padding: 12px; background: #eff6ff; border: 1px solid #2563eb; border-radius: 8px; cursor: pointer; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>📦</span>
+                            <strong>${node.artikel.name || 'Package'}</strong>
+                            <span style="background: #fbbf24; color: #78350f; padding: 2px 6px; border-radius: 4px; font-size: 11px;">PACKAGE</span>
+                        </div>
+                    </div>
+                    <div style="margin-left: 24px;">
+                        ${node.children.map(child => `
+                            <div onclick="selectArtikel('${child.id}')" 
+                                 style="padding: 8px 12px; background: #f9fafb; border-left: 2px solid #e5e7eb; margin-bottom: 4px; cursor: pointer; transition: all 0.2s;"
+                                 onmouseover="this.style.background='#f3f4f6'" 
+                                 onmouseout="this.style.background='#f9fafb'">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #9ca3af;">└</span>
+                                    <span>${child.name || 'Komponente'}</span>
+                                    <span style="font-size: 11px; color: #6b7280;">${child.typ || ''}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else if (node.type === 'hybrid') {
+            return `
+                <div class="tree-node" style="margin-bottom: 16px;">
+                    <div onclick="selectArtikel('${node.artikel.id}')"
+                         style="padding: 12px; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 8px; cursor: pointer; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>🔄</span>
+                            <strong>${node.artikel.name || 'Hybrid'}</strong>
+                            <span style="background: #4ade80; color: #14532d; padding: 2px 6px; border-radius: 4px; font-size: 11px;">HYBRID</span>
+                        </div>
+                    </div>
+                    <div style="margin-left: 24px;">
+                        ${node.streams.map((stream, i) => `
+                            <div onclick="selectStream('${node.artikel.id}', ${i})"
+                                 style="padding: 8px 12px; background: #f9fafb; border-left: 2px solid #e5e7eb; margin-bottom: 4px; cursor: pointer;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="color: #9ca3af;">└</span>
+                                    <span>💰 ${stream.name}</span>
+                                    <span style="font-size: 11px; color: #6b7280;">${stream.type}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="tree-node" onclick="selectArtikel('${node.artikel.id}')"
+                     style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;"
+                     onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#fafafa'" 
+                     onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>📦</span>
+                        <strong>${node.artikel.name || 'Artikel'}</strong>
+                        <span style="background: #e5e7eb; color: #374151; padding: 2px 6px; border-radius: 4px; font-size: 11px;">
+                            ${node.artikel.typ || 'STANDARD'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+}
+
+// ============================================
+// ARTIKEL AUSWÄHLEN UND DETAILS ANZEIGEN
+// ============================================
+
+window.selectArtikel = function(artikelId) {
+    const artikel = window.revenueModelArtikel.find(a => a.id === artikelId);
+    if (!artikel) return;
+    
+    // Highlight selected in tree
+    document.querySelectorAll('.tree-node > div').forEach(el => {
+        el.style.outline = 'none';
+    });
+    event.currentTarget.style.outline = '2px solid #3b82f6';
+    event.currentTarget.style.outlineOffset = '2px';
+    
+    // Show details
+    const container = document.getElementById('detail-container');
+    container.innerHTML = renderArtikelDetails(artikel);
 };
+
+// ============================================
+// DETAIL-ANSICHT (wie vorher, aber kompakter)
+// ============================================
+
+function renderArtikelDetails(art) {
+    return `
+        <div>
+            <!-- Header -->
+            <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px;">
+                <h2 style="margin: 0; font-size: 24px;">
+                    ${art.name || 'Unbenannt'}
+                    <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 6px; font-size: 14px; margin-left: 12px;">
+                        ${art.typ || 'Standard'}
+                    </span>
+                </h2>
+            </div>
+            
+            <!-- Finanz-Parameter (wie im Screenshot) -->
+            ${renderFinanzParameter(art)}
+        </div>
+    `;
+}
+
+function renderFinanzParameter(art) {
+    // Hier den Code von vorher wiederverwenden
+    // aber kompakter
+    return `
+        <div style="background: #fafafa; padding: 20px; border-radius: 8px;">
+            <!-- Inhalt wie vorher -->
+            ... Release, Zeithorizont, Startwerte, Entwicklungsmodelle ...
+        </div>
+    `;
+}
+
+function renderConsolidatedTable(artikel) {
+    // Tabelle am Ende
+    return `
+        <div style="background: white; border: 2px solid #1e3a8a; border-radius: 12px; overflow: hidden;">
+            <div style="background: #1e3a8a; color: white; padding: 16px;">
+                <h3 style="margin: 0;">📊 Konsolidierte Ergebnisse</h3>
+            </div>
+            <div style="padding: 16px;">
+                <!-- Tabelle -->
+            </div>
+        </div>
+    `;
+}
