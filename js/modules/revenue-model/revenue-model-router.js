@@ -1,32 +1,29 @@
 /**
- * REVENUE MODEL ROUTER
+ * REVENUE MODEL ROUTER - UPDATED
  * Horvath & Partners Implementation
  * 
  * Intelligente Weiche für verschiedene Artikel-Typen
- * Lädt das passende Revenue Model basierend auf artikel_mode:
- * 
- * - standard → hardware-model.js ✅
- * - package → package-model.js (TODO)
- * - hybrid → hybrid-model.js (TODO)
- * - subscription → subscription-model.js (TODO)
- * - services → services-model.js (TODO)
- * 
- * USAGE:
- * import { renderRevenueModel } from './js/modules/revenue-model/revenue-model-router.js';
- * renderRevenueModel(artikel, 'revenue-model-content');
+ * Lädt das passende Revenue Model basierend auf artikel_mode
  */
 
-// Single-Artikel View
+// ==========================================
+// IMPORTS - ALL MODELS
+// ==========================================
+
+// Single-Artikel Views
 import { renderHardwareModel } from './hardware-model.js';
+import { renderPackageModel } from './package-model.js';
+import { renderSoftwareModel } from './software-model.js';
+import { renderServiceModel } from './service-model.js';
 
 // Multi-Artikel View
 import { renderMultiArtikelPlanning } from './hardware-model-multi.js';
 
-// Enhanced Sidebar
-import { renderArtikelSidebarWithMultiSelect } from './artikel-sidebar-multi.js';
-
 // Make available globally
 window.renderHardwareModel = renderHardwareModel;
+window.renderPackageModel = renderPackageModel;
+window.renderSoftwareModel = renderSoftwareModel;
+window.renderServiceModel = renderServiceModel;
 window.renderMultiArtikelPlanning = renderMultiArtikelPlanning;
 
 // ==========================================
@@ -71,31 +68,29 @@ export function renderRevenueModel(artikel, containerId) {
         break;
       
       case 'package':
-        console.log('   → Loading Package Model (Placeholder)...');
-        renderPackageModelPlaceholder(artikel, containerId);
-        // TODO: import { renderPackageModel } from './package-model.js';
-        // renderPackageModel(artikel, containerId);
+        console.log('   → Loading Package Model...');
+        renderPackageModel(artikel, containerId);
+        break;
+      
+      case 'software':
+        console.log('   → Loading Software Model...');
+        renderSoftwareModel(artikel, containerId);
+        break;
+      
+      case 'services':
+        console.log('   → Loading Service Model...');
+        renderServiceModel(artikel, containerId);
         break;
       
       case 'hybrid':
         console.log('   → Loading Hybrid Model (Placeholder)...');
         renderHybridModelPlaceholder(artikel, containerId);
-        // TODO: import { renderHybridModel } from './hybrid-model.js';
-        // renderHybridModel(artikel, containerId);
+        // TODO: Hybrid model combines multiple revenue streams
         break;
       
       case 'subscription':
-        console.log('   → Loading Subscription Model (Placeholder)...');
-        renderSubscriptionModelPlaceholder(artikel, containerId);
-        // TODO: import { renderSubscriptionModel } from './subscription-model.js';
-        // renderSubscriptionModel(artikel, containerId);
-        break;
-      
-      case 'services':
-        console.log('   → Loading Services Model (Placeholder)...');
-        renderServicesModelPlaceholder(artikel, containerId);
-        // TODO: import { renderServicesModel } from './services-model.js';
-        // renderServicesModel(artikel, containerId);
+        console.log('   → Routing to Software Model (Subscription Mode)...');
+        renderSoftwareModel(artikel, containerId);
         break;
       
       default:
@@ -119,6 +114,7 @@ export function getModelTypeName(modelType) {
   const names = {
     'hardware': 'Standard (Hardware)',
     'package': 'Package (Good/Better/Best)',
+    'software': 'Software (Perpetual/SaaS)',
     'hybrid': 'Hybrid (Multi-Stream)',
     'subscription': 'Subscription (SaaS)',
     'services': 'Services/Consulting'
@@ -133,6 +129,7 @@ export function getModelTypeIcon(modelType) {
   const icons = {
     'hardware': '📦',
     'package': '📊',
+    'software': '💿',
     'hybrid': '🔀',
     'subscription': '🔄',
     'services': '👔'
@@ -144,7 +141,7 @@ export function getModelTypeIcon(modelType) {
  * Check if model is implemented
  */
 export function isModelImplemented(modelType) {
-  return modelType === 'hardware'; // Only hardware is implemented so far
+  return ['hardware', 'package', 'software', 'services'].includes(modelType);
 }
 
 /**
@@ -153,10 +150,11 @@ export function isModelImplemented(modelType) {
 export function getAvailableModelTypes() {
   return [
     { value: 'hardware', label: 'Standard (Hardware)', icon: '📦', implemented: true },
-    { value: 'subscription', label: 'Subscription (SaaS)', icon: '🔄', implemented: false },
-    { value: 'package', label: 'Package (Varianten)', icon: '📊', implemented: false },
-    { value: 'hybrid', label: 'Hybrid (Multi-Stream)', icon: '🔀', implemented: false },
-    { value: 'services', label: 'Services/Consulting', icon: '👔', implemented: false }
+    { value: 'package', label: 'Package (Varianten)', icon: '📊', implemented: true },
+    { value: 'software', label: 'Software (Perpetual/SaaS)', icon: '💿', implemented: true },
+    { value: 'services', label: 'Services/Consulting', icon: '👔', implemented: true },
+    { value: 'subscription', label: 'Subscription (SaaS)', icon: '🔄', implemented: true },
+    { value: 'hybrid', label: 'Hybrid (Multi-Stream)', icon: '🔀', implemented: false }
   ];
 }
 
@@ -192,169 +190,69 @@ function determineModelType(artikel) {
       
       case 'services':
       case 'consulting':
+      case 'beratung':
         return 'services';
+      
+      case 'software':
+        return 'software';
       
       case 'standard':
       case 'hardware':
         return 'hardware';
       
       default:
-        console.log('      Unknown artikel_mode, falling back to typ inference');
-        // Fall through to typ-based detection
-        break;
+        console.log('      Unknown artikel_mode, falling back to typ');
     }
   }
   
   // Priority 2: Infer from typ
-  const typ = (artikel.typ || '').toLowerCase();
-  console.log('      Inferring from typ:', typ);
-  
-  // Subscription indicators
-  if (typ.includes('saas') || 
-      typ.includes('subscription') || 
-      typ.includes('recurring') ||
-      typ.includes('software-subscription')) {
-    console.log('      → Detected: subscription');
-    return 'subscription';
-  }
-  
-  // Services indicators
-  if (typ.includes('consulting') || 
-      typ.includes('service') || 
-      typ.includes('beratung') ||
-      typ.includes('wartung')) {
-    console.log('      → Detected: services');
-    return 'services';
-  }
-  
-  // Package indicators
-  if (typ.includes('package') || 
-      typ.includes('paket') ||
-      typ.includes('bundle')) {
-    console.log('      → Detected: package');
-    return 'package';
-  }
-  
-  // Software (could be subscription or one-time)
-  if (typ.includes('software') || typ.includes('license')) {
-    // Check if there's recurring revenue config
-    if (artikel.revenue_model_data?.recurring) {
-      console.log('      → Detected: subscription (via config)');
-      return 'subscription';
+  if (artikel.typ) {
+    console.log('      Inferring from typ:', artikel.typ);
+    
+    const typeLower = artikel.typ.toLowerCase();
+    
+    // Package detection
+    if (typeLower.includes('package')) {
+      return 'package';
     }
-    console.log('      → Detected: hardware (one-time software)');
-    return 'hardware'; // Treat as one-time sale
+    
+    // Software detection
+    if (typeLower.includes('software')) {
+      if (typeLower.includes('perpetual')) {
+        return 'software';
+      }
+      if (typeLower.includes('saas') || typeLower.includes('subscription')) {
+        return 'subscription';
+      }
+      return 'software';
+    }
+    
+    // Service detection
+    if (typeLower.includes('service') || 
+        typeLower.includes('consulting') || 
+        typeLower.includes('beratung') ||
+        typeLower.includes('implementation')) {
+      return 'services';
+    }
+    
+    // Hardware detection (default for physical products)
+    if (typeLower.includes('hardware') || 
+        typeLower.includes('maschine') ||
+        typeLower.includes('roboter') ||
+        typeLower.includes('sensor') ||
+        typeLower.includes('gerät')) {
+      return 'hardware';
+    }
   }
   
-  // Default: Hardware model (works for most one-time sales)
-  console.log('      → Default: hardware');
+  // Priority 3: Default (Hardware Model)
+  console.log('      No specific type found, defaulting to hardware');
   return 'hardware';
 }
 
-/**
- * Validate artikel object
- */
-function validateArtikel(artikel) {
-  if (!artikel) {
-    throw new Error('Artikel object is null or undefined');
-  }
-  if (!artikel.id) {
-    throw new Error('Artikel has no ID');
-  }
-  if (!artikel.name) {
-    console.warn('⚠️ Artikel has no name');
-  }
-  return true;
-}
-
 // ==========================================
-// ERROR HANDLING
+// PLACEHOLDER RENDERS
 // ==========================================
-
-function renderErrorState(containerId, errorMessage) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  
-  container.innerHTML = `
-    <div style="padding: 60px 40px; text-align: center; background: white; border-radius: 12px;">
-      <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
-      <h3 style="margin: 0 0 10px; font-size: 24px; color: #991b1b;">Fehler beim Laden</h3>
-      <p style="margin: 0 0 30px; color: #6b7280; font-size: 16px;">
-        Das Revenue Model konnte nicht geladen werden
-      </p>
-      <div style="padding: 20px; background: #fef2f2; border: 2px solid #ef4444; border-radius: 8px; display: inline-block; max-width: 600px;">
-        <p style="margin: 0; color: #991b1b; font-weight: 500; text-align: left;">
-          <strong>Fehlermeldung:</strong><br>
-          ${errorMessage}
-        </p>
-      </div>
-      <div style="margin-top: 30px;">
-        <button 
-          class="btn btn-secondary" 
-          onclick="window.location.reload()"
-          style="padding: 12px 24px; border: 2px solid #e5e7eb; border-radius: 8px; background: white; font-size: 15px; font-weight: 600; cursor: pointer;"
-        >
-          🔄 Seite neu laden
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// PLACEHOLDER RENDERS (TODO - Future Models)
-// ==========================================
-
-function renderPackageModelPlaceholder(artikel, containerId) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = `
-    <div style="padding: 60px 40px; background: white; border-radius: 12px;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <div style="font-size: 64px; margin-bottom: 20px;">📊</div>
-        <h3 style="margin: 0 0 10px; font-size: 24px; color: #1f2937;">Package Model</h3>
-        <p style="margin: 0; color: #6b7280; font-size: 16px;">
-          Customer Journey basiertes Revenue Model für Package-Artikel
-        </p>
-      </div>
-      
-      <div style="padding: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 40px; text-align: center;">
-        <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 15px;">
-          🚧 In Entwicklung - Wird als nächstes implementiert
-        </p>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px;">
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">📈 Revenue Planning</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>Customer Journey Planung</li>
-            <li>Neukunden-Akquisition</li>
-            <li>Wachstumsmodelle</li>
-            <li>Package Mix Entwicklung</li>
-          </ul>
-        </div>
-        
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">🎯 Retention & Upsell</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>Churn-Raten pro Package</li>
-            <li>Upsell-Matrix (S→M→L)</li>
-            <li>Net Revenue Retention</li>
-            <li>Kohortenbasierte Analyse</li>
-          </ul>
-        </div>
-      </div>
-      
-      <div style="padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
-        <h4 style="margin: 0 0 12px; font-size: 16px;">💡 Beispiel-Anwendung</h4>
-        <p style="margin: 0; line-height: 1.6; font-size: 14px; opacity: 0.95;">
-          <strong>Use Case:</strong> Cyber Security Consulting mit Paketen Basic, Professional, Enterprise.<br>
-          Neue Kunden starten bei Basic, 15% upgraden jährlich auf Professional, 10% von Professional auf Enterprise.
-        </p>
-      </div>
-    </div>
-  `;
-}
 
 function renderHybridModelPlaceholder(artikel, containerId) {
   const container = document.getElementById(containerId);
@@ -364,146 +262,28 @@ function renderHybridModelPlaceholder(artikel, containerId) {
         <div style="font-size: 64px; margin-bottom: 20px;">🔀</div>
         <h3 style="margin: 0 0 10px; font-size: 24px; color: #1f2937;">Hybrid Model</h3>
         <p style="margin: 0; color: #6b7280; font-size: 16px;">
-          Multi-Stream Revenue Model für komplexe Produkte
+          Multi-Stream Revenue Model mit Cross-Dependencies
         </p>
       </div>
       
       <div style="padding: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 40px; text-align: center;">
         <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 15px;">
-          🚧 In Entwicklung - Kommt nach Package Model
+          🚧 In Entwicklung
         </p>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px;">
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">💰 Revenue Streams</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>One-Time Sale (Hardware)</li>
-            <li>Subscription (Software)</li>
-            <li>Maintenance Contracts</li>
-            <li>Professional Services</li>
-            <li>Spare Parts/Consumables</li>
-          </ul>
-        </div>
-        
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">📊 Analytics</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>Stream-spezifische Modelle</li>
-            <li>Cross-Stream Dependencies</li>
-            <li>Attach Rates</li>
-            <li>Lifetime Value Berechnung</li>
-          </ul>
-        </div>
       </div>
       
       <div style="padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
         <h4 style="margin: 0 0 12px; font-size: 16px;">💡 Beispiel-Anwendung</h4>
         <p style="margin: 0; line-height: 1.6; font-size: 14px; opacity: 0.95;">
           <strong>Use Case:</strong> Roboter-Verkauf @ 50k€ + Software License @ 5k€/Jahr + Maintenance @ 18% + Implementation Service @ 15k€.<br>
-          Jeder Stream hat eigene Entwicklungslogik, aber sie sind voneinander abhängig (z.B. Maintenance hängt von Installed Base ab).
-        </p>
-      </div>
-    </div>
-  `;
-}
-
-function renderSubscriptionModelPlaceholder(artikel, containerId) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = `
-    <div style="padding: 60px 40px; background: white; border-radius: 12px;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <div style="font-size: 64px; margin-bottom: 20px;">🔄</div>
-        <h3 style="margin: 0 0 10px; font-size: 24px; color: #1f2937;">Subscription Model</h3>
-        <p style="margin: 0; color: #6b7280; font-size: 16px;">
-          SaaS/Subscription Revenue Model mit Churn & Expansion
+          Jeder Stream hat eigene Entwicklungslogik, aber sie sind voneinander abhängig.
         </p>
       </div>
       
-      <div style="padding: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 40px; text-align: center;">
-        <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 15px;">
-          🚧 In Entwicklung
-        </p>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px;">
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">📈 SaaS Metriken</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>MRR/ARR Tracking</li>
-            <li>New/Expansion/Churned MRR</li>
-            <li>Net Revenue Retention</li>
-            <li>ARPU Development</li>
-          </ul>
-        </div>
-        
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">💸 Unit Economics</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>CAC/LTV Ratio</li>
-            <li>CAC Payback Period</li>
-            <li>Rule of 40</li>
-            <li>Kohortenanalyse</li>
-          </ul>
-        </div>
-      </div>
-      
-      <div style="padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
-        <h4 style="margin: 0 0 12px; font-size: 16px;">💡 Beispiel-Anwendung</h4>
-        <p style="margin: 0; line-height: 1.6; font-size: 14px; opacity: 0.95;">
-          <strong>Use Case:</strong> SaaS Platform mit 50€/Monat ARPU, 1.200 Neukunden in Jahr 1, 15% Churn, CAC von 500€.<br>
-          Modell berechnet MRR-Entwicklung, Net Retention und wann Unit Economics profitabel werden (CAC Payback).
-        </p>
-      </div>
-    </div>
-  `;
-}
-
-function renderServicesModelPlaceholder(artikel, containerId) {
-  const container = document.getElementById(containerId);
-  container.innerHTML = `
-    <div style="padding: 60px 40px; background: white; border-radius: 12px;">
-      <div style="text-align: center; margin-bottom: 40px;">
-        <div style="font-size: 64px; margin-bottom: 20px;">👔</div>
-        <h3 style="margin: 0 0 10px; font-size: 24px; color: #1f2937;">Services/Consulting Model</h3>
-        <p style="margin: 0; color: #6b7280; font-size: 16px;">
-          Utilization-basiertes Revenue Model für Beratung & Services
-        </p>
-      </div>
-      
-      <div style="padding: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 12px; margin-bottom: 40px; text-align: center;">
-        <p style="margin: 0; color: #92400e; font-weight: 600; font-size: 15px;">
-          🚧 In Entwicklung
-        </p>
-      </div>
-      
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px;">
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">👥 Kapazitätsplanung</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>FTE Planung (Hiring Plan)</li>
-            <li>Utilization Rate</li>
-            <li>Bench Time Management</li>
-            <li>Tagessatz/Stundensatz</li>
-          </ul>
-        </div>
-        
-        <div style="padding: 24px; background: #f9fafb; border-radius: 12px;">
-          <h4 style="margin: 0 0 16px; color: #1f2937; font-size: 16px;">💰 Profitabilität</h4>
-          <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8; font-size: 14px;">
-            <li>Gross Margin Berechnung</li>
-            <li>Revenue per Consultant</li>
-            <li>Realization Rate</li>
-            <li>Overhead Allocation</li>
-          </ul>
-        </div>
-      </div>
-      
-      <div style="padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
-        <h4 style="margin: 0 0 12px; font-size: 16px;">💡 Beispiel-Anwendung</h4>
-        <p style="margin: 0; line-height: 1.6; font-size: 14px; opacity: 0.95;">
-          <strong>Use Case:</strong> Consulting Firm mit 10 Beratern, 220 verfügbare Tage, 75% Utilization, 1.500€ Tagessatz.<br>
-          Modell plant Team-Wachstum, Auslastungsentwicklung und berechnet Gross Margin bei Personalkosten von 120k€/FTE.
+      <div style="margin-top: 24px; text-align: center;">
+        <p style="color: #6b7280; font-size: 14px;">
+          Für Hybrid-Modelle verwenden Sie aktuell bitte die Multi-Artikel Planung:<br>
+          Aktivieren Sie den Multi-Mode und wählen Sie mehrere Artikel aus.
         </p>
       </div>
     </div>
@@ -571,6 +351,27 @@ function renderDefaultModel(artikel, containerId) {
           style="padding: 12px 24px; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 15px; font-weight: 600; cursor: pointer;"
         >
           🔄 Seite neu laden
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderErrorState(containerId, errorMessage) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <div style="padding: 60px 40px; background: white; border-radius: 12px;">
+      <div style="text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+        <h3 style="margin: 0 0 10px; font-size: 24px; color: #ef4444;">Fehler beim Laden</h3>
+        <p style="margin: 0; color: #6b7280; font-size: 16px;">
+          ${errorMessage}
+        </p>
+        <button 
+          onclick="window.location.reload()"
+          style="margin-top: 24px; padding: 12px 24px; border: none; border-radius: 8px; background: #2563eb; color: white; font-size: 15px; font-weight: 600; cursor: pointer;"
+        >
+          🔄 Neu laden
         </button>
       </div>
     </div>
