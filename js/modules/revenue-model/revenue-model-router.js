@@ -16,7 +16,18 @@
  * renderRevenueModel(artikel, 'revenue-model-content');
  */
 
+// Single-Artikel View
 import { renderHardwareModel } from './hardware-model.js';
+
+// Multi-Artikel View
+import { renderMultiArtikelPlanning } from './hardware-model-multi.js';
+
+// Enhanced Sidebar
+import { renderArtikelSidebarWithMultiSelect } from './artikel-sidebar-multi.js';
+
+// Make available globally
+window.renderHardwareModel = renderHardwareModel;
+window.renderMultiArtikelPlanning = renderMultiArtikelPlanning;
 
 // ==========================================
 // MAIN ROUTER
