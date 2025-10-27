@@ -28,7 +28,7 @@ export function renderHardwareModel(artikel, containerId) {
   const modelData = artikel.revenue_model_data || initializeHardwareData(artikel);
   
   container.innerHTML = `
-    <div class="revenue-model-container" style="padding: 30px; background: white; border-radius: 12px;">
+    <div class="revenue-model-container" style="padding: 20px; background: white; border-radius: 12px;">
       
       <!-- SECTION 1: Zeitliche Rahmendaten -->
       ${renderTimeFrame(modelData)}
@@ -258,6 +258,26 @@ function renderRadioOptionCompact(type, value, label, currentValue) {
     </label>
   `;
 }
+
+function renderActionButtons(artikelId) {
+  return `
+    <div class="action-buttons-compact">
+      <button 
+        class="btn btn-secondary-compact" 
+        onclick="window.resetHardwareModel('${artikelId}')"
+      >
+        🔄 Zurücksetzen
+      </button>
+      <button 
+        class="btn btn-primary-compact" 
+        onclick="window.calculateHardwareModel('${artikelId}')"
+      >
+        📊 Berechnen & Vorschau
+      </button>
+    </div>
+  `;
+}
+
 // ==========================================
 // CALCULATION ENGINE
 // ==========================================
@@ -627,243 +647,6 @@ function calculateAndRender(artikel) {
     previewContainer.innerHTML = renderPreviewTable(data.forecast);
   }
 }
-
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatNumber(value, decimals = 0) {
-  return new Intl.NumberFormat('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(value);
-}
-
-function renderActionButtons(artikelId) {
-  return `
-    <div class="action-buttons-compact">
-      <button 
-        class="btn btn-secondary-compact" 
-        onclick="window.resetHardwareModel('${artikelId}')"
-      >
-        🔄 Zurücksetzen
-      </button>
-      <button 
-        class="btn btn-primary-compact" 
-        onclick="window.calculateHardwareModel('${artikelId}')"
-      >
-        📊 Berechnen & Vorschau
-      </button>
-    </div>
-  `;
-}
-
-// ==========================================
-// RENDER PREVIEW TABLE
-// ==========================================
-
-function renderPreviewTable(forecast) {
-  return `
-    <div class="section-card-compact" style="margin-top: 12px;">
-      <h3 class="section-title-compact">📊 Ergebnis-Vorschau</h3>
-      
-      <div class="preview-table-container">
-        <table class="preview-table">
-          <thead>
-            <tr>
-              <th style="width: 140px;">Parameter</th>
-              ${forecast.years.map(year => `<th style="text-align: center;">${year}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="row-label">Menge (Stück)</td>
-              ${forecast.mengen.map(m => `<td>${formatNumber(m, 0)}</td>`).join('')}
-            </tr>
-            <tr>
-              <td class="row-label">Preis (€/Stück)</td>
-              ${forecast.preise.map(p => `<td>${formatNumber(p, 2)}</td>`).join('')}
-            </tr>
-            <tr>
-              <td class="row-label">HK (€/Stück)</td>
-              ${forecast.kosten.map(k => `<td>${formatNumber(k, 2)}</td>`).join('')}
-            </tr>
-            <tr class="separator-row">
-              <td colspan="${forecast.years.length + 1}"></td>
-            </tr>
-            <tr class="highlight-row">
-              <td class="row-label"><strong>Umsatz (T€)</strong></td>
-              ${forecast.umsaetze.map(u => `<td><strong>${formatNumber(u/1000, 0)}</strong></td>`).join('')}
-            </tr>
-            <tr class="highlight-row">
-              <td class="row-label"><strong>DB2 (T€)</strong></td>
-              ${forecast.db2_values.map(db => `<td style="color: #059669;"><strong>${formatNumber(db/1000, 0)}</strong></td>`).join('')}
-            </tr>
-            <tr>
-              <td class="row-label">DB2 (%)</td>
-              ${forecast.db2_percents.map(pct => `<td style="color: #059669;">${formatNumber(pct, 1)}%</td>`).join('')}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <!-- KPI Summary -->
-      <div class="kpi-summary">
-        <div class="kpi-summary-card">
-          <div class="kpi-summary-label">Gesamt-Umsatz</div>
-          <div class="kpi-summary-value">${formatCurrency(forecast.umsaetze.reduce((a,b) => a+b, 0))}</div>
-        </div>
-        <div class="kpi-summary-card">
-          <div class="kpi-summary-label">Gesamt-DB2</div>
-          <div class="kpi-summary-value">${formatCurrency(forecast.db2_values.reduce((a,b) => a+b, 0))}</div>
-        </div>
-        <div class="kpi-summary-card">
-          <div class="kpi-summary-label">Ø DB2-Marge</div>
-          <div class="kpi-summary-value">
-            ${formatNumber(
-              (forecast.db2_values.reduce((a,b) => a+b, 0) / forecast.umsaetze.reduce((a,b) => a+b, 0) * 100),
-              1
-            )}%
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// ==========================================
-// EVENT HANDLERS
-// ==========================================
-
-function attachEventListeners(artikel) {
-  // Horizon buttons
-  document.querySelectorAll('.horizon-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.horizon-btn').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-    });
-  });
-  
-  // Real-time KPI update for start values
-  ['hw-start-menge', 'hw-start-preis', 'hw-start-hk'].forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', updateStartValuesKPI);
-    }
-  });
-}
-
-function updateStartValuesKPI() {
-  const menge = parseFloat(document.getElementById('hw-start-menge')?.value) || 0;
-  const preis = parseFloat(document.getElementById('hw-start-preis')?.value) || 0;
-  const hk = parseFloat(document.getElementById('hw-start-hk')?.value) || 0;
-  
-  const umsatz = menge * preis;
-  const kosten = menge * hk;
-  const db2 = umsatz - kosten;
-  const db2Percent = umsatz > 0 ? (db2 / umsatz * 100).toFixed(1) : 0;
-  
-  // Update KPI cards
-  const kpiCards = document.querySelectorAll('.kpi-card .kpi-value');
-  if (kpiCards.length >= 4) {
-    kpiCards[0].textContent = formatCurrency(umsatz);
-    kpiCards[1].textContent = formatCurrency(kosten);
-    kpiCards[2].textContent = formatCurrency(db2);
-    kpiCards[3].textContent = `${db2Percent}%`;
-  }
-}
-
-// ==========================================
-// WINDOW FUNCTIONS (Called from UI)
-// ==========================================
-
-window.calculateHardwareModel = async function(artikelId) {
-  console.log('📊 Calculating Hardware Model for:', artikelId);
-  
-  // Get artikel from state
-  const artikel = window.state?.getArtikel(artikelId);
-  if (!artikel) {
-    console.error('❌ Artikel not found:', artikelId);
-    return;
-  }
-  
-  // Collect data from form
-  const data = {
-    release_date: document.getElementById('hw-release-date')?.value,
-    time_horizon: parseInt(document.querySelector('.horizon-btn.active')?.dataset.years) || 5,
-    start_menge: parseFloat(document.getElementById('hw-start-menge')?.value) || 0,
-    start_preis: parseFloat(document.getElementById('hw-start-preis')?.value) || 0,
-    start_hk: parseFloat(document.getElementById('hw-start-hk')?.value) || 0,
-    mengen_modell: document.querySelector('input[name="hw-menge-model"]:checked')?.value || 'realistisch',
-    preis_modell: document.querySelector('input[name="hw-preis-model"]:checked')?.value || 'konstant',
-    kosten_modell: document.querySelector('input[name="hw-kosten-model"]:checked')?.value || 'lernkurve'
-  };
-  
-  // Validate
-  if (!data.start_menge || !data.start_preis) {
-    alert('Bitte Startwerte für Menge und Preis eingeben!');
-    return;
-  }
-  
-  // Calculate forecast
-  const forecast = calculateForecast(data);
-  data.calculated = true;
-  data.forecast = forecast;
-  
-  console.log('✅ Forecast calculated:', forecast);
-  
-  // Render preview
-  const previewContainer = document.getElementById('hardware-preview-container');
-  if (previewContainer) {
-    previewContainer.innerHTML = renderPreviewTable(forecast);
-  }
-  
-  // Save to artikel
-  artikel.revenue_model_data = data;
-  artikel.release_datum = data.release_date;
-  artikel.zeitraum = data.time_horizon;
-  artikel.start_menge = data.start_menge;
-  artikel.start_preis = data.start_preis;
-  artikel.start_hk = data.start_hk;
-  artikel.mengen_modell = data.mengen_modell;
-  artikel.preis_modell = data.preis_modell;
-  artikel.kosten_modell = data.kosten_modell;
-  
-  // Save to backend
-  if (window.api && window.api.saveArticle) {
-    try {
-      await window.api.saveArticle(artikel);
-      console.log('✅ Hardware model saved to database');
-    } catch (error) {
-      console.error('❌ Error saving:', error);
-    }
-  }
-};
-
-window.resetHardwareModel = function(artikelId) {
-  const confirmed = confirm('Möchten Sie alle Eingaben zurücksetzen?');
-  if (!confirmed) return;
-  
-  const artikel = window.state?.getArtikel(artikelId);
-  if (!artikel) return;
-  
-  // Reset data
-  artikel.revenue_model_data = null;
-  
-  // Re-render
-  if (window.renderHardwareModel) {
-    renderHardwareModel(artikel, 'revenue-model-content');
-  }
-};
 
 // ==========================================
 // HELPER FUNCTIONS
