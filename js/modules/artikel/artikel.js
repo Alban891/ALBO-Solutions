@@ -21,26 +21,6 @@ IntegrationPatch.integrateAdaptiveSystem();
 console.log('✅ Adaptive Artikel System loaded!');
 
 // ==========================================
-// HIERARCHIE STATE
-// ==========================================
-
-if (!window.expandedPackages) {
-  window.expandedPackages = new Set();
-}
-
-/**
- * Toggle package expand/collapse
- */
-window.togglePackageExpand = function(packageId) {
-  if (window.expandedPackages.has(packageId)) {
-    window.expandedPackages.delete(packageId);
-  } else {
-    window.expandedPackages.add(packageId);
-  }
-  renderArtikelListByProjekt(); // Re-render
-};
-
-// ==========================================
 // ARTIKEL RENDERING MIT HIERARCHIE
 // ==========================================
 
@@ -84,61 +64,12 @@ export function renderArtikelListByProjekt() {
     return;
   }
 
-  // ==========================================
-  // GRUPPIERE IN HIERARCHIE
-  // ==========================================
-  
-  const hierarchy = [];
-  const processedIds = new Set();
-
-  // STEP 1: Finde alle Parents (package-parent oder hybrid-parent) UND Standard-Artikel
-  alleArtikel.forEach(artikel => {
-    const isParent = artikel.artikel_mode === 'package-parent' || artikel.artikel_mode === 'hybrid-parent';
-    
-    // Verarbeite wenn: Parent ODER kein parent_package_id (= Standard-Artikel)
-    if (isParent || !artikel.parent_package_id) {
-      // Extrahiere UUID aus artikel.id (format: "artikel-db-UUID")
-      const parentUuid = artikel.id.replace('artikel-db-', '');
-      
-      // Finde Children die auf diesen Parent zeigen
-      const children = alleArtikel.filter(a => a.parent_package_id === parentUuid);
-      
-      hierarchy.push({
-        parent: artikel,
-        children: children,
-        hasChildren: children.length > 0,
-        isParent: isParent
-      });
-      
-      processedIds.add(artikel.id);
-      children.forEach(c => processedIds.add(c.id));
-    }
-  });
-
-  // STEP 2: Orphaned Children (sollte nicht passieren, aber zur Sicherheit)
-  alleArtikel.forEach(artikel => {
-    if (!processedIds.has(artikel.id)) {
-      hierarchy.push({
-        parent: artikel,
-        children: [],
-        hasChildren: false,
-        isParent: false
-      });
-    }
-  });
-
-  // ==========================================
-  // RENDER MIT HIERARCHIE
+// ==========================================
+  // RENDER FLAT LIST (KEINE HIERARCHIE)
   // ==========================================
   
-  tbody.innerHTML = hierarchy.map(item => {
-    const { parent, children, hasChildren, isParent } = item;
-    const isExpanded = window.expandedPackages.has(parent.id);
-    
-    let html = '';
-    
-    // === PARENT/STANDARD ROW ===
-    const updatedAt = parent.updatedAt ? new Date(parent.updatedAt).toLocaleString('de-DE', {
+  tbody.innerHTML = alleArtikel.map(artikel => {
+    const updatedAt = artikel.updatedAt ? new Date(artikel.updatedAt).toLocaleString('de-DE', {
       day: '2-digit',
       month: '2-digit', 
       year: 'numeric',
@@ -148,119 +79,48 @@ export function renderArtikelListByProjekt() {
     
     // Bestimme Typ-Anzeige
     let typDisplay = '';
-    let typLabel = '';
-    if (isParent) {
-      // Parent: Zeige den Typ an (Package oder Hybrid)
-      if (parent.artikel_mode === 'package-parent') {
-        typLabel = 'Package';
-      } else if (parent.artikel_mode === 'hybrid-parent') {
-        typLabel = 'Hybrid';
-      }
-      typDisplay = `<span style="background:#e0e7ff;color:#4338ca;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;">${typLabel}</span>`;
-    } else {
-      // Standard-Artikel: Zeige typ-Feld
-      typDisplay = parent.typ ? `<span style="color:var(--text);font-size:13px;">${helpers.escapeHtml(parent.typ)}</span>` : '<span style="color:var(--text-light);">-</span>';
+    
+    // Für Package-Artikel: Zeige "Package" Badge
+    if (artikel.artikel_mode === 'package') {
+      const packageName = artikel.package_config?.package_name || '';
+      typDisplay = `
+        <span style="background:#e0e7ff;color:#4338ca;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;">
+          Package${packageName ? ' · ' + packageName : ''}
+        </span>
+      `;
+    } 
+    // Für Hybrid-Artikel: Zeige "Hybrid" Badge
+    else if (artikel.artikel_mode === 'hybrid') {
+      typDisplay = `<span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:600;">Hybrid</span>`;
+    }
+    // Standard-Artikel: Zeige typ-Feld
+    else {
+      typDisplay = artikel.typ ? `<span style="color:var(--text);font-size:13px;">${helpers.escapeHtml(artikel.typ)}</span>` : '<span style="color:var(--text-light);">-</span>';
     }
     
-    // Expand-Button nur bei Parents mit Children
-    const expandButton = hasChildren ? `
-      <button 
-        onclick="window.togglePackageExpand('${parent.id}')"
-        style="background:none;border:none;cursor:pointer;font-size:14px;padding:4px 8px;margin-right:8px;color:var(--primary);transition:transform 0.2s;${isExpanded ? 'transform:rotate(90deg);' : ''}"
-        title="${isExpanded ? 'Zuklappen' : 'Aufklappen'}"
-      >▶</button>
-    ` : '';
-    
-    html += `
-      <tr class="artikel-row" data-artikel-id="${parent.id}">
+    return `
+      <tr class="artikel-row" data-artikel-id="${artikel.id}">
         <td>
-          <input type="checkbox" class="artikel-checkbox" value="${parent.id}" onchange="updateArtikelBulkActions()">
+          <input type="checkbox" class="artikel-checkbox" value="${artikel.id}" onchange="updateArtikelBulkActions()">
         </td>
         <td>
-          ${expandButton}
-          <div style="display:inline-block;">
-            <div style="font-weight:${isParent ? '600' : '500'};color:var(--text);font-size:14px;">
-              ${helpers.escapeHtml(parent.name)}
-            </div>
+          <div style="font-weight:500;color:var(--text);font-size:14px;">
+            ${helpers.escapeHtml(artikel.name)}
           </div>
         </td>
         <td>${typDisplay}</td>
-        <td>${isParent ? '<span style="color:var(--text-light);">-</span>' : `<div style="font-size:11px;color:var(--text-light);">${updatedAt}</div>`}</td>
-        <td>${isParent ? '<span style="color:var(--text-light);">-</span>' : `<span class="status-badge status-${(parent.status || 'aktiv').toLowerCase()}">${helpers.escapeHtml(parent.status || 'aktiv')}</span>`}</td>
+        <td><div style="font-size:11px;color:var(--text-light);">${updatedAt}</div></td>
+        <td><span class="status-badge status-${(artikel.status || 'aktiv').toLowerCase()}">${helpers.escapeHtml(artikel.status || 'aktiv')}</span></td>
         <td>
           <div class="action-buttons">
-            <button class="btn-icon" onclick="openArtikelDetail('${parent.id}')" title="Details">📝</button>
-            <button class="btn-icon" onclick="duplicateArtikel('${parent.id}')" title="Duplizieren">📋</button>
-            <button class="btn-icon btn-danger" onclick="deleteArtikel('${parent.id}')" title="Löschen">🗑️</button>
+            <button class="btn-icon" onclick="openArtikelDetail('${artikel.id}')" title="Details">📝</button>
+            <button class="btn-icon" onclick="duplicateArtikel('${artikel.id}')" title="Duplizieren">📋</button>
+            <button class="btn-icon btn-danger" onclick="deleteArtikel('${artikel.id}')" title="Löschen">🗑️</button>
           </div>
         </td>
       </tr>
     `;
-    
-    // === CHILDREN ROWS (wenn expanded) ===
-    if (isExpanded && children.length > 0) {
-      children.forEach((child, index) => {
-        const childUpdatedAt = child.updatedAt ? new Date(child.updatedAt).toLocaleString('de-DE', {
-          day: '2-digit',
-          month: '2-digit', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        }) : '-';
-        
-        const isLast = index === children.length - 1;
-        const treeLine = `
-          <span style="position:absolute;left:40px;top:0;bottom:${isLast ? '50%' : '0'};width:1px;background:#cbd5e1;"></span>
-          <span style="position:absolute;left:40px;top:50%;width:24px;height:1px;background:#cbd5e1;"></span>
-        `;
-        
-        // Package-Name Badge (z.B. "Small", "Medium", "Large")
-        const packageBadge = child.package_name ? `
-          <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px;">${child.package_name}</span>
-        ` : '';
-        
-        html += `
-          <tr class="artikel-row" data-artikel-id="${child.id}" style="position:relative;background:#fafbfc;">
-            <td>
-              <input type="checkbox" class="artikel-checkbox" value="${child.id}" onchange="updateArtikelBulkActions()">
-            </td>
-            <td style="padding-left:64px;position:relative;">
-              ${treeLine}
-              <div style="display:inline-block;">
-                <div style="font-weight:400;color:var(--text);font-size:13px;">
-                  ${helpers.escapeHtml(child.name)}${packageBadge}
-                </div>
-              </div>
-            </td>
-            <td>
-              <span style="color:var(--text);font-size:12px;">${helpers.escapeHtml(child.typ || '-')}</span>
-            </td>
-            <td>
-              <div style="font-size:11px;color:var(--text-light);">
-                ${childUpdatedAt}
-              </div>
-            </td>
-            <td>
-              <span class="status-badge status-${(child.status || 'aktiv').toLowerCase()}">
-                ${helpers.escapeHtml(child.status || 'aktiv')}
-              </span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button class="btn-icon" onclick="openArtikelDetail('${child.id}')" title="Details">📝</button>
-                <button class="btn-icon" onclick="duplicateArtikel('${child.id}')" title="Duplizieren">📋</button>
-                <button class="btn-icon btn-danger" onclick="deleteArtikel('${child.id}')" title="Löschen">🗑️</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      });
-    }
-    
-    return html;
   }).join('');
-  
-  console.log('✅ Artikel list rendered');
 }
 
 // ==========================================
@@ -1503,3 +1363,4 @@ window.openArtikelCreationModal = function() {
   // Call the actual modal function with projektId
   openArtikelCreationModalCore(projektId);
 };
+
