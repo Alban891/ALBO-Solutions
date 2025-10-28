@@ -1,14 +1,14 @@
 /**
- * HARDWARE MODEL - COMPACT VERSION WITH DATABASE INTEGRATION
- * Kompaktes Design, Auto-Calculate, Always-Visible Forecast
+ * HARDWARE MODEL - CLEAN VERSION (Like Software Model)
+ * Nur Forecast-Tabelle, keine Input-Felder sichtbar
  * 
- * @version 2.0.0 - Database Integration
+ * @version 3.0.0 - Clean Table View
  * 
- * ✅ NEUE FEATURES:
- * - Auto-save to database after calculations
- * - Load existing forecasts on open
- * - Save status indicator
- * - Error handling with user feedback
+ * ✅ FEATURES:
+ * - Simple table view (like Software Model)
+ * - Manual save button
+ * - Load existing forecasts from database
+ * - Edit button (opens modal with inputs - future feature)
  */
 
 import { renderForecastTable } from './forecast-table.js';
@@ -25,7 +25,7 @@ export function renderHardwareModel(artikel, containerId) {
     return;
   }
   
-  console.log('📦 Rendering Hardware Model (Compact) for:', artikel.name);
+  console.log('📦 Rendering Hardware Model (Clean) for:', artikel.name);
   
   // Store artikel globally for access in event handlers
   window._currentArtikel = artikel;
@@ -35,52 +35,194 @@ export function renderHardwareModel(artikel, containerId) {
     artikel.hardware_model_data = initializeHardwareData(artikel);
   }
   
-  const data = artikel.hardware_model_data;
+  // ✅ Load existing forecast from database
+  loadExistingForecast(artikel, container);
+}
+
+// ==========================================
+// ✅ LOAD EXISTING FORECAST FROM DATABASE
+// ==========================================
+
+async function loadExistingForecast(artikel, container) {
+  try {
+    console.log('📥 Loading existing Hardware forecast for:', artikel.name);
+    
+    const existingForecast = await loadForecast(artikel.id, 'hardware', 'base');
+    
+    if (existingForecast && existingForecast.forecast_data) {
+      console.log('✅ Found existing forecast:', existingForecast);
+      
+      // Render with existing data
+      renderCleanView(container, artikel, existingForecast);
+      
+    } else {
+      console.log('ℹ️ No existing forecast found - showing empty state');
+      
+      // Show empty state with "Create Forecast" button
+      renderEmptyState(container, artikel);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error loading existing forecast:', error);
+    renderEmptyState(container, artikel);
+  }
+}
+
+// ==========================================
+// RENDER CLEAN VIEW (WITH TABLE)
+// ==========================================
+
+function renderCleanView(container, artikel, forecastData) {
+  const lastSaved = forecastData.updated_at 
+    ? new Date(forecastData.updated_at).toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : 'Unbekannt';
   
   container.innerHTML = `
-    <div class="hardware-model-compact">
+    <div class="hardware-model-clean">
       
-      <!-- Save Status Indicator (NEW) -->
+      <!-- Header with Save Button -->
+      <div class="model-header">
+        <div class="header-left">
+          <h2 class="model-title">📦 Hardware Revenue Forecast</h2>
+          <p class="last-saved">Zuletzt gespeichert: ${lastSaved}</p>
+        </div>
+        <div class="header-right">
+          <button id="btn-edit-forecast" class="btn btn-secondary">
+            ✏️ Bearbeiten
+          </button>
+          <button id="btn-save-forecast" class="btn btn-primary">
+            💾 Speichern
+          </button>
+        </div>
+      </div>
+      
+      <!-- Save Status Indicator -->
       <div id="save-status" class="save-status" style="display: none;">
         <span class="status-icon">✓</span>
         <span class="status-text">Gespeichert</span>
         <span class="status-time"></span>
       </div>
       
-      <!-- Zeitliche Rahmendaten (kompakt) -->
+      <!-- Forecast Table Container -->
+      <div id="forecast-table-container" class="forecast-table-wrapper">
+        <!-- Table will be rendered here by forecast-table.js -->
+      </div>
+      
+      <!-- Hidden: Input Data for Editing (collapsed by default) -->
+      <div id="input-section" class="input-section" style="display: none;">
+        ${renderInputSection(artikel.hardware_model_data, forecastData.parameters)}
+      </div>
+      
+    </div>
+    ${getCleanStyles()}
+  `;
+  
+  // Render the actual forecast table
+  if (forecastData.forecast_data) {
+    renderForecastTable(forecastData.forecast_data, 'forecast-table-container');
+  }
+  
+  // Attach event listeners
+  attachEventListeners(artikel, forecastData.parameters);
+}
+
+// ==========================================
+// RENDER EMPTY STATE
+// ==========================================
+
+function renderEmptyState(container, artikel) {
+  container.innerHTML = `
+    <div class="hardware-model-clean">
+      
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h3>Noch kein Hardware Forecast erstellt</h3>
+        <p>Erstellen Sie einen Forecast mit Startwerten und Wachstumsmodellen.</p>
+        <button id="btn-create-forecast" class="btn btn-primary btn-large">
+          ✨ Forecast erstellen
+        </button>
+      </div>
+      
+      <!-- Hidden: Input Data for Creating -->
+      <div id="input-section" class="input-section" style="display: none;">
+        ${renderInputSection(artikel.hardware_model_data, {})}
+      </div>
+      
+    </div>
+    ${getCleanStyles()}
+  `;
+  
+  // Attach event listeners
+  document.getElementById('btn-create-forecast')?.addEventListener('click', () => {
+    showInputSection();
+  });
+}
+
+// ==========================================
+// RENDER INPUT SECTION (COLLAPSED)
+// ==========================================
+
+function renderInputSection(data, savedParams = {}) {
+  // Use saved parameters if available, otherwise use data
+  const params = {
+    release_date: savedParams.release_date || data.release_date || '2025-10',
+    time_horizon: savedParams.zeitraumJahre || data.time_horizon || 5,
+    volume_year1: savedParams.startMenge || data.volume_year1 || 1000,
+    price_year1: savedParams.startPreis || data.price_year1 || 50,
+    cost_year1: savedParams.startHK || data.cost_year1 || 20,
+    volume_model: savedParams.volume_model || data.volume_model || 'konservativ',
+    price_model: savedParams.price_model || data.price_model || 'realistisch',
+    cost_model: savedParams.cost_model || data.cost_model || 'realistisch'
+  };
+  
+  return `
+    <div class="input-content">
+      
+      <div class="input-header">
+        <h3>⚙️ Forecast-Parameter bearbeiten</h3>
+        <button id="btn-close-inputs" class="btn-icon">✕</button>
+      </div>
+      
+      <!-- Zeitliche Rahmendaten -->
       <div class="section-compact">
-        <h3 class="section-title-compact">📅 Zeitliche Rahmendaten</h3>
+        <h4 class="section-title-small">📅 Zeitliche Rahmendaten</h4>
         <div class="input-row-compact">
           <div class="input-group-compact">
             <label>Release / Startdatum</label>
             <input 
               type="month" 
               id="hw-date" 
-              value="${data.release_date}"
+              value="${params.release_date}"
               class="input-compact"
             >
           </div>
           <div class="input-group-compact">
             <label>Zeithorizont</label>
             <div class="horizon-compact">
-              <button class="btn-horizon ${data.time_horizon === 3 ? 'active' : ''}" data-years="3">3J</button>
-              <button class="btn-horizon ${data.time_horizon === 5 ? 'active' : ''}" data-years="5">5J</button>
-              <button class="btn-horizon ${data.time_horizon === 7 ? 'active' : ''}" data-years="7">7J</button>
+              <button class="btn-horizon ${params.time_horizon === 3 ? 'active' : ''}" data-years="3">3J</button>
+              <button class="btn-horizon ${params.time_horizon === 5 ? 'active' : ''}" data-years="5">5J</button>
+              <button class="btn-horizon ${params.time_horizon === 7 ? 'active' : ''}" data-years="7">7J</button>
             </div>
           </div>
         </div>
       </div>
       
-      <!-- Startwerte (kompakt) -->
+      <!-- Startwerte -->
       <div class="section-compact">
-        <h3 class="section-title-compact">📊 Startwerte (Jahr 1)</h3>
+        <h4 class="section-title-small">📊 Startwerte (Jahr 1)</h4>
         <div class="input-row-compact">
           <div class="input-group-compact">
             <label>Menge (Stück)</label>
             <input 
               type="number" 
               id="hw-volume" 
-              value="${data.volume_year1}"
+              value="${params.volume_year1}"
               class="input-compact"
             >
           </div>
@@ -89,7 +231,7 @@ export function renderHardwareModel(artikel, containerId) {
             <input 
               type="number" 
               id="hw-price" 
-              value="${data.price_year1}"
+              value="${params.price_year1}"
               class="input-compact"
               step="0.01"
             >
@@ -99,43 +241,27 @@ export function renderHardwareModel(artikel, containerId) {
             <input 
               type="number" 
               id="hw-cost" 
-              value="${data.cost_year1}"
+              value="${params.cost_year1}"
               class="input-compact"
               step="0.01"
             >
           </div>
         </div>
-        
-        <!-- Quick KPIs (inline) -->
-        <div class="kpis-inline">
-          <span class="kpi-inline">
-            <strong>Umsatz J1:</strong> 
-            <span id="kpi-revenue">${formatCurrency(data.volume_year1 * data.price_year1)}</span>
-          </span>
-          <span class="kpi-inline">
-            <strong>DB2 J1:</strong> 
-            <span id="kpi-db2" class="kpi-positive">${formatCurrency(data.volume_year1 * (data.price_year1 - data.cost_year1))}</span>
-          </span>
-          <span class="kpi-inline">
-            <strong>Marge J1:</strong> 
-            <span id="kpi-margin" class="kpi-positive">${formatNumber((data.price_year1 - data.cost_year1) / data.price_year1 * 100, 1)}%</span>
-          </span>
-        </div>
       </div>
       
-      <!-- Wachstumsmodelle (ultra-kompakt) -->
+      <!-- Entwicklungsmodelle -->
       <div class="section-compact">
-        <h3 class="section-title-compact">📈 Entwicklungsmodelle (Zeitraum)</h3>
+        <h4 class="section-title-small">📈 Entwicklungsmodelle (Zeitraum)</h4>
         <div class="models-compact">
           
           <!-- Mengenmodell -->
           <div class="model-row">
             <div class="model-label-compact">Mengenentwicklung:</div>
             <div class="model-radios">
-              <label><input type="radio" name="volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}> +5%/J</label>
-              <label><input type="radio" name="volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}> S-Kurve</label>
-              <label><input type="radio" name="volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}> +15%/J</label>
+              <label><input type="radio" name="volume-model" value="konstant" ${params.volume_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="volume-model" value="konservativ" ${params.volume_model === 'konservativ' ? 'checked' : ''}> +5%/J</label>
+              <label><input type="radio" name="volume-model" value="realistisch" ${params.volume_model === 'realistisch' ? 'checked' : ''}> S-Kurve</label>
+              <label><input type="radio" name="volume-model" value="optimistisch" ${params.volume_model === 'optimistisch' ? 'checked' : ''}> +15%/J</label>
             </div>
           </div>
           
@@ -143,10 +269,10 @@ export function renderHardwareModel(artikel, containerId) {
           <div class="model-row">
             <div class="model-label-compact">Preisentwicklung:</div>
             <div class="model-radios">
-              <label><input type="radio" name="price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="price-model" value="konservativ" ${data.price_model === 'konservativ' ? 'checked' : ''}> +2%/J</label>
-              <label><input type="radio" name="price-model" value="realistisch" ${data.price_model === 'realistisch' ? 'checked' : ''}> -3%/J</label>
-              <label><input type="radio" name="price-model" value="optimistisch" ${data.price_model === 'optimistisch' ? 'checked' : ''}> -1%/J</label>
+              <label><input type="radio" name="price-model" value="konstant" ${params.price_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="price-model" value="konservativ" ${params.price_model === 'konservativ' ? 'checked' : ''}> +2%/J</label>
+              <label><input type="radio" name="price-model" value="realistisch" ${params.price_model === 'realistisch' ? 'checked' : ''}> -3%/J</label>
+              <label><input type="radio" name="price-model" value="optimistisch" ${params.price_model === 'optimistisch' ? 'checked' : ''}> -1%/J</label>
             </div>
           </div>
           
@@ -154,136 +280,161 @@ export function renderHardwareModel(artikel, containerId) {
           <div class="model-row">
             <div class="model-label-compact">Kostenentwicklung:</div>
             <div class="model-radios">
-              <label><input type="radio" name="cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="cost-model" value="konservativ" ${data.cost_model === 'konservativ' ? 'checked' : ''}> +3%/J</label>
-              <label><input type="radio" name="cost-model" value="realistisch" ${data.cost_model === 'realistisch' ? 'checked' : ''}> -5%/J</label>
-              <label><input type="radio" name="cost-model" value="optimistisch" ${data.cost_model === 'optimistisch' ? 'checked' : ''}> -10%/J</label>
+              <label><input type="radio" name="cost-model" value="konstant" ${params.cost_model === 'konstant' ? 'checked' : ''}> Konstant</label>
+              <label><input type="radio" name="cost-model" value="konservativ" ${params.cost_model === 'konservativ' ? 'checked' : ''}> +3%/J</label>
+              <label><input type="radio" name="cost-model" value="realistisch" ${params.cost_model === 'realistisch' ? 'checked' : ''}> -5%/J</label>
+              <label><input type="radio" name="cost-model" value="optimistisch" ${params.cost_model === 'optimistisch' ? 'checked' : ''}> -10%/J</label>
             </div>
           </div>
           
         </div>
       </div>
       
-      <!-- Forecast Tabelle (immer sichtbar) -->
-      <div class="section-compact">
-        <h3 class="section-title-compact">📊 Prognose-Tabelle</h3>
-        <div id="forecast-table-container"></div>
+      <!-- Action Buttons -->
+      <div class="input-actions">
+        <button id="btn-cancel-edit" class="btn btn-secondary">
+          Abbrechen
+        </button>
+        <button id="btn-calculate-forecast" class="btn btn-primary">
+          ✨ Forecast berechnen
+        </button>
       </div>
       
     </div>
-    ${getHardwareStyles()}
   `;
-  
-  // Attach event listeners
-  attachHardwareEventListeners(artikel);
-  
-  // ✅ NEW: Load existing forecast from database
-  loadExistingForecast(artikel);
-  
-  // Initial calculation
-  window.calculateHardwareForecast();
 }
 
 // ==========================================
-// ✅ NEW: LOAD EXISTING FORECAST FROM DATABASE
+// EVENT HANDLERS
 // ==========================================
 
-/**
- * Load existing forecast from database when opening the model
- * 
- * @param {Object} artikel - Article object
- */
-async function loadExistingForecast(artikel) {
-  try {
-    console.log('📥 Loading existing Hardware forecast for:', artikel.name);
-    
-    const existingForecast = await loadForecast(artikel.id, 'hardware', 'base');
-    
-    if (existingForecast) {
-      console.log('✅ Found existing forecast:', existingForecast);
-      
-      // Populate inputs with saved parameters
-      if (existingForecast.parameters) {
-        const params = existingForecast.parameters;
-        
-        // Set inputs if they exist
-        if (params.startMenge && document.getElementById('hw-volume')) {
-          document.getElementById('hw-volume').value = params.startMenge;
-        }
-        if (params.startPreis && document.getElementById('hw-price')) {
-          document.getElementById('hw-price').value = params.startPreis;
-        }
-        if (params.startHK && document.getElementById('hw-cost')) {
-          document.getElementById('hw-cost').value = params.startHK;
-        }
-        
-        // Set models if they exist
-        if (params.volume_model) {
-          const volumeRadio = document.querySelector(`input[name="volume-model"][value="${params.volume_model}"]`);
-          if (volumeRadio) volumeRadio.checked = true;
-        }
-        if (params.price_model) {
-          const priceRadio = document.querySelector(`input[name="price-model"][value="${params.price_model}"]`);
-          if (priceRadio) priceRadio.checked = true;
-        }
-        if (params.cost_model) {
-          const costRadio = document.querySelector(`input[name="cost-model"][value="${params.cost_model}"]`);
-          if (costRadio) costRadio.checked = true;
-        }
-        
-        // Set time horizon
-        if (params.zeitraumJahre) {
-          const horizonBtn = document.querySelector(`.btn-horizon[data-years="${params.zeitraumJahre}"]`);
-          if (horizonBtn) {
-            document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
-            horizonBtn.classList.add('active');
-          }
-        }
-        
-        // Show last saved timestamp
-        if (existingForecast.updated_at) {
-          showSaveStatus('success', existingForecast.updated_at);
-        }
-      }
-      
-      // Render existing forecast table
-      if (existingForecast.forecast_data) {
-        renderForecastTable(existingForecast.forecast_data, 'forecast-table-container');
-      }
-      
-    } else {
-      console.log('ℹ️ No existing forecast found - starting fresh');
-    }
-    
-  } catch (error) {
-    console.error('❌ Error loading existing forecast:', error);
-    // Don't show error to user - just start fresh
+function attachEventListeners(artikel, savedParams) {
+  // Edit button - show input section
+  document.getElementById('btn-edit-forecast')?.addEventListener('click', () => {
+    showInputSection();
+  });
+  
+  // Save button - save current forecast to database
+  document.getElementById('btn-save-forecast')?.addEventListener('click', async () => {
+    await saveCurrentForecast();
+  });
+  
+  // Close inputs button
+  document.getElementById('btn-close-inputs')?.addEventListener('click', () => {
+    hideInputSection();
+  });
+  
+  // Cancel edit button
+  document.getElementById('btn-cancel-edit')?.addEventListener('click', () => {
+    hideInputSection();
+  });
+  
+  // Calculate forecast button
+  document.getElementById('btn-calculate-forecast')?.addEventListener('click', () => {
+    calculateAndRenderForecast();
+  });
+  
+  // Horizon buttons
+  document.querySelectorAll('.btn-horizon').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+}
+
+function showInputSection() {
+  const inputSection = document.getElementById('input-section');
+  if (inputSection) {
+    inputSection.style.display = 'block';
+    inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function hideInputSection() {
+  const inputSection = document.getElementById('input-section');
+  if (inputSection) {
+    inputSection.style.display = 'none';
   }
 }
 
 // ==========================================
-// ✅ NEW: SAVE FORECAST TO DATABASE
+// CALCULATION & SAVE
 // ==========================================
 
-/**
- * Save forecast to database
- * 
- * @param {Object} forecast - Calculated forecast data
- * @param {Object} parameters - Input parameters
- * @returns {Promise<boolean>} Success status
- */
-async function saveForecastToDatabase(forecast, parameters) {
+function calculateAndRenderForecast() {
   const artikel = window._currentArtikel;
-  if (!artikel) {
-    console.error('❌ No artikel available');
-    return false;
+  if (!artikel) return;
+  
+  // Collect input data
+  const data = {
+    release_date: document.getElementById('hw-date')?.value || '2025-10',
+    time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
+    volume_year1: parseFloat(document.getElementById('hw-volume')?.value) || 0,
+    price_year1: parseFloat(document.getElementById('hw-price')?.value) || 0,
+    cost_year1: parseFloat(document.getElementById('hw-cost')?.value) || 0,
+    volume_model: document.querySelector('input[name="volume-model"]:checked')?.value || 'konstant',
+    price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
+    cost_model: document.querySelector('input[name="cost-model"]:checked')?.value || 'konstant'
+  };
+  
+  // Validate
+  if (!data.volume_year1 || !data.price_year1 || !data.cost_year1) {
+    alert('Bitte alle Startwerte ausfüllen!');
+    return;
+  }
+  
+  // Calculate forecast
+  const forecast = calculateForecast(data);
+  
+  // Render forecast table
+  renderForecastTable(forecast, 'forecast-table-container');
+  
+  // Update last saved indicator
+  document.querySelector('.last-saved')?.textContent = 'Zuletzt gespeichert: Noch nicht gespeichert';
+  
+  // Hide input section
+  hideInputSection();
+  
+  // Store in artikel for later save
+  artikel.hardware_model_data = {
+    ...artikel.hardware_model_data,
+    ...data,
+    calculated: true,
+    forecast: forecast
+  };
+  
+  console.log('✅ Forecast calculated successfully');
+}
+
+async function saveCurrentForecast() {
+  const artikel = window._currentArtikel;
+  if (!artikel || !artikel.hardware_model_data || !artikel.hardware_model_data.forecast) {
+    alert('Kein Forecast zum Speichern vorhanden!');
+    return;
   }
   
   try {
-    console.log('💾 Saving Hardware forecast to database...');
-    
-    // Show saving status
     showSaveStatus('saving');
+    
+    const data = artikel.hardware_model_data;
+    const forecast = data.forecast;
+    
+    // Prepare parameters
+    const parameters = {
+      startMenge: data.volume_year1,
+      startPreis: data.price_year1,
+      startHK: data.cost_year1,
+      mengenWachstum: data.volume_model,
+      preisWachstum: data.price_model,
+      hkWachstum: data.cost_model,
+      zeitraumJahre: data.time_horizon,
+      startJahr: parseInt(data.release_date.split('-')[0]),
+      release_date: data.release_date,
+      volume_model: data.volume_model,
+      price_model: data.price_model,
+      cost_model: data.cost_model
+    };
     
     // Save to database
     const result = await saveForecast(
@@ -291,34 +442,35 @@ async function saveForecastToDatabase(forecast, parameters) {
       'hardware',
       forecast,
       parameters,
-      'base', // scenario
-      'Auto-saved from Hardware Model' // notes
+      'base',
+      'Manuell gespeichert'
     );
     
     if (result) {
       console.log('✅ Forecast saved successfully:', result.id);
       showSaveStatus('success');
-      return true;
+      
+      // Update last saved time
+      const now = new Date().toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.querySelector('.last-saved').textContent = `Zuletzt gespeichert: ${now}`;
+      
     } else {
       console.error('❌ Failed to save forecast');
       showSaveStatus('error');
-      return false;
     }
     
   } catch (error) {
     console.error('❌ Error saving forecast:', error);
     showSaveStatus('error', null, error.message);
-    return false;
   }
 }
 
-/**
- * Show save status indicator
- * 
- * @param {string} status - 'saving', 'success', 'error'
- * @param {string} timestamp - ISO timestamp (optional)
- * @param {string} errorMsg - Error message (optional)
- */
 function showSaveStatus(status, timestamp = null, errorMsg = null) {
   const statusEl = document.getElementById('save-status');
   if (!statusEl) return;
@@ -327,7 +479,6 @@ function showSaveStatus(status, timestamp = null, errorMsg = null) {
   const textEl = statusEl.querySelector('.status-text');
   const timeEl = statusEl.querySelector('.status-time');
   
-  // Reset classes
   statusEl.className = 'save-status';
   statusEl.style.display = 'flex';
   
@@ -342,26 +493,9 @@ function showSaveStatus(status, timestamp = null, errorMsg = null) {
     case 'success':
       statusEl.classList.add('status-success');
       iconEl.textContent = '✓';
-      textEl.textContent = 'Gespeichert';
-      
-      if (timestamp) {
-        const date = new Date(timestamp);
-        const timeStr = date.toLocaleString('de-DE', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        timeEl.textContent = timeStr;
-      } else {
-        timeEl.textContent = 'gerade eben';
-      }
-      
-      // Auto-hide after 3 seconds
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-      }, 3000);
+      textEl.textContent = 'Erfolgreich gespeichert!';
+      timeEl.textContent = timestamp || 'gerade eben';
+      setTimeout(() => statusEl.style.display = 'none', 3000);
       break;
       
     case 'error':
@@ -369,148 +503,14 @@ function showSaveStatus(status, timestamp = null, errorMsg = null) {
       iconEl.textContent = '⚠';
       textEl.textContent = 'Fehler beim Speichern';
       timeEl.textContent = errorMsg || '';
-      
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-      }, 5000);
+      setTimeout(() => statusEl.style.display = 'none', 5000);
       break;
   }
 }
 
 // ==========================================
-// INITIALIZATION
+// FORECAST CALCULATION
 // ==========================================
-
-function initializeHardwareData(artikel) {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
-  
-  return {
-    release_date: `${currentYear}-${currentMonth}`,
-    time_horizon: 5,
-    volume_year1: artikel.start_menge || 100,
-    price_year1: artikel.start_preis || 500,
-    cost_year1: artikel.start_hk || 170,
-    volume_model: 'konservativ',
-    price_model: 'realistisch',
-    cost_model: 'realistisch',
-    calculated: false
-  };
-}
-
-// ==========================================
-// EVENT LISTENERS
-// ==========================================
-
-function attachHardwareEventListeners(artikel) {
-  // Horizon buttons
-  document.querySelectorAll('.btn-horizon').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      // Auto-recalculate
-      window.calculateHardwareForecast();
-    });
-  });
-  
-  // Real-time KPI updates
-  const volumeInput = document.getElementById('hw-volume');
-  const priceInput = document.getElementById('hw-price');
-  const costInput = document.getElementById('hw-cost');
-  
-  const updateKPIs = () => {
-    const volume = parseFloat(volumeInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
-    const cost = parseFloat(costInput.value) || 0;
-    
-    const revenue = volume * price;
-    const db2 = volume * (price - cost);
-    const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
-    
-    document.getElementById('kpi-revenue').textContent = formatCurrency(revenue);
-    document.getElementById('kpi-db2').textContent = formatCurrency(db2);
-    document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
-  };
-  
-  volumeInput.addEventListener('input', updateKPIs);
-  priceInput.addEventListener('input', updateKPIs);
-  costInput.addEventListener('input', updateKPIs);
-  
-  // Auto-recalculate on blur (when user finishes editing)
-  volumeInput.addEventListener('blur', () => window.calculateHardwareForecast());
-  priceInput.addEventListener('blur', () => window.calculateHardwareForecast());
-  costInput.addEventListener('blur', () => window.calculateHardwareForecast());
-  
-  // Radio buttons - auto-recalculate
-  document.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      window.calculateHardwareForecast();
-    });
-  });
-}
-
-// ==========================================
-// CALCULATION (ENHANCED WITH DATABASE SAVE)
-// ==========================================
-
-window.calculateHardwareForecast = async function() {
-  const artikel = window._currentArtikel;
-  if (!artikel) return;
-  
-  // Collect input data
-  const data = {
-    release_date: document.getElementById('hw-date')?.value || '2025-01',
-    time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
-    
-    volume_year1: parseFloat(document.getElementById('hw-volume')?.value) || 0,
-    price_year1: parseFloat(document.getElementById('hw-price')?.value) || 0,
-    cost_year1: parseFloat(document.getElementById('hw-cost')?.value) || 0,
-    
-    volume_model: document.querySelector('input[name="volume-model"]:checked')?.value || 'konstant',
-    price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
-    cost_model: document.querySelector('input[name="cost-model"]:checked')?.value || 'konstant'
-  };
-  
-  // Validate
-  if (!data.volume_year1 || !data.price_year1 || !data.cost_year1) {
-    console.log('⚠️ Waiting for complete input...');
-    return;
-  }
-  
-  // Calculate forecast
-  const forecast = calculateForecast(data);
-  
-  // Render forecast table
-  renderForecastTable(forecast, 'forecast-table-container');
-  
-  // Save to artikel (local)
-  artikel.hardware_model_data = {
-    ...artikel.hardware_model_data,
-    ...data,
-    calculated: true,
-    forecast: forecast
-  };
-  
-  // ✅ NEW: Prepare parameters for database
-  const parameters = {
-    startMenge: data.volume_year1,
-    startPreis: data.price_year1,
-    startHK: data.cost_year1,
-    mengenWachstum: data.volume_model,
-    preisWachstum: data.price_model,
-    hkWachstum: data.cost_model,
-    zeitraumJahre: data.time_horizon,
-    startJahr: parseInt(data.release_date.split('-')[0]),
-    release_date: data.release_date,
-    volume_model: data.volume_model,
-    price_model: data.price_model,
-    cost_model: data.cost_model
-  };
-  
-  // ✅ NEW: Save to database (async - non-blocking)
-  saveForecastToDatabase(forecast, parameters);
-};
 
 function calculateForecast(data) {
   const years = data.time_horizon;
@@ -533,19 +533,15 @@ function calculateForecast(data) {
     const year = startYear + i;
     forecast.years.push(year);
     
-    // Calculate volume
     const volume = calculateVolume(data.volume_year1, data.volume_model, i);
     forecast.volume.push(volume);
     
-    // Calculate price
     const price = calculatePrice(data.price_year1, data.price_model, i);
     forecast.price.push(price);
     
-    // Calculate cost
     const cost = calculateCost(data.cost_year1, data.cost_model, i);
     forecast.cost.push(cost);
     
-    // Calculate outputs
     const revenue = volume * price;
     const totalCost = volume * cost;
     const db2 = revenue - totalCost;
@@ -608,44 +604,124 @@ function calculateCost(startCost, model, yearIndex) {
 }
 
 // ==========================================
-// FORMATTING
+// INITIALIZATION
 // ==========================================
 
-function formatCurrency(value) {
-  if (!value && value !== 0) return '€0';
-  return new Intl.NumberFormat('de-DE', { 
-    style: 'currency', 
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
+function initializeHardwareData(artikel) {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+  
+  return {
+    release_date: `${currentYear}-${currentMonth}`,
+    time_horizon: 5,
+    volume_year1: artikel.start_menge || 1000,
+    price_year1: artikel.start_preis || 50,
+    cost_year1: artikel.start_hk || 20,
+    volume_model: 'konservativ',
+    price_model: 'realistisch',
+    cost_model: 'realistisch',
+    calculated: false
+  };
 }
 
-function formatNumber(value, decimals = 0) {
-  if (!value && value !== 0) return '0';
-  return new Intl.NumberFormat('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(value);
-}
-
 // ==========================================
-// STYLES (ENHANCED WITH SAVE STATUS)
+// STYLES
 // ==========================================
 
-function getHardwareStyles() {
+function getCleanStyles() {
   return `
     <style>
-      /* Hardware Model Compact Styles */
-      .hardware-model-compact {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        padding: 16px;
+      /* Hardware Model - Clean Version Styles */
+      .hardware-model-clean {
+        padding: 20px;
         background: white;
       }
       
-      /* ✅ NEW: Save Status Styles */
+      /* Header with Save Button */
+      .model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      
+      .header-left {
+        flex: 1;
+      }
+      
+      .model-title {
+        margin: 0 0 4px 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e3a8a;
+      }
+      
+      .last-saved {
+        margin: 0;
+        font-size: 12px;
+        color: #6b7280;
+      }
+      
+      .header-right {
+        display: flex;
+        gap: 12px;
+      }
+      
+      /* Buttons */
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .btn-primary {
+        background: #2563eb;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+      
+      .btn-secondary {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      
+      .btn-secondary:hover {
+        background: #e5e7eb;
+      }
+      
+      .btn-large {
+        padding: 14px 28px;
+        font-size: 16px;
+      }
+      
+      .btn-icon {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 4px;
+      }
+      
+      .btn-icon:hover {
+        color: #374151;
+      }
+      
+      /* Save Status */
       .save-status {
         position: fixed;
         top: 80px;
@@ -701,46 +777,103 @@ function getHardwareStyles() {
         margin-left: 4px;
       }
       
-      /* Section Compact */
-      .section-compact {
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        padding: 12px;
-        background: #fafafa;
+      /* Forecast Table Wrapper */
+      .forecast-table-wrapper {
+        margin: 20px 0;
       }
       
-      .section-title-compact {
-        font-size: 13px;
+      /* Empty State */
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+      }
+      
+      .empty-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+      }
+      
+      .empty-state h3 {
+        font-size: 20px;
+        color: #374151;
+        margin: 0 0 8px 0;
+      }
+      
+      .empty-state p {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0 0 24px 0;
+      }
+      
+      /* Input Section (Collapsed) */
+      .input-section {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+      
+      .input-content {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      
+      .input-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      
+      .input-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #1e3a8a;
+      }
+      
+      /* Compact Sections */
+      .section-compact {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      
+      .section-title-small {
+        font-size: 14px;
         font-weight: 700;
         color: #1e3a8a;
-        margin: 0 0 10px 0;
+        margin: 0 0 12px 0;
       }
       
       .input-row-compact {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
       }
       
       .input-group-compact {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
       }
       
       .input-group-compact label {
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 600;
         color: #4b5563;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
       }
       
       .input-compact {
-        padding: 6px 8px;
+        padding: 8px 10px;
         border: 1px solid #d1d5db;
         border-radius: 4px;
-        font-size: 13px;
+        font-size: 14px;
       }
       
       .input-compact:focus {
@@ -749,19 +882,19 @@ function getHardwareStyles() {
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
       }
       
-      /* Horizon Buttons (compact) */
+      /* Horizon Buttons */
       .horizon-compact {
         display: flex;
-        gap: 4px;
+        gap: 6px;
       }
       
       .btn-horizon {
         flex: 1;
-        padding: 6px;
+        padding: 8px;
         border: 1px solid #d1d5db;
         border-radius: 4px;
         background: white;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
@@ -778,75 +911,73 @@ function getHardwareStyles() {
         color: white;
       }
       
-      /* Inline KPIs */
-      .kpis-inline {
-        display: flex;
-        gap: 16px;
-        padding: 8px 0;
-        margin-top: 8px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 12px;
-      }
-      
-      .kpi-inline strong {
-        color: #6b7280;
-        font-weight: 600;
-      }
-      
-      .kpi-positive {
-        color: #059669;
-        font-weight: 600;
-      }
-      
-      /* Models (ultra-compact) */
+      /* Models */
       .models-compact {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
       }
       
       .model-row {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
       }
       
       .model-label-compact {
-        min-width: 140px;
-        font-size: 12px;
+        min-width: 160px;
+        font-size: 13px;
         font-weight: 600;
         color: #374151;
       }
       
       .model-radios {
         display: flex;
-        gap: 12px;
+        gap: 16px;
         flex-wrap: wrap;
       }
       
       .model-radios label {
         display: flex;
         align-items: center;
-        gap: 4px;
-        font-size: 11px;
+        gap: 6px;
+        font-size: 12px;
         color: #1f2937;
         cursor: pointer;
-        white-space: nowrap;
       }
       
       .model-radios input[type="radio"] {
         cursor: pointer;
       }
       
+      /* Input Actions */
+      .input-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      
       /* Responsive */
       @media (max-width: 768px) {
-        .input-row-compact {
-          grid-template-columns: 1fr;
+        .model-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
         }
         
-        .kpis-inline {
-          flex-direction: column;
-          gap: 6px;
+        .header-right {
+          width: 100%;
+        }
+        
+        .btn {
+          flex: 1;
+        }
+        
+        .input-row-compact {
+          grid-template-columns: 1fr;
         }
         
         .model-row {
@@ -856,13 +987,6 @@ function getHardwareStyles() {
         
         .model-label-compact {
           min-width: auto;
-        }
-        
-        .save-status {
-          top: 60px;
-          right: 10px;
-          font-size: 12px;
-          padding: 10px 12px;
         }
       }
     </style>
