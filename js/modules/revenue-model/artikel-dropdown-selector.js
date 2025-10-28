@@ -24,8 +24,8 @@ export function renderArtikelDropdown(artikelList, containerId) {
         <select class="artikel-dropdown" id="artikel-dropdown">
           <option value="">-- Bitte wählen --</option>
           ${artikelList.map(artikel => `
-            <option value="${artikel.id}" data-type="${artikel.type}">
-              ${getArtikelIcon(artikel.type)} ${artikel.name}
+            <option value="${artikel.id}" data-type="${artikel.typ}">
+              ${getArtikelIcon(artikel.typ)} ${artikel.name}
             </option>
           `).join('')}
         </select>
@@ -50,11 +50,11 @@ export function renderArtikelDropdown(artikelList, containerId) {
                      class="artikel-checkbox" 
                      value="${artikel.id}" 
                      data-name="${artikel.name}"
-                     data-type="${artikel.type}">
+                     data-type="${artikel.typ}">
               <span class="checkbox-content">
-                <span class="checkbox-icon">${getArtikelIcon(artikel.type)}</span>
+                <span class="checkbox-icon">${getArtikelIcon(artikel.typ)}</span>
                 <span class="checkbox-name">${artikel.name}</span>
-                <span class="checkbox-badge">${getTypeName(artikel.type)}</span>
+                <span class="checkbox-badge">${getTypeName(artikel.typ)}</span>
               </span>
             </label>
           `).join('')}
@@ -249,24 +249,28 @@ function loadRevenueModel() {
 // HELPER FUNCTIONS
 // ==========================================
 
-function getArtikelIcon(type) {
+function getArtikelIcon(typ) {
   const icons = {
-    'hardware': '📦',
-    'package': '📊',
-    'software': '💿',
-    'services': '👔'
+    'Hardware': '📦',
+    'Software': '💿',
+    'Software-Perpetual': '💿',
+    'Service': '👔',
+    'Beratung': '👔',
+    'Package': '📊'
   };
-  return icons[type] || '📈';
+  return icons[typ] || '📈';
 }
 
-function getTypeName(type) {
+function getTypeName(typ) {
   const names = {
-    'hardware': 'Hardware',
-    'package': 'Package',
-    'software': 'Software',
-    'services': 'Services'
+    'Hardware': 'Hardware',
+    'Software': 'Software',
+    'Software-Perpetual': 'Software',
+    'Service': 'Service',
+    'Beratung': 'Beratung',
+    'Package': 'Package'
   };
-  return names[type] || type;
+  return names[typ] || typ;
 }
 
 // ==========================================
