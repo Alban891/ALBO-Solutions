@@ -19,12 +19,12 @@ import { calculateProjektWirtschaftlichkeit } from '../wirtschaftlichkeit/calcul
  * @param {string} projektId - Project ID
  * @returns {Object} Complete dashboard data
  */
-export function processDataForDashboard(projektId) {
+export async function processDataForDashboard(projektId) {
     console.log('📊 Processing dashboard data for projekt:', projektId);
     
     try {
         // Calculate wirtschaftlichkeit
-        const calculationResult = calculateProjektWirtschaftlichkeit(projektId, {
+        const calculationResult = await calculateProjektWirtschaftlichkeit(projektId, {
             wacc: 0.08,
             validateInputs: true
         });
@@ -326,3 +326,4 @@ export function validateDashboardData(data) {
         errors
     };
 }
+
