@@ -4,12 +4,13 @@
  */
 
 import { renderForecastTable } from './forecast-table.js';
+import * as api from '../../api.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
 // ==========================================
 
-export function renderPackageModel(artikel, containerId) {
+export async function renderPackageModel(artikel, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
@@ -24,6 +25,8 @@ export function renderPackageModel(artikel, containerId) {
   }
   
   const data = artikel.package_model_data;
+  // ✅ LOAD SAVED DATA FROM DATABASE
+  await loadSavedForecast(artikel);
   
   container.innerHTML = `
     <div class="package-model-compact">
@@ -159,6 +162,31 @@ export function renderPackageModel(artikel, containerId) {
       </div>
       
     </div>
+      
+      <!-- ✅ SPEICHERN-BUTTON SECTION -->
+      <div class="section-compact save-section">
+        <div class="save-button-container">
+          <button id="btn-save-package-forecast" class="btn-save-forecast-modern">
+            💾 Speichern
+          </button>
+          <div id="save-status-package" class="save-status" style="display: none;">
+            <span class="status-icon success">✓</span>
+            <span class="status-text">Erfolgreich gespeichert</span>
+          </div>
+          <div id="save-error-package" class="save-status error" style="display: none;">
+            <span class="status-icon">⚠️</span>
+            <span class="error-text">Fehler beim Speichern</span>
+          </div>
+        </div>
+        <div class="save-info">
+          💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        </div>
+      </div>
+      
+    </div>
+    
+    ${renderCompactStyles()}
+  `;
     
     ${renderCompactStyles()}
   `;
@@ -200,6 +228,129 @@ function initializePackageData(artikel) {
     
     calculated: false
   };
+}
+
+// ==========================================
+// LOAD SAVED DATA
+// ==========================================
+
+async function loadSavedForecast(artikel) {
+  try {
+    console.log('📥 Loading saved package forecast for:', artikel.id);
+    
+    const savedForecast = await api.loadForecast(artikel.id, 'package', 'base');
+    
+    if (savedForecast && savedForecast.parameters) {
+      console.log('✅ Found saved forecast, applying parameters...');
+      
+      // Apply saved parameters to artikel.package_model_data
+      Object.assign(artikel.package_model_data, savedForecast.parameters);
+      
+      return true;
+    } else {
+      console.log('ℹ️ No saved forecast found, using defaults');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error loading forecast:', error);
+    return false;
+  }
+}
+
+// ==========================================
+// ✅ SAVE FORECAST FUNCTION
+// ==========================================
+
+async function savePackageForecast() {
+  const artikel = window._currentArtikel;
+  if (!artikel) {
+    showSaveError('Kein Artikel ausgewählt');
+    return;
+  }
+  
+  if (!artikel.package_model_data || !artikel.package_model_data.forecast) {
+    showSaveError('Bitte zuerst Forecast berechnen');
+    return;
+  }
+  
+  const forecast = artikel.package_model_data.forecast;
+  const data = artikel.package_model_data;
+  
+  const parameters = {
+    release_date: data.release_date,
+    time_horizon: data.time_horizon,
+    price_small: data.price_small,
+    price_medium: data.price_medium,
+    price_large: data.price_large,
+    cost_small: data.cost_small,
+    cost_medium: data.cost_medium,
+    cost_large: data.cost_large,
+    volume_year1: data.volume_year1,
+    mix_small: data.mix_small,
+    mix_medium: data.mix_medium,
+    mix_large: data.mix_large,
+    volume_model: data.volume_model,
+    price_model: data.price_model,
+    cost_model: data.cost_model
+  };
+  
+  const forecastData = {
+    years: forecast.years,
+    revenue: forecast.revenue,
+    totalCost: forecast.totalCost,
+    db2: forecast.db2,
+    db2Margin: forecast.db2Margin,
+    volume: forecast.volume,
+    price: forecast.price,
+    cost: forecast.cost
+  };
+  
+  console.log('💾 Speichere Package Forecast:', {
+    artikelId: artikel.id,
+    parameters,
+    forecastData
+  });
+  
+  const saveButton = document.getElementById('btn-save-package-forecast');
+  const originalText = saveButton.innerHTML;
+  saveButton.innerHTML = '⏳ Speichert...';
+  saveButton.disabled = true;
+  
+  try {
+    await api.saveForecast(artikel.id, 'package', forecastData, parameters);
+    showSaveSuccess();
+    console.log('✅ Package Forecast erfolgreich gespeichert');
+  } catch (error) {
+    console.error('❌ Fehler beim Speichern:', error);
+    showSaveError(error.message || 'Unbekannter Fehler');
+  } finally {
+    saveButton.innerHTML = originalText;
+    saveButton.disabled = false;
+  }
+}
+
+function showSaveSuccess() {
+  const successDiv = document.getElementById('save-status-package');
+  const errorDiv = document.getElementById('save-error-package');
+  
+  if (successDiv) {
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'flex';
+    setTimeout(() => { successDiv.style.display = 'none'; }, 3000);
+  }
+}
+
+function showSaveError(message) {
+  const successDiv = document.getElementById('save-status-package');
+  const errorDiv = document.getElementById('save-error-package');
+  
+  if (errorDiv) {
+    successDiv.style.display = 'none';
+    const errorText = errorDiv.querySelector('.error-text');
+    if (errorText) errorText.textContent = message;
+    errorDiv.style.display = 'flex';
+    setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+  }
 }
 
 // ==========================================
@@ -248,6 +399,14 @@ function attachPackageEventListeners(artikel) {
   
   // Initial KPI update
   updateKPIs();
+  
+  // ✅ SAVE BUTTON EVENT LISTENER
+  const saveButton = document.getElementById('btn-save-package-forecast');
+  if (saveButton) {
+    saveButton.addEventListener('click', async () => {
+      await savePackageForecast();
+    });
+  }
 }
 
 function updateKPIs() {
@@ -324,6 +483,9 @@ window.calculatePackageForecast = function() {
     console.log('⚠️ Waiting for complete input...');
     return;
   }
+  
+  // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.package_model_data
+  Object.assign(artikel.package_model_data, data);
   
   // Calculate forecast
   const forecast = calculateForecast(data);
@@ -659,6 +821,75 @@ function renderCompactStyles() {
           flex-direction: column;
           align-items: flex-start;
         }
+      }
+      
+      /* ✅ SAVE SECTION STYLES */
+      .save-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid #3b82f6;
+      }
+      
+      .save-button-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      
+      .btn-save-forecast-modern {
+        padding: 12px 32px;
+        background: #1e3a8a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .btn-save-forecast-modern:hover {
+        background: #1e40af;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+      
+      .btn-save-forecast-modern:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .save-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      
+      .save-status.success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      
+      .save-status.error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      
+      .status-icon.success {
+        color: #10b981;
+        font-size: 16px;
+      }
+      
+      .save-info {
+        font-size: 12px;
+        color: #1e40af;
+        font-style: italic;
       }
     </style>
   `;
