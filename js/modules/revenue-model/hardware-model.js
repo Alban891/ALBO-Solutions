@@ -5,6 +5,7 @@
  */
 
 import { renderForecastTable } from './forecast-table.js';
+import * as api from '../api.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
@@ -330,14 +331,9 @@ async function saveHardwareForecast() {
   saveButton.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Speichert...</span>';
   saveButton.disabled = true;
   
-  try {
-    // Call API to save forecast
-    const api = window.api || window.apiClient;
-    if (!api || typeof api.saveForecast !== 'function') {
-      throw new Error('API nicht verfügbar');
-    }
-    
-    await api.saveForecast(artikel.id, 'hardware', forecastData, parameters);
+try {
+  // Call API to save forecast
+  await api.saveForecast(artikel.id, 'hardware', forecastData, parameters);
     
     // Show success
     showSaveSuccess();
