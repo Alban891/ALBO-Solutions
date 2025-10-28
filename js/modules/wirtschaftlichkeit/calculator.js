@@ -5,7 +5,13 @@
  * @module wirtschaftlichkeit/calculator
  * @description Core calculation engine for contribution margin scheme and KPIs
  * @author Senior Development Team
- * @version 2.0.0
+ * @version 3.0.0 - REVENUE MODEL INTEGRATION
+ * 
+ * ✅ ÄNDERUNGEN v3.0:
+ * - Sales Revenue aus forecast.revenue (statt mengen * preise)
+ * - Kosten aus forecast.totalCost (statt hk_gesamt * mengen)
+ * - DB2 aus forecast.db2 (vorberechnet im Revenue Model)
+ * - Rückwärts-kompatibel: Fallback auf alte Struktur
  */
 
 import { state } from '../../state.js';
@@ -40,7 +46,7 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
         validateInputs = true,
         wacc = CALCULATION_CONSTANTS.DEFAULT_WACC,
         aggregated = false,
-        filteredArtikel = null  // NEW: Accept pre-filtered article list
+        filteredArtikel = null  // Accept pre-filtered article list
     } = options;
     
     try {
@@ -108,6 +114,8 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
  * Calculate profitability for a single year
  * Core calculation logic implementing DB1-DB5 scheme
  * 
+ * ✅ NEUE VERSION: Verwendet Forecast-Daten aus Revenue Model
+ * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {import('./types').Kostenblock[]} projektkosten - Project cost blocks
  * @param {string} jahr - Year to calculate (YYYY)
@@ -117,11 +125,11 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
  * @private
  */
 function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, options = {}) {
-    // Step 1: Calculate Sales Revenue
-    const sales_revenue = calculateSalesRevenue(artikelListe, jahr);
+    // Step 1: Calculate Sales Revenue FROM FORECAST
+    const sales_revenue = calculateSalesRevenueFromForecast(artikelListe, jahr);
     
-    // Step 2: Calculate HK components (Material, Labour, Overhead)
-    const hk_components = calculateHKComponents(artikelListe, jahr);
+    // Step 2: Calculate HK components FROM FORECAST
+    const hk_components = calculateHKComponentsFromForecast(artikelListe, jahr);
     
     // Step 3: DB1 = Sales - Material - Direct Labour
     const material_costs = hk_components.material;
@@ -133,7 +141,20 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     const manufacturing_overhead = hk_components.manufacturing_overhead;
     
     // Step 5: DB2 = DB1 - Material Overhead - Manufacturing Overhead
-    const db2 = db1 - material_overhead - manufacturing_overhead;
+    // ✅ OPTION: Use DB2 directly from forecast if available
+    let db2;
+    const directDB2 = calculateDB2FromForecast(artikelListe, jahr);
+    
+    if (directDB2 !== null) {
+        // Use pre-calculated DB2 from forecast
+        db2 = directDB2;
+        console.log(`✅ Using DB2 from forecast: ${db2.toFixed(2)}`);
+    } else {
+        // Calculate DB2 from components
+        db2 = db1 - material_overhead - manufacturing_overhead;
+        console.log(`⚙️ Calculating DB2 from components: ${db2.toFixed(2)}`);
+    }
+    
     const db2_margin_prozent = sales_revenue > 0 ? (db2 / sales_revenue * 100) : 0;
     
     // Step 6: Get Development Costs from Project Costs (DB3)
@@ -196,13 +217,19 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     };
 }
 
+// ========================================
+// ✅ NEUE FUNKTIONEN - REVENUE MODEL INTEGRATION
+// ========================================
+
 /**
- * Calculate sales revenue for all articles in a given year
- * Supports multiple data structures:
- * 1. volumes/prices: artikel.volumes[2026] * artikel.prices[2026]
- * 2. mengen/preise objects: artikel.mengen[jahr] * artikel.preise[jahr]
- * 3. jahr_X structure: artikel.jahr_1.menge * artikel.jahr_1.preis
- * 4. Direct umsatz field: artikel.umsatz_2025, artikel['jahr_1'].umsatz
+ * Calculate sales revenue from Revenue Model forecasts
+ * 
+ * Priority:
+ * 1. artikel.hardware_model_data.forecast.revenue (PRIMÄR)
+ * 2. artikel.software_model_data.forecast.revenue
+ * 3. artikel.service_model_data.forecast.revenue
+ * 4. artikel.package_model_data.forecast.revenue
+ * 5. Fallback: mengen * preise (alte Struktur)
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
@@ -210,276 +237,337 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
  * 
  * @private
  */
-function calculateSalesRevenue(artikelListe, jahr) {
-    console.log(`💰 Calculating sales for ${jahr} with ${artikelListe.length} articles`);
+function calculateSalesRevenueFromForecast(artikelListe, jahr) {
+    console.log(`💰 [FORECAST] Calculating sales for ${jahr} with ${artikelListe.length} articles`);
     
     const total = artikelListe.reduce((sum, artikel) => {
-        // PRIMARY: Calculate from volumes * prices (your current structure)
+        // Get forecast data based on article type
+        const forecast = getForecastData(artikel);
+        
+        if (forecast && forecast.years && forecast.revenue) {
+            const jahrIndex = forecast.years.indexOf(parseInt(jahr));
+            
+            if (jahrIndex !== -1 && forecast.revenue[jahrIndex] !== undefined) {
+                const revenue = forecast.revenue[jahrIndex];
+                console.log(`  ✅ ${artikel.name}: forecast.revenue[${jahr}] = ${revenue.toFixed(2)}`);
+                return sum + revenue;
+            }
+        }
+        
+        // FALLBACK: Use old structure (mengen * preise)
+        console.warn(`  ⚠️ ${artikel.name}: No forecast data, using fallback`);
         const menge = getArtikelValueForYear(artikel, 'menge', jahr);
         const preis = getArtikelValueForYear(artikel, 'preis', jahr);
         
-        console.log(`  - ${artikel.name}: menge=${menge}, preis=${preis}, revenue=${menge * preis}`);
-        
         if (menge > 0 && preis > 0) {
-            return sum + (menge * preis);
+            const revenue = menge * preis;
+            console.log(`  📦 ${artikel.name}: fallback (${menge} × ${preis}) = ${revenue.toFixed(2)}`);
+            return sum + revenue;
         }
         
-        // FALLBACK 1: Direct umsatz field per year (e.g., umsatz_2025)
-        const umsatzField = `umsatz_${jahr}`;
-        if (artikel[umsatzField] !== undefined) {
-            console.log(`  - ${artikel.name}: using ${umsatzField}=${artikel[umsatzField]}`);
-            return sum + (parseFloat(artikel[umsatzField]) || 0);
-        }
-        
-        // FALLBACK 2: jahr_X structure with umsatz
-        const jahrIndex = parseInt(jahr) - 2024;  // 2025 = jahr_1
-        if (artikel[`jahr_${jahrIndex}`] && artikel[`jahr_${jahrIndex}`].umsatz !== undefined) {
-            console.log(`  - ${artikel.name}: using jahr_${jahrIndex}.umsatz`);
-            return sum + (parseFloat(artikel[`jahr_${jahrIndex}`].umsatz) || 0);
-        }
-        
-        console.log(`  - ${artikel.name}: NO DATA for ${jahr}`);
+        console.log(`  ❌ ${artikel.name}: NO DATA for ${jahr}`);
         return sum;
     }, 0);
     
-    console.log(`💰 Total sales for ${jahr}: ${total}`);
+    console.log(`💰 [FORECAST] Total sales ${jahr}: ${total.toFixed(2)}`);
     return total;
 }
 
 /**
- * Calculate HK components (Material, Labour, Overhead) for all articles
- * Uses HK-Aufteilung from article or defaults
+ * Calculate HK components from Revenue Model forecasts
+ * 
+ * Uses forecast.totalCost and applies HK-Aufteilung to split into:
+ * - Material costs
+ * - Direct labour
+ * - Material overhead
+ * - Manufacturing overhead
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
- * @returns {Object} HK components {material, labour, material_overhead, manufacturing_overhead}
+ * @returns {Object} HK components
  * 
  * @private
  */
-function calculateHKComponents(artikelListe, jahr) {
-    const result = {
-        material: 0,
-        labour: 0,
-        material_overhead: 0,
-        manufacturing_overhead: 0
-    };
+function calculateHKComponentsFromForecast(artikelListe, jahr) {
+    console.log(`🏭 [FORECAST] Calculating HK components for ${jahr}`);
     
-    const yearNum = parseInt(jahr);
+    let totalMaterial = 0;
+    let totalLabour = 0;
+    let totalMaterialOverhead = 0;
+    let totalManufacturingOverhead = 0;
     
     artikelListe.forEach(artikel => {
-        const menge = getArtikelValueForYear(artikel, 'menge', jahr);
+        const forecast = getForecastData(artikel);
         
-        // Support both hk and hk_gesamt
-        const hk_pro_stueck = artikel.hk || artikel.hk_gesamt || 0;
-        const total_hk = menge * hk_pro_stueck;
+        if (forecast && forecast.years && forecast.totalCost) {
+            const jahrIndex = forecast.years.indexOf(parseInt(jahr));
+            
+            if (jahrIndex !== -1 && forecast.totalCost[jahrIndex] !== undefined) {
+                const totalCost = forecast.totalCost[jahrIndex];
+                
+                // Get HK-Aufteilung (or use defaults)
+                const hkAufteilung = getHKAufteilung(artikel);
+                
+                // Split totalCost according to HK-Aufteilung
+                const material = totalCost * (hkAufteilung.material_prozent / 100);
+                const labour = totalCost * (hkAufteilung.fertigung_prozent / 100);
+                const overhead = totalCost * (hkAufteilung.overhead_prozent / 100);
+                
+                // Further split overhead into material_overhead and manufacturing_overhead
+                // (Typical split: 40% material, 60% manufacturing)
+                const materialOverhead = overhead * 0.4;
+                const manufacturingOverhead = overhead * 0.6;
+                
+                totalMaterial += material;
+                totalLabour += labour;
+                totalMaterialOverhead += materialOverhead;
+                totalManufacturingOverhead += manufacturingOverhead;
+                
+                console.log(`  ✅ ${artikel.name}: totalCost=${totalCost.toFixed(2)} → ` +
+                           `M=${material.toFixed(2)} L=${labour.toFixed(2)} OH=${overhead.toFixed(2)}`);
+                return;
+            }
+        }
         
-        // Get HK-Aufteilung (from article or defaults)
-        const aufteilung = getHKAufteilung(artikel);
-        
-        // Calculate components
-        result.material += total_hk * (aufteilung.material_prozent / 100);
-        result.labour += total_hk * (aufteilung.fertigung_prozent / 100);
-        
-        // Overhead split from HK overhead portion
-        const overhead_total = total_hk * (aufteilung.overhead_prozent / 100);
-        // Assume 40% material overhead, 60% manufacturing overhead
-        result.material_overhead += overhead_total * 0.4;
-        result.manufacturing_overhead += overhead_total * 0.6;
+        // FALLBACK: Use old structure
+        console.warn(`  ⚠️ ${artikel.name}: No forecast data, using fallback`);
+        const fallback = calculateHKComponentsFallback(artikel, jahr);
+        totalMaterial += fallback.material;
+        totalLabour += fallback.labour;
+        totalMaterialOverhead += fallback.material_overhead;
+        totalManufacturingOverhead += fallback.manufacturing_overhead;
     });
     
-    return result;
+    console.log(`🏭 [FORECAST] Total HK: M=${totalMaterial.toFixed(2)} ` +
+               `L=${totalLabour.toFixed(2)} MOH=${totalMaterialOverhead.toFixed(2)} ` +
+               `MFOH=${totalManufacturingOverhead.toFixed(2)}`);
+    
+    return {
+        material: totalMaterial,
+        labour: totalLabour,
+        material_overhead: totalMaterialOverhead,
+        manufacturing_overhead: totalManufacturingOverhead
+    };
 }
 
 /**
- * Get HK-Aufteilung for an article (from article data or defaults)
+ * Get DB2 directly from forecast (if available)
  * 
- * @param {import('./types').ArtikelExtended} artikel - Article
- * @returns {import('./types').HKAufteilung} HK split
+ * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
+ * @param {string} jahr - Year (YYYY)
+ * @returns {number|null} DB2 or null if not available
+ * 
+ * @private
+ */
+function calculateDB2FromForecast(artikelListe, jahr) {
+    let hasAnyForecast = false;
+    let totalDB2 = 0;
+    
+    artikelListe.forEach(artikel => {
+        const forecast = getForecastData(artikel);
+        
+        if (forecast && forecast.years && forecast.db2) {
+            hasAnyForecast = true;
+            const jahrIndex = forecast.years.indexOf(parseInt(jahr));
+            
+            if (jahrIndex !== -1 && forecast.db2[jahrIndex] !== undefined) {
+                totalDB2 += forecast.db2[jahrIndex];
+            }
+        }
+    });
+    
+    return hasAnyForecast ? totalDB2 : null;
+}
+
+/**
+ * Get forecast data from artikel based on type
+ * 
+ * Checks in order:
+ * 1. hardware_model_data.forecast
+ * 2. software_model_data.forecast
+ * 3. service_model_data.forecast
+ * 4. package_model_data.forecast
+ * 
+ * @param {Object} artikel - Article data
+ * @returns {Object|null} Forecast data or null
+ * 
+ * @private
+ */
+function getForecastData(artikel) {
+    // Check all possible model types
+    const modelTypes = [
+        'hardware_model_data',
+        'software_model_data',
+        'service_model_data',
+        'package_model_data'
+    ];
+    
+    for (const modelType of modelTypes) {
+        if (artikel[modelType] && artikel[modelType].forecast) {
+            return artikel[modelType].forecast;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Get HK-Aufteilung for artikel (or use defaults)
+ * 
+ * @param {Object} artikel - Article data
+ * @returns {Object} HK-Aufteilung {material_prozent, fertigung_prozent, overhead_prozent}
  * 
  * @private
  */
 function getHKAufteilung(artikel) {
-    // If article has explicit HK-Aufteilung, use it
+    // Priority 1: Use artikel.hk_aufteilung if exists
     if (artikel.hk_aufteilung && 
         artikel.hk_aufteilung.material_prozent !== undefined) {
         return artikel.hk_aufteilung;
     }
     
-    // Otherwise, use defaults based on article type
-    const typ = artikel.typ || 'Default';
-    const defaults = HK_DEFAULTS[typ] || HK_DEFAULTS['Default'];
+    // Priority 2: Use defaults based on typ
+    const defaults = HK_DEFAULTS[artikel.typ] || HK_DEFAULTS['Default'];
     
     return {
         material_prozent: defaults.material,
         fertigung_prozent: defaults.fertigung,
         overhead_prozent: defaults.overhead,
-        quelle: 'ki-default',
-        letzteAenderung: new Date().toISOString()
+        quelle: 'default'
     };
 }
 
 /**
- * Get artikel value for a specific year
- * Handles different data structures:
- * - volumes/prices objects (current structure)
- * - mengen/preise objects (alternative)
- * - jahr_X properties (legacy)
+ * Fallback: Calculate HK components from old structure
  * 
- * @param {import('./types').ArtikelExtended} artikel - Article
+ * @param {Object} artikel - Article data
+ * @param {string} jahr - Year
+ * @returns {Object} HK components
+ * 
+ * @private
+ */
+function calculateHKComponentsFallback(artikel, jahr) {
+    const menge = getArtikelValueForYear(artikel, 'menge', jahr);
+    const hkGesamt = artikel.hk_gesamt || 0;
+    const totalCost = menge * hkGesamt;
+    
+    const hkAufteilung = getHKAufteilung(artikel);
+    
+    const material = totalCost * (hkAufteilung.material_prozent / 100);
+    const labour = totalCost * (hkAufteilung.fertigung_prozent / 100);
+    const overhead = totalCost * (hkAufteilung.overhead_prozent / 100);
+    
+    return {
+        material: material,
+        labour: labour,
+        material_overhead: overhead * 0.4,
+        manufacturing_overhead: overhead * 0.6
+    };
+}
+
+// ========================================
+// HELPER FUNCTIONS (unchanged)
+// ========================================
+
+/**
+ * Get artikel value for a specific year
+ * Supports multiple data structures
+ * 
+ * @param {Object} artikel - Article data
  * @param {string} field - Field name ('menge' or 'preis')
  * @param {string} jahr - Year (YYYY)
- * @returns {number} Value for the year
+ * @returns {number} Value
  * 
  * @private
  */
 function getArtikelValueForYear(artikel, field, jahr) {
-    const yearNum = parseInt(jahr);
+    // Try jahr_X structure first (e.g., jahr_1 for 2025)
+    const jahrIndex = parseInt(jahr) - 2024;
+    const jahrKey = `jahr_${jahrIndex}`;
     
-    // Debug: Log artikel structure
-    if (field === 'menge') {
-        console.log(`🔍 Getting ${field} for ${artikel.name} in ${jahr}`);
-        console.log('   volumes:', artikel.volumes);
-        console.log('   prices:', artikel.prices);
-        console.log('   mengen:', artikel.mengen);
-        console.log('   preise:', artikel.preise);
+    if (artikel[jahrKey] && artikel[jahrKey][field] !== undefined) {
+        return parseFloat(artikel[jahrKey][field]) || 0;
     }
     
-    // PRIMARY: volumes/prices structure (your current structure)
-    if (field === 'menge' && artikel.volumes && artikel.volumes[yearNum] !== undefined) {
-        const val = parseFloat(artikel.volumes[yearNum]) || 0;
-        console.log(`   ✓ Found in volumes[${yearNum}]: ${val}`);
-        return val;
-    }
-    if (field === 'preis' && artikel.prices && artikel.prices[yearNum] !== undefined) {
-        const val = parseFloat(artikel.prices[yearNum]) || 0;
-        console.log(`   ✓ Found in prices[${yearNum}]: ${val}`);
-        return val;
+    // Try mengen/preise object structure
+    if (artikel[field + 'n'] && artikel[field + 'n'][jahr] !== undefined) {
+        return parseFloat(artikel[field + 'n'][jahr]) || 0;
     }
     
-    // ALTERNATIVE: mengen/preise structure
-    if (artikel.mengen && artikel.mengen[jahr] !== undefined) {
-        return parseFloat(artikel.mengen[jahr]) || 0;
-    }
-    if (artikel.preise && artikel.preise[jahr] !== undefined) {
-        return parseFloat(artikel.preise[jahr]) || 0;
+    // Try direct field_{jahr} structure
+    const directField = `${field}_${jahr}`;
+    if (artikel[directField] !== undefined) {
+        return parseFloat(artikel[directField]) || 0;
     }
     
-    // LEGACY: jahr_X structure
-    const jahrIndex = yearNum - 2024;  // 2025 = jahr_1
-    const yearData = artikel[`jahr_${jahrIndex}`];
-    
-    if (yearData && yearData[field] !== undefined) {
-        return parseFloat(yearData[field]) || 0;
-    }
-    
-    // Last fallback: Direct property
-    if (field === 'preis' && artikel.preis !== undefined) {
-        return parseFloat(artikel.preis) || 0;
-    }
-    
-    console.log(`   ✗ No data found for ${field} in ${jahr}`);
     return 0;
 }
 
 /**
- * Sum project costs by category (development, selling_marketing, admin_distribution)
- * 
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @param {string[]} blockIds - IDs of cost blocks in this category
- * @param {string} jahr - Year (YYYY)
- * @returns {number} Sum of costs
- * 
- * @private
- */
-function sumProjectCostsByCategory(projektkosten, blockIds, jahr) {
-    if (!projektkosten || !Array.isArray(blockIds)) {
-        return 0;
-    }
-    
-    return blockIds.reduce((sum, blockId) => {
-        const block = projektkosten.find(b => b.id === blockId);
-        if (!block || !block.isActive) {
-            return sum;
-        }
-        
-        const wert = block.kostenWerte && block.kostenWerte[jahr] 
-            ? parseFloat(block.kostenWerte[jahr]) || 0
-            : 0;
-            
-        return sum + wert;
-    }, 0);
-}
-
-/**
- * Load project costs from state
+ * Get project costs (Kostenblöcke)
  * 
  * @param {string} projektId - Project ID
- * @returns {import('./types').Kostenblock[]} Array of cost blocks
+ * @returns {Array} Cost blocks
  * 
  * @private
  */
 function getProjektkosten(projektId) {
     const projekt = state.getProjekt(projektId);
-    if (!projekt) {
+    
+    if (!projekt || !projekt.kostenblöcke) {
         return [];
     }
     
-    // Get active cost blocks
-    const aktiveBlöcke = projekt.aktiveKostenblöcke || [];
-    const kostenWerte = projekt.kostenWerte || {};
-    
-    // Transform to Kostenblock structure
-    return aktiveBlöcke.map(blockId => ({
-        id: blockId,
-        name: blockId,  // TODO: Get from metadata
-        icon: '📦',
-        isActive: true,
-        kostenWerte: kostenWerte[blockId] || {},
-        kategorisierung: null  // Will be filled by KI if available
-    }));
+    // Return active cost blocks
+    return projekt.kostenblöcke.filter(block => block.isActive);
 }
 
 /**
- * Determine year range from articles and project costs
+ * Sum project costs by category for a specific year
  * 
- * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
- * @returns {string[]} Array of years (YYYY) as strings
+ * @param {Array} projektkosten - Cost blocks
+ * @param {Array} categoryIds - Category IDs to sum
+ * @param {string} jahr - Year
+ * @returns {number} Total costs
+ * 
+ * @private
+ */
+function sumProjectCostsByCategory(projektkosten, categoryIds, jahr) {
+    return projektkosten.reduce((sum, block) => {
+        // Check if block matches any of the category IDs
+        const blockId = block.id || block.name.toLowerCase().replace(/\s+/g, '-');
+        
+        if (categoryIds.includes(blockId)) {
+            const value = block.kostenWerte && block.kostenWerte[jahr];
+            if (value !== undefined) {
+                return sum + parseFloat(value);
+            }
+        }
+        
+        return sum;
+    }, 0);
+}
+
+/**
+ * Determine year range from articles and cost blocks
+ * 
+ * @param {Array} artikelListe - Articles
+ * @param {Array} projektkosten - Cost blocks
+ * @returns {Array} Array of years (strings)
  * 
  * @private
  */
 function determineYearRange(artikelListe, projektkosten) {
     const jahre = new Set();
     
-    // From articles - volumes/prices structure (numeric keys)
+    // Get years from article forecasts
     artikelListe.forEach(artikel => {
-        if (artikel.volumes) {
-            Object.keys(artikel.volumes).forEach(year => {
-                // Convert numeric keys to string YYYY format
-                const yearStr = year.toString();
-                if (yearStr.length === 4) {
-                    jahre.add(yearStr);
-                }
-            });
-        }
-        if (artikel.prices) {
-            Object.keys(artikel.prices).forEach(year => {
-                const yearStr = year.toString();
-                if (yearStr.length === 4) {
-                    jahre.add(yearStr);
-                }
-            });
+        const forecast = getForecastData(artikel);
+        if (forecast && forecast.years) {
+            forecast.years.forEach(jahr => jahre.add(jahr.toString()));
         }
         
-        // Also check mengen/preise structure (string keys)
-        if (artikel.mengen) {
-            Object.keys(artikel.mengen).forEach(jahr => jahre.add(jahr));
-        }
-        if (artikel.preise) {
-            Object.keys(artikel.preise).forEach(jahr => jahre.add(jahr));
-        }
-        
-        // Legacy: jahr_X structure
+        // Fallback: Check jahr_X structure
         for (let i = 1; i <= 10; i++) {
             if (artikel[`jahr_${i}`]) {
                 jahre.add((2024 + i).toString());
@@ -487,26 +575,27 @@ function determineYearRange(artikelListe, projektkosten) {
         }
     });
     
-    // From project costs
+    // Get years from cost blocks
     projektkosten.forEach(block => {
         if (block.kostenWerte) {
-            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr.toString()));
+            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr));
         }
     });
     
-    // Default range if nothing found
+    // If no years found, default to 2025-2029
     if (jahre.size === 0) {
-        return ['2024', '2025', '2026', '2027', '2028'];
+        return ['2025', '2026', '2027', '2028', '2029'];
     }
     
+    // Convert to sorted array
     return Array.from(jahre).sort();
 }
 
 /**
  * Calculate totals across all years
  * 
- * @param {Object.<string, import('./types').JahresWirtschaftlichkeit>} jahresErgebnisse - Results per year
- * @returns {import('./types').WirtschaftlichkeitTotals} Totals
+ * @param {Object} jahresErgebnisse - Year results
+ * @returns {Object} Totals
  * 
  * @private
  */
@@ -515,8 +604,6 @@ function calculateTotals(jahresErgebnisse) {
     
     const totals = {
         sales_revenue_total: 0,
-        material_costs_total: 0,
-        direct_labour_total: 0,
         db1_total: 0,
         db2_total: 0,
         db3_total: 0,
@@ -526,61 +613,65 @@ function calculateTotals(jahresErgebnisse) {
     };
     
     jahre.forEach(jahr => {
-        const j = jahresErgebnisse[jahr];
-        totals.sales_revenue_total += j.sales_revenue;
-        totals.material_costs_total += j.material_costs;
-        totals.direct_labour_total += j.direct_labour;
-        totals.db1_total += j.db1;
-        totals.db2_total += j.db2;
-        totals.db3_total += j.db3;
-        totals.db4_total += j.db4;
-        totals.db5_total += j.db5;
-        totals.ebit_total += j.ebit;
+        const result = jahresErgebnisse[jahr];
+        totals.sales_revenue_total += result.sales_revenue || 0;
+        totals.db1_total += result.db1 || 0;
+        totals.db2_total += result.db2 || 0;
+        totals.db3_total += result.db3 || 0;
+        totals.db4_total += result.db4 || 0;
+        totals.db5_total += result.db5 || 0;
+        totals.ebit_total += result.ebit || 0;
     });
     
     return totals;
 }
 
 /**
- * Calculate Key Performance Indicators
- * Includes margins, break-even, NPV, IRR
+ * Calculate KPIs (NPV, IRR, Break-even, etc.)
  * 
- * @param {Object.<string, import('./types').JahresWirtschaftlichkeit>} jahresErgebnisse - Results per year
- * @param {import('./types').WirtschaftlichkeitTotals} totals - Totals
- * @param {number} wacc - Weighted Average Cost of Capital
- * @param {string} [artikelTyp] - Article type for benchmarking
- * @returns {import('./types').WirtschaftlichkeitKPIs} KPIs
+ * @param {Object} jahresErgebnisse - Year results
+ * @param {Object} totals - Totals
+ * @param {number} wacc - Discount rate
+ * @param {string} artikelTyp - Article type for benchmarks
+ * @returns {Object} KPIs
  * 
  * @private
  */
 function calculateKPIs(jahresErgebnisse, totals, wacc, artikelTyp) {
     const jahre = Object.keys(jahresErgebnisse).sort();
     
-    // Average margins
-    const avg_manufacturing_margin = calculateAverageMargin(
-        jahresErgebnisse,
-        'db2',
-        'db2_margin_prozent'
-    );
+    // Calculate average margins
+    let sumDB2Margin = 0;
+    let sumEBITMargin = 0;
+    let validYears = 0;
     
-    const avg_ebit_margin = calculateAverageMargin(
-        jahresErgebnisse,
-        'ebit',
-        'ebit_margin_prozent'
-    );
+    jahre.forEach(jahr => {
+        const result = jahresErgebnisse[jahr];
+        if (result.sales_revenue > 0) {
+            sumDB2Margin += result.db2_margin_prozent;
+            sumEBITMargin += result.ebit_margin_prozent;
+            validYears++;
+        }
+    });
     
-    // Break-even calculation
-    const break_even_year = calculateBreakEvenYear(jahresErgebnisse);
+    const avg_manufacturing_margin = validYears > 0 ? sumDB2Margin / validYears : 0;
+    const avg_ebit_margin = validYears > 0 ? sumEBITMargin / validYears : 0;
     
-    // NPV calculation
-    const cashflows = jahre.map(jahr => jahresErgebnisse[jahr].ebit);
+    // Find break-even year
+    let cumulativeEBIT = 0;
+    let break_even_year = null;
+    
+    for (const jahr of jahre) {
+        cumulativeEBIT += jahresErgebnisse[jahr].ebit || 0;
+        if (cumulativeEBIT >= 0 && break_even_year === null) {
+            break_even_year = jahr;
+        }
+    }
+    
+    // Calculate NPV and IRR
+    const cashflows = jahre.map(jahr => jahresErgebnisse[jahr].ebit || 0);
     const npv = calculateNPV(cashflows, wacc);
-    
-    // IRR calculation
     const irrResult = calculateIRR(cashflows);
-    const irr = irrResult.converged ? irrResult.irr : null;
-    
-    // Payback period
     const payback_period = calculatePaybackPeriod(cashflows);
     
     return {
@@ -588,68 +679,15 @@ function calculateKPIs(jahresErgebnisse, totals, wacc, artikelTyp) {
         avg_ebit_margin,
         break_even_year,
         npv,
-        irr,
+        irr: irrResult.irr,
         payback_period
     };
 }
 
 /**
- * Calculate average margin across years
- * 
- * @param {Object} jahresErgebnisse - Results per year
- * @param {string} absoluteField - Field name for absolute values
- * @param {string} percentField - Field name for percentage values
- * @returns {number} Average margin in percent
- * 
- * @private
- */
-function calculateAverageMargin(jahresErgebnisse, absoluteField, percentField) {
-    const jahre = Object.keys(jahresErgebnisse);
-    
-    if (jahre.length === 0) return 0;
-    
-    // Calculate weighted average by revenue
-    let weightedSum = 0;
-    let totalRevenue = 0;
-    
-    jahre.forEach(jahr => {
-        const result = jahresErgebnisse[jahr];
-        const revenue = result.sales_revenue;
-        const margin = result[percentField] || 0;
-        
-        weightedSum += margin * revenue;
-        totalRevenue += revenue;
-    });
-    
-    return totalRevenue > 0 ? (weightedSum / totalRevenue) : 0;
-}
-
-/**
- * Calculate break-even year (first year with positive cumulative EBIT)
- * 
- * @param {Object} jahresErgebnisse - Results per year
- * @returns {string|null} Break-even year or null if not reached
- * 
- * @private
- */
-function calculateBreakEvenYear(jahresErgebnisse) {
-    const jahre = Object.keys(jahresErgebnisse).sort();
-    let cumulativeEBIT = 0;
-    
-    for (const jahr of jahre) {
-        cumulativeEBIT += jahresErgebnisse[jahr].ebit;
-        if (cumulativeEBIT >= 0) {
-            return jahr;
-        }
-    }
-    
-    return null;  // Not reached within project period
-}
-
-/**
  * Calculate Net Present Value
  * 
- * @param {number[]} cashflows - Array of cashflows per period
+ * @param {number[]} cashflows - Cashflows
  * @param {number} discountRate - Discount rate (WACC)
  * @param {number} [initialInvestment=0] - Initial investment at t=0
  * @returns {number} NPV
@@ -664,11 +702,11 @@ function calculateNPV(cashflows, discountRate, initialInvestment = 0) {
     let npv = -initialInvestment;
     
     cashflows.forEach((cf, index) => {
-        const period = index + 1;  // Periods start at 1
+        const period = index + 1;
         npv += cf / Math.pow(1 + discountRate, period);
     });
     
-    return Math.round(npv * 100) / 100;  // Round to 2 decimals
+    return Math.round(npv * 100) / 100;
 }
 
 /**
@@ -693,14 +731,13 @@ function calculateIRR(cashflows, initialGuess = 0.1) {
         
         if (Math.abs(npv) < precision) {
             return {
-                irr: Math.round(irr * 10000) / 100,  // Convert to percentage
+                irr: Math.round(irr * 10000) / 100,
                 iterations: iteration,
                 converged: true
             };
         }
         
         if (Math.abs(derivative) < 1e-10) {
-            // Derivative too small, algorithm won't converge
             break;
         }
         
@@ -764,7 +801,7 @@ function calculatePaybackPeriod(cashflows) {
         }
     }
     
-    return cashflows.length;  // Not recovered within period
+    return cashflows.length;
 }
 
 /**
@@ -840,7 +877,8 @@ function createMetadata(projektId, artikelListe, projektkosten, jahre) {
         projekt_id: projektId,
         anzahl_artikel: artikelListe.length,
         verwendete_kostenblöcke: projektkosten.map(b => b.id),
-        hk_aufteilungs_faktoren: {}  // TODO: Add details
+        hk_aufteilungs_faktoren: {},
+        version: '3.0.0 - Revenue Model Integration'
     };
 }
 
@@ -878,7 +916,8 @@ function createEmptyResult(projektId, reason) {
             anzahl_artikel: 0,
             verwendete_kostenblöcke: [],
             hk_aufteilungs_faktoren: {},
-            error: reason
+            error: reason,
+            version: '3.0.0 - Revenue Model Integration'
         }
     };
 }
