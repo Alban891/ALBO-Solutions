@@ -11,7 +11,7 @@ import * as api from '../../api.js';
 // MAIN RENDER FUNCTION
 // ==========================================
 
-export function renderSoftwareModel(artikel, containerId) {
+export async function renderSoftwareModel(artikel, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
@@ -24,6 +24,9 @@ export function renderSoftwareModel(artikel, containerId) {
   if (!artikel.software_model_data) {
     artikel.software_model_data = initializeSoftwareData(artikel);
   }
+  
+  // ✅ LOAD SAVED DATA FROM DATABASE
+  await loadSavedForecast(artikel);
   
   const data = artikel.software_model_data;
   
@@ -72,9 +75,8 @@ export function renderSoftwareModel(artikel, containerId) {
      <!-- ✅ SPEICHERN-BUTTON SECTION -->
       <div class="section-compact save-section">
         <div class="save-button-container">
-          <button id="btn-save-software-forecast" class="btn-save-forecast">
-            <span class="btn-icon">💾</span>
-            <span class="btn-text">Forecast speichern</span>
+          <button id="btn-save-software-forecast" class="btn-save-forecast-modern">
+            Speichern
           </button>
           <div id="save-status-software" class="save-status" style="display: none;">
             <span class="status-icon success">✓</span>
@@ -139,12 +141,20 @@ function renderPerpetualContent(data) {
       
       <div class="input-row-compact" style="margin-top: 10px;">
         <div class="input-group-compact">
-          <label>Maintenance Rate (%)</label>
+          <label>
+            Maintenance Rate (%)
+            <span class="tooltip-icon" title="Jährlicher Wartungsvertrag als % vom Lizenzpreis. Typisch: 15-25%">ℹ️</span>
+          </label>
           <input type="number" id="sw-maint-rate" value="${data.maintenance_rate}" class="input-compact" placeholder="20" max="100">
+          <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">z.B. 20% von 5.000€ = 1.000€/Jahr</small>
         </div>
         <div class="input-group-compact">
-          <label>Maintenance Marge (%)</label>
+          <label>
+            Maintenance Marge (%)
+            <span class="tooltip-icon" title="Gewinnmarge auf Wartungsverträge. Typisch: 80-90% (niedrige Kosten)">ℹ️</span>
+          </label>
           <input type="number" id="sw-maint-margin" value="${data.maintenance_margin}" class="input-compact" placeholder="85" max="100">
+          <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Hohe Marge, da geringe Kosten</small>
         </div>
       </div>
       
@@ -166,30 +176,74 @@ function renderPerpetualContent(data) {
     </div>
     
     <!-- Entwicklungsmodelle -->
-    <div class="section-compact">
-      <h3 class="section-title-compact">📈 Entwicklungsmodelle</h3>
-      <div class="models-compact">
-        <div class="model-row">
-          <label class="model-label-compact">Lizenzentwicklung</label>
-          <div class="model-radios">
-            <label><input type="radio" name="sw-license-model" value="konstant" ${data.license_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-            <label><input type="radio" name="sw-license-model" value="konservativ" ${data.license_model === 'konservativ' ? 'checked' : ''}> Konservativ</label>
-            <label><input type="radio" name="sw-license-model" value="optimistisch" ${data.license_model === 'optimistisch' ? 'checked' : ''}> Optimistisch</label>
-          </div>
-        </div>
-        
-        <div class="model-row">
-          <label class="model-label-compact">Preisentwicklung</label>
-          <div class="model-radios">
-            <label><input type="radio" name="sw-price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-            <label><input type="radio" name="sw-price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}> Inflation</label>
-            <label><input type="radio" name="sw-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}> Premium</label>
-          </div>
-        </div>
-      </div>
+<div class="section-compact">
+  <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
+  
+  <div class="models-grid">
+    <!-- Lizenzentwicklung -->
+    <div class="model-column">
+      <div class="model-header">LIZENZENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="sw-license-model" value="konstant" ${data.license_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(+0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-license-model" value="konservativ" ${data.license_model === 'konservativ' ? 'checked' : ''}>
+        <span>Konservativ <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-license-model" value="optimistisch" ${data.license_model === 'optimistisch' ? 'checked' : ''}>
+        <span>Optimistisch <small>(+15% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-license-model" value="manuell" ${data.license_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
     </div>
-  `;
-}
+    
+    <!-- Preisentwicklung -->
+    <div class="model-column">
+      <div class="model-header">PREISENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="sw-price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
+        <span>Inflation <small>(+2% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
+        <span>Premium <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="sw-price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+    <!-- Kostenentwicklung (Placeholder für Konsistenz) -->
+    <div class="model-column">
+      <div class="model-header">KOSTENENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="sw-cost-model" value="konstant" checked>
+        <span>Konstant <small>(0% p.a.)</small></span>
+      </label>
+      <label class="model-option disabled">
+        <input type="radio" name="sw-cost-model" value="lernkurve" disabled>
+        <span style="color: #9ca3af;">Lernkurve <small>(-5% bei 2x)</small></span>
+      </label>
+      <label class="model-option disabled">
+        <input type="radio" name="sw-cost-model" value="inflation" disabled>
+        <span style="color: #9ca3af;">Inflation <small>(+3% p.a.)</small></span>
+      </label>
+      <label class="model-option disabled">
+        <input type="radio" name="sw-cost-model" value="manuell" disabled>
+        <span style="color: #9ca3af;">Manuell</span>
+      </label>
+    </div>
+  </div>
+</div>
 
 function renderSaaSContent(data) {
   return `
@@ -293,6 +347,33 @@ function initializeSoftwareData(artikel) {
 }
 
 // ==========================================
+// LOAD SAVED DATA
+// ==========================================
+
+async function loadSavedForecast(artikel) {
+  try {
+    console.log('📥 Loading saved software forecast for:', artikel.id);
+    
+    const savedForecast = await api.loadForecast(artikel.id, 'software', 'base');
+    
+    if (savedForecast && savedForecast.parameters) {
+      console.log('✅ Found saved forecast, applying parameters...');
+      
+      // Apply saved parameters to artikel.software_model_data
+      Object.assign(artikel.software_model_data, savedForecast.parameters);
+      
+      return true;
+    } else {
+      console.log('ℹ️ No saved forecast found, using defaults');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error loading forecast:', error);
+    return false;
+  }
+}
+
+// ==========================================
 // AUTO-CALCULATE
 // ==========================================
 
@@ -316,16 +397,28 @@ function attachSoftwareEventListeners(artikel) {
     });
   });
   
-  // Mode toggle
-  document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const mode = this.dataset.mode;
-      artikel.software_model_data.license_mode = mode;
-      
-      // Re-render
-      renderSoftwareModel(artikel, 'model-content-area');
-    });
+ // Mode toggle
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const mode = this.dataset.mode;
+    artikel.software_model_data.license_mode = mode;
+    
+    // Update data object BEFORE re-render
+    const data = artikel.software_model_data;
+    
+    // Collect current input values before re-render
+    if (mode === 'saas') {
+      // Switch to SaaS - preserve any existing data
+      console.log('📡 Switching to SaaS mode');
+    } else {
+      // Switch to Perpetual - preserve any existing data
+      console.log('💿 Switching to Perpetual mode');
+    }
+    
+    // Re-render
+    renderSoftwareModel(artikel, 'model-content-area');
   });
+});
   
   // Attach input listeners based on mode
   const mode = artikel.software_model_data.license_mode;
@@ -937,32 +1030,30 @@ function renderCompactStyles() {
         margin-bottom: 8px;
       }
       
-      .btn-save-forecast {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          .btn-save-forecast-modern {
+        padding: 12px 32px;
+        background: #1e3a8a;
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       
-      .btn-save-forecast:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
+     .btn-save-forecast-modern:hover {
+        background: #1e40af;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
       
       .btn-save-forecast:active {
         transform: translateY(0);
       }
       
-      .btn-save-forecast:disabled {
+      .btn-save-forecast-modern:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
@@ -1002,6 +1093,59 @@ function renderCompactStyles() {
         color: #1e40af;
         font-style: italic;
       }
+
+      /* Models Grid */
+      .models-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 12px;
+    }
+    
+    .model-column {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    
+    .model-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .model-option {
+      display: block;
+      padding: 8px 0;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    
+    .model-option input[type="radio"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    
+    .model-option small {
+      color: #6b7280;
+      font-weight: normal;
+    }
+    
+    .model-option.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .tooltip-icon {
+      cursor: help;
+      font-size: 12px;
+      margin-left: 4px;
+    }
     </style>
   `;
 }
