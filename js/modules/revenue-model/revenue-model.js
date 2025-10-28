@@ -75,7 +75,7 @@ function initRevenueModel() {
 window.revenueModelArtikel = artikel;
 
 // Render Dropdown mit Hierarchie
-renderArtikelDropdown(hierarchy, 'artikel-dropdown-container');
+renderArtikelDropdown(artikel, 'artikel-dropdown-container');
 
 // ============================================
 // DROPDOWN CALLBACK
@@ -410,6 +410,7 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
+
 
 
 
