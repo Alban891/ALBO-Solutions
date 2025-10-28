@@ -95,8 +95,8 @@ window.onLoadRevenueModel = function(artikelList, isMulti) {
             renderRevenueModel(artikel, 'detail-container');
         }
     }
-};   
-  
+};
+}  
 
 // ============================================
 // SAUBERE HIERARCHIE OHNE DUPLIKATE
@@ -410,6 +410,7 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
+
 
 
 
