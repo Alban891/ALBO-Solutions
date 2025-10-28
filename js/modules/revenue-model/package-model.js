@@ -187,9 +187,6 @@ export async function renderPackageModel(artikel, containerId) {
     
     ${renderCompactStyles()}
   `;
-    
-    ${renderCompactStyles()}
-  `;
   
   // Attach event listeners
   attachPackageEventListeners(artikel);
