@@ -532,8 +532,6 @@ function showSaveError(message) {
 }
 
 function calculatePerpetualForecast(artikel) {
-
-function calculatePerpetualForecast(artikel) {
   const data = {
     release_date: document.getElementById('sw-date')?.value || '2025-01',
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
