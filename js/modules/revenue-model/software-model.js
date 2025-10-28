@@ -66,9 +66,6 @@ export function renderSoftwareModel(artikel, containerId) {
         ${renderModeContent(data)}
       </div>
       
-      <!-- Forecast Table Container -->
-      <div id="forecast-table-container"></div>
-      
     </div>
     
     ${renderCompactStyles()}
