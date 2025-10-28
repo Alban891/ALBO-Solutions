@@ -1,6 +1,7 @@
 /**
  * HARDWARE MODEL - COMPACT VERSION
  * Kompaktes Design, Auto-Calculate, Always-Visible Forecast
+ * ✅ MIT SPEICHERN-FUNKTION
  */
 
 import { renderForecastTable } from './forecast-table.js';
@@ -144,6 +145,27 @@ export function renderHardwareModel(artikel, containerId) {
         </div>
       </div>
       
+      <!-- ✅ SPEICHERN-BUTTON SECTION -->
+      <div class="section-compact save-section">
+        <div class="save-button-container">
+          <button id="btn-save-hardware-forecast" class="btn-save-forecast">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">Forecast speichern</span>
+          </button>
+          <div id="save-status-hardware" class="save-status" style="display: none;">
+            <span class="status-icon success">✓</span>
+            <span class="status-text">Erfolgreich gespeichert</span>
+          </div>
+          <div id="save-error-hardware" class="save-status error" style="display: none;">
+            <span class="status-icon">⚠️</span>
+            <span class="error-text">Fehler beim Speichern</span>
+          </div>
+        </div>
+        <div class="save-info">
+          💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        </div>
+      </div>
+      
     </div>
     
     ${renderCompactStyles()}
@@ -242,6 +264,130 @@ function attachHardwareEventListeners(artikel) {
       window.calculateHardwareForecast();
     });
   });
+  
+  // ✅ SAVE BUTTON EVENT LISTENER
+  const saveButton = document.getElementById('btn-save-hardware-forecast');
+  if (saveButton) {
+    saveButton.addEventListener('click', async () => {
+      await saveHardwareForecast();
+    });
+  }
+}
+
+// ==========================================
+// ✅ SAVE FORECAST FUNCTION
+// ==========================================
+
+async function saveHardwareForecast() {
+  const artikel = window._currentArtikel;
+  if (!artikel) {
+    showSaveError('Kein Artikel ausgewählt');
+    return;
+  }
+  
+  // Check if forecast exists
+  if (!artikel.hardware_model_data || !artikel.hardware_model_data.forecast) {
+    showSaveError('Bitte zuerst Forecast berechnen');
+    return;
+  }
+  
+  const forecast = artikel.hardware_model_data.forecast;
+  const data = artikel.hardware_model_data;
+  
+  // Prepare parameters
+  const parameters = {
+    release_date: data.release_date,
+    time_horizon: data.time_horizon,
+    volume_year1: data.volume_year1,
+    price_year1: data.price_year1,
+    cost_year1: data.cost_year1,
+    volume_model: data.volume_model,
+    price_model: data.price_model,
+    cost_model: data.cost_model
+  };
+  
+  // Prepare forecast data
+  const forecastData = {
+    years: forecast.years,
+    revenue: forecast.revenue,
+    totalCost: forecast.totalCost,
+    db2: forecast.db2,
+    db2Margin: forecast.db2Margin,
+    volume: forecast.volume,
+    price: forecast.price,
+    cost: forecast.cost
+  };
+  
+  console.log('💾 Speichere Hardware Forecast:', {
+    artikelId: artikel.id,
+    parameters,
+    forecastData
+  });
+  
+  // Show loading state
+  const saveButton = document.getElementById('btn-save-hardware-forecast');
+  const originalText = saveButton.innerHTML;
+  saveButton.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Speichert...</span>';
+  saveButton.disabled = true;
+  
+  try {
+    // Call API to save forecast
+    const api = window.api || window.apiClient;
+    if (!api || typeof api.saveForecast !== 'function') {
+      throw new Error('API nicht verfügbar');
+    }
+    
+    await api.saveForecast(artikel.id, 'hardware', forecastData, parameters);
+    
+    // Show success
+    showSaveSuccess();
+    
+    console.log('✅ Hardware Forecast erfolgreich gespeichert');
+    
+  } catch (error) {
+    console.error('❌ Fehler beim Speichern:', error);
+    showSaveError(error.message || 'Unbekannter Fehler');
+  } finally {
+    // Reset button
+    saveButton.innerHTML = originalText;
+    saveButton.disabled = false;
+  }
+}
+
+function showSaveSuccess() {
+  const successDiv = document.getElementById('save-status-hardware');
+  const errorDiv = document.getElementById('save-error-hardware');
+  
+  if (successDiv) {
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'flex';
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+      successDiv.style.display = 'none';
+    }, 3000);
+  }
+}
+
+function showSaveError(message) {
+  const successDiv = document.getElementById('save-status-hardware');
+  const errorDiv = document.getElementById('save-error-hardware');
+  
+  if (errorDiv) {
+    successDiv.style.display = 'none';
+    
+    const errorText = errorDiv.querySelector('.error-text');
+    if (errorText) {
+      errorText.textContent = message;
+    }
+    
+    errorDiv.style.display = 'flex';
+    
+    // Hide after 5 seconds
+    setTimeout(() => {
+      errorDiv.style.display = 'none';
+    }, 5000);
+  }
 }
 
 // ==========================================
@@ -551,6 +697,85 @@ function renderCompactStyles() {
         cursor: pointer;
       }
       
+      /* ✅ SAVE SECTION STYLES */
+      .save-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid #3b82f6;
+      }
+      
+      .save-button-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      
+      .btn-save-forecast {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+      }
+      
+      .btn-save-forecast:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
+      }
+      
+      .btn-save-forecast:active {
+        transform: translateY(0);
+      }
+      
+      .btn-save-forecast:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .btn-icon {
+        font-size: 18px;
+      }
+      
+      .save-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      
+      .save-status.success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      
+      .save-status.error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      
+      .status-icon.success {
+        color: #10b981;
+        font-size: 16px;
+      }
+      
+      .save-info {
+        font-size: 12px;
+        color: #1e40af;
+        font-style: italic;
+      }
+      
       /* Responsive */
       @media (max-width: 768px) {
         .input-row-compact {
@@ -569,6 +794,16 @@ function renderCompactStyles() {
         
         .model-label-compact {
           min-width: auto;
+        }
+        
+        .save-button-container {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        .btn-save-forecast {
+          width: 100%;
+          justify-content: center;
         }
       }
     </style>
