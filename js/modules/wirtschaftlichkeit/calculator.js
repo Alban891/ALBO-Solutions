@@ -5,12 +5,12 @@
  * @module wirtschaftlichkeit/calculator
  * @description Core calculation engine for contribution margin scheme and KPIs
  * @author Senior Development Team
- * @version 3.0.0 - REVENUE MODEL INTEGRATION
+ * @version 4.0.0 - DATABASE INTEGRATION
  * 
- * ✅ ÄNDERUNGEN v3.0:
- * - Sales Revenue aus forecast.revenue (statt mengen * preise)
- * - Kosten aus forecast.totalCost (statt hk_gesamt * mengen)
- * - DB2 aus forecast.db2 (vorberechnet im Revenue Model)
+ * ✅ ÄNDERUNGEN v4.0:
+ * - Forecasts aus ALBO_Revenue_Forecasts Tabelle laden (nicht mehr aus artikel.hardware_model_data)
+ * - Async/Await Support für Datenbankzugriffe
+ * - Forecast-Cache für Performance
  * - Rückwärts-kompatibel: Fallback auf alte Struktur
  */
 
@@ -24,23 +24,116 @@ import {
     BRANCHEN_BENCHMARKS
 } from './constants.js';
 
+// Import API functions for forecast loading
+import { loadAllForecasts } from '../../api.js';
+
+// ==========================================
+// FORECAST CACHE
+// ==========================================
+
+/**
+ * In-memory cache for loaded forecasts
+ * Avoids repeated database calls during calculation
+ */
+const forecastCache = new Map();
+
+/**
+ * Clear forecast cache
+ * Call this when forecasts are updated
+ */
+export function clearForecastCache() {
+    forecastCache.clear();
+    console.log('🗑️ Forecast cache cleared');
+}
+
+/**
+ * Preload all forecasts for articles
+ * 
+ * @param {Array} artikelListe - List of articles
+ * @returns {Promise<void>}
+ * 
+ * @private
+ */
+async function preloadForecasts(artikelListe) {
+    console.log(`📥 Preloading forecasts for ${artikelListe.length} articles...`);
+    
+    const loadPromises = artikelListe.map(async (artikel) => {
+        try {
+            const forecasts = await loadAllForecasts(artikel.id, true);
+            
+            if (forecasts && forecasts.length > 0) {
+                // Store forecasts in cache by artikel_id
+                forecastCache.set(artikel.id, forecasts);
+                console.log(`  ✅ ${artikel.name}: Loaded ${forecasts.length} forecast(s)`);
+            } else {
+                console.log(`  ℹ️ ${artikel.name}: No forecasts found`);
+            }
+        } catch (error) {
+            console.error(`  ❌ ${artikel.name}: Failed to load forecasts:`, error);
+        }
+    });
+    
+    await Promise.all(loadPromises);
+    console.log(`✅ Forecast preload complete`);
+}
+
+/**
+ * Get forecast data for an artikel from cache
+ * 
+ * @param {Object} artikel - Article object
+ * @returns {Object|null} Forecast data or null
+ * 
+ * @private
+ */
+function getForecastDataFromCache(artikel) {
+    const forecasts = forecastCache.get(artikel.id);
+    
+    if (!forecasts || forecasts.length === 0) {
+        return null;
+    }
+    
+    // Find the first active forecast (any model type)
+    // Priority: hardware > software > service > package
+    const modelPriority = ['hardware', 'software', 'service', 'package'];
+    
+    for (const modelType of modelPriority) {
+        const forecast = forecasts.find(f => 
+            f.model_type === modelType && 
+            f.is_active === true
+        );
+        
+        if (forecast && forecast.forecast_data) {
+            console.log(`  📊 ${artikel.name}: Using ${modelType} forecast`);
+            return forecast.forecast_data;
+        }
+    }
+    
+    return null;
+}
+
+// ==========================================
+// MAIN CALCULATION FUNCTION (NOW ASYNC!)
+// ==========================================
+
 /**
  * Main calculation engine for project profitability
  * Implements full DB1-DB5 contribution margin scheme
  * 
+ * ⚠️ NOW ASYNC! Must be called with await
+ * 
  * @param {string} projektId - Project ID
  * @param {import('./types').CalculationOptions} [options={}] - Calculation options
- * @returns {import('./types').WirtschaftlichkeitResult} Complete profitability analysis
+ * @returns {Promise<import('./types').WirtschaftlichkeitResult>} Complete profitability analysis
  * 
  * @example
- * const result = calculateProjektWirtschaftlichkeit('projekt-123', {
+ * const result = await calculateProjektWirtschaftlichkeit('projekt-123', {
  *   wacc: 0.10,
  *   validateInputs: true,
- *   filteredArtikel: [artikel1, artikel2]  // Optional: pre-filtered list
+ *   filteredArtikel: [artikel1, artikel2]
  * });
  * console.log(result.kpis.ebit_margin);
  */
-export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
+export async function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
     const {
         includeKI = true,
         validateInputs = true,
@@ -62,6 +155,9 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
         if (!artikelListe || artikelListe.length === 0) {
             return createEmptyResult(projektId, 'Keine Artikel vorhanden');
         }
+        
+        // ✅ NEW: Preload all forecasts from database
+        await preloadForecasts(artikelListe);
         
         const projektkosten = getProjektkosten(projektId);
         
@@ -114,7 +210,7 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
  * Calculate profitability for a single year
  * Core calculation logic implementing DB1-DB5 scheme
  * 
- * ✅ NEUE VERSION: Verwendet Forecast-Daten aus Revenue Model
+ * ✅ NEUE VERSION: Verwendet Forecast-Daten aus Datenbank-Cache
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {import('./types').Kostenblock[]} projektkosten - Project cost blocks
@@ -125,10 +221,10 @@ export function calculateProjektWirtschaftlichkeit(projektId, options = {}) {
  * @private
  */
 function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, options = {}) {
-    // Step 1: Calculate Sales Revenue FROM FORECAST
+    // Step 1: Calculate Sales Revenue FROM FORECAST DATABASE
     const sales_revenue = calculateSalesRevenueFromForecast(artikelListe, jahr);
     
-    // Step 2: Calculate HK components FROM FORECAST
+    // Step 2: Calculate HK components FROM FORECAST DATABASE
     const hk_components = calculateHKComponentsFromForecast(artikelListe, jahr);
     
     // Step 3: DB1 = Sales - Material - Direct Labour
@@ -218,18 +314,16 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
 }
 
 // ========================================
-// ✅ NEUE FUNKTIONEN - REVENUE MODEL INTEGRATION
+// ✅ ANGEPASSTE FUNKTIONEN - DATABASE INTEGRATION
 // ========================================
 
 /**
- * Calculate sales revenue from Revenue Model forecasts
+ * Calculate sales revenue from Revenue Model forecasts (DATABASE VERSION)
  * 
  * Priority:
- * 1. artikel.hardware_model_data.forecast.revenue (PRIMÄR)
- * 2. artikel.software_model_data.forecast.revenue
- * 3. artikel.service_model_data.forecast.revenue
- * 4. artikel.package_model_data.forecast.revenue
- * 5. Fallback: mengen * preise (alte Struktur)
+ * 1. Database: ALBO_Revenue_Forecasts.forecast_data.revenue (PRIMÄR)
+ * 2. Fallback: artikel.hardware_model_data.forecast.revenue (Legacy)
+ * 3. Fallback: mengen * preise (Old structure)
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
@@ -238,23 +332,34 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
  * @private
  */
 function calculateSalesRevenueFromForecast(artikelListe, jahr) {
-    console.log(`💰 [FORECAST] Calculating sales for ${jahr} with ${artikelListe.length} articles`);
+    console.log(`💰 [DB-FORECAST] Calculating sales for ${jahr} with ${artikelListe.length} articles`);
     
     const total = artikelListe.reduce((sum, artikel) => {
-        // Get forecast data based on article type
-        const forecast = getForecastData(artikel);
+        // ✅ NEW: Get forecast data from DATABASE CACHE
+        const forecast = getForecastDataFromCache(artikel);
         
         if (forecast && forecast.years && forecast.revenue) {
             const jahrIndex = forecast.years.indexOf(parseInt(jahr));
             
             if (jahrIndex !== -1 && forecast.revenue[jahrIndex] !== undefined) {
                 const revenue = forecast.revenue[jahrIndex];
-                console.log(`  ✅ ${artikel.name}: forecast.revenue[${jahr}] = ${revenue.toFixed(2)}`);
+                console.log(`  ✅ ${artikel.name}: DB forecast.revenue[${jahr}] = ${revenue.toFixed(2)}`);
                 return sum + revenue;
             }
         }
         
-        // FALLBACK: Use old structure (mengen * preise)
+        // FALLBACK 1: Try old artikel structure (for backward compatibility)
+        const legacyForecast = getForecastDataLegacy(artikel);
+        if (legacyForecast && legacyForecast.years && legacyForecast.revenue) {
+            const jahrIndex = legacyForecast.years.indexOf(parseInt(jahr));
+            if (jahrIndex !== -1 && legacyForecast.revenue[jahrIndex] !== undefined) {
+                const revenue = legacyForecast.revenue[jahrIndex];
+                console.log(`  ⚠️ ${artikel.name}: Legacy forecast.revenue[${jahr}] = ${revenue.toFixed(2)}`);
+                return sum + revenue;
+            }
+        }
+        
+        // FALLBACK 2: Use old structure (mengen * preise)
         console.warn(`  ⚠️ ${artikel.name}: No forecast data, using fallback`);
         const menge = getArtikelValueForYear(artikel, 'menge', jahr);
         const preis = getArtikelValueForYear(artikel, 'preis', jahr);
@@ -269,14 +374,14 @@ function calculateSalesRevenueFromForecast(artikelListe, jahr) {
         return sum;
     }, 0);
     
-    console.log(`💰 [FORECAST] Total sales ${jahr}: ${total.toFixed(2)}`);
+    console.log(`💰 [DB-FORECAST] Total sales ${jahr}: ${total.toFixed(2)}`);
     return total;
 }
 
 /**
- * Calculate HK components from Revenue Model forecasts
+ * Calculate HK components from Revenue Model forecasts (DATABASE VERSION)
  * 
- * Uses forecast.totalCost and applies HK-Aufteilung to split into:
+ * Uses forecast.totalCost from database and applies HK-Aufteilung to split into:
  * - Material costs
  * - Direct labour
  * - Material overhead
@@ -289,7 +394,7 @@ function calculateSalesRevenueFromForecast(artikelListe, jahr) {
  * @private
  */
 function calculateHKComponentsFromForecast(artikelListe, jahr) {
-    console.log(`🏭 [FORECAST] Calculating HK components for ${jahr}`);
+    console.log(`🏭 [DB-FORECAST] Calculating HK components for ${jahr}`);
     
     let totalMaterial = 0;
     let totalLabour = 0;
@@ -297,7 +402,8 @@ function calculateHKComponentsFromForecast(artikelListe, jahr) {
     let totalManufacturingOverhead = 0;
     
     artikelListe.forEach(artikel => {
-        const forecast = getForecastData(artikel);
+        // ✅ NEW: Get forecast data from DATABASE CACHE
+        const forecast = getForecastDataFromCache(artikel);
         
         if (forecast && forecast.years && forecast.totalCost) {
             const jahrIndex = forecast.years.indexOf(parseInt(jahr));
@@ -323,7 +429,7 @@ function calculateHKComponentsFromForecast(artikelListe, jahr) {
                 totalMaterialOverhead += materialOverhead;
                 totalManufacturingOverhead += manufacturingOverhead;
                 
-                console.log(`  ✅ ${artikel.name}: totalCost=${totalCost.toFixed(2)} → ` +
+                console.log(`  ✅ ${artikel.name}: DB totalCost=${totalCost.toFixed(2)} → ` +
                            `M=${material.toFixed(2)} L=${labour.toFixed(2)} OH=${overhead.toFixed(2)}`);
                 return;
             }
@@ -338,7 +444,7 @@ function calculateHKComponentsFromForecast(artikelListe, jahr) {
         totalManufacturingOverhead += fallback.manufacturing_overhead;
     });
     
-    console.log(`🏭 [FORECAST] Total HK: M=${totalMaterial.toFixed(2)} ` +
+    console.log(`🏭 [DB-FORECAST] Total HK: M=${totalMaterial.toFixed(2)} ` +
                `L=${totalLabour.toFixed(2)} MOH=${totalMaterialOverhead.toFixed(2)} ` +
                `MFOH=${totalManufacturingOverhead.toFixed(2)}`);
     
@@ -351,7 +457,7 @@ function calculateHKComponentsFromForecast(artikelListe, jahr) {
 }
 
 /**
- * Get DB2 directly from forecast (if available)
+ * Get DB2 directly from forecast (DATABASE VERSION)
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
  * @param {string} jahr - Year (YYYY)
@@ -364,7 +470,8 @@ function calculateDB2FromForecast(artikelListe, jahr) {
     let totalDB2 = 0;
     
     artikelListe.forEach(artikel => {
-        const forecast = getForecastData(artikel);
+        // ✅ NEW: Get forecast data from DATABASE CACHE
+        const forecast = getForecastDataFromCache(artikel);
         
         if (forecast && forecast.years && forecast.db2) {
             hasAnyForecast = true;
@@ -380,21 +487,16 @@ function calculateDB2FromForecast(artikelListe, jahr) {
 }
 
 /**
- * Get forecast data from artikel based on type
- * 
- * Checks in order:
- * 1. hardware_model_data.forecast
- * 2. software_model_data.forecast
- * 3. service_model_data.forecast
- * 4. package_model_data.forecast
+ * Get forecast data from artikel (LEGACY - for backward compatibility)
+ * Checks old struktur: artikel.hardware_model_data.forecast
  * 
  * @param {Object} artikel - Article data
  * @returns {Object|null} Forecast data or null
  * 
  * @private
  */
-function getForecastData(artikel) {
-    // Check all possible model types
+function getForecastDataLegacy(artikel) {
+    // Check all possible model types (old structure)
     const modelTypes = [
         'hardware_model_data',
         'software_model_data',
@@ -560,9 +662,9 @@ function sumProjectCostsByCategory(projektkosten, categoryIds, jahr) {
 function determineYearRange(artikelListe, projektkosten) {
     const jahre = new Set();
     
-    // Get years from article forecasts
+    // Get years from forecast cache
     artikelListe.forEach(artikel => {
-        const forecast = getForecastData(artikel);
+        const forecast = getForecastDataFromCache(artikel);
         if (forecast && forecast.years) {
             forecast.years.forEach(jahr => jahre.add(jahr.toString()));
         }
@@ -878,7 +980,7 @@ function createMetadata(projektId, artikelListe, projektkosten, jahre) {
         anzahl_artikel: artikelListe.length,
         verwendete_kostenblöcke: projektkosten.map(b => b.id),
         hk_aufteilungs_faktoren: {},
-        version: '3.0.0 - Revenue Model Integration'
+        version: '4.0.0 - Database Integration'
     };
 }
 
@@ -917,7 +1019,7 @@ function createEmptyResult(projektId, reason) {
             verwendete_kostenblöcke: [],
             hk_aufteilungs_faktoren: {},
             error: reason,
-            version: '3.0.0 - Revenue Model Integration'
+            version: '4.0.0 - Database Integration'
         }
     };
 }
@@ -928,5 +1030,6 @@ function createEmptyResult(projektId, reason) {
 export default {
     calculateProjektWirtschaftlichkeit,
     calculateNPV,
-    calculateIRR
+    calculateIRR,
+    clearForecastCache
 };
