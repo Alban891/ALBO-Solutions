@@ -75,8 +75,27 @@ function initRevenueModel() {
 window.revenueModelArtikel = artikel;
 
 // Render Dropdown mit Hierarchie
-renderArtikelDropdown(hierarchy, 'artikel-dropdown-container');   
+renderArtikelDropdown(hierarchy, 'artikel-dropdown-container');
+
+// ============================================
+// DROPDOWN CALLBACK
+// ============================================
+
+window.onLoadRevenueModel = function(artikelList, isMulti) {
+    console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
     
+    if (isMulti) {
+        // Multi-Artikel Planung
+        const artikelIds = artikelList.map(a => a.id);
+        renderMultiArtikelPlanning(artikelIds, 'detail-container');
+    } else {
+        // Single-Artikel View
+        const artikel = window.revenueModelArtikel.find(a => a.id === artikelList[0].id);
+        if (artikel) {
+            renderRevenueModel(artikel, 'detail-container');
+        }
+    }
+};   
   
 
 // ============================================
@@ -391,5 +410,6 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
+
 
 
