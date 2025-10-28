@@ -98,7 +98,7 @@ export async function renderProjektDashboard() {
         console.log('✅ Kosten data loaded');
         
         // Process data
-        dashboardState.data = processDataForDashboard(projektId);
+        dashboardState.data = await processDataForDashboard(projektId);
         dashboardState.lastUpdate = new Date();
         
         // Validate
@@ -443,3 +443,4 @@ export default {
     destroyDashboard,
     getDashboardState
 };
+
