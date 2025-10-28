@@ -176,74 +176,76 @@ function renderPerpetualContent(data) {
     </div>
     
     <!-- Entwicklungsmodelle -->
-<div class="section-compact">
-  <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
-  
-  <div class="models-grid">
-    <!-- Lizenzentwicklung -->
-    <div class="model-column">
-      <div class="model-header">LIZENZENTWICKLUNG</div>
-      <label class="model-option">
-        <input type="radio" name="sw-license-model" value="konstant" ${data.license_model === 'konstant' ? 'checked' : ''}>
-        <span>Konstant <small>(+0% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-license-model" value="konservativ" ${data.license_model === 'konservativ' ? 'checked' : ''}>
-        <span>Konservativ <small>(+5% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-license-model" value="optimistisch" ${data.license_model === 'optimistisch' ? 'checked' : ''}>
-        <span>Optimistisch <small>(+15% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-license-model" value="manuell" ${data.license_model === 'manuell' ? 'checked' : ''}>
-        <span style="color: #6b7280;">Manuell</span>
-      </label>
+    <div class="section-compact">
+      <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
+      
+      <div class="models-grid">
+        <!-- Lizenzentwicklung -->
+        <div class="model-column">
+          <div class="model-header">LIZENZENTWICKLUNG</div>
+          <label class="model-option">
+            <input type="radio" name="sw-license-model" value="konstant" ${data.license_model === 'konstant' ? 'checked' : ''}>
+            <span>Konstant <small>(+0% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-license-model" value="konservativ" ${data.license_model === 'konservativ' ? 'checked' : ''}>
+            <span>Konservativ <small>(+5% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-license-model" value="optimistisch" ${data.license_model === 'optimistisch' ? 'checked' : ''}>
+            <span>Optimistisch <small>(+15% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-license-model" value="manuell" ${data.license_model === 'manuell' ? 'checked' : ''}>
+            <span style="color: #6b7280;">Manuell</span>
+          </label>
+        </div>
+        
+        <!-- Preisentwicklung -->
+        <div class="model-column">
+          <div class="model-header">PREISENTWICKLUNG</div>
+          <label class="model-option">
+            <input type="radio" name="sw-price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
+            <span>Konstant <small>(0% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
+            <span>Inflation <small>(+2% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
+            <span>Premium <small>(+5% p.a.)</small></span>
+          </label>
+          <label class="model-option">
+            <input type="radio" name="sw-price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
+            <span style="color: #6b7280;">Manuell</span>
+          </label>
+        </div>
+        
+        <!-- Kostenentwicklung -->
+        <div class="model-column">
+          <div class="model-header">KOSTENENTWICKLUNG</div>
+          <label class="model-option">
+            <input type="radio" name="sw-cost-model" value="konstant" checked>
+            <span>Konstant <small>(0% p.a.)</small></span>
+          </label>
+          <label class="model-option disabled">
+            <input type="radio" name="sw-cost-model" value="lernkurve" disabled>
+            <span style="color: #9ca3af;">Lernkurve <small>(-5% bei 2x)</small></span>
+          </label>
+          <label class="model-option disabled">
+            <input type="radio" name="sw-cost-model" value="inflation" disabled>
+            <span style="color: #9ca3af;">Inflation <small>(+3% p.a.)</small></span>
+          </label>
+          <label class="model-option disabled">
+            <input type="radio" name="sw-cost-model" value="manuell" disabled>
+            <span style="color: #9ca3af;">Manuell</span>
+          </label>
+        </div>
+      </div>
     </div>
-    
-    <!-- Preisentwicklung -->
-    <div class="model-column">
-      <div class="model-header">PREISENTWICKLUNG</div>
-      <label class="model-option">
-        <input type="radio" name="sw-price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
-        <span>Konstant <small>(0% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
-        <span>Inflation <small>(+2% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
-        <span>Premium <small>(+5% p.a.)</small></span>
-      </label>
-      <label class="model-option">
-        <input type="radio" name="sw-price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
-        <span style="color: #6b7280;">Manuell</span>
-      </label>
-    </div>
-    
-    <!-- Kostenentwicklung (Placeholder für Konsistenz) -->
-    <div class="model-column">
-      <div class="model-header">KOSTENENTWICKLUNG</div>
-      <label class="model-option">
-        <input type="radio" name="sw-cost-model" value="konstant" checked>
-        <span>Konstant <small>(0% p.a.)</small></span>
-      </label>
-      <label class="model-option disabled">
-        <input type="radio" name="sw-cost-model" value="lernkurve" disabled>
-        <span style="color: #9ca3af;">Lernkurve <small>(-5% bei 2x)</small></span>
-      </label>
-      <label class="model-option disabled">
-        <input type="radio" name="sw-cost-model" value="inflation" disabled>
-        <span style="color: #9ca3af;">Inflation <small>(+3% p.a.)</small></span>
-      </label>
-      <label class="model-option disabled">
-        <input type="radio" name="sw-cost-model" value="manuell" disabled>
-        <span style="color: #9ca3af;">Manuell</span>
-      </label>
-    </div>
-  </div>
-</div>
+  `;
+}
 
 function renderSaaSContent(data) {
   return `
