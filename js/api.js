@@ -1554,7 +1554,7 @@ export default {
   saveGeschaeftsmodell,
   deleteGeschaeftsmodell,
   calculateGeschaeftsmodellProgress,
-  getCompletedSections
+  getCompletedSections,
   // ✅ NEW: Revenue Forecasts
   saveForecast,
   loadForecast,
