@@ -5,12 +5,13 @@
  */
 
 import { renderForecastTable } from './forecast-table.js';
+import * as api from '../../api.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
 // ==========================================
 
-export function renderServiceModel(artikel, containerId) {
+export async function renderServiceModel(artikel, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
@@ -25,6 +26,8 @@ export function renderServiceModel(artikel, containerId) {
   }
   
   const data = artikel.service_model_data;
+  // ✅ LOAD SAVED DATA FROM DATABASE
+  await loadSavedForecast(artikel);
   
   container.innerHTML = `
     <div class="service-model-compact">
@@ -145,6 +148,27 @@ export function renderServiceModel(artikel, containerId) {
       </div>
       
     </div>
+    <!-- ✅ SPEICHERN-BUTTON SECTION -->
+      <div class="section-compact save-section">
+        <div class="save-button-container">
+          <button id="btn-save-service-forecast" class="btn-save-forecast-modern">
+            💾 Speichern
+          </button>
+          <div id="save-status-service" class="save-status" style="display: none;">
+            <span class="status-icon success">✓</span>
+            <span class="status-text">Erfolgreich gespeichert</span>
+          </div>
+          <div id="save-error-service" class="save-status error" style="display: none;">
+            <span class="status-icon">⚠️</span>
+            <span class="error-text">Fehler beim Speichern</span>
+          </div>
+        </div>
+        <div class="save-info">
+          💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        </div>
+      </div>
+      
+    </div>
     
     ${renderCompactStyles()}
   `;
@@ -181,6 +205,124 @@ function initializeServiceData(artikel) {
     
     calculated: false
   };
+}
+// ==========================================
+// LOAD SAVED DATA
+// ==========================================
+
+async function loadSavedForecast(artikel) {
+  try {
+    console.log('📥 Loading saved service forecast for:', artikel.id);
+    
+    const savedForecast = await api.loadForecast(artikel.id, 'service', 'base');
+    
+    if (savedForecast && savedForecast.parameters) {
+      console.log('✅ Found saved forecast, applying parameters...');
+      
+      // Apply saved parameters to artikel.service_model_data
+      Object.assign(artikel.service_model_data, savedForecast.parameters);
+      
+      return true;
+    } else {
+      console.log('ℹ️ No saved forecast found, using defaults');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error loading forecast:', error);
+    return false;
+  }
+}
+
+// ==========================================
+// ✅ SAVE FORECAST FUNCTION
+// ==========================================
+
+async function saveServiceForecast() {
+  const artikel = window._currentArtikel;
+  if (!artikel) {
+    showSaveError('Kein Artikel ausgewählt');
+    return;
+  }
+  
+  if (!artikel.service_model_data || !artikel.service_model_data.forecast) {
+    showSaveError('Bitte zuerst Forecast berechnen');
+    return;
+  }
+  
+  const forecast = artikel.service_model_data.forecast;
+  const data = artikel.service_model_data;
+  
+  const parameters = {
+    release_date: data.release_date,
+    time_horizon: data.time_horizon,
+    fte_year1: data.fte_year1,
+    utilization_rate: data.utilization_rate,
+    working_days: data.working_days,
+    day_rate: data.day_rate,
+    fte_cost: data.fte_cost,
+    overhead_rate: data.overhead_rate,
+    fte_model: data.fte_model,
+    rate_model: data.rate_model,
+    utilization_model: data.utilization_model
+  };
+  
+  const forecastData = {
+    years: forecast.years,
+    revenue: forecast.revenue,
+    totalCost: forecast.totalCost,
+    db2: forecast.db2,
+    db2Margin: forecast.db2Margin,
+    volume: forecast.volume,
+    price: forecast.price,
+    cost: forecast.cost
+  };
+  
+  console.log('💾 Speichere Service Forecast:', {
+    artikelId: artikel.id,
+    parameters,
+    forecastData
+  });
+  
+  const saveButton = document.getElementById('btn-save-service-forecast');
+  const originalText = saveButton.innerHTML;
+  saveButton.innerHTML = '⏳ Speichert...';
+  saveButton.disabled = true;
+  
+  try {
+    await api.saveForecast(artikel.id, 'service', forecastData, parameters);
+    showSaveSuccess();
+    console.log('✅ Service Forecast erfolgreich gespeichert');
+  } catch (error) {
+    console.error('❌ Fehler beim Speichern:', error);
+    showSaveError(error.message || 'Unbekannter Fehler');
+  } finally {
+    saveButton.innerHTML = originalText;
+    saveButton.disabled = false;
+  }
+}
+
+function showSaveSuccess() {
+  const successDiv = document.getElementById('save-status-service');
+  const errorDiv = document.getElementById('save-error-service');
+  
+  if (successDiv) {
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'flex';
+    setTimeout(() => { successDiv.style.display = 'none'; }, 3000);
+  }
+}
+
+function showSaveError(message) {
+  const successDiv = document.getElementById('save-status-service');
+  const errorDiv = document.getElementById('save-error-service');
+  
+  if (errorDiv) {
+    successDiv.style.display = 'none';
+    const errorText = errorDiv.querySelector('.error-text');
+    if (errorText) errorText.textContent = message;
+    errorDiv.style.display = 'flex';
+    setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+  }
 }
 
 // ==========================================
@@ -226,8 +368,16 @@ function attachServiceEventListeners(artikel) {
     radio.addEventListener('change', () => window.calculateServiceForecast());
   });
   
-  // Initial KPI update
+ // Initial KPI update
   updateKPIs();
+  
+  // ✅ SAVE BUTTON EVENT LISTENER
+  const saveButton = document.getElementById('btn-save-service-forecast');
+  if (saveButton) {
+    saveButton.addEventListener('click', async () => {
+      await saveServiceForecast();
+    });
+  }
 }
 
 function updateKPIs() {
@@ -283,11 +433,14 @@ window.calculateServiceForecast = function() {
     utilization_model: document.querySelector('input[name="svc-util-model"]:checked')?.value || 'konstant'
   };
   
-  // Validate
+ // Validate
   if (!data.fte_year1) {
     console.log('⚠️ Waiting for complete input...');
     return;
   }
+  
+  // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.service_model_data
+  Object.assign(artikel.service_model_data, data);
   
   // Calculate forecast
   const forecast = calculateForecast(data);
@@ -574,7 +727,7 @@ function renderCompactStyles() {
         cursor: pointer;
       }
       
-      @media (max-width: 768px) {
+     @media (max-width: 768px) {
         .input-row-compact {
           grid-template-columns: 1fr;
         }
@@ -592,6 +745,75 @@ function renderCompactStyles() {
         .model-label-compact {
           min-width: auto;
         }
+      }
+      
+      /* ✅ SAVE SECTION STYLES */
+      .save-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid #3b82f6;
+      }
+      
+      .save-button-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      
+      .btn-save-forecast-modern {
+        padding: 12px 32px;
+        background: #1e3a8a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .btn-save-forecast-modern:hover {
+        background: #1e40af;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+      
+      .btn-save-forecast-modern:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .save-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      
+      .save-status.success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      
+      .save-status.error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      
+      .status-icon.success {
+        color: #10b981;
+        font-size: 16px;
+      }
+      
+      .save-info {
+        font-size: 12px;
+        color: #1e40af;
+        font-style: italic;
       }
     </style>
   `;
