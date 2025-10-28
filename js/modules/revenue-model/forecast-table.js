@@ -1,10 +1,11 @@
 /**
- * FORECAST TABLE - COMPACT VERSION
- * Kompakteres Design, keine Summary Cards, immer sichtbar
+ * FORECAST TABLE - CONTROLLER VERSION
+ * Single-Artikel: Input-Parameter + Output-Metriken
+ * Multi-Artikel: Pro Artikel + Portfolio-Aggregation
  */
 
 // ==========================================
-// MAIN RENDER FUNCTION
+// SINGLE-ARTIKEL FORECAST TABLE
 // ==========================================
 
 export function renderForecastTable(forecastData, containerId) {
@@ -15,16 +16,17 @@ export function renderForecastTable(forecastData, containerId) {
   }
   
   container.innerHTML = `
-    <div class="forecast-table-compact">
-      <div class="forecast-header-compact">
-        <h3 class="forecast-title-compact">📊 Revenue Forecast</h3>
-        <div class="forecast-actions-compact">
-          <button class="btn-action-compact" onclick="window.copyForecastToClipboard()" title="In Zwischenablage kopieren">
-            📋 Kopieren
-          </button>
+    <div class="forecast-table-controller">
+      
+      <!-- Header -->
+      <div class="forecast-header">
+        <div class="forecast-title">
+          <span class="title-icon">📊</span>
+          <span class="title-text">Revenue Forecast - ${forecastData.name}</span>
         </div>
       </div>
       
+      <!-- Table -->
       <div class="forecast-table-wrapper">
         <table class="forecast-table">
           <thead>
@@ -34,17 +36,26 @@ export function renderForecastTable(forecastData, containerId) {
             </tr>
           </thead>
           <tbody>
-            <!-- Input Metrics -->
+            
+            <!-- INPUT-PARAMETER -->
+            <tr class="section-header">
+              <td colspan="${forecastData.years.length + 1}">
+                <strong>INPUT-PARAMETER</strong> <span style="font-size: 11px; color: #6b7280;">(Grau hinterlegt)</span>
+              </td>
+            </tr>
+            
             <tr class="row-input">
-              <td class="col-label">Menge (Stück)</td>
+              <td class="col-label">Menge (${getUnitLabel(forecastData.type)})</td>
               ${forecastData.volume.map(v => `<td class="col-value">${formatNumber(v, 0)}</td>`).join('')}
             </tr>
+            
             <tr class="row-input">
-              <td class="col-label">Preis (€/Stück)</td>
+              <td class="col-label">Preis (€/${getUnitLabel(forecastData.type)})</td>
               ${forecastData.price.map(p => `<td class="col-value">${formatNumber(p, 2)}</td>`).join('')}
             </tr>
+            
             <tr class="row-input">
-              <td class="col-label">HK (€/Stück)</td>
+              <td class="col-label">HK (€/${getUnitLabel(forecastData.type)})</td>
               ${forecastData.cost.map(c => `<td class="col-value">${formatNumber(c, 2)}</td>`).join('')}
             </tr>
             
@@ -53,29 +64,47 @@ export function renderForecastTable(forecastData, containerId) {
               <td colspan="${forecastData.years.length + 1}"></td>
             </tr>
             
-            <!-- Output Metrics -->
-            <tr class="row-output row-revenue">
+            <!-- OUTPUT-METRIKEN -->
+            <tr class="section-header">
+              <td colspan="${forecastData.years.length + 1}">
+                <strong>OUTPUT-METRIKEN</strong> <span style="font-size: 11px; color: #6b7280;">(Berechnet)</span>
+              </td>
+            </tr>
+            
+            <tr class="row-output">
               <td class="col-label">Umsatz (T€)</td>
               ${forecastData.revenue.map(r => `<td class="col-value">${formatNumber(r / 1000, 0)}</td>`).join('')}
             </tr>
-            <tr class="row-output row-costs">
+            
+            <tr class="row-output">
               <td class="col-label">Kosten (T€)</td>
               ${forecastData.totalCost.map(c => `<td class="col-value col-negative">${formatNumber(c / 1000, 0)}</td>`).join('')}
             </tr>
+            
             <tr class="row-output row-db2">
-              <td class="col-label">DB2 (T€)</td>
-              ${forecastData.db2.map(db => `<td class="col-value col-positive">${formatNumber(db / 1000, 0)}</td>`).join('')}
+              <td class="col-label"><strong>DB2 (T€)</strong></td>
+              ${forecastData.db2.map(db => `<td class="col-value col-positive"><strong>${formatNumber(db / 1000, 0)}</strong></td>`).join('')}
             </tr>
+            
             <tr class="row-output row-margin">
               <td class="col-label">DB2 Marge (%)</td>
               ${forecastData.db2Margin.map(m => `<td class="col-value col-percentage">${formatNumber(m, 1)}%</td>`).join('')}
             </tr>
+            
           </tbody>
         </table>
       </div>
+      
+      <!-- Copy Button -->
+      <div class="forecast-actions">
+        <button class="btn-copy" onclick="window.copyForecastToClipboard()">
+          📋 In Zwischenablage kopieren
+        </button>
+      </div>
+      
     </div>
     
-    ${renderCompactTableStyles()}
+    ${renderForecastStyles()}
   `;
   
   // Store data for export
@@ -94,19 +123,20 @@ export function renderMultiForecastTable(artikelForecasts, containerId) {
   }
   
   const years = artikelForecasts[0].years;
-  const totals = calculateTotals(artikelForecasts, years);
+  const totals = calculatePortfolioTotals(artikelForecasts, years);
   
   container.innerHTML = `
-    <div class="forecast-table-compact">
-      <div class="forecast-header-compact">
-        <h3 class="forecast-title-compact">📊 Kombinierte Revenue Forecast (${artikelForecasts.length} Artikel)</h3>
-        <div class="forecast-actions-compact">
-          <button class="btn-action-compact" onclick="window.copyForecastToClipboard()">
-            📋 Kopieren
-          </button>
+    <div class="forecast-table-controller">
+      
+      <!-- Header -->
+      <div class="forecast-header">
+        <div class="forecast-title">
+          <span class="title-icon">📊</span>
+          <span class="title-text">Revenue Forecast - Multi-Artikel (${artikelForecasts.length} Artikel)</span>
         </div>
       </div>
       
+      <!-- Table -->
       <div class="forecast-table-wrapper">
         <table class="forecast-table forecast-table-multi">
           <thead>
@@ -116,95 +146,130 @@ export function renderMultiForecastTable(artikelForecasts, containerId) {
             </tr>
           </thead>
           <tbody>
-            ${renderMultiArtikelRows(artikelForecasts, years)}
             
-            <!-- Separator -->
-            <tr class="separator-row">
-              <td colspan="${years.length + 1}"></td>
+            ${renderMultiArtikelBlocks(artikelForecasts, years)}
+            
+            <!-- Portfolio Aggregation -->
+            <tr class="portfolio-header">
+              <td colspan="${years.length + 1}">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 20px;">💰</span>
+                  <strong style="font-size: 15px;">GESAMT (PORTFOLIO-AGGREGATION)</strong>
+                </div>
+              </td>
             </tr>
             
-            <!-- Totals -->
-            ${renderTotalRows(totals, years)}
+            <tr class="row-portfolio">
+              <td class="col-label"><strong>Umsatz (T€)</strong></td>
+              ${totals.revenue.map(r => `<td class="col-value col-bold">${formatNumber(r / 1000, 0)}</td>`).join('')}
+            </tr>
+            
+            <tr class="row-portfolio">
+              <td class="col-label"><strong>Kosten (T€)</strong></td>
+              ${totals.totalCost.map(c => `<td class="col-value col-bold col-negative">${formatNumber(c / 1000, 0)}</td>`).join('')}
+            </tr>
+            
+            <tr class="row-portfolio row-db2">
+              <td class="col-label"><strong>DB2 (T€)</strong></td>
+              ${totals.db2.map(db => `<td class="col-value col-bold col-positive">${formatNumber(db / 1000, 0)}</td>`).join('')}
+            </tr>
+            
+            <tr class="row-portfolio row-margin">
+              <td class="col-label"><strong>DB2 Marge (%)</strong></td>
+              ${totals.db2Margin.map(m => `<td class="col-value col-bold col-percentage">${formatNumber(m, 1)}%</td>`).join('')}
+            </tr>
+            
           </tbody>
         </table>
       </div>
+      
+      <!-- Copy Button -->
+      <div class="forecast-actions">
+        <button class="btn-copy" onclick="window.copyMultiForecastToClipboard()">
+          📋 In Zwischenablage kopieren
+        </button>
+      </div>
+      
     </div>
     
-    ${renderCompactTableStyles()}
+    ${renderForecastStyles()}
   `;
   
+  // Store data for export
   window._currentMultiForecastData = artikelForecasts;
 }
 
 // ==========================================
-// MULTI-ARTIKEL ROWS
+// MULTI-ARTIKEL BLOCKS
 // ==========================================
 
-function renderMultiArtikelRows(artikelForecasts, years) {
-  let html = '';
-  
-  artikelForecasts.forEach((forecast, index) => {
+function renderMultiArtikelBlocks(artikelForecasts, years) {
+  return artikelForecasts.map((forecast, index) => {
     const icon = getArtikelIcon(forecast.type);
+    const unitLabel = getUnitLabel(forecast.type);
     
-    html += `
-      <tr class="row-artikel-header">
-        <td class="col-label" colspan="${years.length + 1}">
-          ${icon} ${forecast.name}
+    return `
+      <!-- Artikel ${index + 1}: ${forecast.name} -->
+      <tr class="artikel-header">
+        <td colspan="${years.length + 1}">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0;">
+            <span style="font-size: 18px;">${icon}</span>
+            <strong style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">${forecast.name}</strong>
+          </div>
         </td>
       </tr>
-      <tr class="row-artikel-data">
-        <td class="col-label indent">└─ Umsatz (T€)</td>
+      
+      <!-- Input-Parameter -->
+      <tr class="row-input">
+        <td class="col-label">Menge (${unitLabel})</td>
+        ${forecast.volume.map(v => `<td class="col-value">${formatNumber(v, 0)}</td>`).join('')}
+      </tr>
+      
+      <tr class="row-input">
+        <td class="col-label">Preis (€/${unitLabel})</td>
+        ${forecast.price.map(p => `<td class="col-value">${formatNumber(p, 2)}</td>`).join('')}
+      </tr>
+      
+      <tr class="row-input">
+        <td class="col-label">HK (€/${unitLabel})</td>
+        ${forecast.cost.map(c => `<td class="col-value">${formatNumber(c, 2)}</td>`).join('')}
+      </tr>
+      
+      <!-- Separator -->
+      <tr class="separator-thin">
+        <td colspan="${years.length + 1}"></td>
+      </tr>
+      
+      <!-- Output-Metriken -->
+      <tr class="row-output">
+        <td class="col-label">Umsatz (T€)</td>
         ${forecast.revenue.map(r => `<td class="col-value">${formatNumber(r / 1000, 0)}</td>`).join('')}
       </tr>
-      <tr class="row-artikel-data">
-        <td class="col-label indent">└─ Kosten (T€)</td>
+      
+      <tr class="row-output">
+        <td class="col-label">Kosten (T€)</td>
         ${forecast.totalCost.map(c => `<td class="col-value col-negative">${formatNumber(c / 1000, 0)}</td>`).join('')}
       </tr>
-      <tr class="row-artikel-data">
-        <td class="col-label indent">└─ DB2 (T€)</td>
+      
+      <tr class="row-output">
+        <td class="col-label">DB2 (T€)</td>
         ${forecast.db2.map(db => `<td class="col-value col-positive">${formatNumber(db / 1000, 0)}</td>`).join('')}
       </tr>
-      ${index < artikelForecasts.length - 1 ? '<tr class="spacer-row"><td colspan="' + (years.length + 1) + '"></td></tr>' : ''}
+      
+      ${index < artikelForecasts.length - 1 ? `
+        <tr class="spacer-row">
+          <td colspan="${years.length + 1}"></td>
+        </tr>
+      ` : ''}
     `;
-  });
-  
-  return html;
+  }).join('');
 }
 
 // ==========================================
-// TOTAL ROWS
+// PORTFOLIO TOTALS CALCULATION
 // ==========================================
 
-function renderTotalRows(totals, years) {
-  return `
-    <tr class="row-total">
-      <td class="col-label">💰 = GESAMT</td>
-      <td colspan="${years.length}"></td>
-    </tr>
-    <tr class="row-total-data">
-      <td class="col-label indent">└─ Umsatz (T€)</td>
-      ${totals.revenue.map(r => `<td class="col-value col-bold">${formatNumber(r / 1000, 0)}</td>`).join('')}
-    </tr>
-    <tr class="row-total-data">
-      <td class="col-label indent">└─ Kosten (T€)</td>
-      ${totals.totalCost.map(c => `<td class="col-value col-bold col-negative">${formatNumber(c / 1000, 0)}</td>`).join('')}
-    </tr>
-    <tr class="row-total-data">
-      <td class="col-label indent">└─ DB2 (T€)</td>
-      ${totals.db2.map(db => `<td class="col-value col-bold col-positive">${formatNumber(db / 1000, 0)}</td>`).join('')}
-    </tr>
-    <tr class="row-total-data">
-      <td class="col-label indent">└─ DB2 Marge (%)</td>
-      ${totals.db2Margin.map(m => `<td class="col-value col-bold col-percentage">${formatNumber(m, 1)}%</td>`).join('')}
-    </tr>
-  `;
-}
-
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-function calculateTotals(artikelForecasts, years) {
+function calculatePortfolioTotals(artikelForecasts, years) {
   const totals = {
     revenue: new Array(years.length).fill(0),
     totalCost: new Array(years.length).fill(0),
@@ -224,12 +289,17 @@ function calculateTotals(artikelForecasts, years) {
     });
   });
   
+  // Gewichtete DB2-Marge
   totals.db2Margin = totals.revenue.map((rev, i) => {
     return rev > 0 ? (totals.db2[i] / rev) * 100 : 0;
   });
   
   return totals;
 }
+
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
 
 function getArtikelIcon(type) {
   const icons = {
@@ -240,6 +310,17 @@ function getArtikelIcon(type) {
     'subscription': '🔄'
   };
   return icons[type] || '📈';
+}
+
+function getUnitLabel(type) {
+  const units = {
+    'hardware': 'Stück',
+    'software': 'Lizenzen',
+    'subscription': 'Lizenzen',
+    'services': 'Tage',
+    'package': 'Stück'
+  };
+  return units[type] || 'Stück';
 }
 
 function formatNumber(value, decimals = 0) {
@@ -256,19 +337,22 @@ function formatNumber(value, decimals = 0) {
 window.copyForecastToClipboard = function() {
   const data = window._currentForecastData;
   if (!data) {
-    alert('Keine Daten zum Kopieren verfügbar!');
+    alert('❌ Keine Daten zum Kopieren verfügbar!');
     return;
   }
   
+  const unitLabel = getUnitLabel(data.type);
+  
   let text = 'Position\t' + data.years.join('\t') + '\n';
-  text += 'Menge\t' + data.volume.map(v => formatNumber(v, 0)).join('\t') + '\n';
-  text += 'Preis\t' + data.price.map(p => formatNumber(p, 2)).join('\t') + '\n';
-  text += 'HK\t' + data.cost.map(c => formatNumber(c, 2)).join('\t') + '\n';
-  text += '\n';
+  text += '\n=== INPUT-PARAMETER ===\n';
+  text += `Menge (${unitLabel})\t` + data.volume.map(v => formatNumber(v, 0)).join('\t') + '\n';
+  text += `Preis (€/${unitLabel})\t` + data.price.map(p => formatNumber(p, 2)).join('\t') + '\n';
+  text += `HK (€/${unitLabel})\t` + data.cost.map(c => formatNumber(c, 2)).join('\t') + '\n';
+  text += '\n=== OUTPUT-METRIKEN ===\n';
   text += 'Umsatz (T€)\t' + data.revenue.map(r => formatNumber(r/1000, 0)).join('\t') + '\n';
   text += 'Kosten (T€)\t' + data.totalCost.map(c => formatNumber(c/1000, 0)).join('\t') + '\n';
   text += 'DB2 (T€)\t' + data.db2.map(db => formatNumber(db/1000, 0)).join('\t') + '\n';
-  text += 'DB2 Marge %\t' + data.db2Margin.map(m => formatNumber(m, 1) + '%').join('\t') + '\n';
+  text += 'DB2 Marge (%)\t' + data.db2Margin.map(m => formatNumber(m, 1) + '%').join('\t') + '\n';
   
   navigator.clipboard.writeText(text).then(() => {
     alert('✅ Forecast in Zwischenablage kopiert!\n\nJetzt in Excel einfügen (Strg+V)');
@@ -278,74 +362,97 @@ window.copyForecastToClipboard = function() {
   });
 };
 
+window.copyMultiForecastToClipboard = function() {
+  const data = window._currentMultiForecastData;
+  if (!data || data.length === 0) {
+    alert('❌ Keine Daten zum Kopieren verfügbar!');
+    return;
+  }
+  
+  const years = data[0].years;
+  let text = 'Position\t' + years.join('\t') + '\n\n';
+  
+  data.forEach((forecast, index) => {
+    const unitLabel = getUnitLabel(forecast.type);
+    text += `=== ${forecast.name.toUpperCase()} ===\n`;
+    text += `Menge (${unitLabel})\t` + forecast.volume.map(v => formatNumber(v, 0)).join('\t') + '\n';
+    text += `Preis (€/${unitLabel})\t` + forecast.price.map(p => formatNumber(p, 2)).join('\t') + '\n';
+    text += `HK (€/${unitLabel})\t` + forecast.cost.map(c => formatNumber(c, 2)).join('\t') + '\n';
+    text += 'Umsatz (T€)\t' + forecast.revenue.map(r => formatNumber(r/1000, 0)).join('\t') + '\n';
+    text += 'Kosten (T€)\t' + forecast.totalCost.map(c => formatNumber(c/1000, 0)).join('\t') + '\n';
+    text += 'DB2 (T€)\t' + forecast.db2.map(db => formatNumber(db/1000, 0)).join('\t') + '\n\n';
+  });
+  
+  const totals = calculatePortfolioTotals(data, years);
+  text += '=== GESAMT (PORTFOLIO) ===\n';
+  text += 'Umsatz (T€)\t' + totals.revenue.map(r => formatNumber(r/1000, 0)).join('\t') + '\n';
+  text += 'Kosten (T€)\t' + totals.totalCost.map(c => formatNumber(c/1000, 0)).join('\t') + '\n';
+  text += 'DB2 (T€)\t' + totals.db2.map(db => formatNumber(db/1000, 0)).join('\t') + '\n';
+  text += 'DB2 Marge (%)\t' + totals.db2Margin.map(m => formatNumber(m, 1) + '%').join('\t') + '\n';
+  
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Multi-Forecast in Zwischenablage kopiert!\n\nJetzt in Excel einfügen (Strg+V)');
+  }).catch(err => {
+    console.error('Clipboard error:', err);
+    alert('❌ Fehler beim Kopieren');
+  });
+};
+
 // ==========================================
-// COMPACT STYLES
+// STYLES
 // ==========================================
 
-function renderCompactTableStyles() {
+function renderForecastStyles() {
   return `
     <style>
-      .forecast-table-compact {
-        margin-top: 12px;
+      .forecast-table-controller {
         background: white;
-        border: 1px solid #e5e7eb;
         border-radius: 8px;
-        padding: 12px;
       }
       
-      .forecast-header-compact {
+      /* Header */
+      .forecast-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 16px;
       }
       
-      .forecast-title-compact {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1f2937;
-      }
-      
-      .forecast-actions-compact {
+      .forecast-title {
         display: flex;
-        gap: 6px;
+        align-items: center;
+        gap: 8px;
       }
       
-      .btn-action-compact {
-        padding: 4px 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 4px;
-        background: white;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
+      .title-icon {
+        font-size: 20px;
       }
       
-      .btn-action-compact:hover {
-        background: #f3f4f6;
-        border-color: #3b82f6;
+      .title-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1f2937;
       }
       
       /* Table Wrapper */
       .forecast-table-wrapper {
         overflow-x: auto;
         border: 1px solid #e5e7eb;
-        border-radius: 6px;
+        border-radius: 8px;
+        margin-bottom: 12px;
       }
       
       .forecast-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 12px;
+        font-size: 13px;
       }
       
       .forecast-table th {
-        padding: 8px 10px;
+        padding: 10px 12px;
         background: #f9fafb;
-        border-bottom: 1px solid #e5e7eb;
-        font-weight: 600;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 700;
         text-align: left;
         color: #374151;
         white-space: nowrap;
@@ -357,7 +464,7 @@ function renderCompactTableStyles() {
       }
       
       .forecast-table td {
-        padding: 6px 10px;
+        padding: 8px 12px;
         border-bottom: 1px solid #f3f4f6;
       }
       
@@ -373,31 +480,44 @@ function renderCompactTableStyles() {
         color: #1f2937;
       }
       
-      /* Row Styles */
+      /* Section Headers */
+      .section-header td {
+        padding: 12px 12px 6px;
+        background: #f9fafb;
+        font-weight: 700;
+        font-size: 12px;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: none;
+      }
+      
+      /* Input Rows */
       .row-input {
         background: #fafafa;
       }
       
+      .row-input td {
+        color: #4b5563;
+      }
+      
+      /* Output Rows */
       .row-output {
         background: white;
       }
       
-      .row-revenue {
-        background: #eff6ff;
-      }
-      
       .row-db2 {
-        background: #dcfce7;
-        font-weight: 600;
+        background: #dcfce7 !important;
       }
       
       .row-margin {
-        background: #dbeafe;
+        background: #dbeafe !important;
       }
       
+      /* Separators */
       .separator-row {
-        height: 4px;
-        background: #f9fafb;
+        height: 8px;
+        background: transparent;
       }
       
       .separator-row td {
@@ -405,43 +525,46 @@ function renderCompactTableStyles() {
         border: none;
       }
       
+      .separator-thin {
+        height: 4px;
+        background: transparent;
+      }
+      
+      .separator-thin td {
+        padding: 0;
+        border: none;
+      }
+      
       /* Value Colors */
       .col-negative {
-        color: #ef4444;
+        color: #dc2626;
       }
       
       .col-positive {
         color: #059669;
-        font-weight: 600;
       }
       
       .col-percentage {
         color: #2563eb;
       }
       
-      /* Multi-Artikel Styles */
-      .row-artikel-header td {
-        padding: 10px 10px 6px;
-        background: #f9fafb;
+      .col-bold {
         font-weight: 700;
-        font-size: 13px;
-        color: #1f2937;
+      }
+      
+      /* Multi-Artikel Specific */
+      .artikel-header td {
+        padding: 16px 12px 8px;
+        background: #eff6ff;
+        border-top: 2px solid #3b82f6;
         border-bottom: none;
-      }
-      
-      .row-artikel-data {
-        background: white;
-      }
-      
-      .row-artikel-data .col-label {
-        padding-left: 24px;
-        color: #6b7280;
-        font-weight: 500;
+        font-weight: 700;
+        color: #1e40af;
       }
       
       .spacer-row {
-        height: 2px;
-        background: transparent;
+        height: 12px;
+        background: white;
       }
       
       .spacer-row td {
@@ -449,35 +572,56 @@ function renderCompactTableStyles() {
         border: none;
       }
       
-      .row-total {
+      /* Portfolio Aggregation */
+      .portfolio-header td {
+        padding: 16px 12px 8px;
         background: #1e3a8a;
-        color: white;
-      }
-      
-      .row-total td {
-        padding: 8px 10px;
-        font-weight: 700;
-        font-size: 13px;
-        color: white;
-        border-top: 2px solid #1e3a8a;
+        border-top: 3px solid #1e3a8a;
         border-bottom: none;
-      }
-      
-      .row-total-data {
-        background: #dbeafe;
-        font-weight: 600;
-      }
-      
-      .row-total-data .col-label {
-        padding-left: 24px;
-      }
-      
-      .col-bold {
+        color: white;
         font-weight: 700;
+        font-size: 14px;
       }
       
-      .indent {
-        padding-left: 24px;
+      .row-portfolio {
+        background: #dbeafe;
+      }
+      
+      .row-portfolio td {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      
+      .row-portfolio.row-db2 {
+        background: #86efac !important;
+      }
+      
+      .row-portfolio.row-margin {
+        background: #bfdbfe !important;
+      }
+      
+      /* Actions */
+      .forecast-actions {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 8px;
+      }
+      
+      .btn-copy {
+        padding: 8px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .btn-copy:hover {
+        background: #f3f4f6;
+        border-color: #3b82f6;
       }
       
       /* Responsive */
