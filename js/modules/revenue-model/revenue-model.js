@@ -50,53 +50,110 @@ function initRevenueModel() {
     // Baue saubere Hierarchie
     const hierarchy = buildCleanHierarchy(artikel);
     
- container.innerHTML = `
-    <div style="padding: 24px;">
+    container.innerHTML = `
+        <div style="padding: 24px;">
+            
+            <!-- DROPDOWN SELECTOR (oben) -->
+            <div id="artikel-dropdown-container"></div>
+            
+            <!-- DETAIL-ANSICHT (Mitte - Inputs für Hardware/Software/Package) -->
+            <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto; margin-top: 16px; margin-bottom: 16px;">
+                <div id="detail-container" style="padding: 24px;">
+                    <div style="text-align: center; padding: 40px 40px; color: #9ca3af;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                        <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
+                        <p style="font-size: 14px; color: #d1d5db; margin-top: 8px;">
+                            Konfigurieren Sie die Parameter, um die Forecast-Tabelle zu befüllen
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FORECAST-TABELLE (unten - IMMER SICHTBAR!) -->
+            <div style="background: white; border: 2px solid #2563eb; border-radius: 12px; padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1f2937;">
+                        📊 Revenue Forecast
+                    </h3>
+                    <span style="padding: 4px 12px; background: #dbeafe; color: #1e40af; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                        Basis für PnL & Dashboard
+                    </span>
+                </div>
+                <div id="forecast-table-container">
+                    ${renderEmptyForecastTable()}
+                </div>
+            </div>
+            
+        </div>
+    `;
+
+    window.revenueModelArtikel = artikel;
+
+    // Render Dropdown mit Artikel-Liste
+    renderArtikelDropdown(artikel, 'artikel-dropdown-container');
+
+    // ============================================
+    // DROPDOWN CALLBACK
+    // ============================================
+
+    window.onLoadRevenueModel = function(artikelList, isMulti) {
+        console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
         
-        <!-- DROPDOWN SELECTOR (NEU - oben, kompakt) -->
-        <div id="artikel-dropdown-container"></div>
+        if (isMulti) {
+            // Multi-Artikel Planung
+            const artikelIds = artikelList.map(a => a.id);
+            renderMultiArtikelPlanning(artikelIds, 'detail-container');
+        } else {
+            // Single-Artikel View
+            const artikel = window.revenueModelArtikel.find(a => a.id === artikelList[0].id);
+            if (artikel) {
+                renderRevenueModel(artikel, 'detail-container');
+            }
+        }
         
-        <!-- DETAIL-ANSICHT (volle Breite!) -->
-        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto; margin-top: 16px;">
-            <div id="detail-container" style="padding: 24px;">
-                <div style="text-align: center; padding: 80px 40px; color: #9ca3af;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-                    <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
-                    <p style="font-size: 14px; color: #d1d5db; margin-top: 8px;">
-                        Oder aktivieren Sie den Multi-Mode für kombinierte Planung
-                    </p>
+        // WICHTIG: Forecast-Tabelle bleibt unten sichtbar!
+        // Sie wird von den einzelnen Models befüllt via 'forecast-table-container'
+    };
+    
+}  // ← Schließt initRevenueModel()
+
+// ============================================
+// LEERE FORECAST-TABELLE (PLATZHALTER)
+// ============================================
+
+function renderEmptyForecastTable() {
+    return `
+        <div style="text-align: center; padding: 60px 40px;">
+            <div style="font-size: 64px; margin-bottom: 20px; opacity: 0.2;">📊</div>
+            <p style="margin: 0 0 8px; color: #9ca3af; font-size: 16px; font-weight: 500;">
+                Keine Forecast-Daten vorhanden
+            </p>
+            <p style="margin: 0; color: #d1d5db; font-size: 14px;">
+                Wählen Sie einen Artikel aus und klicken Sie auf "Revenue Model laden", um die Tabelle zu befüllen
+            </p>
+            
+            <div style="margin-top: 40px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px dashed #d1d5db;">
+                <p style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: #6b7280;">
+                    💡 Diese Tabelle ist die Grundlage für:
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: left;">
+                    <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 20px; margin-bottom: 4px;">📈</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #374151;">PnL-Kalkulation</div>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 20px; margin-bottom: 4px;">📊</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #374151;">Dashboard-Charts</div>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-size: 20px; margin-bottom: 4px;">💰</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #374151;">Wirtschaftlichkeit</div>
+                    </div>
                 </div>
             </div>
         </div>
-        
-    </div>
-`;
-
-window.revenueModelArtikel = artikel;
-
-// Render Dropdown mit Hierarchie
-renderArtikelDropdown(artikel, 'artikel-dropdown-container');
-
-// ============================================
-// DROPDOWN CALLBACK
-// ============================================
-
-window.onLoadRevenueModel = function(artikelList, isMulti) {
-    console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
-    
-    if (isMulti) {
-        // Multi-Artikel Planung
-        const artikelIds = artikelList.map(a => a.id);
-        renderMultiArtikelPlanning(artikelIds, 'detail-container');
-    } else {
-        // Single-Artikel View
-        const artikel = window.revenueModelArtikel.find(a => a.id === artikelList[0].id);
-        if (artikel) {
-            renderRevenueModel(artikel, 'detail-container');
-        }
-    }
-};
-}  
+    `;
+}
 
 // ============================================
 // SAUBERE HIERARCHIE OHNE DUPLIKATE
@@ -166,6 +223,8 @@ function buildCleanHierarchy(artikel) {
 
 // ============================================
 // RENDER SAUBERE HIERARCHIE MIT CHECKBOXEN
+// (Diese Funktionen werden aktuell nicht mehr verwendet,
+//  können aber für spätere Features behalten werden)
 // ============================================
 
 function renderCleanHierarchy(hierarchy) {
@@ -312,6 +371,8 @@ function getTypeColor(typ) {
 
 // ============================================
 // ARTIKEL SELECTION (SINGLE MODE)
+// (Diese Funktion wird aktuell nicht verwendet,
+//  da wir jetzt den Dropdown nutzen)
 // ============================================
 
 window.selectArtikel = function(artikelId) {
@@ -320,23 +381,13 @@ window.selectArtikel = function(artikelId) {
     
     console.log('📊 Artikel ausgewählt:', artikel.name);
     
-    // Highlight selected in tree
-    document.querySelectorAll('#artikel-tree [data-artikel-id]').forEach(el => {
-        el.style.outline = 'none';
-    });
-    
-    const currentElement = document.querySelector(`[data-artikel-id="${artikelId}"]`);
-    if (currentElement) {
-        currentElement.style.outline = '2px solid #3b82f6';
-        currentElement.style.outlineOffset = '2px';
-    }
-    
     // Render single artikel view via router
     renderRevenueModel(artikel, 'detail-container');
 };
 
 // ============================================
 // MULTI-MODE FUNCTIONS
+// (Werden vom Dropdown verwendet)
 // ============================================
 
 window.toggleMultiMode = function() {
@@ -410,8 +461,3 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
-
-
-
-
-
