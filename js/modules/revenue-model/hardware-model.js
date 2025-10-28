@@ -5,7 +5,7 @@
  */
 
 import { renderForecastTable } from './forecast-table.js';
-import * as api from '../api.js';
+import * as api from '../../api.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
