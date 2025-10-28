@@ -144,9 +144,6 @@ export function renderHardwareModel(artikel, containerId) {
         </div>
       </div>
       
-      <!-- Forecast Table Container (always visible) -->
-      <div id="forecast-table-container"></div>
-      
     </div>
     
     ${renderCompactStyles()}
