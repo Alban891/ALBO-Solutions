@@ -144,9 +144,6 @@ export function renderServiceModel(artikel, containerId) {
         </div>
       </div>
       
-      <!-- Forecast Table Container -->
-      <div id="forecast-table-container"></div>
-      
     </div>
     
     ${renderCompactStyles()}
