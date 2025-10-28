@@ -401,24 +401,16 @@ function attachSoftwareEventListeners(artikel) {
   
  // Mode toggle
 document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
+  btn.addEventListener('click', async function() {  // ✅ async hinzufügen!
     const mode = this.dataset.mode;
+    
+    console.log(`🔄 Switching to ${mode} mode`);
+    
+    // Update mode
     artikel.software_model_data.license_mode = mode;
     
-    // Update data object BEFORE re-render
-    const data = artikel.software_model_data;
-    
-    // Collect current input values before re-render
-    if (mode === 'saas') {
-      // Switch to SaaS - preserve any existing data
-      console.log('📡 Switching to SaaS mode');
-    } else {
-      // Switch to Perpetual - preserve any existing data
-      console.log('💿 Switching to Perpetual mode');
-    }
-    
-    // Re-render
-    renderSoftwareModel(artikel, 'model-content-area');
+    // Re-render with await
+    await renderSoftwareModel(artikel, 'model-content-area');  // ✅ await hinzufügen!
   });
 });
   
@@ -639,6 +631,9 @@ function calculatePerpetualForecast(artikel) {
     price_model: document.querySelector('input[name="sw-price-model"]:checked')?.value || 'konstant'
   };
   
+  // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.software_model_data
+  Object.assign(artikel.software_model_data, data);
+  
   if (!data.licenses_year1) return null;
   
   const years = data.time_horizon;
@@ -710,6 +705,9 @@ function calculateSaaSForecast(artikel) {
     saas_expansion_rate: parseFloat(document.getElementById('saas-expansion')?.value) || 0,
     saas_growth_model: document.querySelector('input[name="saas-growth-model"]:checked')?.value || 'linear'
   };
+  
+  // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.software_model_data
+  Object.assign(artikel.software_model_data, data);
   
   if (!data.saas_customers_start) return null;
   
