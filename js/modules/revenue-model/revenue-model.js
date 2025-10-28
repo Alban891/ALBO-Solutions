@@ -50,67 +50,34 @@ function initRevenueModel() {
     // Baue saubere Hierarchie
     const hierarchy = buildCleanHierarchy(artikel);
     
-    container.innerHTML = `
-        <div style="display: flex; height: calc(100vh - 300px); gap: 24px; padding: 24px;">
-            
-            <!-- LINKE SEITE: ARTIKEL-BAUM MIT MULTI-MODE -->
-            <div style="width: 380px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;">
-                
-                <!-- Header mit Multi-Toggle -->
-                <div style="background: #1e3a8a; color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 16px;">📋 Artikel-Struktur</h3>
-                    
-                    <!-- Multi-Mode Toggle Button -->
-                    <button 
-                        id="multi-mode-toggle"
-                        onclick="window.toggleMultiMode()"
-                        style="padding: 6px 12px; border: 2px solid white; border-radius: 6px; background: ${window.isMultiPlanningMode ? 'white' : 'transparent'}; color: ${window.isMultiPlanningMode ? '#1e3a8a' : 'white'}; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                        title="Multi-Artikel Planung aktivieren"
-                        onmouseover="if (!${window.isMultiPlanningMode}) { this.style.background='rgba(255,255,255,0.2)'; }"
-                        onmouseout="if (!${window.isMultiPlanningMode}) { this.style.background='transparent'; }"
-                    >
-                        ${window.isMultiPlanningMode ? '☑️ Multi' : '☐ Multi'}
-                    </button>
-                </div>
-                
-                <!-- Artikel Tree -->
-                <div id="artikel-tree" style="flex: 1; padding: 16px; overflow-y: auto;">
-                    ${renderCleanHierarchy(hierarchy)}
-                </div>
-                
-                <!-- Multi-Action Bar (nur sichtbar wenn Artikel ausgewählt) -->
-                <div id="multi-action-bar" style="display: ${window.selectedArtikelIds.length > 0 ? 'flex' : 'none'}; flex-direction: column; gap: 10px; padding: 16px; background: #f9fafb; border-top: 2px solid #e5e7eb;">
-                    <div style="padding: 8px; background: #dbeafe; border: 2px solid #3b82f6; border-radius: 6px; text-align: center; font-size: 12px; font-weight: 600; color: #1e40af;">
-                        <span id="selection-count">${window.selectedArtikelIds.length}</span> ausgewählt
-                    </div>
-                    <button 
-                        onclick="window.startMultiPlanning()"
-                        style="width: 100%; padding: 12px; border: none; border-radius: 6px; background: #2563eb; color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;"
-                        onmouseover="this.style.background='#1d4ed8'; this.style.transform='translateY(-1px)'"
-                        onmouseout="this.style.background='#2563eb'; this.style.transform='translateY(0)'"
-                    >
-                        📊 Kombiniert planen
-                    </button>
-                </div>
-            </div>
-            
-            <!-- RECHTE SEITE: DETAIL-ANSICHT -->
-            <div style="flex: 1; background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto;">
-                <div id="detail-container" style="padding: 24px;">
-                    <div style="text-align: center; padding: 80px 40px; color: #9ca3af;">
-                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-                        <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
-                        <p style="font-size: 14px; color: #d1d5db; margin-top: 8px;">
-                            Oder aktivieren Sie den Multi-Mode für kombinierte Planung
-                        </p>
-                    </div>
+ container.innerHTML = `
+    <div style="padding: 24px;">
+        
+        <!-- DROPDOWN SELECTOR (NEU - oben, kompakt) -->
+        <div id="artikel-dropdown-container"></div>
+        
+        <!-- DETAIL-ANSICHT (volle Breite!) -->
+        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 12px; overflow-y: auto; margin-top: 16px;">
+            <div id="detail-container" style="padding: 24px;">
+                <div style="text-align: center; padding: 80px 40px; color: #9ca3af;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                    <p style="font-size: 18px; font-weight: 500;">Wählen Sie einen Artikel aus</p>
+                    <p style="font-size: 14px; color: #d1d5db; margin-top: 8px;">
+                        Oder aktivieren Sie den Multi-Mode für kombinierte Planung
+                    </p>
                 </div>
             </div>
         </div>
-    `;
+        
+    </div>
+`;
+
+window.revenueModelArtikel = artikel;
+
+// Render Dropdown mit Hierarchie
+renderArtikelDropdown(hierarchy, 'artikel-dropdown-container');   
     
-    window.revenueModelArtikel = artikel;
-}
+  
 
 // ============================================
 // SAUBERE HIERARCHIE OHNE DUPLIKATE
@@ -424,4 +391,5 @@ function updateMultiActionBar() {
         count.textContent = window.selectedArtikelIds.length;
     }
 }
+
 
