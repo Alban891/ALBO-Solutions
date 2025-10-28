@@ -5,6 +5,7 @@
  */
 
 import { renderForecastTable } from './forecast-table.js';
+import * as api from '../api.js';
 
 // ==========================================
 // MAIN RENDER FUNCTION
@@ -64,6 +65,29 @@ export function renderSoftwareModel(artikel, containerId) {
       <!-- Dynamic Content Area -->
       <div id="sw-mode-content">
         ${renderModeContent(data)}
+      </div>
+      
+    </div>
+
+     <!-- ✅ SPEICHERN-BUTTON SECTION -->
+      <div class="section-compact save-section">
+        <div class="save-button-container">
+          <button id="btn-save-software-forecast" class="btn-save-forecast">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">Forecast speichern</span>
+          </button>
+          <div id="save-status-software" class="save-status" style="display: none;">
+            <span class="status-icon success">✓</span>
+            <span class="status-text">Erfolgreich gespeichert</span>
+          </div>
+          <div id="save-error-software" class="save-status error" style="display: none;">
+            <span class="status-icon">⚠️</span>
+            <span class="error-text">Fehler beim Speichern</span>
+          </div>
+        </div>
+        <div class="save-info">
+          💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        </div>
       </div>
       
     </div>
@@ -316,7 +340,14 @@ function attachSoftwareEventListeners(artikel) {
   document.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => window.calculateSoftwareForecast());
   });
-}
+  // ✅ SAVE BUTTON EVENT LISTENER
+    const saveButton = document.getElementById('btn-save-software-forecast');
+    if (saveButton) {
+      saveButton.addEventListener('click', async () => {
+        await saveSoftwareForecast();
+      });
+    }
+  }
 
 function attachPerpetualListeners() {
   const inputs = ['sw-licenses', 'sw-price', 'sw-cost', 'sw-maint-rate', 'sw-maint-margin'];
@@ -396,6 +427,111 @@ window.calculateSoftwareForecast = function() {
     artikel.software_model_data.forecast = forecast;
   }
 };
+
+// ==========================================
+// ✅ SAVE FORECAST FUNCTION
+// ==========================================
+
+async function saveSoftwareForecast() {
+  const artikel = window._currentArtikel;
+  if (!artikel) {
+    showSaveError('Kein Artikel ausgewählt');
+    return;
+  }
+  
+  if (!artikel.software_model_data || !artikel.software_model_data.forecast) {
+    showSaveError('Bitte zuerst Forecast berechnen');
+    return;
+  }
+  
+  const forecast = artikel.software_model_data.forecast;
+  const data = artikel.software_model_data;
+  
+  const parameters = {
+    release_date: data.release_date,
+    time_horizon: data.time_horizon,
+    license_mode: data.license_mode
+  };
+  
+  if (data.license_mode === 'perpetual') {
+    parameters.licenses_year1 = data.licenses_year1;
+    parameters.license_price = data.license_price;
+    parameters.license_cost = data.license_cost;
+    parameters.maintenance_rate = data.maintenance_rate;
+    parameters.maintenance_margin = data.maintenance_margin;
+    parameters.license_model = data.license_model;
+    parameters.price_model = data.price_model;
+  } else {
+    parameters.saas_customers_start = data.saas_customers_start;
+    parameters.saas_arr = data.saas_arr;
+    parameters.saas_cost = data.saas_cost;
+    parameters.saas_new_customers = data.saas_new_customers;
+    parameters.saas_churn_rate = data.saas_churn_rate;
+    parameters.saas_expansion_rate = data.saas_expansion_rate;
+    parameters.saas_growth_model = data.saas_growth_model;
+  }
+  
+  const forecastData = {
+    years: forecast.years,
+    revenue: forecast.revenue,
+    totalCost: forecast.totalCost,
+    db2: forecast.db2,
+    db2Margin: forecast.db2Margin,
+    volume: forecast.volume,
+    price: forecast.price,
+    cost: forecast.cost
+  };
+  
+  console.log('💾 Speichere Software Forecast:', {
+    artikelId: artikel.id,
+    license_mode: data.license_mode,
+    parameters,
+    forecastData
+  });
+  
+  const saveButton = document.getElementById('btn-save-software-forecast');
+  const originalText = saveButton.innerHTML;
+  saveButton.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Speichert...</span>';
+  saveButton.disabled = true;
+  
+  try {
+    await api.saveForecast(artikel.id, 'software', forecastData, parameters);
+    showSaveSuccess();
+    console.log('✅ Software Forecast erfolgreich gespeichert');
+  } catch (error) {
+    console.error('❌ Fehler beim Speichern:', error);
+    showSaveError(error.message || 'Unbekannter Fehler');
+  } finally {
+    saveButton.innerHTML = originalText;
+    saveButton.disabled = false;
+  }
+}
+
+function showSaveSuccess() {
+  const successDiv = document.getElementById('save-status-software');
+  const errorDiv = document.getElementById('save-error-software');
+  
+  if (successDiv) {
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'flex';
+    setTimeout(() => { successDiv.style.display = 'none'; }, 3000);
+  }
+}
+
+function showSaveError(message) {
+  const successDiv = document.getElementById('save-status-software');
+  const errorDiv = document.getElementById('save-error-software');
+  
+  if (errorDiv) {
+    successDiv.style.display = 'none';
+    const errorText = errorDiv.querySelector('.error-text');
+    if (errorText) errorText.textContent = message;
+    errorDiv.style.display = 'flex';
+    setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+  }
+}
+
+function calculatePerpetualForecast(artikel) {
 
 function calculatePerpetualForecast(artikel) {
   const data = {
@@ -788,6 +924,85 @@ function renderCompactStyles() {
         .license-mode-toggle {
           flex-direction: column;
         }
+      }
+      
+      /* ✅ SAVE SECTION STYLES */
+      .save-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid #3b82f6;
+      }
+      
+      .save-button-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      
+      .btn-save-forecast {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+      }
+      
+      .btn-save-forecast:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
+      }
+      
+      .btn-save-forecast:active {
+        transform: translateY(0);
+      }
+      
+      .btn-save-forecast:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      .btn-icon {
+        font-size: 18px;
+      }
+      
+      .save-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      
+      .save-status.success {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      
+      .save-status.error {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      
+      .status-icon.success {
+        color: #10b981;
+        font-size: 16px;
+      }
+      
+      .save-info {
+        font-size: 12px;
+        color: #1e40af;
+        font-style: italic;
       }
     </style>
   `;
