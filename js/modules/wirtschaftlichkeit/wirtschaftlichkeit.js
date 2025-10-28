@@ -60,7 +60,7 @@ export async function renderProjektWirtschaftlichkeit() {
         }
         
         // Calculate profitability (with filtered articles)
-        const result = calculateProjektWirtschaftlichkeit(projektId, {
+        const result = await calculateProjektWirtschaftlichkeit(projektId, {
             wacc: 0.08,
             validateInputs: true,
             filteredArtikel: artikelListe  // Pass filtered list
@@ -137,7 +137,7 @@ export async function renderWirtschaftlichkeit() {
             throw new Error('Artikel hat keine Projekt-Zuordnung');
         }
         
-        const result = calculateProjektWirtschaftlichkeit(projektId, {
+        const result = await calculateProjektWirtschaftlichkeit(projektId, {
             wacc: 0.08,
             validateInputs: true
         });
