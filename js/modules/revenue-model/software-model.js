@@ -609,7 +609,7 @@ function autoCalculateForecast() {
 // EVENT LISTENERS
 // ==========================================
 
-function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄNDERT
+function attachSoftwareEventListeners(artikel, showToggle = true) {
   // Horizon buttons
   document.querySelectorAll('.btn-horizon').forEach(btn => {
     btn.addEventListener('click', function() {
@@ -619,7 +619,7 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄ
     });
   });
   
-  // ✅ Mode toggle - ONLY if multi-stream  ← NEU: if (showToggle) { ... }
+  // Mode toggle - ONLY if multi-stream
   if (showToggle) {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', function() {
@@ -646,17 +646,12 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄ
             attachSaaSListeners();
           }
           
-          // Radio buttons
-          document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', () => window.calculateSoftwareForecast());
-          });
-          
           // Recalculate forecast
           window.calculateSoftwareForecast();
         }
       });
     });
-  }  // ← NEU: schließende Klammer für if (showToggle)
+  }
   
   // Attach input listeners based on mode
   const mode = artikel.software_model_data.license_mode;
@@ -666,11 +661,6 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄ
   } else {
     attachSaaSListeners();
   }
-  
-  // Radio buttons
-  document.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', () => window.calculateSoftwareForecast());
-  });
   
   // ✅ SAVE BUTTON EVENT LISTENER
   const saveButton = document.getElementById('btn-save-software-forecast');
