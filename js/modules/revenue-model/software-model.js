@@ -401,7 +401,7 @@ function attachSoftwareEventListeners(artikel) {
   
  // Mode toggle
 document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', async function() {
+  btn.addEventListener('click', function() {
     const mode = this.dataset.mode;
     
     console.log(`🔄 Switching to ${mode} mode`);
@@ -409,9 +409,30 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     // Update mode
     artikel.software_model_data.license_mode = mode;
     
-    // Re-render - find correct container
-    const containerId = 'detail-container'; // Revenue Model Container
-    await renderSoftwareModel(artikel, containerId);
+    // Update UI - toggle active state
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Re-render mode content
+    const modeContentContainer = document.getElementById('sw-mode-content');
+    if (modeContentContainer) {
+      modeContentContainer.innerHTML = renderModeContent(artikel.software_model_data);
+      
+      // Re-attach listeners for new inputs
+      if (mode === 'perpetual') {
+        attachPerpetualListeners();
+      } else {
+        attachSaaSListeners();
+      }
+      
+      // Radio buttons
+      document.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', () => window.calculateSoftwareForecast());
+      });
+      
+      // Recalculate forecast
+      window.calculateSoftwareForecast();
+    }
   });
 });
   
