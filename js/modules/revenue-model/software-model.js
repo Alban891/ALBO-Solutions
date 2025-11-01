@@ -773,16 +773,6 @@ function attachSaaSListeners() {
   updateSaaSKPIs();
 }
   
-  // ARR Manual Button
-  const btnArrManual = document.getElementById('btn-edit-arr-manual');
-  if (btnArrManual) {
-    btnArrManual.addEventListener('click', () => {
-      console.log('🔧 Opening manual editor for ARR');
-      alert('Manual editor for ARR - Coming soon!');
-      // TODO: Open modal
-    });
-  }
-  
   // CHURN Manual Button
   const btnChurnManual = document.getElementById('btn-edit-churn-manual');
   if (btnChurnManual) {
@@ -1172,7 +1162,7 @@ for (let i = 0; i < years; i++) {
   // ✅ Ab Jahr 2: Growth Modelle anwenden
   const newCustomers = calculateNewCustomersModel(data.saas_new_customers, data.saas_new_model, i - 1);
   const currentARR = calculateARRModel(initialARR, data.saas_arr_model, i);
-  const churnRate = calculateChurnModel(data.saas_churn_rate, data.saas_churn_model, i - 1);
+  const churnRate = calculateChurnModel(data.saas_churn_rate, data.saas_churn_model, i - 1, artikel);
   
   // Churn calculation
   const churnedCustomers = totalCustomers * (churnRate / 100);
@@ -1308,17 +1298,21 @@ function calculateARRModel(baseARR, model, yearIndex) {
   }
 }
 
-function calculateChurnModel(baseChurn, model, yearIndex) {
+function calculateChurnModel(baseChurn, model, yearIndex, artikel) {
   switch (model) {
     case 'konstant':
       return baseChurn;
     case 'verbesserung':
-      // Churn Rate sinkt um 2 Prozentpunkte pro Jahr
-      // z.B. 15% → 13% → 11% → 9%...
       const newChurn = baseChurn - (2 * yearIndex);
-      return Math.max(newChurn, 2);  // Minimum 2%
+      return Math.max(newChurn, 2);
     case 'manuell':
-      // TODO: Manuelle Werte implementieren
+      // ✅ Use manual values if available
+      if (artikel && artikel.software_model_data && artikel.software_model_data.saas_churn_manual) {
+        const manualValue = artikel.software_model_data.saas_churn_manual[yearIndex + 1];
+        if (manualValue !== undefined && manualValue !== null) {
+          return manualValue;
+        }
+      }
       return baseChurn;
     default:
       return baseChurn;
