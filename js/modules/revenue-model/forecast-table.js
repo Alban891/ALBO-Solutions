@@ -8,8 +8,8 @@
 // SINGLE-ARTIKEL FORECAST TABLE
 // ==========================================
 
-export function renderForecastTable(forecastData, containerId, options = {}) {
-  const { isEditable = false } = options;
+export function renderForecastTable(forecastData, containerId) {
+  const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
     return;
@@ -44,58 +44,19 @@ export function renderForecastTable(forecastData, containerId, options = {}) {
               </td>
             </tr>
             
-            <tr class="row-input ${isEditable ? 'editable' : ''}">
-            <td class="col-label">Menge (${getUnitLabel(forecastData.type)})</td>
-            ${forecastData.volume.map((v, i) => `
-                <td class="col-value">
-                ${isEditable ? `
-                    <input 
-                    type="text" 
-                    class="input-editable" 
-                    data-type="volume" 
-                    data-year="${i}"
-                    value="${formatNumber(v, 0)}"
-                    onfocus="this.select()"
-                    >
-                ` : formatNumber(v, 0)}
-                </td>
-            `).join('')}
+            <tr class="row-input">
+              <td class="col-label">Menge (${getUnitLabel(forecastData.type)})</td>
+              ${forecastData.volume.map(v => `<td class="col-value">${formatNumber(v, 0)}</td>`).join('')}
             </tr>
-
-            <tr class="row-input ${isEditable ? 'editable' : ''}">
-            <td class="col-label">Preis (€/${getUnitLabel(forecastData.type)})</td>
-            ${forecastData.price.map((p, i) => `
-                <td class="col-value">
-                ${isEditable ? `
-                    <input 
-                    type="text" 
-                    class="input-editable" 
-                    data-type="price" 
-                    data-year="${i}"
-                    value="${formatNumber(p, 2)}"
-                    onfocus="this.select()"
-                    >
-                ` : formatNumber(p, 2)}
-                </td>
-            `).join('')}
+            
+            <tr class="row-input">
+              <td class="col-label">Preis (€/${getUnitLabel(forecastData.type)})</td>
+              ${forecastData.price.map(p => `<td class="col-value">${formatNumber(p, 2)}</td>`).join('')}
             </tr>
-
-            <tr class="row-input ${isEditable ? 'editable' : ''}">
-            <td class="col-label">HK (€/${getUnitLabel(forecastData.type)})</td>
-            ${forecastData.cost.map((c, i) => `
-                <td class="col-value">
-                ${isEditable ? `
-                    <input 
-                    type="text" 
-                    class="input-editable" 
-                    data-type="cost" 
-                    data-year="${i}"
-                    value="${formatNumber(c, 2)}"
-                    onfocus="this.select()"
-                    >
-                ` : formatNumber(c, 2)}
-                </td>
-            `).join('')}
+            
+            <tr class="row-input">
+              <td class="col-label">HK (€/${getUnitLabel(forecastData.type)})</td>
+              ${forecastData.cost.map(c => `<td class="col-value">${formatNumber(c, 2)}</td>`).join('')}
             </tr>
             
             <!-- Separator -->
@@ -539,37 +500,6 @@ function renderForecastStyles() {
       .row-input td {
         color: #4b5563;
       }
-
-      /* Editable Input Rows */
-        .row-input.editable {
-        background: #fffbeb !important;
-        }
-
-        .input-editable {
-        width: 100%;
-        padding: 4px 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 4px;
-        font-size: 13px;
-        text-align: right;
-        background: #fffbeb;
-        font-weight: 600;
-        color: #92400e;
-        font-variant-numeric: tabular-nums;
-        }
-
-        .input-editable:focus {
-        outline: none;
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
-        background: white;
-        color: #1f2937;
-        }
-
-        .input-editable:hover {
-        border-color: #f59e0b;
-        background: #fef3c7;
-        }
       
       /* Output Rows */
       .row-output {
