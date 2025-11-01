@@ -61,30 +61,34 @@ export function renderHardwareModel(artikel, containerId) {
           <div class="input-group-compact">
             <label>Menge (Stück)</label>
             <input 
-              type="number" 
-              id="hw-volume" 
-              value="${data.volume_year1}"
-              class="input-compact"
+                type="text" 
+                id="hw-volume" 
+                value="${formatNumberWithThousands(data.volume_year1)}"
+                class="input-compact"
+                onfocus="handleInputFocus(this)"
+                onblur="handleInputBlur(this, 'number')"
             >
           </div>
           <div class="input-group-compact">
             <label>Preis (€/Stück)</label>
             <input 
-              type="number" 
-              id="hw-price" 
-              value="${data.price_year1}"
-              class="input-compact"
-              step="0.01"
+            type="text" 
+            id="hw-price" 
+            value="${formatNumberWithDecimals(data.price_year1, 2)}"
+            class="input-compact"
+            onfocus="handleInputFocus(this)"
+            onblur="handleInputBlur(this, 'decimal')"
             >
           </div>
           <div class="input-group-compact">
             <label>HK (€/Stück)</label>
             <input 
-              type="number" 
-              id="hw-cost" 
-              value="${data.cost_year1}"
-              class="input-compact"
-              step="0.01"
+            type="text" 
+            id="hw-cost" 
+            value="${formatNumberWithDecimals(data.cost_year1, 2)}"
+            class="input-compact"
+            onfocus="handleInputFocus(this)"
+            onblur="handleInputBlur(this, 'decimal')"
             >
           </div>
         </div>
@@ -106,58 +110,101 @@ export function renderHardwareModel(artikel, containerId) {
         </div>
       </div>
       
-      <!-- Entwicklungsmodelle (ultra-kompakt) -->
-      <div class="section-compact">
-        <h3 class="section-title-compact">📈 Entwicklungsmodelle</h3>
+      <!-- Entwicklungsmodelle (3-Spalten) -->
+        <div class="section-compact">
+        <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
         
-        <div class="models-compact">
-          <!-- Menge -->
-          <div class="model-row">
-            <label class="model-label-compact">Mengenentwicklung</label>
-            <div class="model-radios">
-              <label><input type="radio" name="volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}> Konservativ</label>
-              <label><input type="radio" name="volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}> Realistisch</label>
-              <label><input type="radio" name="volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}> Optimistisch</label>
+        <div class="models-grid">
+            
+            <!-- Spalte 1: Mengenentwicklung -->
+            <div class="model-column">
+            <div class="model-header">MENGENENTWICKLUNG</div>
+            <label class="model-option">
+                <input type="radio" name="volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}>
+                <span>Konstant <small>(+0% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}>
+                <span>Konservativ <small>(+15% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}>
+                <span>Realistisch <small>(S-Kurve)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}>
+                <span>Optimistisch <small>(Hockey-Stick)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="volume-model" value="manuell" ${data.volume_model === 'manuell' ? 'checked' : ''}>
+                <span style="color: #6b7280;">Manuell</span>
+            </label>
             </div>
-          </div>
-          
-          <!-- Preis -->
-          <div class="model-row">
-            <label class="model-label-compact">Preisentwicklung</label>
-            <div class="model-radios">
-              <label><input type="radio" name="price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}> Inflation</label>
-              <label><input type="radio" name="price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}> Premium</label>
-              <label><input type="radio" name="price-model" value="deflation" ${data.price_model === 'deflation' ? 'checked' : ''}> Deflation</label>
+            
+            <!-- Spalte 2: Preisentwicklung -->
+            <div class="model-column">
+            <div class="model-header">PREISENTWICKLUNG</div>
+            <label class="model-option">
+                <input type="radio" name="price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
+                <span>Konstant <small>(0% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
+                <span>Inflation <small>(+2% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
+                <span>Premium <small>(+5% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="price-model" value="deflation" ${data.price_model === 'deflation' ? 'checked' : ''}>
+                <span>Deflation <small>(-3% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
+                <span style="color: #6b7280;">Manuell</span>
+            </label>
             </div>
-          </div>
-          
-          <!-- Kosten -->
-          <div class="model-row">
-            <label class="model-label-compact">Kostenentwicklung</label>
-            <div class="model-radios">
-              <label><input type="radio" name="cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}> Konstant</label>
-              <label><input type="radio" name="cost-model" value="inflation" ${data.cost_model === 'inflation' ? 'checked' : ''}> Inflation</label>
-              <label><input type="radio" name="cost-model" value="learning" ${data.cost_model === 'learning' ? 'checked' : ''}> Learning</label>
-              <label><input type="radio" name="cost-model" value="steigend" ${data.cost_model === 'steigend' ? 'checked' : ''}> Steigend</label>
+            
+            <!-- Spalte 3: Kostenentwicklung -->
+            <div class="model-column">
+            <div class="model-header">KOSTENENTWICKLUNG</div>
+            <label class="model-option">
+                <input type="radio" name="cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}>
+                <span>Konstant <small>(0% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="cost-model" value="inflation" ${data.cost_model === 'inflation' ? 'checked' : ''}>
+                <span>Inflation <small>(+2% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="cost-model" value="learning" ${data.cost_model === 'learning' ? 'checked' : ''}>
+                <span>Lernkurve <small>(-5% bei 2x)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="cost-model" value="steigend" ${data.cost_model === 'steigend' ? 'checked' : ''}>
+                <span>Steigend <small>(+5% p.a.)</small></span>
+            </label>
+            <label class="model-option">
+                <input type="radio" name="cost-model" value="manuell" ${data.cost_model === 'manuell' ? 'checked' : ''}>
+                <span style="color: #6b7280;">Manuell</span>
+            </label>
             </div>
-          </div>
+            
         </div>
-      </div>
+        </div>
       
       <!-- ✅ SPEICHERN-BUTTON SECTION -->
       <div class="section-compact save-section">
         <div class="save-button-container">
-          <button id="btn-save-hardware-forecast" class="btn-save-forecast">
-            <span class="btn-icon">💾</span>
-            <span class="btn-text">Forecast speichern</span>
+          <button id="btn-save-software-forecast" class="btn-save-forecast-modern">
+            Speichern
           </button>
-          <div id="save-status-hardware" class="save-status" style="display: none;">
+          <div id="save-status-software" class="save-status" style="display: none;">
             <span class="status-icon success">✓</span>
             <span class="status-text">Erfolgreich gespeichert</span>
           </div>
-          <div id="save-error-hardware" class="save-status error" style="display: none;">
+          <div id="save-error-software" class="save-status error" style="display: none;">
             <span class="status-icon">⚠️</span>
             <span class="error-text">Fehler beim Speichern</span>
           </div>
@@ -226,7 +273,6 @@ function attachHardwareEventListeners(artikel) {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      // Auto-recalculate
       window.calculateHardwareForecast();
     });
   });
@@ -236,10 +282,17 @@ function attachHardwareEventListeners(artikel) {
   const priceInput = document.getElementById('hw-price');
   const costInput = document.getElementById('hw-cost');
   
+  // ✅ NEU: Helper für formatierte Inputs (INNERHALB der Funktion!)
+  const parseFormattedValue = (input) => {
+    const value = input.value.replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(value) || 0;
+  };
+  
+  // ✅ VERBESSERT: Nutzt parseFormattedValue
   const updateKPIs = () => {
-    const volume = parseFloat(volumeInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
-    const cost = parseFloat(costInput.value) || 0;
+    const volume = parseFormattedValue(volumeInput);  // ✅ Funktioniert jetzt!
+    const price = parseFormattedValue(priceInput);
+    const cost = parseFormattedValue(costInput);
     
     const revenue = volume * price;
     const db2 = volume * (price - cost);
@@ -254,19 +307,19 @@ function attachHardwareEventListeners(artikel) {
   priceInput.addEventListener('input', updateKPIs);
   costInput.addEventListener('input', updateKPIs);
   
-  // Auto-recalculate on blur (when user finishes editing)
+  // Auto-recalculate on blur
   volumeInput.addEventListener('blur', () => window.calculateHardwareForecast());
   priceInput.addEventListener('blur', () => window.calculateHardwareForecast());
   costInput.addEventListener('blur', () => window.calculateHardwareForecast());
   
-  // Radio buttons - auto-recalculate
+  // Radio buttons
   document.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => {
       window.calculateHardwareForecast();
     });
   });
   
-  // ✅ SAVE BUTTON EVENT LISTENER
+  // Save button
   const saveButton = document.getElementById('btn-save-hardware-forecast');
   if (saveButton) {
     saveButton.addEventListener('click', async () => {
@@ -274,6 +327,7 @@ function attachHardwareEventListeners(artikel) {
     });
   }
 }
+
 
 // ==========================================
 // ✅ SAVE FORECAST FUNCTION
@@ -399,9 +453,9 @@ window.calculateHardwareForecast = function() {
     release_date: document.getElementById('hw-date')?.value || '2025-01',
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
     
-    volume_year1: parseFloat(document.getElementById('hw-volume')?.value) || 0,
-    price_year1: parseFloat(document.getElementById('hw-price')?.value) || 0,
-    cost_year1: parseFloat(document.getElementById('hw-cost')?.value) || 0,
+    volume_year1: parseFormattedNumber(document.getElementById('hw-volume')?.value),
+    price_year1: parseFormattedNumber(document.getElementById('hw-price')?.value),
+    cost_year1: parseFormattedNumber(document.getElementById('hw-cost')?.value),
     
     volume_model: document.querySelector('input[name="volume-model"]:checked')?.value || 'konstant',
     price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
@@ -545,6 +599,50 @@ function formatNumber(value, decimals = 0) {
 }
 
 // ==========================================
+// INPUT FORMATTING HELPERS
+// ==========================================
+
+function formatNumberWithThousands(value) {
+  if (!value && value !== 0) return '';
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+function formatNumberWithDecimals(value, decimals) {
+  if (!value && value !== 0) return '';
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(value);
+}
+
+function handleInputFocus(input) {
+  // Remove formatting on focus (1.000 → 1000 oder 50,00 → 50)
+  const value = input.value.replace(/\./g, '').replace(/,/g, '.');
+  input.value = value;
+  input.select();
+}
+
+function handleInputBlur(input, type) {
+  // Re-apply formatting on blur
+  const value = parseFloat(input.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
+  
+  if (type === 'number') {
+    input.value = formatNumberWithThousands(value);
+  } else if (type === 'decimal') {
+    input.value = formatNumberWithDecimals(value, 2);
+  }
+}
+
+function parseFormattedNumber(value) {
+  if (!value) return 0;
+  const cleaned = value.toString().replace(/\./g, '').replace(/,/g, '.');
+  return parseFloat(cleaned) || 0;
+}
+
+// ==========================================
 // COMPACT STYLES
 // ==========================================
 
@@ -654,17 +752,54 @@ function renderCompactStyles() {
       }
       
       /* Models (ultra-compact) */
-      .models-compact {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      
-      .model-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
+      /* Models Grid (3 Spalten) */
+        .models-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 12px;
+        }
+
+        .model-column {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px;
+        }
+
+        .model-header {
+        font-size: 11px;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e5e7eb;
+        }
+
+        .model-option {
+        display: block;
+        padding: 8px 0;
+        cursor: pointer;
+        font-size: 11px;
+        }
+
+        .model-option input[type="radio"] {
+        margin-right: 8px;
+        cursor: pointer;
+        }
+
+        .model-option small {
+        color: #6b7280;
+        font-weight: normal;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+        .models-grid {
+            grid-template-columns: 1fr;
+        }
+        }
       
       .model-label-compact {
         min-width: 140px;
