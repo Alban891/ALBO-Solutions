@@ -730,7 +730,72 @@ function attachSaaSListeners() {
     }
   });
   
+  // ✅ NEW: Radio button listeners for manual mode detection
+  document.querySelectorAll('input[name="saas-new-model"]').forEach(radio => {
+    radio.addEventListener('change', handleSaaSModelChange);
+  });
+  
+  document.querySelectorAll('input[name="saas-arr-model"]').forEach(radio => {
+    radio.addEventListener('change', handleSaaSModelChange);
+  });
+  
+  document.querySelectorAll('input[name="saas-churn-model"]').forEach(radio => {
+    radio.addEventListener('change', handleSaaSModelChange);
+  });
+  
+  // ✅ NEW: Attach manual edit button listeners
+  attachSaaSManualButtonListeners();
+  
   updateSaaSKPIs();
+}
+
+function handleSaaSModelChange() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  // Re-render SaaS content to show/hide manual buttons
+  const modeContentContainer = document.getElementById('sw-mode-content');
+  if (modeContentContainer) {
+    modeContentContainer.innerHTML = renderSaaSContent(artikel.software_model_data);
+    
+    // Re-attach all listeners
+    attachSaaSListeners();
+    
+    // Recalculate forecast
+    window.calculateSoftwareForecast();
+  }
+}
+
+function attachSaaSManualButtonListeners() {
+  // NEW CUSTOMERS Manual Button
+  const btnNewManual = document.getElementById('btn-edit-new-manual');
+  if (btnNewManual) {
+    btnNewManual.addEventListener('click', () => {
+      console.log('🔧 Opening manual editor for NEW CUSTOMERS');
+      alert('Manual editor for NEW CUSTOMERS - Coming soon!');
+      // TODO: Open modal
+    });
+  }
+  
+  // ARR Manual Button
+  const btnArrManual = document.getElementById('btn-edit-arr-manual');
+  if (btnArrManual) {
+    btnArrManual.addEventListener('click', () => {
+      console.log('🔧 Opening manual editor for ARR');
+      alert('Manual editor for ARR - Coming soon!');
+      // TODO: Open modal
+    });
+  }
+  
+  // CHURN Manual Button
+  const btnChurnManual = document.getElementById('btn-edit-churn-manual');
+  if (btnChurnManual) {
+    btnChurnManual.addEventListener('click', () => {
+      console.log('🔧 Opening manual editor for CHURN RATE');
+      alert('Manual editor for CHURN RATE - Coming soon!');
+      // TODO: Open modal
+    });
+  }
 }
 
 function updatePerpetualKPIs() {
