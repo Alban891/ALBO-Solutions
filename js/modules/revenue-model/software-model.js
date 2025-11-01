@@ -28,23 +28,45 @@ export async function renderSoftwareModel(artikel, containerId) {
   // ✅ LOAD SAVED DATA FROM DATABASE
 await loadSavedForecast(artikel);
 
-// ✅ Determine which modes to show based on revenue streams
+// ✅ Determine which modes to show
+const data = artikel.software_model_data;
+
+// Check revenue streams
 const revenueStreams = artikel.revenue_streams || [];
 const hasOneTimeSale = revenueStreams.includes('one_time_sale');
 const hasSubscription = revenueStreams.includes('subscription');
 
-console.log('📊 Revenue Streams:', revenueStreams);
-console.log('   One-Time Sale:', hasOneTimeSale);
-console.log('   Subscription:', hasSubscription);
+// Check artikel name/typ for indicators
+const artikelName = (artikel.name || '').toLowerCase();
+const artikelTyp = (artikel.typ || '').toLowerCase();
 
-// ✅ Set mode based on revenue streams
-const data = artikel.software_model_data;
+console.log('📊 Software Article:', artikel.name);
+console.log('   Revenue Streams:', revenueStreams);
+console.log('   Name contains "subscription":', artikelName.includes('subscription'));
+console.log('   Name contains "one time":', artikelName.includes('one time'));
 
+// Determine mode
 if (revenueStreams.length === 0) {
-  // NO STREAMS → Default to Perpetual only
-  data.license_mode = 'perpetual';
-  data.show_toggle = false;  // ✅ KEIN Toggle!
-  console.log('   → No streams defined, default to PERPETUAL only');
+  // NO STREAMS → Check name for indicators
+  
+  if (artikelName.includes('subscription') || artikelName.includes('saas')) {
+    // Name indicates subscription
+    data.license_mode = 'saas';
+    data.show_toggle = false;
+    console.log('   → Detected SUBSCRIPTION from name');
+    
+  } else if (artikelName.includes('one time') || artikelName.includes('perpetual')) {
+    // Name indicates one-time
+    data.license_mode = 'perpetual';
+    data.show_toggle = false;
+    console.log('   → Detected ONE-TIME from name');
+    
+  } else {
+    // Standard software → Perpetual only
+    data.license_mode = 'perpetual';
+    data.show_toggle = false;
+    console.log('   → No streams, default to PERPETUAL only');
+  }
   
 } else if (hasOneTimeSale && hasSubscription) {
   // BOTH STREAMS → Show toggle
@@ -64,7 +86,7 @@ if (revenueStreams.length === 0) {
   console.log('   → Only Subscription, SAAS only');
   
 } else {
-  // FALLBACK (sollte nie erreicht werden)
+  // FALLBACK
   data.license_mode = 'perpetual';
   data.show_toggle = false;
   console.log('   → Fallback: PERPETUAL only');
