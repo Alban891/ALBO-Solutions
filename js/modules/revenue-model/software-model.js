@@ -442,6 +442,11 @@ function renderSaaSContent(data) {
         <input type="radio" name="saas-new-model" value="manuell" ${data.saas_new_model === 'manuell' ? 'checked' : ''}>
         <span style="color: #6b7280;">Manuell</span>
       </label>
+      ${data.saas_new_model === 'manuell' ? `
+        <button class="btn-manual-edit" id="btn-edit-new-manual" style="margin-top: 8px;">
+            ✏️ Neue Kunden bearbeiten
+        </button>
+        ` : ''}
     </div>
     
     <!-- Spalte 2: ARR Development -->
@@ -463,26 +468,35 @@ function renderSaaSContent(data) {
         <input type="radio" name="saas-arr-model" value="manuell" ${data.saas_arr_model === 'manuell' ? 'checked' : ''}>
         <span style="color: #6b7280;">Manuell</span>
       </label>
+      ${data.saas_arr_model === 'manuell' ? `
+    <button class="btn-manual-edit" id="btn-edit-arr-manual" style="margin-top: 8px;">
+        ✏️ ARR-Werte bearbeiten
+    </button>
+    ` : ''}
     </div>
     
     <!-- Spalte 3: Churn Rate -->
     <div class="model-column">
-      <div class="model-header">CHURN RATE</div>
-      <label class="model-option">
+    <div class="model-header">CHURN RATE</div>
+    <label class="model-option">
         <input type="radio" name="saas-churn-model" value="konstant" ${data.saas_churn_model === 'konstant' ? 'checked' : ''}>
         <span>Konstant <small>(gleich)</small></span>
-      </label>
-      <label class="model-option">
+    </label>
+    <label class="model-option">
         <input type="radio" name="saas-churn-model" value="verbesserung" ${data.saas_churn_model === 'verbesserung' ? 'checked' : ''}>
         <span>Verbesserung <small>(-2% p.a.)</small></span>
-      </label>
-      <label class="model-option">
+    </label>
+    <label class="model-option">
         <input type="radio" name="saas-churn-model" value="manuell" ${data.saas_churn_model === 'manuell' ? 'checked' : ''}>
         <span style="color: #6b7280;">Manuell</span>
-      </label>
-    </div>
+    </label>
     
-  </div>
+    ${data.saas_churn_model === 'manuell' ? `
+        <button class="btn-manual-edit" id="btn-edit-churn-manual" style="margin-top: 8px;">
+        ✏️ Churn-Raten bearbeiten
+        </button>
+    ` : ''}
+    </div>
 </div>
   `;
 }
@@ -1660,6 +1674,36 @@ function renderCompactStyles() {
   background: #3b82f6;
   color: white;
 }
+
+.cogs-mode-btn.active {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Manual Edit Button */
+.btn-manual-edit {
+  width: 100%;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-manual-edit:hover {
+  background: #e5e7eb;
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
     </style>
   `;
 }
