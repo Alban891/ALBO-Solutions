@@ -8,12 +8,17 @@
 // SINGLE-ARTIKEL FORECAST TABLE
 // ==========================================
 
-export function renderForecastTable(forecastData, containerId) {
+export function renderForecastTable(forecastData, containerId, isManualMode = false) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
     return;
   }
+  
+  // Check if manual mode is active
+  const manualVolume = forecastData.volume_model === 'manuell';
+  const manualPrice = forecastData.price_model === 'manuell';
+  const manualCost = forecastData.cost_model === 'manuell';
   
   container.innerHTML = `
     <div class="forecast-table-controller">
@@ -24,6 +29,11 @@ export function renderForecastTable(forecastData, containerId) {
           <span class="title-icon">📊</span>
           <span class="title-text">Revenue Forecast - ${forecastData.name}</span>
         </div>
+        ${(manualVolume || manualPrice || manualCost) ? `
+          <div style="padding: 4px 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; font-size: 12px; font-weight: 600; color: #92400e;">
+            ✏️ Manuell-Modus aktiv
+          </div>
+        ` : ''}
       </div>
       
       <!-- Table -->
@@ -40,23 +50,68 @@ export function renderForecastTable(forecastData, containerId) {
             <!-- INPUT-PARAMETER -->
             <tr class="section-header">
               <td colspan="${forecastData.years.length + 1}">
-                <strong>INPUT-PARAMETER</strong> <span style="font-size: 11px; color: #6b7280;">(Grau hinterlegt)</span>
+                <strong>INPUT-PARAMETER</strong> <span style="font-size: 11px; color: #6b7280;">(${(manualVolume || manualPrice || manualCost) ? 'Editierbar' : 'Grau hinterlegt'})</span>
               </td>
             </tr>
             
-            <tr class="row-input">
+            <!-- Menge -->
+            <tr class="row-input ${manualVolume ? 'row-editable' : ''}">
               <td class="col-label">Menge (${getUnitLabel(forecastData.type)})</td>
-              ${forecastData.volume.map(v => `<td class="col-value">${formatNumber(v, 0)}</td>`).join('')}
+              ${forecastData.volume.map((v, i) => `
+                <td class="col-value">
+                  ${manualVolume ? 
+                    `<input 
+                      type="text" 
+                      class="editable-input" 
+                      data-type="volume" 
+                      data-year="${i}"
+                      value="${formatNumber(v, 0)}"
+                      style="width: 100%; text-align: right; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;"
+                    >` 
+                    : formatNumber(v, 0)
+                  }
+                </td>
+              `).join('')}
             </tr>
             
-            <tr class="row-input">
+            <!-- Preis -->
+            <tr class="row-input ${manualPrice ? 'row-editable' : ''}">
               <td class="col-label">Preis (€/${getUnitLabel(forecastData.type)})</td>
-              ${forecastData.price.map(p => `<td class="col-value">${formatNumber(p, 2)}</td>`).join('')}
+              ${forecastData.price.map((p, i) => `
+                <td class="col-value">
+                  ${manualPrice ? 
+                    `<input 
+                      type="text" 
+                      class="editable-input" 
+                      data-type="price" 
+                      data-year="${i}"
+                      value="${formatNumber(p, 2)}"
+                      style="width: 100%; text-align: right; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;"
+                    >` 
+                    : formatNumber(p, 2)
+                  }
+                </td>
+              `).join('')}
             </tr>
             
-            <tr class="row-input">
+            <!-- HK -->
+            <tr class="row-input ${manualCost ? 'row-editable' : ''}">
               <td class="col-label">HK (€/${getUnitLabel(forecastData.type)})</td>
-              ${forecastData.cost.map(c => `<td class="col-value">${formatNumber(c, 2)}</td>`).join('')}
+              ${forecastData.cost.map((c, i) => `
+                <td class="col-value">
+                  ${manualCost ? 
+                    `<input 
+                      type="text" 
+                      class="editable-input" 
+                      data-type="cost" 
+                      data-year="${i}"
+                      value="${formatNumber(c, 2)}"
+                      style="width: 100%; text-align: right; padding: 4px; border: 1px solid #d1d5db; border-radius: 4px;"
+                    >` 
+                    : formatNumber(c, 2)
+                  }
+                </td>
+              `).join('')}
             </tr>
             
             <!-- Separator -->
@@ -67,28 +122,28 @@ export function renderForecastTable(forecastData, containerId) {
             <!-- OUTPUT-METRIKEN -->
             <tr class="section-header">
               <td colspan="${forecastData.years.length + 1}">
-                <strong>OUTPUT-METRIKEN</strong> <span style="font-size: 11px; color: #6b7280;">(Berechnet)</span>
+                <strong>OUTPUT-METRIKEN</strong> <span style="font-size: 11px; color: #6b7280;">(Automatisch berechnet)</span>
               </td>
             </tr>
             
             <tr class="row-output">
               <td class="col-label">Umsatz (T€)</td>
-              ${forecastData.revenue.map(r => `<td class="col-value">${formatNumber(r / 1000, 0)}</td>`).join('')}
+              ${forecastData.revenue.map((r, i) => `<td class="col-value" id="output-revenue-${i}">${formatNumber(r / 1000, 0)}</td>`).join('')}
             </tr>
             
             <tr class="row-output">
               <td class="col-label">Kosten (T€)</td>
-              ${forecastData.totalCost.map(c => `<td class="col-value col-negative">${formatNumber(c / 1000, 0)}</td>`).join('')}
+              ${forecastData.totalCost.map((c, i) => `<td class="col-value col-negative" id="output-cost-${i}">${formatNumber(c / 1000, 0)}</td>`).join('')}
             </tr>
             
             <tr class="row-output row-db2">
               <td class="col-label"><strong>DB2 (T€)</strong></td>
-              ${forecastData.db2.map(db => `<td class="col-value col-positive"><strong>${formatNumber(db / 1000, 0)}</strong></td>`).join('')}
+              ${forecastData.db2.map((db, i) => `<td class="col-value col-positive" id="output-db2-${i}"><strong>${formatNumber(db / 1000, 0)}</strong></td>`).join('')}
             </tr>
             
             <tr class="row-output row-margin">
               <td class="col-label">DB2 Marge (%)</td>
-              ${forecastData.db2Margin.map(m => `<td class="col-value col-percentage">${formatNumber(m, 1)}%</td>`).join('')}
+              ${forecastData.db2Margin.map((m, i) => `<td class="col-value col-percentage" id="output-margin-${i}">${formatNumber(m, 1)}%</td>`).join('')}
             </tr>
             
           </tbody>
@@ -109,6 +164,11 @@ export function renderForecastTable(forecastData, containerId) {
   
   // Store data for export
   window._currentForecastData = forecastData;
+  
+  // Attach event listeners for manual mode
+  if (manualVolume || manualPrice || manualCost) {
+    attachManualModeListeners();
+  }
 }
 
 // ==========================================
@@ -331,6 +391,106 @@ function formatNumber(value, decimals = 0) {
 }
 
 // ==========================================
+// MANUAL MODE EVENT LISTENERS
+// ==========================================
+
+function attachManualModeListeners() {
+  const inputs = document.querySelectorAll('.editable-input');
+  
+  inputs.forEach(input => {
+    // Format on focus (remove formatting)
+    input.addEventListener('focus', function() {
+      const value = this.value.replace(/\./g, '').replace(/,/g, '.');
+      this.value = value;
+      this.select();
+    });
+    
+    // Format on blur and recalculate
+    input.addEventListener('blur', function() {
+      const type = this.dataset.type;
+      const value = parseFloat(this.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
+      
+      // Format based on type
+      if (type === 'volume') {
+        this.value = formatNumber(value, 0);
+      } else {
+        this.value = formatNumber(value, 2);
+      }
+      
+      // Recalculate outputs
+      recalculateOutputs();
+    });
+    
+    // Recalculate on input (real-time)
+    input.addEventListener('input', debounce(() => {
+      recalculateOutputs();
+    }, 500));
+  });
+}
+
+function recalculateOutputs() {
+  const forecastData = window._currentForecastData;
+  if (!forecastData) return;
+  
+  const years = forecastData.years.length;
+  
+  for (let i = 0; i < years; i++) {
+    // Get current values from inputs
+    const volumeInput = document.querySelector(`[data-type="volume"][data-year="${i}"]`);
+    const priceInput = document.querySelector(`[data-type="price"][data-year="${i}"]`);
+    const costInput = document.querySelector(`[data-type="cost"][data-year="${i}"]`);
+    
+    const volume = volumeInput ? parseFloat(volumeInput.value.replace(/\./g, '').replace(/,/g, '.')) || 0 : forecastData.volume[i];
+    const price = priceInput ? parseFloat(priceInput.value.replace(/\./g, '').replace(/,/g, '.')) || 0 : forecastData.price[i];
+    const cost = costInput ? parseFloat(costInput.value.replace(/\./g, '').replace(/,/g, '.')) || 0 : forecastData.cost[i];
+    
+    // Calculate outputs
+    const revenue = volume * price;
+    const totalCost = volume * cost;
+    const db2 = revenue - totalCost;
+    const db2Margin = revenue > 0 ? (db2 / revenue) * 100 : 0;
+    
+    // Update display
+    const revenueEl = document.getElementById(`output-revenue-${i}`);
+    const costEl = document.getElementById(`output-cost-${i}`);
+    const db2El = document.getElementById(`output-db2-${i}`);
+    const marginEl = document.getElementById(`output-margin-${i}`);
+    
+    if (revenueEl) revenueEl.textContent = formatNumber(revenue / 1000, 0);
+    if (costEl) costEl.textContent = formatNumber(totalCost / 1000, 0);
+    if (db2El) db2El.innerHTML = `<strong>${formatNumber(db2 / 1000, 0)}</strong>`;
+    if (marginEl) marginEl.textContent = formatNumber(db2Margin, 1) + '%';
+    
+    // Update stored data
+    forecastData.volume[i] = volume;
+    forecastData.price[i] = price;
+    forecastData.cost[i] = cost;
+    forecastData.revenue[i] = revenue;
+    forecastData.totalCost[i] = totalCost;
+    forecastData.db2[i] = db2;
+    forecastData.db2Margin[i] = db2Margin;
+  }
+  
+  // Update artikel data
+  if (window._currentArtikel && window._currentArtikel.hardware_model_data) {
+    window._currentArtikel.hardware_model_data.forecast = forecastData;
+  }
+}
+
+// Debounce helper
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// ==========================================
 // EXPORT FUNCTIONS
 // ==========================================
 
@@ -500,6 +660,37 @@ function renderForecastStyles() {
       .row-input td {
         color: #4b5563;
       }
+
+      /* Editable Input Rows */
+        .row-input.editable {
+        background: #fffbeb !important;
+        }
+
+        .input-editable {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 13px;
+        text-align: right;
+        background: #fffbeb;
+        font-weight: 600;
+        color: #92400e;
+        font-variant-numeric: tabular-nums;
+        }
+
+        .input-editable:focus {
+        outline: none;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+        background: white;
+        color: #1f2937;
+        }
+
+        .input-editable:hover {
+        border-color: #f59e0b;
+        background: #fef3c7;
+        }
       
       /* Output Rows */
       .row-output {
@@ -624,7 +815,7 @@ function renderForecastStyles() {
         border-color: #3b82f6;
       }
       
-      /* Responsive */
+        /* Responsive */
       @media (max-width: 768px) {
         .forecast-table {
           font-size: 11px;
@@ -634,6 +825,24 @@ function renderForecastStyles() {
         .forecast-table td {
           padding: 6px 8px;
         }
+      }
+      
+      /* ✅ MANUAL MODE STYLES */
+      .row-editable {
+        background: #fef3c7 !important;
+      }
+      
+      .editable-input {
+        font-family: inherit;
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+      
+      .editable-input:focus {
+        outline: none;
+        border-color: #f59e0b !important;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+        background: white;
       }
     </style>
   `;
