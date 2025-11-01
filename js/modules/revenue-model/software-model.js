@@ -1009,8 +1009,8 @@ function formatNumber(value, decimals = 0) {
 function formatNumberInput(input) {
   if (!input) return;
   
-  // Get raw value (remove all non-digits)
-  let value = input.value.replace(/\./g, '');
+  // Get raw value (remove all non-digits and commas)
+  let value = input.value.replace(/[.,]/g, '');
   
   // If empty, return
   if (value === '') {
@@ -1027,8 +1027,8 @@ function formatNumberInput(input) {
     return;
   }
   
-  // Format with thousand separators
-  input.value = num.toLocaleString('de-DE');
+  // Format with thousand separators (PUNKT statt Komma!)
+  input.value = num.toLocaleString('de-DE').replace(/,/g, '.');
 }
 
 /**
