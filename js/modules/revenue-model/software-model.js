@@ -26,12 +26,42 @@ export async function renderSoftwareModel(artikel, containerId) {
   }
   
   // ✅ LOAD SAVED DATA FROM DATABASE
-  await loadSavedForecast(artikel);
-  
-  const data = artikel.software_model_data;
-  
-  container.innerHTML = `
-    <div class="software-model-compact">
+await loadSavedForecast(artikel);
+
+// ✅ NEU: Determine which modes to show based on revenue streams
+const revenueStreams = artikel.revenue_streams || [];
+const hasOneTimeSale = revenueStreams.includes('one_time_sale');
+const hasSubscription = revenueStreams.includes('subscription');
+
+console.log('📊 Revenue Streams:', revenueStreams);
+console.log('   One-Time Sale:', hasOneTimeSale);
+console.log('   Subscription:', hasSubscription);
+
+// ✅ NEU: Set mode based on revenue streams
+const data = artikel.software_model_data;
+
+if (hasOneTimeSale && !hasSubscription) {
+  // Only perpetual
+  data.license_mode = 'perpetual';
+  data.show_toggle = false;
+  console.log('   → Locked to PERPETUAL (single stream)');
+} else if (hasSubscription && !hasOneTimeSale) {
+  // Only SaaS
+  data.license_mode = 'saas';
+  data.show_toggle = false;
+  console.log('   → Locked to SAAS (single stream)');
+} else if (hasOneTimeSale && hasSubscription) {
+  // Both → show toggle
+  data.show_toggle = true;
+  console.log('   → BOTH modes available (multi stream)');
+} else {
+  // Neither → default to perpetual with toggle
+  data.show_toggle = true;
+  console.log('   → No streams defined, showing both modes');
+}
+
+container.innerHTML = `
+  <div class="software-model-compact">
       
       <!-- Zeitliche Rahmendaten -->
       <div class="section-compact">
@@ -53,17 +83,27 @@ export async function renderSoftwareModel(artikel, containerId) {
       </div>
       
       <!-- Lizenzmodell -->
-      <div class="section-compact">
+        <div class="section-compact">
         <h3 class="section-title-compact">💿 Lizenzmodell</h3>
-        <div class="license-mode-toggle">
-          <button class="mode-btn ${data.license_mode === 'perpetual' ? 'active' : ''}" data-mode="perpetual">
-            Perpetual License
-          </button>
-          <button class="mode-btn ${data.license_mode === 'saas' ? 'active' : ''}" data-mode="saas">
-            SaaS / Subscription
-          </button>
+        
+        ${data.show_toggle ? `
+            <!-- Multi-Stream: Show Toggle -->
+            <div class="license-mode-toggle">
+            <button class="mode-btn ${data.license_mode === 'perpetual' ? 'active' : ''}" data-mode="perpetual">
+                Perpetual License
+            </button>
+            <button class="mode-btn ${data.license_mode === 'saas' ? 'active' : ''}" data-mode="saas">
+                SaaS / Subscription
+            </button>
+            </div>
+        ` : `
+            <!-- Single-Stream: Show Info Only -->
+            <div style="padding: 10px 12px; background: #f0f9ff; border: 1px solid #3b82f6; border-radius: 6px; font-size: 13px; color: #1e40af;">
+            <strong>${data.license_mode === 'perpetual' ? '📦 Perpetual License' : '🔄 SaaS / Subscription'}</strong>
+            <span style="margin-left: 8px; font-size: 11px; opacity: 0.8;">(Single Revenue Stream)</span>
+            </div>
+        `}
         </div>
-      </div>
       
       <!-- Dynamic Content Area -->
       <div id="sw-mode-content">
@@ -98,7 +138,7 @@ export async function renderSoftwareModel(artikel, containerId) {
   `;
   
   // Attach event listeners
-  attachSoftwareEventListeners(artikel);
+  attachSoftwareEventListeners(artikel, data.show_toggle);
   
   // Store artikel reference
   window._currentArtikel = artikel;
@@ -389,7 +429,7 @@ function autoCalculateForecast() {
 // EVENT LISTENERS
 // ==========================================
 
-function attachSoftwareEventListeners(artikel) {
+function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄNDERT
   // Horizon buttons
   document.querySelectorAll('.btn-horizon').forEach(btn => {
     btn.addEventListener('click', function() {
@@ -399,42 +439,44 @@ function attachSoftwareEventListeners(artikel) {
     });
   });
   
- // Mode toggle
-document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const mode = this.dataset.mode;
-    
-    console.log(`🔄 Switching to ${mode} mode`);
-    
-    // Update mode
-    artikel.software_model_data.license_mode = mode;
-    
-    // Update UI - toggle active state
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    this.classList.add('active');
-    
-    // Re-render mode content
-    const modeContentContainer = document.getElementById('sw-mode-content');
-    if (modeContentContainer) {
-      modeContentContainer.innerHTML = renderModeContent(artikel.software_model_data);
-      
-      // Re-attach listeners for new inputs
-      if (mode === 'perpetual') {
-        attachPerpetualListeners();
-      } else {
-        attachSaaSListeners();
-      }
-      
-      // Radio buttons
-      document.querySelectorAll('input[type="radio"]').forEach(radio => {
-        radio.addEventListener('change', () => window.calculateSoftwareForecast());
+  // ✅ Mode toggle - ONLY if multi-stream  ← NEU: if (showToggle) { ... }
+  if (showToggle) {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const mode = this.dataset.mode;
+        
+        console.log(`🔄 Switching to ${mode} mode`);
+        
+        // Update mode
+        artikel.software_model_data.license_mode = mode;
+        
+        // Update UI - toggle active state
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Re-render mode content
+        const modeContentContainer = document.getElementById('sw-mode-content');
+        if (modeContentContainer) {
+          modeContentContainer.innerHTML = renderModeContent(artikel.software_model_data);
+          
+          // Re-attach listeners for new inputs
+          if (mode === 'perpetual') {
+            attachPerpetualListeners();
+          } else {
+            attachSaaSListeners();
+          }
+          
+          // Radio buttons
+          document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => window.calculateSoftwareForecast());
+          });
+          
+          // Recalculate forecast
+          window.calculateSoftwareForecast();
+        }
       });
-      
-      // Recalculate forecast
-      window.calculateSoftwareForecast();
-    }
-  });
-});
+    });
+  }  // ← NEU: schließende Klammer für if (showToggle)
   
   // Attach input listeners based on mode
   const mode = artikel.software_model_data.license_mode;
@@ -449,14 +491,15 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   document.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => window.calculateSoftwareForecast());
   });
+  
   // ✅ SAVE BUTTON EVENT LISTENER
-    const saveButton = document.getElementById('btn-save-software-forecast');
-    if (saveButton) {
-      saveButton.addEventListener('click', async () => {
-        await saveSoftwareForecast();
-      });
-    }
+  const saveButton = document.getElementById('btn-save-software-forecast');
+  if (saveButton) {
+    saveButton.addEventListener('click', async () => {
+      await saveSoftwareForecast();
+    });
   }
+}
 
 function attachPerpetualListeners() {
   const inputs = ['sw-licenses', 'sw-price', 'sw-cost', 'sw-maint-rate', 'sw-maint-margin'];
