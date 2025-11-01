@@ -210,9 +210,6 @@ export function renderHardwareModel(artikel, containerId) {
         </div>
       
     </div>
-
-    <!-- ✅ FORECAST TABLE CONTAINER -->
-    <div id="forecast-table-container"></div>
     
     ${renderCompactStyles()}
   `;
