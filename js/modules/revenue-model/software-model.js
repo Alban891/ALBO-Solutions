@@ -401,7 +401,7 @@ function attachSoftwareEventListeners(artikel) {
   
  // Mode toggle
 document.querySelectorAll('.mode-btn').forEach(btn => {
-  btn.addEventListener('click', async function() {  // ✅ async hinzufügen!
+  btn.addEventListener('click', async function() {
     const mode = this.dataset.mode;
     
     console.log(`🔄 Switching to ${mode} mode`);
@@ -409,8 +409,9 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     // Update mode
     artikel.software_model_data.license_mode = mode;
     
-    // Re-render with await
-    await renderSoftwareModel(artikel, 'model-content-area');  // ✅ await hinzufügen!
+    // Re-render - find correct container
+    const containerId = 'detail-container'; // Revenue Model Container
+    await renderSoftwareModel(artikel, containerId);
   });
 });
   
@@ -510,6 +511,11 @@ window.calculateSoftwareForecast = function() {
   }
   
   if (forecast) {
+    // ✅ Add model info to forecast (for manual mode detection)
+    forecast.volume_model = artikel.software_model_data.license_model;
+    forecast.price_model = artikel.software_model_data.price_model;
+    forecast.cost_model = 'konstant'; // Software hat nur konstante Kosten
+    
     renderForecastTable(forecast, 'forecast-table-container');
     artikel.software_model_data.forecast = forecast;
   }
@@ -642,6 +648,9 @@ function calculatePerpetualForecast(artikel) {
   const forecast = {
     name: artikel.name || 'Software',
     type: 'software',
+    volume_model: data.license_model,  // ✅ NEU
+    price_model: data.price_model,      // ✅ NEU
+    cost_model: 'konstant',             // ✅ NEU
     years: [],
     volume: [],
     price: [],
@@ -717,6 +726,9 @@ function calculateSaaSForecast(artikel) {
   const forecast = {
     name: artikel.name || 'SaaS',
     type: 'subscription',
+    volume_model: 'konstant',           // ✅ NEU - SaaS hat Customer Growth Model
+    price_model: 'konstant',            // ✅ NEU - ARR per Customer
+    cost_model: 'konstant',             // ✅ NEU
     years: [],
     volume: [],
     price: [],
