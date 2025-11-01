@@ -442,11 +442,6 @@ function renderSaaSContent(data) {
         <input type="radio" name="saas-new-model" value="manuell" ${data.saas_new_model === 'manuell' ? 'checked' : ''}>
         <span style="color: #6b7280;">Manuell</span>
       </label>
-      ${data.saas_new_model === 'manuell' ? `
-        <button class="btn-manual-edit" id="btn-edit-new-manual" style="margin-top: 8px;">
-            ✏️ Neue Kunden bearbeiten
-        </button>
-        ` : ''}
     </div>
     
     <!-- Spalte 2: ARR Development -->
@@ -468,11 +463,6 @@ function renderSaaSContent(data) {
         <input type="radio" name="saas-arr-model" value="manuell" ${data.saas_arr_model === 'manuell' ? 'checked' : ''}>
         <span style="color: #6b7280;">Manuell</span>
       </label>
-      ${data.saas_arr_model === 'manuell' ? `
-    <button class="btn-manual-edit" id="btn-edit-arr-manual" style="margin-top: 8px;">
-        ✏️ ARR-Werte bearbeiten
-    </button>
-    ` : ''}
     </div>
     
     <!-- Spalte 3: Churn Rate -->
@@ -491,14 +481,56 @@ function renderSaaSContent(data) {
         <span style="color: #6b7280;">Manuell</span>
     </label>
     
-    ${data.saas_churn_model === 'manuell' ? `
-        <button class="btn-manual-edit" id="btn-edit-churn-manual" style="margin-top: 8px;">
-        ✏️ Churn-Raten bearbeiten
-        </button>
-    ` : ''}
+    ${data.saas_churn_model === 'manuell' ? renderChurnManualInputs(data) : ''}
     </div>
 </div>
   `;
+}
+
+function renderChurnManualInputs(data) {
+  const years = data.time_horizon || 5;
+  const startYear = parseInt(data.release_date?.split('-')[0] || new Date().getFullYear());
+  const baseChurn = data.saas_churn_rate || 15;
+  
+  // Initialize manual churn values if not exists
+  if (!data.saas_churn_manual) {
+    data.saas_churn_manual = Array(years).fill(baseChurn);
+    data.saas_churn_manual[0] = baseChurn; // Year 1 = base value
+  }
+  
+  let html = '<div class="manual-inputs-container">';
+  
+  // Year 1 is base (not editable in manual mode, shown for reference)
+  html += `
+    <div class="manual-input-row">
+      <label>Jahr ${startYear} (Start):</label>
+      <span class="manual-value-display">${baseChurn}%</span>
+    </div>
+  `;
+  
+  // Years 2-N are editable
+  for (let i = 1; i < years; i++) {
+    const year = startYear + i;
+    const value = data.saas_churn_manual[i] || baseChurn;
+    
+    html += `
+      <div class="manual-input-row">
+        <label>Jahr ${year}:</label>
+        <input type="number" 
+               class="manual-input-churn" 
+               data-year-index="${i}"
+               value="${value}" 
+               min="0" 
+               max="100" 
+               step="0.1"
+               placeholder="${baseChurn}">
+        <span class="manual-unit">%</span>
+      </div>
+    `;
+  }
+  
+  html += '</div>';
+  return html;
 }
 
 // ==========================================
@@ -730,52 +762,16 @@ function attachSaaSListeners() {
     }
   });
   
-  // ✅ NEW: Radio button listeners for manual mode detection
-  document.querySelectorAll('input[name="saas-new-model"]').forEach(radio => {
-    radio.addEventListener('change', handleSaaSModelChange);
-  });
-  
-  document.querySelectorAll('input[name="saas-arr-model"]').forEach(radio => {
-    radio.addEventListener('change', handleSaaSModelChange);
-  });
-  
+  // ✅ NEW: Radio button listeners for churn manual mode
   document.querySelectorAll('input[name="saas-churn-model"]').forEach(radio => {
-    radio.addEventListener('change', handleSaaSModelChange);
+    radio.addEventListener('change', handleChurnModelChange);
   });
   
-  // ✅ NEW: Attach manual edit button listeners
-  attachSaaSManualButtonListeners();
+  // ✅ NEW: Manual churn input listeners
+  attachChurnManualInputListeners();
   
   updateSaaSKPIs();
 }
-
-function handleSaaSModelChange() {
-  const artikel = window._currentArtikel;
-  if (!artikel) return;
-  
-  // Re-render SaaS content to show/hide manual buttons
-  const modeContentContainer = document.getElementById('sw-mode-content');
-  if (modeContentContainer) {
-    modeContentContainer.innerHTML = renderSaaSContent(artikel.software_model_data);
-    
-    // Re-attach all listeners
-    attachSaaSListeners();
-    
-    // Recalculate forecast
-    window.calculateSoftwareForecast();
-  }
-}
-
-function attachSaaSManualButtonListeners() {
-  // NEW CUSTOMERS Manual Button
-  const btnNewManual = document.getElementById('btn-edit-new-manual');
-  if (btnNewManual) {
-    btnNewManual.addEventListener('click', () => {
-      console.log('🔧 Opening manual editor for NEW CUSTOMERS');
-      alert('Manual editor for NEW CUSTOMERS - Coming soon!');
-      // TODO: Open modal
-    });
-  }
   
   // ARR Manual Button
   const btnArrManual = document.getElementById('btn-edit-arr-manual');
@@ -796,6 +792,50 @@ function attachSaaSManualButtonListeners() {
       // TODO: Open modal
     });
   }
+
+function handleChurnModelChange() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  // Re-render SaaS content to show/hide manual inputs
+  const modeContentContainer = document.getElementById('sw-mode-content');
+  if (modeContentContainer) {
+    modeContentContainer.innerHTML = renderSaaSContent(artikel.software_model_data);
+    
+    // Re-attach all listeners
+    attachSaaSListeners();
+    
+    // Recalculate forecast
+    window.calculateSoftwareForecast();
+  }
+}
+
+function attachChurnManualInputListeners() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  // Get all manual churn inputs
+  const churnInputs = document.querySelectorAll('.manual-input-churn');
+  
+  churnInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      const yearIndex = parseInt(this.dataset.yearIndex);
+      const value = parseFloat(this.value) || 0;
+      
+      // Update data
+      if (!artikel.software_model_data.saas_churn_manual) {
+        artikel.software_model_data.saas_churn_manual = [];
+      }
+      artikel.software_model_data.saas_churn_manual[yearIndex] = value;
+      
+      console.log(`📝 Manual Churn Year ${yearIndex + 1}: ${value}%`);
+    });
+    
+    input.addEventListener('blur', () => {
+      // Recalculate on blur
+      window.calculateSoftwareForecast();
+    });
+  });
 }
 
 function updatePerpetualKPIs() {
@@ -1767,6 +1807,63 @@ function renderCompactStyles() {
   background: #e5e7eb;
   border-color: #3b82f6;
   color: #1e40af;
+}
+
+/* Manual Inputs Container */
+.manual-inputs-container {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.manual-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.manual-input-row:last-child {
+  margin-bottom: 0;
+}
+
+.manual-input-row label {
+  min-width: 80px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.manual-value-display {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 4px 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+
+.manual-input-churn {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 11px;
+  max-width: 80px;
+}
+
+.manual-input-churn:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.manual-unit {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
     </style>
