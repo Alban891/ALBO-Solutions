@@ -692,7 +692,21 @@ function attachPerpetualListeners() {
 }
 
 function attachSaaSListeners() {
-  const inputs = ['saas-customers', 'saas-arr', 'saas-cost', 'saas-new', 'saas-churn', 'saas-expansion'];
+  // ✅ Attach number formatting for INTEGER inputs
+  attachNumberFormatting('saas-customers');
+  attachNumberFormatting('saas-arr');
+  attachNumberFormatting('saas-cost');
+  attachNumberFormatting('saas-new');
+  
+  // Input listeners
+  const inputs = [
+    'saas-customers', 
+    'saas-arr', 
+    'saas-cost', 
+    'saas-new', 
+    'saas-churn', 
+    'saas-expansion'
+  ];
   
   inputs.forEach(id => {
     const input = document.getElementById(id);
