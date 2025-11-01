@@ -191,23 +191,25 @@ export function renderHardwareModel(artikel, containerId) {
   </div>
 </div>
       
-      <!-- ✅ SPEICHERN-BUTTON SECTION -->
-        <div class="section-compact save-section">
-        <button id="btn-save-hardware-forecast" class="btn-save-modern">
-            Speichern
+     <!-- ✅ SPEICHERN-BUTTON SECTION -->
+    <div class="section-compact save-section">
+    <div class="save-button-container">
+        <button id="btn-save-hardware-forecast" class="btn-save-forecast-modern">
+        Speichern
         </button>
-        <div class="save-info">
-            💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        <div id="save-status-hardware" class="save-status" style="display: none;">
+        <span class="status-icon success">✓</span>
+        <span class="status-text">Erfolgreich gespeichert</span>
         </div>
-        <div id="save-status-hardware" class="save-status-modern" style="display: none;">
-            <span class="status-icon">✓</span>
-            <span>Erfolgreich gespeichert</span>
+        <div id="save-error-hardware" class="save-status error" style="display: none;">
+        <span class="status-icon">⚠️</span>
+        <span class="error-text">Fehler beim Speichern</span>
         </div>
-        <div id="save-error-hardware" class="save-status-modern error" style="display: none;">
-            <span class="status-icon">⚠️</span>
-            <span class="error-text">Fehler beim Speichern</span>
-        </div>
-        </div>
+    </div>
+    <div class="save-info">
+        💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+    </div>
+</div>
       
     </div>
     
@@ -804,7 +806,7 @@ function renderCompactStyles() {
   gap: 8px;
 }
 
-.btn-save-modern {
+.btn-save-forecast-modern {
   padding: 12px 32px;
   background: #1e40af;
   color: white;
@@ -814,21 +816,19 @@ function renderCompactStyles() {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.btn-save-modern:hover {
-  background: #1e3a8a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+.btn-save-forecast-modern:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.btn-save-modern:active {
-  transform: scale(0.98);
-}
-
-.btn-save-modern:disabled {
+.btn-save-forecast-modern:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .save-info {
