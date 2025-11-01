@@ -209,7 +209,7 @@ function renderPerpetualContent(data) {
             New License Units
             <span class="tooltip-icon" title="Anzahl verkaufter Lizenzen im ersten Jahr">ℹ️</span>
           </label>
-          <input type="number" id="sw-licenses" value="${data.licenses_year1}" class="input-compact" placeholder="100">
+          <input type="text" id="sw-licenses" value="${formatNumberWithDots(data.licenses_year1)}" class="input-compact" placeholder="100">
         </div>
         
         <div class="input-group-compact">
@@ -217,7 +217,7 @@ function renderPerpetualContent(data) {
             License Price (€)
             <span class="tooltip-icon" title="Verkaufspreis pro Lizenz">ℹ️</span>
           </label>
-          <input type="number" id="sw-price" value="${data.license_price}" class="input-compact" placeholder="5000">
+          <input type="text" id="sw-price" value="${formatNumberWithDots(data.license_price)}" class="input-compact" placeholder="5000">
         </div>
         
         <div class="input-group-compact">
@@ -245,8 +245,8 @@ function renderPerpetualContent(data) {
             </small>
           ` : `
             <!-- Absolute Input -->
-            <input type="number" id="sw-cogs-absolute" value="${data.license_cogs_absolute || 500}" 
-                   class="input-compact" placeholder="500">
+           <input type="text" id="sw-cogs-absolute" value="${formatNumberWithDots(data.license_cogs_absolute || 500)}" 
+       class="input-compact" placeholder="500">
             <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">
               Direkte Kosten in € pro Lizenz
             </small>
@@ -997,6 +997,18 @@ function formatNumber(value, decimals = 0) {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   }).format(value);
+}
+
+function formatNumber(value, decimals = 0) {
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  }).format(value);
+}
+
+function formatNumberWithDots(value) {
+  if (!value || value === 0) return '0';
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // ==========================================
