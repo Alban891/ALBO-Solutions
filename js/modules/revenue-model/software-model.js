@@ -369,22 +369,22 @@ function renderSaaSContent(data) {
       <div class="input-row-compact">
         <div class="input-group-compact">
           <label>Start Customers</label>
-          <input type="number" id="saas-customers" value="${data.saas_customers_start}" class="input-compact" placeholder="1000">
+          <input type="text" id="saas-customers" value="${formatNumberWithDots(data.saas_customers_start)}" class="input-compact" placeholder="1.000">
         </div>
         <div class="input-group-compact">
           <label>ARR per Customer (€)</label>
-          <input type="number" id="saas-arr" value="${data.saas_arr}" class="input-compact" placeholder="600">
+          <input type="text" id="saas-arr" value="${formatNumberWithDots(data.saas_arr)}" class="input-compact" placeholder="600">
         </div>
         <div class="input-group-compact">
           <label>Cost per Customer (€)</label>
-          <input type="number" id="saas-cost" value="${data.saas_cost}" class="input-compact" placeholder="108">
+          <input type="text" id="saas-cost" value="${formatNumberWithDots(data.saas_cost)}" class="input-compact" placeholder="108">
         </div>
       </div>
       
       <div class="input-row-compact" style="margin-top: 10px;">
         <div class="input-group-compact">
           <label>New Customers p.a.</label>
-          <input type="number" id="saas-new" value="${data.saas_new_customers}" class="input-compact" placeholder="800">
+          <input type="text" id="saas-new" value="${formatNumberWithDots(data.saas_new_customers)}" class="input-compact" placeholder="800">
         </div>
         <div class="input-group-compact">
           <label>Churn Rate (% p.a.)</label>
@@ -413,20 +413,77 @@ function renderSaaSContent(data) {
       </div>
     </div>
     
-    <!-- Entwicklungsmodelle -->
-    <div class="section-compact">
-      <h3 class="section-title-compact">📈 Entwicklungsmodelle</h3>
-      <div class="models-compact">
-        <div class="model-row">
-          <label class="model-label-compact">Customer Growth</label>
-          <div class="model-radios">
-            <label><input type="radio" name="saas-growth-model" value="linear" ${data.saas_growth_model === 'linear' ? 'checked' : ''}> Linear</label>
-            <label><input type="radio" name="saas-growth-model" value="degressiv" ${data.saas_growth_model === 'degressiv' ? 'checked' : ''}> Degressiv</label>
-            <label><input type="radio" name="saas-growth-model" value="aggressiv" ${data.saas_growth_model === 'aggressiv' ? 'checked' : ''}> Aggressiv</label>
-          </div>
-        </div>
-      </div>
+<!-- Entwicklungsmodelle (3-Spalten) -->
+<div class="section-compact">
+  <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
+  
+  <div class="models-grid">
+    
+    <!-- Spalte 1: Customer Growth (New Customers) -->
+    <div class="model-column">
+      <div class="model-header">NEW CUSTOMERS</div>
+      <label class="model-option">
+        <input type="radio" name="saas-new-model" value="konstant" ${data.saas_new_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(+0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-new-model" value="linear" ${data.saas_new_model === 'linear' ? 'checked' : ''}>
+        <span>Linear <small>(gleich)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-new-model" value="degressiv" ${data.saas_new_model === 'degressiv' ? 'checked' : ''}>
+        <span>Degressiv <small>(-10% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-new-model" value="aggressiv" ${data.saas_new_model === 'aggressiv' ? 'checked' : ''}>
+        <span>Aggressiv <small>(+20% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-new-model" value="manuell" ${data.saas_new_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
     </div>
+    
+    <!-- Spalte 2: ARR Development -->
+    <div class="model-column">
+      <div class="model-header">ARR ENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="saas-arr-model" value="konstant" ${data.saas_arr_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-arr-model" value="expansion" ${data.saas_arr_model === 'expansion' ? 'checked' : ''}>
+        <span>Expansion <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-arr-model" value="premium" ${data.saas_arr_model === 'premium' ? 'checked' : ''}>
+        <span>Premium <small>(+10% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-arr-model" value="manuell" ${data.saas_arr_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+    <!-- Spalte 3: Churn Rate -->
+    <div class="model-column">
+      <div class="model-header">CHURN RATE</div>
+      <label class="model-option">
+        <input type="radio" name="saas-churn-model" value="konstant" ${data.saas_churn_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(gleich)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-churn-model" value="verbesserung" ${data.saas_churn_model === 'verbesserung' ? 'checked' : ''}>
+        <span>Verbesserung <small>(-2% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="saas-churn-model" value="manuell" ${data.saas_churn_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+  </div>
+</div>
   `;
 }
 
@@ -457,7 +514,9 @@ function initializeSoftwareData(artikel) {
     saas_new_customers: 800,
     saas_churn_rate: 15,
     saas_expansion_rate: 5,
-    saas_growth_model: 'linear',
+    saas_new_model: 'linear',
+    saas_arr_model: 'expansion',
+    saas_churn_model: 'konstant',
     
     calculated: false
   };
