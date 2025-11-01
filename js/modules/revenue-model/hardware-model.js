@@ -3,7 +3,7 @@
  * Kompaktes Design, Auto-Calculate, Always-Visible Forecast
  * ✅ MIT SPEICHERN-FUNKTION
  */
-
+	
 import { renderForecastTable } from './forecast-table.js';
 import * as api from '../../api.js';
 
@@ -61,34 +61,31 @@ export function renderHardwareModel(artikel, containerId) {
           <div class="input-group-compact">
             <label>Menge (Stück)</label>
             <input 
-                type="text" 
-                id="hw-volume" 
-                value="${formatNumberWithThousands(data.volume_year1)}"
-                class="input-compact"
-                onfocus="handleInputFocus(this)"
-                onblur="handleInputBlur(this, 'number')"
+              type="text" 
+              id="hw-volume" 
+              value="${formatThousands(data.volume_year1)}"
+              class="input-compact"
+              inputmode="numeric"
             >
           </div>
           <div class="input-group-compact">
             <label>Preis (€/Stück)</label>
             <input 
-            type="text" 
-            id="hw-price" 
-            value="${formatNumberWithDecimals(data.price_year1, 2)}"
-            class="input-compact"
-            onfocus="handleInputFocus(this)"
-            onblur="handleInputBlur(this, 'decimal')"
+              type="text" 
+              id="hw-price" 
+              value="${formatDecimals(data.price_year1)}"
+              class="input-compact"
+              inputmode="decimal"
             >
           </div>
           <div class="input-group-compact">
             <label>HK (€/Stück)</label>
             <input 
-            type="text" 
-            id="hw-cost" 
-            value="${formatNumberWithDecimals(data.cost_year1, 2)}"
-            class="input-compact"
-            onfocus="handleInputFocus(this)"
-            onblur="handleInputBlur(this, 'decimal')"
+              type="text" 
+              id="hw-cost" 
+              value="${formatDecimals(data.cost_year1)}"
+              class="input-compact"
+              inputmode="decimal"
             >
           </div>
         </div>
@@ -111,115 +108,111 @@ export function renderHardwareModel(artikel, containerId) {
       </div>
       
       <!-- Entwicklungsmodelle (3-Spalten) -->
-        <div class="section-compact">
-        <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
-        
-        <div class="models-grid">
-            
-            <!-- Spalte 1: Mengenentwicklung -->
-            <div class="model-column">
-            <div class="model-header">MENGENENTWICKLUNG</div>
-            <label class="model-option">
-                <input type="radio" name="volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}>
-                <span>Konstant <small>(+0% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}>
-                <span>Konservativ <small>(+15% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}>
-                <span>Realistisch <small>(S-Kurve)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}>
-                <span>Optimistisch <small>(Hockey-Stick)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="volume-model" value="manuell" ${data.volume_model === 'manuell' ? 'checked' : ''}>
-                <span style="color: #6b7280;">Manuell</span>
-            </label>
-            </div>
-            
-            <!-- Spalte 2: Preisentwicklung -->
-            <div class="model-column">
-            <div class="model-header">PREISENTWICKLUNG</div>
-            <label class="model-option">
-                <input type="radio" name="price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
-                <span>Konstant <small>(0% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
-                <span>Inflation <small>(+2% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
-                <span>Premium <small>(+5% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="price-model" value="deflation" ${data.price_model === 'deflation' ? 'checked' : ''}>
-                <span>Deflation <small>(-3% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
-                <span style="color: #6b7280;">Manuell</span>
-            </label>
-            </div>
-            
-            <!-- Spalte 3: Kostenentwicklung -->
-            <div class="model-column">
-            <div class="model-header">KOSTENENTWICKLUNG</div>
-            <label class="model-option">
-                <input type="radio" name="cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}>
-                <span>Konstant <small>(0% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="cost-model" value="inflation" ${data.cost_model === 'inflation' ? 'checked' : ''}>
-                <span>Inflation <small>(+2% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="cost-model" value="learning" ${data.cost_model === 'learning' ? 'checked' : ''}>
-                <span>Lernkurve <small>(-5% bei 2x)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="cost-model" value="steigend" ${data.cost_model === 'steigend' ? 'checked' : ''}>
-                <span>Steigend <small>(+5% p.a.)</small></span>
-            </label>
-            <label class="model-option">
-                <input type="radio" name="cost-model" value="manuell" ${data.cost_model === 'manuell' ? 'checked' : ''}>
-                <span style="color: #6b7280;">Manuell</span>
-            </label>
-            </div>
-            
-        </div>
-        </div>
+<div class="section-compact">
+  <h3 class="section-title-compact">📈 ENTWICKLUNGSMODELLE</h3>
+  
+  <div class="models-grid">
+    
+    <!-- Spalte 1: Mengenentwicklung -->
+    <div class="model-column">
+      <div class="model-header">MENGENENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="volume-model" value="konstant" ${data.volume_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(+0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="volume-model" value="konservativ" ${data.volume_model === 'konservativ' ? 'checked' : ''}>
+        <span>Konservativ <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="volume-model" value="realistisch" ${data.volume_model === 'realistisch' ? 'checked' : ''}>
+        <span>Realistisch <small>(S-Kurve)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="volume-model" value="optimistisch" ${data.volume_model === 'optimistisch' ? 'checked' : ''}>
+        <span>Optimistisch <small>(Hockey-Stick)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="volume-model" value="manuell" ${data.volume_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+    <!-- Spalte 2: Preisentwicklung -->
+    <div class="model-column">
+      <div class="model-header">PREISENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="price-model" value="konstant" ${data.price_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="price-model" value="inflation" ${data.price_model === 'inflation' ? 'checked' : ''}>
+        <span>Inflation <small>(+2% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
+        <span>Premium <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="price-model" value="deflation" ${data.price_model === 'deflation' ? 'checked' : ''}>
+        <span>Deflation <small>(-3% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+    <!-- Spalte 3: Kostenentwicklung -->
+    <div class="model-column">
+      <div class="model-header">KOSTENENTWICKLUNG</div>
+      <label class="model-option">
+        <input type="radio" name="cost-model" value="konstant" ${data.cost_model === 'konstant' ? 'checked' : ''}>
+        <span>Konstant <small>(0% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="cost-model" value="inflation" ${data.cost_model === 'inflation' ? 'checked' : ''}>
+        <span>Inflation <small>(+2% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="cost-model" value="learning" ${data.cost_model === 'learning' ? 'checked' : ''}>
+        <span>Lernkurve <small>(-5% bei 2x)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="cost-model" value="steigend" ${data.cost_model === 'steigend' ? 'checked' : ''}>
+        <span>Steigend <small>(+5% p.a.)</small></span>
+      </label>
+      <label class="model-option">
+        <input type="radio" name="cost-model" value="manuell" ${data.cost_model === 'manuell' ? 'checked' : ''}>
+        <span style="color: #6b7280;">Manuell</span>
+      </label>
+    </div>
+    
+  </div>
+</div>
       
       <!-- ✅ SPEICHERN-BUTTON SECTION -->
-      <div class="section-compact save-section">
-        <div class="save-button-container">
-          <button id="btn-save-software-forecast" class="btn-save-forecast-modern">
+        <div class="section-compact save-section">
+        <button id="btn-save-hardware-forecast" class="btn-save-modern">
             Speichern
-          </button>
-          <div id="save-status-software" class="save-status" style="display: none;">
-            <span class="status-icon success">✓</span>
-            <span class="status-text">Erfolgreich gespeichert</span>
-          </div>
-          <div id="save-error-software" class="save-status error" style="display: none;">
+        </button>
+        <div class="save-info">
+            💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
+        </div>
+        <div id="save-status-hardware" class="save-status-modern" style="display: none;">
+            <span class="status-icon">✓</span>
+            <span>Erfolgreich gespeichert</span>
+        </div>
+        <div id="save-error-hardware" class="save-status-modern error" style="display: none;">
             <span class="status-icon">⚠️</span>
             <span class="error-text">Fehler beim Speichern</span>
-          </div>
         </div>
-        <div class="save-info">
-          💡 <em>Speichert Input-Parameter und berechnete Forecast-Daten in der Datenbank</em>
         </div>
-      </div>
       
     </div>
 
     <!-- ✅ FORECAST TABLE CONTAINER -->
-    <div id="forecast-table-container" style="margin-top: 16px;">
-    <!-- Forecast wird hier dynamisch eingefügt -->
-    </div>
+    <div id="forecast-table-container"></div>
     
     ${renderCompactStyles()}
   `;
@@ -252,8 +245,14 @@ function autoCalculateForecast() {
 // ==========================================
 
 function initializeHardwareData(artikel) {
+  // ✅ Ensure YYYY-MM format (not YYYY-MM-DD)
+  let releaseDate = artikel.release_datum || new Date().toISOString().slice(0, 7);
+  if (releaseDate && releaseDate.length > 7) {
+    releaseDate = releaseDate.slice(0, 7);
+  }
+  
   return {
-    release_date: artikel.release_datum || new Date().toISOString().slice(0, 7),
+    release_date: releaseDate,
     time_horizon: artikel.zeitraum || 5,
     
     volume_year1: 1000,
@@ -278,6 +277,7 @@ function attachHardwareEventListeners(artikel) {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.btn-horizon').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
+      // Auto-recalculate
       window.calculateHardwareForecast();
     });
   });
@@ -287,44 +287,51 @@ function attachHardwareEventListeners(artikel) {
   const priceInput = document.getElementById('hw-price');
   const costInput = document.getElementById('hw-cost');
   
-  // ✅ NEU: Helper für formatierte Inputs (INNERHALB der Funktion!)
-  const parseFormattedValue = (input) => {
-    const value = input.value.replace(/\./g, '').replace(/,/g, '.');
-    return parseFloat(value) || 0;
-  };
-  
-  // ✅ VERBESSERT: Nutzt parseFormattedValue
   const updateKPIs = () => {
-    const volume = parseFormattedValue(volumeInput);  // ✅ Funktioniert jetzt!
-    const price = parseFormattedValue(priceInput);
-    const cost = parseFormattedValue(costInput);
-    
-    const revenue = volume * price;
-    const db2 = volume * (price - cost);
-    const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
-    
-    document.getElementById('kpi-revenue').textContent = formatCurrency(revenue);
-    document.getElementById('kpi-db2').textContent = formatCurrency(db2);
-    document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
-  };
+  const volume = parseGermanNumber(volumeInput.value);
+  const price = parseGermanNumber(priceInput.value);
+  const cost = parseGermanNumber(costInput.value);
+  
+  const revenue = volume * price;
+  const db2 = volume * (price - cost);
+  const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
+  
+  document.getElementById('kpi-revenue').textContent = formatCurrency(revenue);
+  document.getElementById('kpi-db2').textContent = formatCurrency(db2);
+  document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
+};
   
   volumeInput.addEventListener('input', updateKPIs);
   priceInput.addEventListener('input', updateKPIs);
   costInput.addEventListener('input', updateKPIs);
   
-  // Auto-recalculate on blur
-  volumeInput.addEventListener('blur', () => window.calculateHardwareForecast());
-  priceInput.addEventListener('blur', () => window.calculateHardwareForecast());
-  costInput.addEventListener('blur', () => window.calculateHardwareForecast());
+ // ✅ Format on blur + recalculate
+volumeInput.addEventListener('blur', function() {
+  const value = parseGermanNumber(this.value);
+  this.value = formatThousands(value);
+  window.calculateHardwareForecast();
+});
+
+priceInput.addEventListener('blur', function() {
+  const value = parseGermanNumber(this.value);
+  this.value = formatDecimals(value);
+  window.calculateHardwareForecast();
+});
+
+costInput.addEventListener('blur', function() {
+  const value = parseGermanNumber(this.value);
+  this.value = formatDecimals(value);
+  window.calculateHardwareForecast();
+});
   
-  // Radio buttons
+  // Radio buttons - auto-recalculate
   document.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', () => {
       window.calculateHardwareForecast();
     });
   });
   
-  // Save button
+  // ✅ SAVE BUTTON EVENT LISTENER
   const saveButton = document.getElementById('btn-save-hardware-forecast');
   if (saveButton) {
     saveButton.addEventListener('click', async () => {
@@ -332,7 +339,6 @@ function attachHardwareEventListeners(artikel) {
     });
   }
 }
-
 
 // ==========================================
 // ✅ SAVE FORECAST FUNCTION
@@ -387,7 +393,7 @@ async function saveHardwareForecast() {
   // Show loading state
   const saveButton = document.getElementById('btn-save-hardware-forecast');
   const originalText = saveButton.innerHTML;
-  saveButton.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-text">Speichert...</span>';
+  saveButton.innerHTML = '⏳ Speichert...';
   saveButton.disabled = true;
   
 try {
@@ -404,7 +410,7 @@ try {
     showSaveError(error.message || 'Unbekannter Fehler');
   } finally {
     // Reset button
-    saveButton.innerHTML = originalText;
+    saveButton.innerHTML = 'Speichern';
     saveButton.disabled = false;
   }
 }
@@ -458,19 +464,14 @@ window.calculateHardwareForecast = function() {
     release_date: document.getElementById('hw-date')?.value || '2025-01',
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
     
-    volume_year1: parseFormattedNumber(document.getElementById('hw-volume')?.value),
-    price_year1: parseFormattedNumber(document.getElementById('hw-price')?.value),
-    cost_year1: parseFormattedNumber(document.getElementById('hw-cost')?.value),
+   volume_year1: parseGermanNumber(document.getElementById('hw-volume')?.value),
+    price_year1: parseGermanNumber(document.getElementById('hw-price')?.value),
+    cost_year1: parseGermanNumber(document.getElementById('hw-cost')?.value),
     
     volume_model: document.querySelector('input[name="volume-model"]:checked')?.value || 'konstant',
     price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
     cost_model: document.querySelector('input[name="cost-model"]:checked')?.value || 'konstant'
   };
-
-  // Check if any manual mode is active
-    const isManualMode = data.volume_model === 'manuell' || 
-                     data.price_model === 'manuell' || 
-                     data.cost_model === 'manuell';
   
   // Validate
   if (!data.volume_year1 || !data.price_year1 || !data.cost_year1) {
@@ -608,11 +609,8 @@ function formatNumber(value, decimals = 0) {
   }).format(value);
 }
 
-// ==========================================
-// INPUT FORMATTING HELPERS
-// ==========================================
-
-function formatNumberWithThousands(value) {
+// Format für Tausender-Trennzeichen (nur für Mengen)
+function formatThousands(value) {
   if (!value && value !== 0) return '';
   return new Intl.NumberFormat('de-DE', {
     minimumFractionDigits: 0,
@@ -620,34 +618,19 @@ function formatNumberWithThousands(value) {
   }).format(value);
 }
 
-function formatNumberWithDecimals(value, decimals) {
+// Format für Dezimalzahlen (für Preis & HK)
+function formatDecimals(value) {
   if (!value && value !== 0) return '';
   return new Intl.NumberFormat('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(value);
 }
 
-function handleInputFocus(input) {
-  // Remove formatting on focus (1.000 → 1000 oder 50,00 → 50)
-  const value = input.value.replace(/\./g, '').replace(/,/g, '.');
-  input.value = value;
-  input.select();
-}
-
-function handleInputBlur(input, type) {
-  // Re-apply formatting on blur
-  const value = parseFloat(input.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
-  
-  if (type === 'number') {
-    input.value = formatNumberWithThousands(value);
-  } else if (type === 'decimal') {
-    input.value = formatNumberWithDecimals(value, 2);
-  }
-}
-
-function parseFormattedNumber(value) {
+// Parse formatierte deutsche Zahlen zurück zu Number
+function parseGermanNumber(value) {
   if (!value) return 0;
+  // Entferne Tausender-Punkte, ersetze Komma mit Punkt
   const cleaned = value.toString().replace(/\./g, '').replace(/,/g, '.');
   return parseFloat(cleaned) || 0;
 }
@@ -761,161 +744,130 @@ function renderCompactStyles() {
         font-weight: 600;
       }
       
-      /* Models (ultra-compact) */
-      /* Models Grid (3 Spalten) */
-        .models-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-top: 12px;
-        }
+     /* Models Grid (3 Spalten) */
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 12px;
+}
 
-        .model-column {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        padding: 12px;
-        }
+.model-column {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+}
 
-        .model-header {
-        font-size: 11px;
-        font-weight: 600;
-        color: #374151;
-        text-transform: uppercase;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #e5e7eb;
-        }
+.model-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
 
-        .model-option {
-        display: block;
-        padding: 8px 0;
-        cursor: pointer;
-        font-size: 11px;
-        }
+.model-option {
+  display: block;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 11px;
+}
 
-        .model-option input[type="radio"] {
-        margin-right: 8px;
-        cursor: pointer;
-        }
+.model-option input[type="radio"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
 
-        .model-option small {
-        color: #6b7280;
-        font-weight: normal;
-        }
+.model-option small {
+  color: #6b7280;
+  font-weight: normal;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-        .models-grid {
-            grid-template-columns: 1fr;
-        }
-        }
+.model-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .models-grid {
+    grid-template-columns: 1fr;
+  }
+}
       
-      .model-label-compact {
-        min-width: 140px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #374151;
-      }
-      
-      .model-radios {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
-      
-      .model-radios label {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        color: #1f2937;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      
-      .model-radios input[type="radio"] {
-        cursor: pointer;
-      }
-      
-      /* ✅ SAVE SECTION STYLES */
-      .save-section {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-        border: 2px solid #3b82f6;
-      }
-      
-      .save-button-container {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 8px;
-      }
-      
-      .btn-save-forecast {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
-      }
-      
-      .btn-save-forecast:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
-      }
-      
-      .btn-save-forecast:active {
-        transform: translateY(0);
-      }
-      
-      .btn-save-forecast:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
-      
-      .btn-icon {
-        font-size: 18px;
-      }
-      
-      .save-status {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      
-      .save-status.success {
-        background: #d1fae5;
-        color: #065f46;
-      }
-      
-      .save-status.error {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-      
-      .status-icon.success {
-        color: #10b981;
-        font-size: 16px;
-      }
-      
-      .save-info {
-        font-size: 12px;
-        color: #1e40af;
-        font-style: italic;
-      }
+      /* ✅ SAVE SECTION STYLES - MODERN */
+.save-section {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #3b82f6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-save-modern {
+  width: 100%;
+  padding: 12px 24px;
+  background: #1e40af;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-save-modern:hover {
+  background: #1e3a8a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-save-modern:active {
+  transform: scale(0.98);
+}
+
+.btn-save-modern:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-info {
+  font-size: 12px;
+  color: #1e40af;
+  text-align: left;
+  margin: 0;
+}
+
+.save-info em {
+  font-style: normal;
+}
+
+.save-status-modern {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.save-status-modern.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.save-status-modern .status-icon {
+  font-size: 16px;
+}
       
       /* Responsive */
       @media (max-width: 768px) {
