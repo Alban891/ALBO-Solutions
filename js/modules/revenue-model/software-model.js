@@ -567,9 +567,18 @@ function attachPerpetualListeners() {
     });
   });
   
+  // ✅ Number formatting for integer inputs
+  attachNumberFormatting('sw-licenses');
+  attachNumberFormatting('sw-price');
+  
   // Input listeners
   const artikel = window._currentArtikel;
   const cogsMode = artikel?.software_model_data?.cogs_mode || 'percent';
+  
+  // ✅ Format absolute COGS if in absolute mode
+  if (cogsMode === 'absolute') {
+    attachNumberFormatting('sw-cogs-absolute');
+  }
   
   const inputs = [
     'sw-licenses', 
@@ -608,16 +617,18 @@ function updatePerpetualKPIs() {
   
   const cogsMode = artikel.software_model_data.cogs_mode || 'percent';
   
-  const licenses = parseFloat(document.getElementById('sw-licenses')?.value) || 0;
-  const price = parseFloat(document.getElementById('sw-price')?.value) || 0;
+  // ✅ Get raw numbers (remove thousand separators)
+  const licenses = getRawNumberFromInput(document.getElementById('sw-licenses'));
+  const price = getRawNumberFromInput(document.getElementById('sw-price'));
   
-  // Calculate COGS based on mode
+// Calculate COGS based on mode
   let cogs;
   if (cogsMode === 'percent') {
     const cogsPercent = parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10;
     cogs = (licenses * price) * (cogsPercent / 100);
   } else {
-    const cogsAbsolute = parseFloat(document.getElementById('sw-cogs-absolute')?.value) || 500;
+    // ✅ Get raw number for absolute COGS
+    const cogsAbsolute = getRawNumberFromInput(document.getElementById('sw-cogs-absolute'));
     cogs = licenses * cogsAbsolute;
   }
   
@@ -703,11 +714,11 @@ async function saveSoftwareForecast() {
   };
   
     if (data.license_mode === 'perpetual') {
-    parameters.licenses_year1 = data.licenses_year1;
+      parameters.licenses_year1 = data.licenses_year1;
     parameters.license_price = data.license_price;
     parameters.license_cogs_percent = data.license_cogs_percent;
-    parameters.maintenance_rate = data.maintenance_rate;
-    parameters.maintenance_cogs_percent = data.maintenance_cogs_percent;
+    parameters.license_cogs_absolute = data.license_cogs_absolute;
+    parameters.cogs_mode = data.cogs_mode;
     parameters.license_model = data.license_model;
     parameters.price_model = data.price_model;
   } else {
@@ -784,11 +795,11 @@ function calculatePerpetualForecast(artikel) {
   const data = {
     release_date: document.getElementById('sw-date')?.value || '2025-01',
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
-    licenses_year1: parseFloat(document.getElementById('sw-licenses')?.value) || 0,
-    license_price: parseFloat(document.getElementById('sw-price')?.value) || 0,
+    licenses_year1: getRawNumberFromInput(document.getElementById('sw-licenses')),
+    license_price: getRawNumberFromInput(document.getElementById('sw-price')),
     license_cogs_percent: parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10,
-    maintenance_rate: parseFloat(document.getElementById('sw-maint-rate')?.value) || 0,
-    maintenance_cogs_percent: parseFloat(document.getElementById('sw-maint-cogs')?.value) || 15,
+    license_cogs_absolute: getRawNumberFromInput(document.getElementById('sw-cogs-absolute')),
+    cogs_mode: artikel.software_model_data.cogs_mode || 'percent',
     license_model: document.querySelector('input[name="sw-license-model"]:checked')?.value || 'konstant',
     price_model: document.querySelector('input[name="sw-price-model"]:checked')?.value || 'konstant'
   };
@@ -817,8 +828,6 @@ function calculatePerpetualForecast(artikel) {
     db2Margin: []
   };
   
-  let installedBase = 0;
-  
   for (let i = 0; i < years; i++) {
     forecast.years.push(startYear + i);
     
@@ -829,23 +838,18 @@ function calculatePerpetualForecast(artikel) {
     // License revenue
     const licenseRevenue = newLicenses * licensePrice;
     
-    // Maintenance revenue (from installed base)
-    installedBase += newLicenses;
-    const maintPrice = licensePrice * (data.maintenance_rate / 100);
-    const maintRevenue = installedBase * maintPrice;
-    
-    // Total revenue
-    const totalRevenue = licenseRevenue + maintRevenue;
+   // Total revenue (no maintenance in single mode)
+    const totalRevenue = licenseRevenue;
     
    // Costs - based on COGS mode
-let licenseCost;
-if (data.cogs_mode === 'percent') {
-  licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
-} else {
-  licenseCost = newLicenses * data.license_cogs_absolute;
-}
+    let licenseCost;
+    if (data.cogs_mode === 'percent') {
+    licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
+    } else {
+    licenseCost = newLicenses * data.license_cogs_absolute;
+    }
 
-const totalCost = licenseCost;
+    const totalCost = licenseCost;
     
     // DB2
     const db2 = totalRevenue - totalCost;
@@ -853,7 +857,7 @@ const totalCost = licenseCost;
     
     forecast.volume.push(newLicenses);
     forecast.price.push(licensePrice);
-    forecast.cost.push(data.license_cost);
+    forecast.cost.push(licenseCost / newLicenses);  // ← COGS pro Einheit
     forecast.revenue.push(totalRevenue);
     forecast.totalCost.push(totalCost);
     forecast.db2.push(db2);
@@ -993,6 +997,76 @@ function formatNumber(value, decimals = 0) {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals
   }).format(value);
+}
+
+// ==========================================
+// INPUT FORMATTING HELPERS
+// ==========================================
+
+/**
+ * Format number input with thousand separators (German format)
+ */
+function formatNumberInput(input) {
+  if (!input) return;
+  
+  // Get raw value (remove all non-digits)
+  let value = input.value.replace(/\./g, '');
+  
+  // If empty, return
+  if (value === '') {
+    input.value = '';
+    return;
+  }
+  
+  // Parse as number
+  let num = parseInt(value, 10);
+  
+  // If not a valid number, return
+  if (isNaN(num)) {
+    input.value = '';
+    return;
+  }
+  
+  // Format with thousand separators
+  input.value = num.toLocaleString('de-DE');
+}
+
+/**
+ * Get raw number from formatted input
+ */
+function getRawNumberFromInput(input) {
+  if (!input) return 0;
+  
+  // Remove thousand separators and parse
+  const value = input.value.replace(/\./g, '');
+  const num = parseInt(value, 10);
+  
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Attach number formatting to input field
+ */
+function attachNumberFormatting(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  
+  // Format on blur (when user leaves field)
+  input.addEventListener('blur', function() {
+    formatNumberInput(this);
+  });
+  
+  // Allow only digits and dots while typing
+  input.addEventListener('input', function(e) {
+    // Remove any non-digit characters except dots
+    let value = this.value.replace(/[^\d.]/g, '');
+    this.value = value;
+  });
+  
+  // Format initial value if it exists
+  if (input.value) {
+    formatNumberInput(input);
+  }
 }
 
 // ==========================================
