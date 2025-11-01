@@ -194,51 +194,65 @@ function renderModeContent(data) {
 }
 
 function renderPerpetualContent(data) {
+  // Initialize COGS mode if not set
+  if (!data.cogs_mode) data.cogs_mode = 'percent';
+  
   return `
     <!-- Perpetual Mode -->
-    <div class="input-row-compact">
-    <div class="input-group-compact">
-        <label>
-        New License Units
-        <span class="tooltip-icon" title="Anzahl verkaufter Lizenzen im ersten Jahr">ℹ️</span>
-        </label>
-        <input type="number" id="sw-licenses" value="${data.licenses_year1}" class="input-compact" placeholder="100">
-    </div>
-    <div class="input-group-compact">
-        <label>
-        License ASP (€)
-        <span class="tooltip-icon" title="Average Selling Price pro Lizenz. Durchschnittlicher Verkaufspreis.">ℹ️</span>
-        </label>
-        <input type="number" id="sw-price" value="${data.license_price}" class="input-compact" placeholder="5000">
-    </div>
-    <div class="input-group-compact">
-        <label>
-        License COGS (%)
-        <span class="tooltip-icon" title="Direkte Kosten pro Lizenz als % vom ASP. Typisch: 8-12% (Cloud, Onboarding, Support)">ℹ️</span>
-        </label>
-        <input type="number" id="sw-cogs-percent" value="${data.license_cogs_percent || 10}" class="input-compact" placeholder="10" max="100" step="0.1">
-        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Industry Standard: 8-12%</small>
-    </div>
-    </div>
-
-    <div class="input-row-compact" style="margin-top: 10px;">
-    <div class="input-group-compact">
-        <label>
-        Annual Maintenance (%)
-        <span class="tooltip-icon" title="Jährliche Wartungsgebühr als % vom License ASP. Industry Standard: 18-22%">ℹ️</span>
-        </label>
-        <input type="number" id="sw-maint-rate" value="${data.maintenance_rate}" class="input-compact" placeholder="20" max="100" step="0.1">
-        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Standard: 20% (= 1.000€ bei 5.000€ ASP)</small>
-    </div>
-    <div class="input-group-compact">
-        <label>
-        Maintenance COGS (%)
-        <span class="tooltip-icon" title="Kosten für Support & Updates als % vom Maintenance Revenue. Typisch: 12-18%">ℹ️</span>
-        </label>
-        <input type="number" id="sw-maint-cogs" value="${data.maintenance_cogs_percent || 15}" class="input-compact" placeholder="15" max="100" step="0.1">
-        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Industry Standard: 12-18%</small>
-    </div>
-    </div>
+    <div class="section-compact">
+      <h3 class="section-title-compact">📊 Startwerte (Jahr 1)</h3>
+      
+      <!-- License Inputs -->
+      <div class="input-row-compact">
+        <div class="input-group-compact">
+          <label>
+            New License Units
+            <span class="tooltip-icon" title="Anzahl verkaufter Lizenzen im ersten Jahr">ℹ️</span>
+          </label>
+          <input type="number" id="sw-licenses" value="${data.licenses_year1}" class="input-compact" placeholder="100">
+        </div>
+        
+        <div class="input-group-compact">
+          <label>
+            License Price (€)
+            <span class="tooltip-icon" title="Verkaufspreis pro Lizenz">ℹ️</span>
+          </label>
+          <input type="number" id="sw-price" value="${data.license_price}" class="input-compact" placeholder="5000">
+        </div>
+        
+        <div class="input-group-compact">
+          <label>
+            License COGS
+            <span class="tooltip-icon" title="Herstellkosten pro Lizenz (Cloud, Onboarding, Support)">ℹ️</span>
+          </label>
+          
+          <!-- COGS Mode Toggle -->
+          <div class="cogs-mode-toggle">
+            <button class="cogs-mode-btn ${data.cogs_mode === 'percent' ? 'active' : ''}" data-mode="percent">
+              %
+            </button>
+            <button class="cogs-mode-btn ${data.cogs_mode === 'absolute' ? 'active' : ''}" data-mode="absolute">
+              €
+            </button>
+          </div>
+          
+          ${data.cogs_mode === 'percent' ? `
+            <!-- Percentage Input -->
+            <input type="number" id="sw-cogs-percent" value="${data.license_cogs_percent || 10}" 
+                   class="input-compact" placeholder="10" max="100" step="0.1">
+            <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">
+              Standard: 8-12% | Bei 5.000€ → ${formatCurrency((data.license_price || 5000) * 0.1)}
+            </small>
+          ` : `
+            <!-- Absolute Input -->
+            <input type="number" id="sw-cogs-absolute" value="${data.license_cogs_absolute || 500}" 
+                   class="input-compact" placeholder="500">
+            <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">
+              Direkte Kosten in € pro Lizenz
+            </small>
+          `}
+        </div>
+      </div>
       
       <!-- Quick KPIs -->
       <div class="kpis-inline">
@@ -247,12 +261,16 @@ function renderPerpetualContent(data) {
           <span id="kpi-license-revenue">-</span>
         </span>
         <span class="kpi-inline">
-          <strong>Maint Rev J1:</strong> 
-          <span id="kpi-maint-revenue">-</span>
+          <strong>License COGS J1:</strong> 
+          <span id="kpi-license-cogs">-</span>
         </span>
         <span class="kpi-inline">
-          <strong>Total Rev J1:</strong> 
-          <span id="kpi-total-revenue" class="kpi-positive">-</span>
+          <strong>DB2 J1:</strong> 
+          <span id="kpi-db2" class="kpi-positive">-</span>
+        </span>
+        <span class="kpi-inline">
+          <strong>Marge J1:</strong> 
+          <span id="kpi-margin" class="kpi-positive">-</span>
         </span>
       </div>
     </div>
@@ -277,10 +295,6 @@ function renderPerpetualContent(data) {
             <input type="radio" name="sw-license-model" value="optimistisch" ${data.license_model === 'optimistisch' ? 'checked' : ''}>
             <span>Optimistisch <small>(+15% p.a.)</small></span>
           </label>
-          <label class="model-option">
-            <input type="radio" name="sw-license-model" value="manuell" ${data.license_model === 'manuell' ? 'checked' : ''}>
-            <span style="color: #6b7280;">Manuell</span>
-          </label>
         </div>
         
         <!-- Preisentwicklung -->
@@ -298,10 +312,6 @@ function renderPerpetualContent(data) {
             <input type="radio" name="sw-price-model" value="premium" ${data.price_model === 'premium' ? 'checked' : ''}>
             <span>Premium <small>(+5% p.a.)</small></span>
           </label>
-          <label class="model-option">
-            <input type="radio" name="sw-price-model" value="manuell" ${data.price_model === 'manuell' ? 'checked' : ''}>
-            <span style="color: #6b7280;">Manuell</span>
-          </label>
         </div>
         
         <!-- Kostenentwicklung -->
@@ -310,18 +320,6 @@ function renderPerpetualContent(data) {
           <label class="model-option">
             <input type="radio" name="sw-cost-model" value="konstant" checked>
             <span>Konstant <small>(0% p.a.)</small></span>
-          </label>
-          <label class="model-option disabled">
-            <input type="radio" name="sw-cost-model" value="lernkurve" disabled>
-            <span style="color: #9ca3af;">Lernkurve <small>(-5% bei 2x)</small></span>
-          </label>
-          <label class="model-option disabled">
-            <input type="radio" name="sw-cost-model" value="inflation" disabled>
-            <span style="color: #9ca3af;">Inflation <small>(+3% p.a.)</small></span>
-          </label>
-          <label class="model-option disabled">
-            <input type="radio" name="sw-cost-model" value="manuell" disabled>
-            <span style="color: #9ca3af;">Manuell</span>
           </label>
         </div>
       </div>
@@ -409,11 +407,11 @@ function initializeSoftwareData(artikel) {
     license_mode: 'perpetual',
     
     // Perpetual Mode
-    licenses_year1: 100,
+   licenses_year1: 100,
     license_price: 5000,
-    license_cogs_percent: 10,        // ✅ NEU: % statt absolut
-    maintenance_rate: 20,
-    maintenance_cogs_percent: 15,    // ✅ NEU: COGS statt Marge
+    cogs_mode: 'percent',              // ✅ NEU: 'percent' oder 'absolute'
+    license_cogs_percent: 10,          // ✅ Für % Mode
+    license_cogs_absolute: 500,        // ✅ Für € Mode
     license_model: 'konservativ',
     price_model: 'konstant',
     
@@ -544,7 +542,40 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄ
 }
 
 function attachPerpetualListeners() {
-  const inputs = ['sw-licenses', 'sw-price', 'sw-cogs-percent', 'sw-maint-rate', 'sw-maint-cogs'];
+  // COGS Mode Toggle
+  document.querySelectorAll('.cogs-mode-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const mode = this.dataset.mode;
+      const artikel = window._currentArtikel;
+      
+      if (!artikel) return;
+      
+      // Update mode
+      artikel.software_model_data.cogs_mode = mode;
+      
+      // Re-render perpetual content
+      const modeContentContainer = document.getElementById('sw-mode-content');
+      if (modeContentContainer) {
+        modeContentContainer.innerHTML = renderPerpetualContent(artikel.software_model_data);
+        
+        // Re-attach listeners
+        attachPerpetualListeners();
+        
+        // Recalculate
+        window.calculateSoftwareForecast();
+      }
+    });
+  });
+  
+  // Input listeners
+  const artikel = window._currentArtikel;
+  const cogsMode = artikel?.software_model_data?.cogs_mode || 'percent';
+  
+  const inputs = [
+    'sw-licenses', 
+    'sw-price', 
+    cogsMode === 'percent' ? 'sw-cogs-percent' : 'sw-cogs-absolute'
+  ];
   
   inputs.forEach(id => {
     const input = document.getElementById(id);
@@ -572,33 +603,36 @@ function attachSaaSListeners() {
 }
 
 function updatePerpetualKPIs() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  const cogsMode = artikel.software_model_data.cogs_mode || 'percent';
+  
   const licenses = parseFloat(document.getElementById('sw-licenses')?.value) || 0;
   const price = parseFloat(document.getElementById('sw-price')?.value) || 0;
-  const cogsPercent = parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10;
-  const maintRate = parseFloat(document.getElementById('sw-maint-rate')?.value) || 0;
-  const maintCogsPercent = parseFloat(document.getElementById('sw-maint-cogs')?.value) || 15;
+  
+  // Calculate COGS based on mode
+  let cogs;
+  if (cogsMode === 'percent') {
+    const cogsPercent = parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10;
+    cogs = (licenses * price) * (cogsPercent / 100);
+  } else {
+    const cogsAbsolute = parseFloat(document.getElementById('sw-cogs-absolute')?.value) || 500;
+    cogs = licenses * cogsAbsolute;
+  }
   
   // Revenue
   const licenseRev = licenses * price;
-  const maintRev = licenseRev * (maintRate / 100);
-  const totalRev = licenseRev + maintRev;
   
-  // Costs
-  const licenseCost = licenseRev * (cogsPercent / 100);
-  const maintCost = maintRev * (maintCogsPercent / 100);
-  const totalCost = licenseCost + maintCost;
+  // DB2
+  const db2 = licenseRev - cogs;
+  const margin = licenseRev > 0 ? (db2 / licenseRev) * 100 : 0;
   
-  // Margin
-  const db2 = totalRev - totalCost;
-  const margin = totalRev > 0 ? (db2 / totalRev) * 100 : 0;
-  
+  // Update KPIs
   document.getElementById('kpi-license-revenue').textContent = formatCurrency(licenseRev);
-  document.getElementById('kpi-maint-revenue').textContent = formatCurrency(maintRev);
-  document.getElementById('kpi-total-revenue').textContent = formatCurrency(totalRev);
-  
-  // Optional: Auch DB2 und Marge anzeigen
-  // document.getElementById('kpi-db2').textContent = formatCurrency(db2);
-  // document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
+  document.getElementById('kpi-license-cogs').textContent = formatCurrency(cogs);
+  document.getElementById('kpi-db2').textContent = formatCurrency(db2);
+  document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
 }
 
 function updateSaaSKPIs() {
@@ -803,10 +837,15 @@ function calculatePerpetualForecast(artikel) {
     // Total revenue
     const totalRevenue = licenseRevenue + maintRevenue;
     
-   // Costs (Industry Standard: % based)
-    const licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
-    const maintCost = maintRevenue * (data.maintenance_cogs_percent / 100);
-    const totalCost = licenseCost + maintCost;
+   // Costs - based on COGS mode
+let licenseCost;
+if (data.cogs_mode === 'percent') {
+  licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
+} else {
+  licenseCost = newLicenses * data.license_cogs_absolute;
+}
+
+const totalCost = licenseCost;
     
     // DB2
     const db2 = totalRevenue - totalCost;
@@ -1280,6 +1319,40 @@ function renderCompactStyles() {
       font-size: 12px;
       margin-left: 4px;
     }
+
+    /* COGS Mode Toggle */
+.cogs-mode-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 2px;
+  background: #f9fafb;
+}
+
+.cogs-mode-btn {
+  flex: 1;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cogs-mode-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.cogs-mode-btn.active {
+  background: #3b82f6;
+  color: white;
+}
     </style>
   `;
 }
