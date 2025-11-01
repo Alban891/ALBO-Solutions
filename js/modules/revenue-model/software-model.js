@@ -1027,19 +1027,39 @@ function calculateSaaSForecast(artikel) {
   let totalCustomers = data.saas_customers_start;
   const initialARR = data.saas_arr;
   
-  for (let i = 0; i < years; i++) {
-    forecast.years.push(startYear + i);
+for (let i = 0; i < years; i++) {
+  forecast.years.push(startYear + i);
+  
+  // ✅ Jahr 1 = Start (keine New Customers, kein Churn)
+  if (i === 0) {
+    // Jahr 1: Nur Startwerte
+    const currentARR = calculateARRModel(initialARR, data.saas_arr_model, 0);
+    const revenue = totalCustomers * currentARR;
+    const totalCost = totalCustomers * data.saas_cost;
+    const db2 = revenue - totalCost;
+    const db2Margin = revenue > 0 ? (db2 / revenue) * 100 : 0;
     
-    // ✅ NEW: Calculate using models
-    const newCustomers = calculateNewCustomersModel(data.saas_new_customers, data.saas_new_model, i);
-    const currentARR = calculateARRModel(initialARR, data.saas_arr_model, i);
-    const churnRate = calculateChurnModel(data.saas_churn_rate, data.saas_churn_model, i);
+    forecast.volume.push(Math.round(totalCustomers));
+    forecast.price.push(currentARR);
+    forecast.cost.push(data.saas_cost);
+    forecast.revenue.push(revenue);
+    forecast.totalCost.push(totalCost);
+    forecast.db2.push(db2);
+    forecast.db2Margin.push(db2Margin);
     
-    // Churn calculation
-    const churnedCustomers = totalCustomers * (churnRate / 100);
-    
-    // Net new customers
-    totalCustomers = totalCustomers + newCustomers - churnedCustomers;
+    continue;  // Skip to next year
+  }
+  
+  // ✅ Ab Jahr 2: Growth Modelle anwenden
+  const newCustomers = calculateNewCustomersModel(data.saas_new_customers, data.saas_new_model, i - 1);
+  const currentARR = calculateARRModel(initialARR, data.saas_arr_model, i);
+  const churnRate = calculateChurnModel(data.saas_churn_rate, data.saas_churn_model, i - 1);
+  
+  // Churn calculation
+  const churnedCustomers = totalCustomers * (churnRate / 100);
+  
+  // Net new customers
+  totalCustomers = totalCustomers + newCustomers - churnedCustomers;
     
     // Revenue & Costs
     const revenue = totalCustomers * currentARR;
