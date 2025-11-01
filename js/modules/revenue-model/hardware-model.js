@@ -215,6 +215,11 @@ export function renderHardwareModel(artikel, containerId) {
       </div>
       
     </div>
+
+    <!-- ✅ FORECAST TABLE CONTAINER -->
+    <div id="forecast-table-container" style="margin-top: 16px;">
+    <!-- Forecast wird hier dynamisch eingefügt -->
+    </div>
     
     ${renderCompactStyles()}
   `;
