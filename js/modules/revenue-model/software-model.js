@@ -999,13 +999,6 @@ function formatNumber(value, decimals = 0) {
   }).format(value);
 }
 
-function formatNumber(value, decimals = 0) {
-  return new Intl.NumberFormat('de-DE', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  }).format(value);
-}
-
 function formatNumberWithDots(value) {
   if (!value || value === 0) return '0';
   return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
