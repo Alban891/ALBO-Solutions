@@ -727,6 +727,61 @@ function attachPerpetualListeners() {
   updatePerpetualKPIs();
 }
 
+// ==========================================
+// SAAS HELPER FUNCTIONS
+// ==========================================
+
+function handleChurnModelChange() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  console.log('🔄 Churn model changed!');
+  
+  // Re-render SaaS content to show/hide manual inputs
+  const modeContentContainer = document.getElementById('sw-mode-content');
+  if (modeContentContainer) {
+    modeContentContainer.innerHTML = renderSaaSContent(artikel.software_model_data);
+    
+    // Re-attach all listeners
+    attachSaaSListeners();
+    
+    // Recalculate forecast
+    window.calculateSoftwareForecast();
+  }
+}
+
+function attachChurnManualInputListeners() {
+  const artikel = window._currentArtikel;
+  if (!artikel) return;
+  
+  console.log('📝 Attaching churn manual input listeners...');
+  
+  // Get all manual churn inputs
+  const churnInputs = document.querySelectorAll('.manual-input-churn');
+  
+  console.log(`Found ${churnInputs.length} manual churn inputs`);
+  
+  churnInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      const yearIndex = parseInt(this.dataset.yearIndex);
+      const value = parseFloat(this.value) || 0;
+      
+      // Update data
+      if (!artikel.software_model_data.saas_churn_manual) {
+        artikel.software_model_data.saas_churn_manual = [];
+      }
+      artikel.software_model_data.saas_churn_manual[yearIndex] = value;
+      
+      console.log(`📝 Manual Churn Year ${yearIndex + 1}: ${value}%`);
+    });
+    
+    input.addEventListener('blur', () => {
+      // Recalculate on blur
+      window.calculateSoftwareForecast();
+    });
+  });
+}
+
 function attachSaaSListeners() {
   // ✅ Attach number formatting for INTEGER inputs
   attachNumberFormatting('saas-customers');
@@ -761,61 +816,6 @@ function attachSaaSListeners() {
   attachChurnManualInputListeners();
   
   updateSaaSKPIs();
-}
-  
-  // CHURN Manual Button
-  const btnChurnManual = document.getElementById('btn-edit-churn-manual');
-  if (btnChurnManual) {
-    btnChurnManual.addEventListener('click', () => {
-      console.log('🔧 Opening manual editor for CHURN RATE');
-      alert('Manual editor for CHURN RATE - Coming soon!');
-      // TODO: Open modal
-    });
-  }
-
-function handleChurnModelChange() {
-  const artikel = window._currentArtikel;
-  if (!artikel) return;
-  
-  // Re-render SaaS content to show/hide manual inputs
-  const modeContentContainer = document.getElementById('sw-mode-content');
-  if (modeContentContainer) {
-    modeContentContainer.innerHTML = renderSaaSContent(artikel.software_model_data);
-    
-    // Re-attach all listeners
-    attachSaaSListeners();
-    
-    // Recalculate forecast
-    window.calculateSoftwareForecast();
-  }
-}
-
-function attachChurnManualInputListeners() {
-  const artikel = window._currentArtikel;
-  if (!artikel) return;
-  
-  // Get all manual churn inputs
-  const churnInputs = document.querySelectorAll('.manual-input-churn');
-  
-  churnInputs.forEach(input => {
-    input.addEventListener('input', function() {
-      const yearIndex = parseInt(this.dataset.yearIndex);
-      const value = parseFloat(this.value) || 0;
-      
-      // Update data
-      if (!artikel.software_model_data.saas_churn_manual) {
-        artikel.software_model_data.saas_churn_manual = [];
-      }
-      artikel.software_model_data.saas_churn_manual[yearIndex] = value;
-      
-      console.log(`📝 Manual Churn Year ${yearIndex + 1}: ${value}%`);
-    });
-    
-    input.addEventListener('blur', () => {
-      // Recalculate on blur
-      window.calculateSoftwareForecast();
-    });
-  });
 }
 
 function updatePerpetualKPIs() {
