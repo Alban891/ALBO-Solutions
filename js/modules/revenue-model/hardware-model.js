@@ -805,8 +805,7 @@ function renderCompactStyles() {
 }
 
 .btn-save-modern {
-  width: auto;
-  padding: 10px 28px;
+  padding: 12px 32px;
   background: #1e40af;
   color: white;
   border: none;
