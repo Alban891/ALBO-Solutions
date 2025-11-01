@@ -983,13 +983,21 @@ function calculateSaaSForecast(artikel) {
   const data = {
     release_date: document.getElementById('sw-date')?.value || '2025-01',
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
-    saas_customers_start: parseFloat(document.getElementById('saas-customers')?.value) || 0,
-    saas_arr: parseFloat(document.getElementById('saas-arr')?.value) || 0,
-    saas_cost: parseFloat(document.getElementById('saas-cost')?.value) || 0,
-    saas_new_customers: parseFloat(document.getElementById('saas-new')?.value) || 0,
+    
+    // ✅ Get formatted inputs
+    saas_customers_start: getRawNumberFromInput(document.getElementById('saas-customers')),
+    saas_arr: getRawNumberFromInput(document.getElementById('saas-arr')),
+    saas_cost: getRawNumberFromInput(document.getElementById('saas-cost')),
+    saas_new_customers: getRawNumberFromInput(document.getElementById('saas-new')),
+    
+    // ✅ Percentages stay as number inputs
     saas_churn_rate: parseFloat(document.getElementById('saas-churn')?.value) || 0,
     saas_expansion_rate: parseFloat(document.getElementById('saas-expansion')?.value) || 0,
-    saas_growth_model: document.querySelector('input[name="saas-growth-model"]:checked')?.value || 'linear'
+    
+    // ✅ NEW: Read model selections
+    saas_new_model: document.querySelector('input[name="saas-new-model"]:checked')?.value || 'linear',
+    saas_arr_model: document.querySelector('input[name="saas-arr-model"]:checked')?.value || 'expansion',
+    saas_churn_model: document.querySelector('input[name="saas-churn-model"]:checked')?.value || 'konstant'
   };
   
   // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.software_model_data
@@ -1003,9 +1011,9 @@ function calculateSaaSForecast(artikel) {
   const forecast = {
     name: artikel.name || 'SaaS',
     type: 'subscription',
-    volume_model: 'konstant',           // ✅ NEU - SaaS hat Customer Growth Model
-    price_model: 'konstant',            // ✅ NEU - ARR per Customer
-    cost_model: 'konstant',             // ✅ NEU
+    volume_model: data.saas_new_model,     // ✅ NEW
+    price_model: data.saas_arr_model,      // ✅ NEW
+    cost_model: data.saas_churn_model,     // ✅ NEW (Churn in cost_model speichern)
     years: [],
     volume: [],
     price: [],
@@ -1017,22 +1025,21 @@ function calculateSaaSForecast(artikel) {
   };
   
   let totalCustomers = data.saas_customers_start;
-  let currentARR = data.saas_arr;
+  const initialARR = data.saas_arr;
   
   for (let i = 0; i < years; i++) {
     forecast.years.push(startYear + i);
     
-    // New customers (apply growth model)
-    const newCustomers = calculateNewCustomers(data.saas_new_customers, data.saas_growth_model, i);
+    // ✅ NEW: Calculate using models
+    const newCustomers = calculateNewCustomersModel(data.saas_new_customers, data.saas_new_model, i);
+    const currentARR = calculateARRModel(initialARR, data.saas_arr_model, i);
+    const churnRate = calculateChurnModel(data.saas_churn_rate, data.saas_churn_model, i);
     
-    // Churn
-    const churnedCustomers = totalCustomers * (data.saas_churn_rate / 100);
+    // Churn calculation
+    const churnedCustomers = totalCustomers * (churnRate / 100);
     
     // Net new customers
     totalCustomers = totalCustomers + newCustomers - churnedCustomers;
-    
-    // ARR expansion
-    currentARR = currentARR * (1 + data.saas_expansion_rate / 100);
     
     // Revenue & Costs
     const revenue = totalCustomers * currentARR;
@@ -1123,6 +1130,62 @@ function calculateNewCustomers(baseNew, model, yearIndex) {
       return baseNew;
   }
 }
+
+// ==========================================
+// SAAS MODEL CALCULATIONS
+// ==========================================
+
+function calculateNewCustomersModel(baseNew, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return baseNew;
+    case 'linear':
+      return baseNew;  // Gleich wie konstant
+    case 'degressiv':
+      return baseNew * Math.pow(0.9, yearIndex);  // -10% p.a.
+    case 'aggressiv':
+      return baseNew * Math.pow(1.2, yearIndex);  // +20% p.a.
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return baseNew;
+    default:
+      return baseNew;
+  }
+}
+
+function calculateARRModel(baseARR, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return baseARR;
+    case 'expansion':
+      return baseARR * Math.pow(1.05, yearIndex);  // +5% p.a.
+    case 'premium':
+      return baseARR * Math.pow(1.10, yearIndex);  // +10% p.a.
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return baseARR;
+    default:
+      return baseARR;
+  }
+}
+
+function calculateChurnModel(baseChurn, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return baseChurn;
+    case 'verbesserung':
+      // Churn Rate sinkt um 2 Prozentpunkte pro Jahr
+      // z.B. 15% → 13% → 11% → 9%...
+      const newChurn = baseChurn - (2 * yearIndex);
+      return Math.max(newChurn, 2);  // Minimum 2%
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return baseChurn;
+    default:
+      return baseChurn;
+  }
+}
+
 
 // ==========================================
 // HELPER FUNCTIONS
