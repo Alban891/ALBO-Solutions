@@ -446,8 +446,9 @@ function initializeSoftwareData(artikel) {
     cogs_mode: 'percent',              // ✅ NEU: 'percent' oder 'absolute'
     license_cogs_percent: 10,          // ✅ Für % Mode
     license_cogs_absolute: 500,        // ✅ Für € Mode
-    license_model: 'konservativ',
+    volume_model: 'konservativ',
     price_model: 'konstant',
+    cost_model: 'konstant',
     
     // SaaS Mode
     saas_customers_start: 1000,
@@ -713,9 +714,9 @@ window.calculateSoftwareForecast = function() {
   
   if (forecast) {
     // ✅ Add model info to forecast (for manual mode detection)
-    forecast.volume_model = artikel.software_model_data.license_model;
+    forecast.volume_model = artikel.software_model_data.volume_model;  // ✅ RICHTIG
     forecast.price_model = artikel.software_model_data.price_model;
-    forecast.cost_model = 'konstant'; // Software hat nur konstante Kosten
+    forecast.cost_model = artikel.software_model_data.cost_model; 
     
     renderForecastTable(forecast, 'forecast-table-container');
     artikel.software_model_data.forecast = forecast;
@@ -748,13 +749,14 @@ async function saveSoftwareForecast() {
   };
   
     if (data.license_mode === 'perpetual') {
-      parameters.licenses_year1 = data.licenses_year1;
+    parameters.licenses_year1 = data.licenses_year1;
     parameters.license_price = data.license_price;
     parameters.license_cogs_percent = data.license_cogs_percent;
     parameters.license_cogs_absolute = data.license_cogs_absolute;
     parameters.cogs_mode = data.cogs_mode;
-    parameters.license_model = data.license_model;
+    parameters.volume_model = data.volume_model;  // ✅ RICHTIG
     parameters.price_model = data.price_model;
+    parameters.cost_model = data.cost_model;      // ✅ NEU!
   } else {
     parameters.saas_customers_start = data.saas_customers_start;
     parameters.saas_arr = data.saas_arr;
@@ -834,8 +836,9 @@ function calculatePerpetualForecast(artikel) {
     license_cogs_percent: parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10,
     license_cogs_absolute: getRawNumberFromInput(document.getElementById('sw-cogs-absolute')),
     cogs_mode: artikel.software_model_data.cogs_mode || 'percent',
-    license_model: document.querySelector('input[name="sw-license-model"]:checked')?.value || 'konstant',
-    price_model: document.querySelector('input[name="sw-price-model"]:checked')?.value || 'konstant'
+    volume_model: document.querySelector('input[name="volume-model"]:checked')?.value || 'konstant',
+    price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
+    cost_model: document.querySelector('input[name="cost-model"]:checked')?.value || 'konstant'
   };
   
   // ✅ WICHTIG: Speichere aktuelle Werte zurück in artikel.software_model_data
@@ -849,9 +852,9 @@ function calculatePerpetualForecast(artikel) {
   const forecast = {
     name: artikel.name || 'Software',
     type: 'software',
-    volume_model: data.license_model,  // ✅ NEU
-    price_model: data.price_model,      // ✅ NEU
-    cost_model: 'konstant',             // ✅ NEU
+    volume_model: data.volume_model,  // ✅ RICHTIG
+    price_model: data.price_model,    // ✅ OK
+    cost_model: data.cost_model,      // ✅ RICHTIG
     years: [],
     volume: [],
     price: [],
@@ -866,8 +869,9 @@ function calculatePerpetualForecast(artikel) {
     forecast.years.push(startYear + i);
     
     // New licenses
-    const newLicenses = calculateLicenses(data.licenses_year1, data.license_model, i);
+    const newLicenses = calculateLicenses(data.licenses_year1, data.volume_model, i);
     const licensePrice = calculatePrice(data.license_price, data.price_model, i);
+    const unitCost = calculateCost(data.license_cogs_absolute || 500, data.cost_model, i);
     
     // License revenue
     const licenseRevenue = newLicenses * licensePrice;
@@ -980,8 +984,17 @@ function calculateLicenses(startLicenses, model, yearIndex) {
       return startLicenses;
     case 'konservativ':
       return startLicenses * Math.pow(1.05, yearIndex);
+    case 'realistisch':
+      // S-Kurve: Sigmoid function
+      const t = yearIndex / 5;
+      const multiplier = 1 / (1 + Math.exp(-10 * (t - 0.5)));
+      return startLicenses * (1 + multiplier * 0.5);
     case 'optimistisch':
+      // Hockey-Stick: Exponentielles Wachstum
       return startLicenses * Math.pow(1.15, yearIndex);
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return startLicenses;
     default:
       return startLicenses;
   }
@@ -995,8 +1008,32 @@ function calculatePrice(startPrice, model, yearIndex) {
       return startPrice * Math.pow(1.02, yearIndex);
     case 'premium':
       return startPrice * Math.pow(1.05, yearIndex);
+    case 'deflation':
+      return startPrice * Math.pow(0.97, yearIndex);
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return startPrice;
     default:
       return startPrice;
+  }
+}
+
+function calculateCost(startCost, model, yearIndex) {
+  switch (model) {
+    case 'konstant':
+      return startCost;
+    case 'inflation':
+      return startCost * Math.pow(1.02, yearIndex);
+    case 'learning':
+      // Lernkurve: -5% bei Verdopplung
+      return startCost * Math.pow(0.95, yearIndex);
+    case 'steigend':
+      return startCost * Math.pow(1.05, yearIndex);
+    case 'manuell':
+      // TODO: Manuelle Werte implementieren
+      return startCost;
+    default:
+      return startCost;
   }
 }
 
