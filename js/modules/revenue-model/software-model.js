@@ -755,9 +755,10 @@ function updatePerpetualKPIs() {
 }
 
 function updateSaaSKPIs() {
-  const customers = parseFloat(document.getElementById('saas-customers')?.value) || 0;
-  const arr = parseFloat(document.getElementById('saas-arr')?.value) || 0;
-  const cost = parseFloat(document.getElementById('saas-cost')?.value) || 0;
+  // ✅ Get raw numbers (remove thousand separators)
+  const customers = getRawNumberFromInput(document.getElementById('saas-customers'));
+  const arr = getRawNumberFromInput(document.getElementById('saas-arr'));
+  const cost = getRawNumberFromInput(document.getElementById('saas-cost'));
   
   const totalARR = customers * arr;
   const totalCost = customers * cost;
