@@ -461,6 +461,11 @@ window.calculateHardwareForecast = function() {
     price_model: document.querySelector('input[name="price-model"]:checked')?.value || 'konstant',
     cost_model: document.querySelector('input[name="cost-model"]:checked')?.value || 'konstant'
   };
+
+  // Check if any manual mode is active
+    const isManualMode = data.volume_model === 'manuell' || 
+                     data.price_model === 'manuell' || 
+                     data.cost_model === 'manuell';
   
   // Validate
   if (!data.volume_year1 || !data.price_year1 || !data.cost_year1) {
