@@ -196,41 +196,49 @@ function renderModeContent(data) {
 function renderPerpetualContent(data) {
   return `
     <!-- Perpetual Mode -->
-    <div class="section-compact">
-      <h3 class="section-title-compact">📊 Startwerte (Jahr 1)</h3>
-      <div class="input-row-compact">
-        <div class="input-group-compact">
-          <label>Neue Lizenzen</label>
-          <input type="number" id="sw-licenses" value="${data.licenses_year1}" class="input-compact" placeholder="100">
-        </div>
-        <div class="input-group-compact">
-          <label>Lizenzpreis (€)</label>
-          <input type="number" id="sw-price" value="${data.license_price}" class="input-compact" placeholder="5000">
-        </div>
-        <div class="input-group-compact">
-          <label>Lizenzkosten (€)</label>
-          <input type="number" id="sw-cost" value="${data.license_cost}" class="input-compact" placeholder="500">
-        </div>
-      </div>
-      
-      <div class="input-row-compact" style="margin-top: 10px;">
-        <div class="input-group-compact">
-          <label>
-            Maintenance Rate (%)
-            <span class="tooltip-icon" title="Jährlicher Wartungsvertrag als % vom Lizenzpreis. Typisch: 15-25%">ℹ️</span>
-          </label>
-          <input type="number" id="sw-maint-rate" value="${data.maintenance_rate}" class="input-compact" placeholder="20" max="100">
-          <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">z.B. 20% von 5.000€ = 1.000€/Jahr</small>
-        </div>
-        <div class="input-group-compact">
-          <label>
-            Maintenance Marge (%)
-            <span class="tooltip-icon" title="Gewinnmarge auf Wartungsverträge. Typisch: 80-90% (niedrige Kosten)">ℹ️</span>
-          </label>
-          <input type="number" id="sw-maint-margin" value="${data.maintenance_margin}" class="input-compact" placeholder="85" max="100">
-          <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Hohe Marge, da geringe Kosten</small>
-        </div>
-      </div>
+    <div class="input-row-compact">
+    <div class="input-group-compact">
+        <label>
+        New License Units
+        <span class="tooltip-icon" title="Anzahl verkaufter Lizenzen im ersten Jahr">ℹ️</span>
+        </label>
+        <input type="number" id="sw-licenses" value="${data.licenses_year1}" class="input-compact" placeholder="100">
+    </div>
+    <div class="input-group-compact">
+        <label>
+        License ASP (€)
+        <span class="tooltip-icon" title="Average Selling Price pro Lizenz. Durchschnittlicher Verkaufspreis.">ℹ️</span>
+        </label>
+        <input type="number" id="sw-price" value="${data.license_price}" class="input-compact" placeholder="5000">
+    </div>
+    <div class="input-group-compact">
+        <label>
+        License COGS (%)
+        <span class="tooltip-icon" title="Direkte Kosten pro Lizenz als % vom ASP. Typisch: 8-12% (Cloud, Onboarding, Support)">ℹ️</span>
+        </label>
+        <input type="number" id="sw-cogs-percent" value="${data.license_cogs_percent || 10}" class="input-compact" placeholder="10" max="100" step="0.1">
+        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Industry Standard: 8-12%</small>
+    </div>
+    </div>
+
+    <div class="input-row-compact" style="margin-top: 10px;">
+    <div class="input-group-compact">
+        <label>
+        Annual Maintenance (%)
+        <span class="tooltip-icon" title="Jährliche Wartungsgebühr als % vom License ASP. Industry Standard: 18-22%">ℹ️</span>
+        </label>
+        <input type="number" id="sw-maint-rate" value="${data.maintenance_rate}" class="input-compact" placeholder="20" max="100" step="0.1">
+        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Standard: 20% (= 1.000€ bei 5.000€ ASP)</small>
+    </div>
+    <div class="input-group-compact">
+        <label>
+        Maintenance COGS (%)
+        <span class="tooltip-icon" title="Kosten für Support & Updates als % vom Maintenance Revenue. Typisch: 12-18%">ℹ️</span>
+        </label>
+        <input type="number" id="sw-maint-cogs" value="${data.maintenance_cogs_percent || 15}" class="input-compact" placeholder="15" max="100" step="0.1">
+        <small style="font-size: 10px; color: #6b7280; margin-top: 2px;">Industry Standard: 12-18%</small>
+    </div>
+    </div>
       
       <!-- Quick KPIs -->
       <div class="kpis-inline">
@@ -398,14 +406,14 @@ function initializeSoftwareData(artikel) {
   return {
     release_date: artikel.release_datum || new Date().toISOString().slice(0, 7),
     time_horizon: artikel.zeitraum || 5,
-    license_mode: 'perpetual', // or 'saas'
+    license_mode: 'perpetual',
     
     // Perpetual Mode
     licenses_year1: 100,
     license_price: 5000,
-    license_cost: 500,
+    license_cogs_percent: 10,        // ✅ NEU: % statt absolut
     maintenance_rate: 20,
-    maintenance_margin: 85,
+    maintenance_cogs_percent: 15,    // ✅ NEU: COGS statt Marge
     license_model: 'konservativ',
     price_model: 'konstant',
     
@@ -536,7 +544,7 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {  // ← GEÄ
 }
 
 function attachPerpetualListeners() {
-  const inputs = ['sw-licenses', 'sw-price', 'sw-cost', 'sw-maint-rate', 'sw-maint-margin'];
+  const inputs = ['sw-licenses', 'sw-price', 'sw-cogs-percent', 'sw-maint-rate', 'sw-maint-cogs'];
   
   inputs.forEach(id => {
     const input = document.getElementById(id);
@@ -566,15 +574,31 @@ function attachSaaSListeners() {
 function updatePerpetualKPIs() {
   const licenses = parseFloat(document.getElementById('sw-licenses')?.value) || 0;
   const price = parseFloat(document.getElementById('sw-price')?.value) || 0;
+  const cogsPercent = parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10;
   const maintRate = parseFloat(document.getElementById('sw-maint-rate')?.value) || 0;
+  const maintCogsPercent = parseFloat(document.getElementById('sw-maint-cogs')?.value) || 15;
   
+  // Revenue
   const licenseRev = licenses * price;
   const maintRev = licenseRev * (maintRate / 100);
   const totalRev = licenseRev + maintRev;
   
+  // Costs
+  const licenseCost = licenseRev * (cogsPercent / 100);
+  const maintCost = maintRev * (maintCogsPercent / 100);
+  const totalCost = licenseCost + maintCost;
+  
+  // Margin
+  const db2 = totalRev - totalCost;
+  const margin = totalRev > 0 ? (db2 / totalRev) * 100 : 0;
+  
   document.getElementById('kpi-license-revenue').textContent = formatCurrency(licenseRev);
   document.getElementById('kpi-maint-revenue').textContent = formatCurrency(maintRev);
   document.getElementById('kpi-total-revenue').textContent = formatCurrency(totalRev);
+  
+  // Optional: Auch DB2 und Marge anzeigen
+  // document.getElementById('kpi-db2').textContent = formatCurrency(db2);
+  // document.getElementById('kpi-margin').textContent = formatNumber(margin, 1) + '%';
 }
 
 function updateSaaSKPIs() {
@@ -644,12 +668,12 @@ async function saveSoftwareForecast() {
     license_mode: data.license_mode
   };
   
-  if (data.license_mode === 'perpetual') {
+    if (data.license_mode === 'perpetual') {
     parameters.licenses_year1 = data.licenses_year1;
     parameters.license_price = data.license_price;
-    parameters.license_cost = data.license_cost;
+    parameters.license_cogs_percent = data.license_cogs_percent;
     parameters.maintenance_rate = data.maintenance_rate;
-    parameters.maintenance_margin = data.maintenance_margin;
+    parameters.maintenance_cogs_percent = data.maintenance_cogs_percent;
     parameters.license_model = data.license_model;
     parameters.price_model = data.price_model;
   } else {
@@ -728,9 +752,9 @@ function calculatePerpetualForecast(artikel) {
     time_horizon: parseInt(document.querySelector('.btn-horizon.active')?.dataset.years) || 5,
     licenses_year1: parseFloat(document.getElementById('sw-licenses')?.value) || 0,
     license_price: parseFloat(document.getElementById('sw-price')?.value) || 0,
-    license_cost: parseFloat(document.getElementById('sw-cost')?.value) || 0,
+    license_cogs_percent: parseFloat(document.getElementById('sw-cogs-percent')?.value) || 10,
     maintenance_rate: parseFloat(document.getElementById('sw-maint-rate')?.value) || 0,
-    maintenance_margin: parseFloat(document.getElementById('sw-maint-margin')?.value) || 0,
+    maintenance_cogs_percent: parseFloat(document.getElementById('sw-maint-cogs')?.value) || 15,
     license_model: document.querySelector('input[name="sw-license-model"]:checked')?.value || 'konstant',
     price_model: document.querySelector('input[name="sw-price-model"]:checked')?.value || 'konstant'
   };
@@ -779,9 +803,9 @@ function calculatePerpetualForecast(artikel) {
     // Total revenue
     const totalRevenue = licenseRevenue + maintRevenue;
     
-    // Costs
-    const licenseCost = newLicenses * data.license_cost;
-    const maintCost = maintRevenue * (1 - data.maintenance_margin / 100);
+   // Costs (Industry Standard: % based)
+    const licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
+    const maintCost = maintRevenue * (data.maintenance_cogs_percent / 100);
     const totalCost = licenseCost + maintCost;
     
     // DB2
