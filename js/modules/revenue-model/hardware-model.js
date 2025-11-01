@@ -479,10 +479,15 @@ window.calculateHardwareForecast = function() {
   }
   
   // Calculate forecast
-  const forecast = calculateForecast(data);
-  
-  // Render forecast table
-  renderForecastTable(forecast, 'forecast-table-container');
+const forecast = calculateForecast(data);
+
+// Add model info to forecast
+forecast.volume_model = data.volume_model;
+forecast.price_model = data.price_model;
+forecast.cost_model = data.cost_model;
+
+// Render forecast table
+renderForecastTable(forecast, 'forecast-table-container');
   
   // Save to artikel
   artikel.hardware_model_data = {
@@ -500,6 +505,9 @@ function calculateForecast(data) {
   const forecast = {
     name: window._currentArtikel?.name || 'Hardware',
     type: 'hardware',
+    volume_model: data.volume_model,  // ✅ NEU
+    price_model: data.price_model,    // ✅ NEU
+    cost_model: data.cost_model,      // ✅ NEU
     years: [],
     volume: [],
     price: [],
