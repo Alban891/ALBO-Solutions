@@ -28,7 +28,7 @@ export async function renderSoftwareModel(artikel, containerId) {
   // ✅ LOAD SAVED DATA FROM DATABASE
 await loadSavedForecast(artikel);
 
-// ✅ NEU: Determine which modes to show based on revenue streams
+// ✅ Determine which modes to show based on revenue streams
 const revenueStreams = artikel.revenue_streams || [];
 const hasOneTimeSale = revenueStreams.includes('one_time_sale');
 const hasSubscription = revenueStreams.includes('subscription');
@@ -37,28 +37,40 @@ console.log('📊 Revenue Streams:', revenueStreams);
 console.log('   One-Time Sale:', hasOneTimeSale);
 console.log('   Subscription:', hasSubscription);
 
-// ✅ NEU: Set mode based on revenue streams
+// ✅ Set mode based on revenue streams
 const data = artikel.software_model_data;
 
-if (hasOneTimeSale && !hasSubscription) {
-  // Only perpetual
+if (revenueStreams.length === 0) {
+  // NO STREAMS → Default to Perpetual only
+  data.license_mode = 'perpetual';
+  data.show_toggle = false;  // ✅ KEIN Toggle!
+  console.log('   → No streams defined, default to PERPETUAL only');
+  
+} else if (hasOneTimeSale && hasSubscription) {
+  // BOTH STREAMS → Show toggle
+  data.show_toggle = true;
+  console.log('   → Both streams available, showing toggle');
+  
+} else if (hasOneTimeSale) {
+  // ONLY ONE-TIME → Perpetual only
   data.license_mode = 'perpetual';
   data.show_toggle = false;
-  console.log('   → Locked to PERPETUAL (single stream)');
-} else if (hasSubscription && !hasOneTimeSale) {
-  // Only SaaS
+  console.log('   → Only One-Time Sale, PERPETUAL only');
+  
+} else if (hasSubscription) {
+  // ONLY SUBSCRIPTION → SaaS only
   data.license_mode = 'saas';
   data.show_toggle = false;
-  console.log('   → Locked to SAAS (single stream)');
-} else if (hasOneTimeSale && hasSubscription) {
-  // Both → show toggle
-  data.show_toggle = true;
-  console.log('   → BOTH modes available (multi stream)');
+  console.log('   → Only Subscription, SAAS only');
+  
 } else {
-  // Neither → default to perpetual with toggle
-  data.show_toggle = true;
-  console.log('   → No streams defined, showing both modes');
+  // FALLBACK (sollte nie erreicht werden)
+  data.license_mode = 'perpetual';
+  data.show_toggle = false;
+  console.log('   → Fallback: PERPETUAL only');
 }
+
+console.log('   → Final: mode=' + data.license_mode + ', show_toggle=' + data.show_toggle);
 
 container.innerHTML = `
   <div class="software-model-compact">
