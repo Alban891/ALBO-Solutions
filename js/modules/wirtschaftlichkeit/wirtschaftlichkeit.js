@@ -11,6 +11,8 @@
 import { state } from '../../state.js';
 import * as helpers from '../../helpers.js';
 import { calculateProjektWirtschaftlichkeit } from './calculator.js';
+import { renderSzenarioSelector } from './szenario-ui.js';
+import './szenario-window-functions.js';
 import { analyzeKostenblockKategorisierung } from './ki-integration.js';
 import {
     HK_DEFAULTS,
@@ -76,6 +78,7 @@ export async function renderProjektWirtschaftlichkeit() {
         container.innerHTML = `
             <div style="padding: 20px;">
                 ${renderHeader(projekt, allArtikelListe)}
+                ${renderSzenarioSelector('base')}
                 ${renderArtikelOverview(allArtikelListe)}
                 ${renderContributionMarginTable(result)}
                 ${renderKPIDashboard(result, result.kpis, allArtikelListe[0]?.typ)}
