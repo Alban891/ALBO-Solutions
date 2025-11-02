@@ -96,7 +96,7 @@ function initRevenueModel() {
     // DROPDOWN CALLBACK
     // ============================================
 
-    window.onLoadRevenueModel = function(artikelList, isMulti) {
+    window.onLoadRevenueModel = async function(artikelList, isMulti) {  // ← async hinzugefügt
         console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
         
         if (isMulti) {
@@ -107,7 +107,7 @@ function initRevenueModel() {
             // Single-Artikel View
             const artikel = window.revenueModelArtikel.find(a => a.id === artikelList[0].id);
             if (artikel) {
-                renderRevenueModel(artikel, 'detail-container');
+                await renderRevenueModel(artikel, 'detail-container');  // ← await hinzugefügt
             }
         }
         
