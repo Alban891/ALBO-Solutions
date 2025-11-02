@@ -44,29 +44,40 @@ export async function renderProjektWirtschaftlichkeit() {
     // Show loading state
     container.innerHTML = createLoadingState();
     
-    try {
-        // Get article list
-        let artikelListe = state.getArtikelByProjekt(projektId);
-        console.log('📋 All articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+try {
+    // ✨ NEU: Initialize Szenario-Analyse
+    await window.initializeSzenarioAnalysis();
+    
+    // Get article list
+    let artikelListe = state.getArtikelByProjekt(projektId);
+    console.log('📋 All articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+    
+    // ✅ CRITICAL: Apply article filter if active
+    const activeFilter = window.cfoDashboard?.artikelFilter;
+    if (activeFilter) {
+        console.log('🔍 Active filter:', activeFilter);
+        artikelListe = artikelListe.filter(a => a.id === activeFilter);
+        console.log('📋 Filtered articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
         
-        // ✅ CRITICAL: Apply article filter if active
-        const activeFilter = window.cfoDashboard?.artikelFilter;
-        if (activeFilter) {
-            console.log('🔍 Active filter:', activeFilter);
-            artikelListe = artikelListe.filter(a => a.id === activeFilter);
-            console.log('📋 Filtered articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
-            
-            if (artikelListe.length === 0) {
-                console.error('❌ No articles after filter!');
-            }
+        if (artikelListe.length === 0) {
+            console.error('❌ No articles after filter!');
         }
-        
+    }
+    
+    // ✨ NEU: Use scenario result if available
+    let result;
+    if (window.currentSzenarioResult) {
+        result = window.currentSzenarioResult;
+        console.log('✅ Using scenario result');
+    } else {
         // Calculate profitability (with filtered articles)
-        const result = await calculateProjektWirtschaftlichkeit(projektId, {
+        result = await calculateProjektWirtschaftlichkeit(projektId, {
             wacc: 0.08,
             validateInputs: true,
             filteredArtikel: artikelListe  // Pass filtered list
         });
+        console.log('✅ Calculated base case');
+    }
         
         console.log('💰 Calculated sales revenue:', result.totals?.sales_revenue);
         console.log('📊 Full result:', result);
