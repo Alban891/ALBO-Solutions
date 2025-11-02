@@ -783,6 +783,8 @@ function attachChurnManualInputListeners() {
 }
 
 function attachSaaSListeners() {
+  console.log('📌 Attaching SaaS listeners...');
+  
   // ✅ Attach number formatting for INTEGER inputs
   attachNumberFormatting('saas-customers');
   attachNumberFormatting('saas-arr');
@@ -807,12 +809,23 @@ function attachSaaSListeners() {
     }
   });
   
-  // ✅ NEW: Radio button listeners for churn manual mode
-  document.querySelectorAll('input[name="saas-churn-model"]').forEach(radio => {
-    radio.addEventListener('change', handleChurnModelChange);
+  // ✅ ALL RADIO BUTTONS - General recalculate
+  document.querySelectorAll('input[type="radio"][name^="saas-"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      console.log('📻 SaaS radio changed:', radio.name, radio.value);
+      window.calculateSoftwareForecast();
+    });
   });
   
-  // ✅ NEW: Manual churn input listeners
+  // ✅ CHURN RADIO BUTTONS - Special handling for manual mode
+  document.querySelectorAll('input[name="saas-churn-model"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      console.log('🔄 Churn model changed to:', this.value);
+      handleChurnModelChange();
+    });
+  });
+  
+  // ✅ Manual churn input listeners
   attachChurnManualInputListeners();
   
   updateSaaSKPIs();
