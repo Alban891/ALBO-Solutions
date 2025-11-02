@@ -418,17 +418,20 @@ function updateSzenarioSelector(activeSzenarioId) {
         const szenarioId = btn.dataset.szenarioId;
         const isActive = szenarioId === activeSzenarioId;
         
-        btn.classList.toggle('active', isActive);
+        // Reset all buttons first
+        btn.style.background = 'white';
+        btn.style.color = '#374151';
+        btn.style.border = '2px solid #e5e7eb';
+        btn.style.fontWeight = '500';
         
         if (isActive) {
             const preset = SZENARIO_PRESETS[szenarioId];
             if (preset) {
                 btn.style.border = `2px solid ${preset.color}`;
-                btn.style.background = preset.color + '10';
+                btn.style.background = preset.color;
+                btn.style.color = 'white';
+                btn.style.fontWeight = '600';
             }
-        } else {
-            btn.style.border = '2px solid #e5e7eb';
-            btn.style.background = 'white';
         }
     });
     
@@ -437,21 +440,28 @@ function updateSzenarioSelector(activeSzenarioId) {
     if (infoBox) {
         const preset = SZENARIO_PRESETS[activeSzenarioId];
         const name = preset?.name || 'Custom Szenario';
+        const description = preset?.description || '';
         
         infoBox.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 18px;">ℹ️</span>
                 <div style="flex: 1;">
-                    <span style="font-size: 11px; color: var(--gray);">Aktiv:</span>
-                    <strong style="font-size: 12px; color: var(--primary); margin-left: 6px;">
+                    <span style="font-size: 10px; color: #64748b;">Aktiv:</span>
+                    <strong style="font-size: 12px; color: #1e40af; margin-left: 4px;">
                         ${name}
                     </strong>
+                    ${description ? `
+                        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+                            ${description}
+                        </div>
+                    ` : ''}
                 </div>
                 ${activeSzenarioId !== 'base' ? `
                     <button onclick="window.selectSzenario('base')" 
-                            style="padding: 4px 12px; font-size: 10px; background: white; 
-                                   border: 1px solid #3b82f6; border-radius: 4px; cursor: pointer;">
-                        Zurück zu Base Case
+                            style="padding: 6px 12px; font-size: 10px; background: white; 
+                                   border: 1px solid #3b82f6; border-radius: 4px; cursor: pointer;
+                                   transition: all 0.2s;">
+                        ← Zurück zu Base
                     </button>
                 ` : ''}
             </div>
