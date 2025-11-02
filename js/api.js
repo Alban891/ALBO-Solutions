@@ -607,11 +607,14 @@ export async function saveForecast(artikelId, modelType, forecastData, parameter
       updated_by: 'user'
     };
 
-    const { data, error } = await client
-      .from('ALBO_Revenue_Forecasts')
-      .insert([dataToSave])
-      .select()
-      .single();
+   const { data, error } = await client
+    .from('ALBO_Revenue_Forecasts')
+    .upsert(dataToSave, {
+      onConflict: 'artikel_id,model_type,scenario,is_active',
+      ignoreDuplicates: false
+    })
+    .select()
+    .single();
 
     if (error) throw error;
 
