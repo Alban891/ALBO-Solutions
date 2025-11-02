@@ -25,90 +25,102 @@ let customSzenarios = [];
 /**
  * Render scenario selector buttons
  * 
- * @param {string} activeSzenarioId - Currently active scenario ID
+ * @param {string} activeSzenarioId - Currently active scenario
  * @returns {string} HTML
  * 
  * @public
  */
 export function renderSzenarioSelector(activeSzenarioId = 'base') {
-    const mainPresets = ['base', 'best-organic', 'worst-conservative'];
-    
     return `
-        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; 
-                    border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="margin-bottom: 12px;">
-                <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 8px 0; color: var(--primary);">
-                    📊 Szenario-Analyse
-                </h4>
-                <div style="font-size: 11px; color: var(--gray);">
+        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
+                    padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; 
+                    border: 1px solid #bae6fd;">
+            
+            <!-- Compact Header -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 16px;">📊</span>
+                    <span style="font-size: 12px; font-weight: 600; color: #0c4a6e;">
+                        Szenario-Analyse
+                    </span>
+                </div>
+                <div style="font-size: 10px; color: #64748b;">
                     Wählen Sie ein Szenario oder erstellen Sie ein individuelles
                 </div>
             </div>
             
-            <!-- Main Scenario Buttons -->
-            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                ${mainPresets.map(presetId => {
-                    const preset = SZENARIO_PRESETS[presetId];
-                    const isActive = activeSzenarioId === presetId;
-                    
-                    return `
-                        <button 
-                            id="szenario-btn-${presetId}"
-                            class="szenario-selector-btn ${isActive ? 'active' : ''}"
-                            data-szenario-id="${presetId}"
-                            onclick="window.selectSzenario('${presetId}')"
-                            style="flex: 1; padding: 16px; border: 2px solid ${isActive ? preset.color : '#e5e7eb'};
-                                   background: ${isActive ? preset.color + '10' : 'white'};
-                                   border-radius: 8px; cursor: pointer; transition: all 0.2s;
-                                   text-align: center;">
-                            <div style="font-size: 24px; margin-bottom: 8px;">${preset.icon}</div>
-                            <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px; 
-                                        color: ${isActive ? preset.color : 'var(--text)'};">
-                                ${preset.shortName}
-                            </div>
-                            <div style="font-size: 10px; color: var(--gray); line-height: 1.3;">
-                                ${preset.description.substring(0, 60)}...
-                            </div>
-                        </button>
-                    `;
-                }).join('')}
+            <!-- Compact Buttons Row -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+                
+                <!-- Base Button -->
+                <button 
+                    class="szenario-selector-btn"
+                    data-szenario-id="base"
+                    onclick="window.selectSzenario('base')"
+                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
+                           border: 2px solid ${activeSzenarioId === 'base' ? '#3b82f6' : '#e5e7eb'}; 
+                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
+                           display: flex; align-items: center; gap: 6px; font-size: 11px;
+                           font-weight: ${activeSzenarioId === 'base' ? '600' : '500'};
+                           color: ${activeSzenarioId === 'base' ? '#1e40af' : '#64748b'};">
+                    <span style="font-size: 14px;">📊</span>
+                    <span>Base</span>
+                </button>
+                
+                <!-- Best Button -->
+                <button 
+                    class="szenario-selector-btn"
+                    data-szenario-id="best-organic"
+                    onclick="window.selectSzenario('best-organic')"
+                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
+                           border: 2px solid ${activeSzenarioId === 'best-organic' ? '#10b981' : '#e5e7eb'}; 
+                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
+                           display: flex; align-items: center; gap: 6px; font-size: 11px;
+                           font-weight: ${activeSzenarioId === 'best-organic' ? '600' : '500'};
+                           color: ${activeSzenarioId === 'best-organic' ? '#047857' : '#64748b'};">
+                    <span style="font-size: 14px;">📈</span>
+                    <span>Best</span>
+                </button>
+                
+                <!-- Worst Button -->
+                <button 
+                    class="szenario-selector-btn"
+                    data-szenario-id="worst-conservative"
+                    onclick="window.selectSzenario('worst-conservative')"
+                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
+                           border: 2px solid ${activeSzenarioId === 'worst-conservative' ? '#ef4444' : '#e5e7eb'}; 
+                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
+                           display: flex; align-items: center; gap: 6px; font-size: 11px;
+                           font-weight: ${activeSzenarioId === 'worst-conservative' ? '600' : '500'};
+                           color: ${activeSzenarioId === 'worst-conservative' ? '#dc2626' : '#64748b'};">
+                    <span style="font-size: 14px;">📉</span>
+                    <span>Worst</span>
+                </button>
                 
                 <!-- Custom Builder Button -->
                 <button 
-                    id="szenario-btn-custom"
                     class="szenario-selector-btn"
                     onclick="window.openSzenarioBuilder()"
-                    style="flex: 1; padding: 16px; border: 2px dashed #d1d5db;
-                           background: white; border-radius: 8px; cursor: pointer; 
-                           transition: all 0.2s; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 8px;">⚙️</div>
-                    <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--text);">
-                        Custom Builder
-                    </div>
-                    <div style="font-size: 10px; color: var(--gray);">
-                        Individuelle Anpassungen
-                    </div>
+                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
+                           border: 2px dashed #94a3b8; border-radius: 6px; cursor: pointer; 
+                           transition: all 0.2s; display: flex; align-items: center; gap: 6px; 
+                           font-size: 11px; font-weight: 500; color: #64748b;">
+                    <span style="font-size: 14px;">⚙️</span>
+                    <span>Custom Builder</span>
                 </button>
-            </div>
-            
-            <!-- Active Scenario Info -->
-            <div id="active-szenario-info" style="padding: 12px; background: #f0f9ff; 
-                                                   border-left: 4px solid #3b82f6; border-radius: 4px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">ℹ️</span>
+                
+                <!-- Active Scenario Info -->
+                <div id="active-szenario-info" 
+                     style="flex: 1; display: flex; align-items: center; gap: 8px; 
+                            padding: 6px 12px; background: white; border-radius: 6px; 
+                            border: 1px solid #e5e7eb; margin-left: 8px;">
+                    <span style="font-size: 14px;">ℹ️</span>
                     <div style="flex: 1;">
-                        <span style="font-size: 11px; color: var(--gray);">Aktiv:</span>
-                        <strong style="font-size: 12px; color: var(--primary); margin-left: 6px;">
-                            ${SZENARIO_PRESETS[activeSzenarioId]?.name || 'Custom Szenario'}
+                        <span style="font-size: 10px; color: #64748b;">Aktiv:</span>
+                        <strong style="font-size: 11px; color: #1e40af; margin-left: 4px;">
+                            ${SZENARIO_PRESETS[activeSzenarioId]?.name || 'Base Case'}
                         </strong>
                     </div>
-                    ${activeSzenarioId !== 'base' ? `
-                        <button onclick="window.selectSzenario('base')" 
-                                style="padding: 4px 12px; font-size: 10px; background: white; 
-                                       border: 1px solid #3b82f6; border-radius: 4px; cursor: pointer;">
-                            Zurück zu Base Case
-                        </button>
-                    ` : ''}
                 </div>
             </div>
         </div>
