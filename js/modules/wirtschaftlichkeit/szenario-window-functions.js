@@ -401,6 +401,9 @@ function updateWirtschaftlichkeitWithSzenario(result) {
     // Store result temporarily
     window.currentSzenarioResult = result;
     
+    // WICHTIG: Speichere auch die aktive Szenario-ID
+    window.currentActiveSzenarioId = activeSzenarioId;
+    
     // Re-render wirtschaftlichkeit tab with new data
     renderProjektWirtschaftlichkeit();
 }
