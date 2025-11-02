@@ -176,11 +176,19 @@ export function renderSzenarioBuilder(initialConfig = null) {
     return `
         <div id="szenario-builder-modal" class="modal" style="display: flex;">
             <div class="modal-overlay" onclick="window.closeSzenarioBuilder()"></div>
-            <div class="modal-content" style="width: 900px; max-width: 95vw; max-height: 90vh; overflow-y: auto;">
+            
+           <!-- ✅ Modal Container - KEIN Scroll hier -->
+            <div class="modal-content" style="position: relative; width: 90%; max-width: 900px; 
+                                  max-height: 90vh; background: white; 
+                                  border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                                  z-index: 10000;
+                                  display: flex; flex-direction: column;
+                                  overflow: hidden;">
                 
-                <!-- Header -->
+                <!-- Header (Sticky) -->
                 <div style="position: sticky; top: 0; background: white; z-index: 10; 
-                            padding: 20px; border-bottom: 2px solid var(--border);">
+                            padding: 20px; border-bottom: 2px solid var(--border);
+                            flex-shrink: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--primary);">
@@ -198,8 +206,8 @@ export function renderSzenarioBuilder(initialConfig = null) {
                     </div>
                 </div>
                 
-                <!-- Content -->
-                <div style="padding: 20px;">
+                <!-- ✅ Content (Scrollable!) -->
+                <div style="flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px;">
                     
                     <!-- Scenario Name -->
                     <div style="margin-bottom: 24px;">
@@ -223,9 +231,10 @@ export function renderSzenarioBuilder(initialConfig = null) {
                     
                 </div>
                 
-                <!-- Footer -->
+                <!-- Footer (Sticky) -->
                 <div style="position: sticky; bottom: 0; background: white; z-index: 10; 
-                            padding: 20px; border-top: 2px solid var(--border);">
+                            padding: 20px; border-top: 2px solid var(--border);
+                            flex-shrink: 0;">
                     <div style="display: flex; gap: 12px; justify-content: flex-end;">
                         <button onclick="window.resetSzenarioBuilder()" 
                                 class="btn btn-secondary"
