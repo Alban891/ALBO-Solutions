@@ -18,11 +18,7 @@ import {
     renderSzenarioComparison,
     getSzenarioFromBuilder 
 } from './szenario-ui.js';
-import { 
-    applySzenario, 
-    calculateSensitivity,
-    compareScenarios 
-} from './szenario-calculator.js';
+import * as szenarioCalculator from './szenario-calculator.js';
 import { 
     SZENARIO_PRESETS,
     SZENARIO_TEMPLATE,
@@ -92,7 +88,7 @@ window.selectSzenario = async function(szenarioId) {
             }
             
             console.log('⚙️ Applying scenario:', preset.name);
-            result = applySzenario(baseCalculationResult, preset.config);
+            result = szenarioCalculator.applySzenario(baseCalculationResult, preset.config);
         }
         
         // Update UI
@@ -165,7 +161,7 @@ window.applySzenarioFromBuilder = async function() {
         console.log('⚙️ Custom config:', customConfig);
         
         // Apply scenario
-        const result = applySzenario(baseCalculationResult, customConfig);
+        const result = szenarioCalculator.applySzenario(baseCalculationResult, customConfig);
         
         // Update UI
         updateWirtschaftlichkeitWithSzenario(result);
@@ -319,7 +315,7 @@ window.showSensitivityAnalysis = async function() {
     
     try {
         const baseConfig = SZENARIO_PRESETS['base'].config;
-        const sensitivityData = calculateSensitivity(
+        const sensitivityData = szenarioCalculator.calculateSensitivity(
             baseCalculationResult, 
             baseConfig, 
             SENSITIVITY_PARAMS
@@ -363,7 +359,7 @@ window.showSzenarioComparison = async function() {
             SZENARIO_PRESETS['worst-conservative']
         ];
         
-        const comparisonData = compareScenarios(baseCalculationResult, scenarios);
+        const comparisonData = szenarioCalculator.compareScenarios(baseCalculationResult, scenarios);
         
         console.log('✅ Comparison data:', comparisonData);
         
