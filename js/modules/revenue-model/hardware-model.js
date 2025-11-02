@@ -30,10 +30,21 @@ if (savedForecast && savedForecast.parameters) {
   console.log('✅ Lade gespeicherte Parameter:', savedForecast.parameters);
   data = savedForecast.parameters;
   
-  // Auch Forecast-Daten wiederherstellen
+  // ✅ NEU: Prüfe ob forecast_data die richtige Struktur hat
   if (savedForecast.forecast_data) {
-    data.forecast = savedForecast.forecast_data;
-    data.calculated = true;
+    console.log('🔍 forecast_data =', savedForecast.forecast_data);
+    
+    // Prüfe ob years-Array existiert
+    if (savedForecast.forecast_data.years && 
+        Array.isArray(savedForecast.forecast_data.years) &&
+        savedForecast.forecast_data.years.length > 0) {
+      
+      data.forecast = savedForecast.forecast_data;
+      data.calculated = true;
+      console.log('✅ Forecast-Daten wiederhergestellt');
+    } else {
+      console.warn('⚠️ forecast_data hat keine years-Array:', savedForecast.forecast_data);
+    }
   }
 } else {
   // ❌ Keine gespeicherten Daten → Defaults
