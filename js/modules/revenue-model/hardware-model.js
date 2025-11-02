@@ -263,7 +263,29 @@ window._currentArtikel = artikel;
 // ✅ NEU: Wenn Forecast vorhanden, automatisch rendern
 if (data.forecast && data.calculated) {
   console.log('🔄 Restore gespeicherten Forecast');
-  renderForecastTable(data.forecast, 'forecast-table-container');
+  
+  // ✅ FIX: Erstelle vollständiges Forecast-Objekt mit allen benötigten Feldern
+  const forecastWithMetadata = {
+    // Daten aus DB (Arrays)
+    years: data.forecast.years || [],
+    revenue: data.forecast.revenue || [],
+    totalCost: data.forecast.totalCost || [],
+    db2: data.forecast.db2 || [],
+    db2Margin: data.forecast.db2Margin || [],
+    volume: data.forecast.volume || [],
+    price: data.forecast.price || [],
+    cost: data.forecast.cost || [],
+    
+    // Metadaten aus Parameters (für Tabellen-Header)
+    name: artikel.name || 'Hardware',
+    type: 'hardware',
+    volume_model: data.volume_model || 'konstant',
+    price_model: data.price_model || 'konstant',
+    cost_model: data.cost_model || 'konstant'
+  };
+  
+  console.log('📦 Complete forecast object:', forecastWithMetadata);
+  renderForecastTable(forecastWithMetadata, 'forecast-table-container');
 } else {
   autoCalculateForecast();
 }
