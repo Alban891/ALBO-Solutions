@@ -92,22 +92,25 @@ function initRevenueModel() {
     // Render Dropdown mit Artikel-Liste
     renderArtikelDropdown(artikel, 'artikel-dropdown-container');
 
-    // ✅ NEU: Auto-restore letzten Artikel beim Tab-Switch
-if (window._lastSelectedArtikelId) {
-    const lastArtikel = state.getArtikel(window._lastSelectedArtikelId);
+    // ✅ NEU: Auto-restore letzten Artikel (auch nach Refresh!)
+const lastArtikelId = localStorage.getItem('lastSelectedArtikelId');
+const lastProjektId = localStorage.getItem('lastSelectedProjektId');
+
+if (lastArtikelId && lastProjektId === projektId) {
+    const lastArtikel = state.getArtikel(lastArtikelId);
     if (lastArtikel) {
-        console.log('🔄 Restore letzten Artikel:', lastArtikel.name);
+        console.log('🔄 Auto-Restore letzten Artikel:', lastArtikel.name);
         
-        // Set dropdown value
-        setTimeout(() => {
+        setTimeout(async () => {
+            // Setze Dropdown-Wert
             const dropdown = document.getElementById('artikel-dropdown');
             if (dropdown) {
                 dropdown.value = lastArtikel.id;
             }
             
-            // Auto-load model
-            renderRevenueModel(lastArtikel, 'detail-container');
-        }, 100);
+            // Lade Revenue Model automatisch
+            await renderRevenueModel(lastArtikel, 'detail-container');
+        }, 200);
     }
 }
 
@@ -116,6 +119,7 @@ if (window._lastSelectedArtikelId) {
     // ============================================
 
     window.onLoadRevenueModel = async function(artikelList, isMulti) {
+        const projektId = window.cfoDashboard?.currentProjekt; // ✅ NEU
     console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
     
     if (isMulti) {
@@ -137,10 +141,12 @@ if (window._lastSelectedArtikelId) {
             package: !!artikel.package_model_data
         });
 
-        // ✅ Speichere für Auto-Restore beim Tab-Switch
+       // ✅ Speichere für Auto-Restore (auch nach Refresh!)
         window._lastSelectedArtikelId = artikel.id;
+        localStorage.setItem('lastSelectedArtikelId', artikel.id);
+        localStorage.setItem('lastSelectedProjektId', projektId);
 
-            await renderRevenueModel(artikel, 'detail-container');
+        await renderRevenueModel(artikel, 'detail-container');
         } else {
             console.error('❌ Artikel nicht im State gefunden:', artikelList[0].id);
         }
