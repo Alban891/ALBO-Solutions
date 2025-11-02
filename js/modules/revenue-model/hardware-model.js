@@ -26,11 +26,13 @@ const savedForecast = await loadForecastFromDB(artikel.id);
 let data;
 
 if (savedForecast && savedForecast.parameters) {
-  // ✅ Gespeicherte Daten gefunden
   console.log('✅ Lade gespeicherte Parameter:', savedForecast.parameters);
-  console.log('🔍 Komplettes savedForecast Objekt:', savedForecast);  // ← NEU: Zeige ALLES
   
-  data = savedForecast.parameters;
+  // ✅ FIX: Merge mit Defaults
+  data = {
+    ...initializeHardwareData(artikel),  // ← Defaults
+    ...savedForecast.parameters          // ← Überschreibe mit gespeicherten Werten
+  };
   
 // ✅ NEU: Prüfe ob forecast_data die richtige Struktur hat
 if (savedForecast.forecast_data) {
