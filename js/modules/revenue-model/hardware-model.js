@@ -11,7 +11,7 @@ import * as api from '../../api.js';
 // MAIN RENDER FUNCTION
 // ==========================================
 
-export function renderHardwareModel(artikel, containerId) {
+export async function renderHardwareModel(artikel, containerId) {
   const container = document.getElementById(containerId);
   if (!container) {
     console.error('❌ Container not found:', containerId);
@@ -20,12 +20,33 @@ export function renderHardwareModel(artikel, containerId) {
   
   console.log('📦 Rendering Hardware Model (Compact) for:', artikel.name);
   
-  // Initialize data
+// ✅ NEU: Versuche Forecast aus DB zu laden
+const savedForecast = await loadForecastFromDB(artikel.id);
+
+let data;
+
+if (savedForecast && savedForecast.parameters) {
+  // ✅ Gespeicherte Daten gefunden
+  console.log('✅ Lade gespeicherte Parameter:', savedForecast.parameters);
+  data = savedForecast.parameters;
+  
+  // Auch Forecast-Daten wiederherstellen
+  if (savedForecast.forecast_data) {
+    data.forecast = savedForecast.forecast_data;
+    data.calculated = true;
+  }
+} else {
+  // ❌ Keine gespeicherten Daten → Defaults
+  console.log('ℹ️ Keine gespeicherten Daten, verwende Defaults');
+  
   if (!artikel.hardware_model_data) {
     artikel.hardware_model_data = initializeHardwareData(artikel);
   }
-  
-  const data = artikel.hardware_model_data;
+  data = artikel.hardware_model_data;
+}
+
+// Speichere in Artikel
+artikel.hardware_model_data = data;
   
   container.innerHTML = `
     <div class="hardware-model-compact">
@@ -219,11 +240,46 @@ export function renderHardwareModel(artikel, containerId) {
   // Attach event listeners
   attachHardwareEventListeners(artikel);
   
-  // Store artikel reference
-  window._currentArtikel = artikel;
-  
-  // AUTO-CALCULATE: Render initial forecast
+// Store artikel reference
+window._currentArtikel = artikel;
+
+// ✅ NEU: Wenn Forecast vorhanden, automatisch rendern
+if (data.forecast && data.calculated) {
+  console.log('🔄 Restore gespeicherten Forecast');
+  renderForecastTable(data.forecast, 'forecast-table-container');
+} else {
   autoCalculateForecast();
+}
+}
+
+// ==========================================
+// ✅ LOAD FORECAST FROM DB
+// ==========================================
+
+/**
+ * Load forecast from database
+ * @param {string} artikelId - Artikel ID
+ * @returns {Promise<object|null>} Forecast data or null
+ */
+async function loadForecastFromDB(artikelId) {
+  try {
+    console.log('📥 Loading forecast from DB for:', artikelId);
+    
+    // Call API function
+    const forecast = await api.loadForecast(artikelId, 'hardware', 'base');
+    
+    if (!forecast) {
+      console.log('ℹ️ No saved forecast found in DB');
+      return null;
+    }
+    
+    console.log('✅ Forecast loaded from DB');
+    return forecast;
+    
+  } catch (error) {
+    console.error('❌ Failed to load forecast from DB:', error);
+    return null;
+  }
 }
 
 // ==========================================
