@@ -653,14 +653,24 @@ function attachSoftwareEventListeners(artikel, showToggle = true) {
     });
   }
   
-  // Attach input listeners based on mode
-  const mode = artikel.software_model_data.license_mode;
+// Attach input listeners based on mode
+const mode = artikel.software_model_data.license_mode;
+
+if (mode === 'perpetual') {
+  attachPerpetualListeners();
   
-  if (mode === 'perpetual') {
-    attachPerpetualListeners();
-  } else {
-    attachSaaSListeners();
-  }
+  // ✅ RADIO BUTTON LISTENERS FOR PERPETUAL MODE
+  document.querySelectorAll('input[type="radio"][name="volume-model"], input[type="radio"][name="price-model"], input[type="radio"][name="cost-model"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      console.log('📻 Perpetual radio changed:', radio.name, radio.value);
+      window.calculateSoftwareForecast();
+    });
+  });
+  
+} else {
+  attachSaaSListeners();
+}
+
   
   // ✅ SAVE BUTTON EVENT LISTENER
   const saveButton = document.getElementById('btn-save-software-forecast');
