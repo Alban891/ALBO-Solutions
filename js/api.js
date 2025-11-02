@@ -573,52 +573,41 @@ export async function saveForecast(artikelId, modelType, forecastData, parameter
   if (!client) return null;
 
   try {
-    console.log(`💾 Saving ${modelType} forecast for artikel ${artikelId}`);
-
     const dbId = artikelId.replace('artikel-db-', '');
 
-    const validModelTypes = ['hardware', 'software', 'service', 'package'];
-    if (!validModelTypes.includes(modelType)) {
-      throw new Error(`Invalid model type: ${modelType}. Must be one of: ${validModelTypes.join(', ')}`);
+    // SCHRITT 1: Deaktiviere alte Forecasts für diesen Artikel + Model
+    const { error: deactivateError } = await client
+      .from('ALBO_Revenue_Forecasts')
+      .update({ is_active: false })
+      .eq('artikel_id', dbId)
+      .eq('model_type', modelType)
+      .eq('scenario', scenario)
+      .eq('is_active', true);
+
+    if (deactivateError) {
+      console.warn('⚠️ Deactivate warning:', deactivateError);
     }
 
-    if (!forecastData.years || !Array.isArray(forecastData.years)) {
-      throw new Error('forecast_data.years must be an array');
-    }
-    if (!forecastData.revenue || !Array.isArray(forecastData.revenue)) {
-      throw new Error('forecast_data.revenue must be an array');
-    }
-
+    // SCHRITT 2: Erstelle neuen aktiven Forecast
     const dataToSave = {
       artikel_id: dbId,
       model_type: modelType,
       scenario: scenario,
-      forecast_data: {
-        years: forecastData.years,
-        revenue: forecastData.revenue,
-        totalCost: forecastData.totalCost || [],
-        db2: forecastData.db2 || [],
-        db2Margin: forecastData.db2Margin || []
-      },
-      parameters: parameters || {},
+      forecast_data: forecastData,
+      parameters: parameters,
       is_active: true,
-      notes: notes || null,
-      created_by: 'user',
-      updated_by: 'user'
+      notes: notes || null
     };
 
-  const { data, error } = await client
-    .from('ALBO_Revenue_Forecasts')
-    .upsert(dataToSave, {
-      onConflict: 'artikel_id,model_type,scenario',
-      ignoreDuplicates: false
-    })
-    .select()
-    .single();
+    const { data, error } = await client
+      .from('ALBO_Revenue_Forecasts')
+      .insert([dataToSave])
+      .select()
+      .single();
 
     if (error) throw error;
 
-    console.log('✅ Forecast saved successfully:', data.id);
+    console.log('✅ Forecast saved:', data.id);
     return data;
 
   } catch (error) {
