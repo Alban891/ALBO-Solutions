@@ -32,22 +32,26 @@ if (savedForecast && savedForecast.parameters) {
   
   data = savedForecast.parameters;
   
-  // ✅ NEU: Prüfe ob forecast_data die richtige Struktur hat
-  if (savedForecast.forecast_data) {
-    console.log('🔍 forecast_data =', savedForecast.forecast_data);
+// ✅ NEU: Prüfe ob forecast_data die richtige Struktur hat
+if (savedForecast.forecast_data) {
+  console.log('🔍 forecast_data =', savedForecast.forecast_data);
+  console.log('🔍 forecast_data.years =', savedForecast.forecast_data.years);
+  console.log('🔍 forecast_data.revenue =', savedForecast.forecast_data.revenue);
+  
+  // Prüfe ob years-Array existiert
+  if (savedForecast.forecast_data.years && 
+      Array.isArray(savedForecast.forecast_data.years) &&
+      savedForecast.forecast_data.years.length > 0) {
     
-    // Prüfe ob years-Array existiert
-    if (savedForecast.forecast_data.years && 
-        Array.isArray(savedForecast.forecast_data.years) &&
-        savedForecast.forecast_data.years.length > 0) {
-      
-      data.forecast = savedForecast.forecast_data;
-      data.calculated = true;
-      console.log('✅ Forecast-Daten wiederhergestellt');
-    } else {
-      console.warn('⚠️ forecast_data hat keine years-Array:', savedForecast.forecast_data);
-    }
+    data.forecast = savedForecast.forecast_data;
+    data.calculated = true;
+    console.log('✅ Forecast-Daten wiederhergestellt');
+  } else {
+    console.warn('⚠️ forecast_data hat keine years-Array:', savedForecast.forecast_data);
+    console.warn('🔍 Type of forecast_data:', typeof savedForecast.forecast_data);
+    console.warn('🔍 Keys in forecast_data:', Object.keys(savedForecast.forecast_data));
   }
+}
 } else {
   // ❌ Keine gespeicherten Daten → Defaults
   console.log('ℹ️ Keine gespeicherten Daten, verwende Defaults');
