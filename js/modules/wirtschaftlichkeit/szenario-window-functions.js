@@ -18,16 +18,15 @@ import {
     renderSzenarioComparison,
     getSzenarioFromBuilder 
 } from './szenario-ui.js';
-import { 
-    applySzenario, 
-    calculateSensitivity,
-    compareScenarios 
-} from './szenario-calculator.js';
+import szenarioCalculatorModule from './szenario-calculator.js';
 import { 
     SZENARIO_PRESETS,
     SZENARIO_TEMPLATE,
     SENSITIVITY_PARAMS 
 } from './szenario-constants.js';
+
+// Destructure functions from module
+const { applySzenario, calculateSensitivity, compareScenarios } = szenarioCalculatorModule;
 
 // Global state
 let activeSzenarioId = 'base';
@@ -403,10 +402,6 @@ function updateWirtschaftlichkeitWithSzenario(result) {
     window.currentSzenarioResult = result;
     
     // Re-render wirtschaftlichkeit tab with new data
-    // This would call the existing renderProjektWirtschaftlichkeit
-    // but pass the scenario result instead of recalculating
-    
-    // For now, just trigger a re-render
     renderProjektWirtschaftlichkeit();
 }
 
