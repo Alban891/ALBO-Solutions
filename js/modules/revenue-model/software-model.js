@@ -1075,13 +1075,20 @@ function calculatePerpetualForecast(artikel) {
    // Total revenue (no maintenance in single mode)
     const totalRevenue = licenseRevenue;
     
-   // Costs - based on COGS mode
-    let licenseCost;
-    if (data.cogs_mode === 'percent') {
-    licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
-    } else {
-    licenseCost = newLicenses * data.license_cogs_absolute;
-    }
+// Costs - based on COGS mode
+let licenseCost;
+let costPerUnit;
+
+if (data.cogs_mode === 'percent') {
+  // Percent mode: COGS als % vom Revenue
+  licenseCost = licenseRevenue * (data.license_cogs_percent / 100);
+  costPerUnit = licenseCost / newLicenses;
+} else {
+  // Absolute mode: Use calculated unit cost (with cost model applied)
+  const unitCost = calculateCost(data.license_cogs_absolute, data.cost_model, i);
+  costPerUnit = unitCost;
+  licenseCost = newLicenses * unitCost;
+}
 
     const totalCost = licenseCost;
     
@@ -1091,7 +1098,7 @@ function calculatePerpetualForecast(artikel) {
     
     forecast.volume.push(newLicenses);
     forecast.price.push(licensePrice);
-    forecast.cost.push(licenseCost / newLicenses);  // ← COGS pro Einheit
+    forecast.cost.push(costPerUnit);  // ← NEUE Zeile
     forecast.revenue.push(totalRevenue);
     forecast.totalCost.push(totalCost);
     forecast.db2.push(db2);
