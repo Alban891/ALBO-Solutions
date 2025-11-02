@@ -607,10 +607,10 @@ export async function saveForecast(artikelId, modelType, forecastData, parameter
       updated_by: 'user'
     };
 
-   const { data, error } = await client
+  const { data, error } = await client
     .from('ALBO_Revenue_Forecasts')
     .upsert(dataToSave, {
-      onConflict: 'artikel_id,model_type,scenario,is_active',
+      onConflict: 'artikel_id,model_type,scenario',
       ignoreDuplicates: false
     })
     .select()
