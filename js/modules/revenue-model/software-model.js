@@ -20,16 +20,39 @@ export async function renderSoftwareModel(artikel, containerId) {
   
   console.log('💿 Rendering Software Model (Compact) for:', artikel.name);
   
-  // Initialize data
-  if (!artikel.software_model_data) {
-    artikel.software_model_data = initializeSoftwareData(artikel);
+  let data;
+
+  // ✅ PRÜFE ERST: Sind Daten bereits im Artikel-Objekt?
+  if (artikel.software_model_data && artikel.software_model_data.calculated) {
+    console.log('✅ Verwende bereits geladene Software-Daten aus Speicher');
+    data = artikel.software_model_data;
+  } else {
+    // ✅ Lade Forecast aus DB
+    console.log('📥 Lade Software Forecast aus DB...');
+    const savedForecast = await loadSoftwareForecastFromDB(artikel.id);
+    
+    if (savedForecast && savedForecast.parameters) {
+      console.log('✅ Lade gespeicherte Parameter:', savedForecast.parameters);
+      
+      data = {
+        ...initializeSoftwareData(artikel),
+        ...savedForecast.parameters
+      };
+      
+      // ✅ Lade auch forecast_data
+      if (savedForecast.forecast_data && savedForecast.forecast_data.years) {
+        data.forecast = savedForecast.forecast_data;
+        data.calculated = true;
+        console.log('✅ Software Forecast-Daten wiederhergestellt');
+      }
+    } else {
+      console.log('ℹ️ Keine gespeicherten Software-Daten, verwende Defaults');
+      data = initializeSoftwareData(artikel);
+    }
   }
   
-  // ✅ LOAD SAVED DATA FROM DATABASE
-await loadSavedForecast(artikel);
-
-// ✅ Determine which modes to show
-const data = artikel.software_model_data;
+  // Speichere in Artikel
+  artikel.software_model_data = data;
 
 // Check revenue streams
 const revenueStreams = artikel.revenue_streams || [];
@@ -177,9 +200,33 @@ container.innerHTML = `
   // Store artikel reference
   window._currentArtikel = artikel;
   
-  // AUTO-CALCULATE
+ // AUTO-CALCULATE
   autoCalculateForecast();
-}
+  
+  // ✅ NEU: Wenn Forecast vorhanden, automatisch rendern
+  if (data.forecast && data.calculated) {
+    console.log('🔄 Restore gespeicherten Software Forecast');
+    
+    const forecastWithMetadata = {
+      years: data.forecast.years || [],
+      revenue: data.forecast.revenue || [],
+      totalCost: data.forecast.totalCost || [],
+      db2: data.forecast.db2 || [],
+      db2Margin: data.forecast.db2Margin || [],
+      volume: data.forecast.volume || [],
+      price: data.forecast.price || [],
+      cost: data.forecast.cost || [],
+      name: artikel.name || 'Software',
+      type: 'software',
+      volume_model: data.volume_model || 'konstant',
+      price_model: data.price_model || 'konstant',
+      cost_model: data.cost_model || 'konstant'
+    };
+    
+    renderForecastTable(forecastWithMetadata, 'forecast-table-container');
+  }
+}  // ← Hier endet renderSoftwareModel
+
 
 // ==========================================
 // MODE CONTENT RENDERING
@@ -572,26 +619,23 @@ function initializeSoftwareData(artikel) {
 // LOAD SAVED DATA
 // ==========================================
 
-async function loadSavedForecast(artikel) {
+async function loadSoftwareForecastFromDB(artikelId) {
   try {
-    console.log('📥 Loading saved software forecast for:', artikel.id);
+    console.log('📥 Loading forecast from DB for:', artikelId);
     
-    const savedForecast = await api.loadForecast(artikel.id, 'software', 'base');
+    const forecast = await api.loadForecast(artikelId, 'software', 'base');
     
-    if (savedForecast && savedForecast.parameters) {
-      console.log('✅ Found saved forecast, applying parameters...');
-      
-      // Apply saved parameters to artikel.software_model_data
-      Object.assign(artikel.software_model_data, savedForecast.parameters);
-      
-      return true;
-    } else {
-      console.log('ℹ️ No saved forecast found, using defaults');
-      return false;
+    if (!forecast) {
+      console.log('ℹ️ No saved forecast found in DB');
+      return null;
     }
+    
+    console.log('✅ Forecast loaded from DB');
+    return forecast;
+    
   } catch (error) {
-    console.error('❌ Error loading forecast:', error);
-    return false;
+    console.error('❌ Failed to load forecast from DB:', error);
+    return null;
   }
 }
 
@@ -604,6 +648,7 @@ function autoCalculateForecast() {
     window.calculateSoftwareForecast();
   }, 100);
 }
+
 
 // ==========================================
 // EVENT LISTENERS
