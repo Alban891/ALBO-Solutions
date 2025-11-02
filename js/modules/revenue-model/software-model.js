@@ -200,32 +200,32 @@ container.innerHTML = `
   // Store artikel reference
   window._currentArtikel = artikel;
   
- // AUTO-CALCULATE
+  // AUTO-CALCULATE
   autoCalculateForecast();
   
   // ✅ NEU: Wenn Forecast vorhanden, automatisch rendern
-  if (data.forecast && data.calculated) {
+  if (artikel.software_model_data.forecast && artikel.software_model_data.calculated) {
     console.log('🔄 Restore gespeicherten Software Forecast');
     
     const forecastWithMetadata = {
-      years: data.forecast.years || [],
-      revenue: data.forecast.revenue || [],
-      totalCost: data.forecast.totalCost || [],
-      db2: data.forecast.db2 || [],
-      db2Margin: data.forecast.db2Margin || [],
-      volume: data.forecast.volume || [],
-      price: data.forecast.price || [],
-      cost: data.forecast.cost || [],
+      years: artikel.software_model_data.forecast.years || [],
+      revenue: artikel.software_model_data.forecast.revenue || [],
+      totalCost: artikel.software_model_data.forecast.totalCost || [],
+      db2: artikel.software_model_data.forecast.db2 || [],
+      db2Margin: artikel.software_model_data.forecast.db2Margin || [],
+      volume: artikel.software_model_data.forecast.volume || [],
+      price: artikel.software_model_data.forecast.price || [],
+      cost: artikel.software_model_data.forecast.cost || [],
       name: artikel.name || 'Software',
       type: 'software',
-      volume_model: data.volume_model || 'konstant',
-      price_model: data.price_model || 'konstant',
-      cost_model: data.cost_model || 'konstant'
+      volume_model: artikel.software_model_data.volume_model || 'konstant',
+      price_model: artikel.software_model_data.price_model || 'konstant',
+      cost_model: artikel.software_model_data.cost_model || 'konstant'
     };
     
     renderForecastTable(forecastWithMetadata, 'forecast-table-container');
   }
-}  // ← Hier endet renderSoftwareModel
+}  // ← Schließt renderSoftwareModel
 
 
 // ==========================================
