@@ -92,27 +92,59 @@ function initRevenueModel() {
     // Render Dropdown mit Artikel-Liste
     renderArtikelDropdown(artikel, 'artikel-dropdown-container');
 
+    // ✅ NEU: Auto-restore letzten Artikel beim Tab-Switch
+if (window._lastSelectedArtikelId) {
+    const lastArtikel = state.getArtikel(window._lastSelectedArtikelId);
+    if (lastArtikel) {
+        console.log('🔄 Restore letzten Artikel:', lastArtikel.name);
+        
+        // Set dropdown value
+        setTimeout(() => {
+            const dropdown = document.getElementById('artikel-dropdown');
+            if (dropdown) {
+                dropdown.value = lastArtikel.id;
+            }
+            
+            // Auto-load model
+            renderRevenueModel(lastArtikel, 'detail-container');
+        }, 100);
+    }
+}
+
     // ============================================
     // DROPDOWN CALLBACK
     // ============================================
 
-    window.onLoadRevenueModel = async function(artikelList, isMulti) {  // ← async hinzugefügt
-        console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
+    window.onLoadRevenueModel = async function(artikelList, isMulti) {
+    console.log('📊 Dropdown Callback:', isMulti ? 'Multi-Mode' : 'Single-Mode', artikelList);
+    
+    if (isMulti) {
+        // Multi-Artikel Planung
+        const artikelIds = artikelList.map(a => a.id);
+        renderMultiArtikelPlanning(artikelIds, 'detail-container');
+    } else {
+        // ✅ FIX: Hole vollständiges Artikel-Objekt aus STATE
+        const state = window.state || window.projektState;
+        const artikel = state ? state.getArtikel(artikelList[0].id) : null;
         
-        if (isMulti) {
-            // Multi-Artikel Planung
-            const artikelIds = artikelList.map(a => a.id);
-            renderMultiArtikelPlanning(artikelIds, 'detail-container');
+        if (artikel) {
+            console.log('✅ Verwende Artikel aus State:', {
+            name: artikel.name,
+            typ: artikel.typ,
+            hardware: !!artikel.hardware_model_data,
+            software: !!artikel.software_model_data,
+            service: !!artikel.service_model_data,
+            package: !!artikel.package_model_data
+        });
+
+        // ✅ Speichere für Auto-Restore beim Tab-Switch
+        window._lastSelectedArtikelId = artikel.id;
+
+            await renderRevenueModel(artikel, 'detail-container');
         } else {
-            // Single-Artikel View
-            const artikel = window.revenueModelArtikel.find(a => a.id === artikelList[0].id);
-            if (artikel) {
-                await renderRevenueModel(artikel, 'detail-container');  // ← await hinzugefügt
-            }
+            console.error('❌ Artikel nicht im State gefunden:', artikelList[0].id);
         }
-        
-        // WICHTIG: Forecast-Tabelle bleibt unten sichtbar!
-        // Sie wird von den einzelnen Models befüllt via 'forecast-table-container'
+    }
     };
     
 }  // ← Schließt initRevenueModel()
