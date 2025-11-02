@@ -89,7 +89,7 @@ try {
         container.innerHTML = `
             <div style="padding: 20px;">
                 ${renderHeader(projekt, allArtikelListe)}
-                ${renderSzenarioSelector('base')}
+                ${renderSzenarioSelector(window.currentActiveSzenarioId || 'base')}
                 ${renderArtikelOverview(allArtikelListe)}
                 ${renderContributionMarginTable(result)}
                 ${renderKPIDashboard(result, result.kpis, allArtikelListe[0]?.typ)}
