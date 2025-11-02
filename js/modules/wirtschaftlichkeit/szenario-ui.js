@@ -31,6 +31,8 @@ let customSzenarios = [];
  * @public
  */
 export function renderSzenarioSelector(activeSzenarioId = 'base') {
+    const activePreset = SZENARIO_PRESETS[activeSzenarioId];
+    
     return `
         <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
                     padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; 
@@ -118,11 +120,44 @@ export function renderSzenarioSelector(activeSzenarioId = 'base') {
                     <div style="flex: 1;">
                         <span style="font-size: 10px; color: #64748b;">Aktiv:</span>
                         <strong style="font-size: 11px; color: #1e40af; margin-left: 4px;">
-                            ${SZENARIO_PRESETS[activeSzenarioId]?.name || 'Base Case'}
+                            ${activePreset?.name || 'Base Case'}
                         </strong>
                     </div>
                 </div>
             </div>
+            
+            <!-- ✨ NEU: Change Indicator (nur wenn nicht Base) -->
+            ${activeSzenarioId !== 'base' ? `
+                <div style="margin-top: 12px; padding: 10px 12px; background: white; 
+                            border-radius: 6px; border-left: 4px solid ${activePreset.color};">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
+                                📈 REVENUE
+                            </div>
+                            <div style="font-size: 14px; font-weight: 600; color: ${activePreset.config.revenue.adjustment > 0 ? '#10b981' : '#ef4444'};">
+                                ${activePreset.config.revenue.adjustment > 0 ? '+' : ''}${(activePreset.config.revenue.adjustment * 100).toFixed(0)}%
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
+                                💰 MATERIAL COSTS
+                            </div>
+                            <div style="font-size: 14px; font-weight: 600; color: #64748b;">
+                                ${activePreset.config.material_costs.mode === 'auto' ? '🤖 Auto (folgt Revenue)' : 'Fixed'}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
+                                🏭 DEVELOPMENT OH
+                            </div>
+                            <div style="font-size: 14px; font-weight: 600; color: #64748b;">
+                                ${activePreset.config.development_overhead.mode === 'fixed' ? '💡 Fixed' : 'Variable'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
         </div>
     `;
 }
