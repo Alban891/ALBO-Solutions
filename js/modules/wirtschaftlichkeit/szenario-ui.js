@@ -31,133 +31,51 @@ let customSzenarios = [];
  * @public
  */
 export function renderSzenarioSelector(activeSzenarioId = 'base') {
-    const activePreset = SZENARIO_PRESETS[activeSzenarioId];
-    
     return `
-        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); 
-                    padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; 
-                    border: 1px solid #bae6fd;">
-            
-            <!-- Compact Header -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 16px;">📊</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #0c4a6e;">
-                        Szenario-Analyse
-                    </span>
+        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 16px; 
+                    border-radius: 8px; margin-bottom: 12px; border: 1px solid #dbeafe;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-size: 11px; font-weight: 600; color: var(--primary);">📊 Szenario:</span>
+                    
+                    <button id="szenario-base" class="szenario-btn ${activeSzenarioId === 'base' ? 'active' : ''}"
+                            style="padding: 6px 12px; background: ${activeSzenarioId === 'base' ? '#1e3a8a' : 'white'}; 
+                                   color: ${activeSzenarioId === 'base' ? 'white' : '#374151'}; 
+                                   border: 1px solid ${activeSzenarioId === 'base' ? '#1e3a8a' : '#e5e7eb'};
+                                   border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                        Base Case
+                    </button>
+                    
+                    <button id="szenario-best" class="szenario-btn ${activeSzenarioId === 'best' ? 'active' : ''}"
+                            style="padding: 6px 12px; background: ${activeSzenarioId === 'best' ? '#059669' : 'white'}; 
+                                   color: ${activeSzenarioId === 'best' ? 'white' : '#374151'}; 
+                                   border: 1px solid ${activeSzenarioId === 'best' ? '#059669' : '#e5e7eb'};
+                                   border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                        ✓ Best
+                    </button>
+                    
+                    <button id="szenario-worst" class="szenario-btn ${activeSzenarioId === 'worst' ? 'active' : ''}"
+                            style="padding: 6px 12px; background: ${activeSzenarioId === 'worst' ? '#dc2626' : 'white'}; 
+                                   color: ${activeSzenarioId === 'worst' ? 'white' : '#374151'}; 
+                                   border: 1px solid ${activeSzenarioId === 'worst' ? '#dc2626' : '#e5e7eb'};
+                                   border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                        ✗ Worst
+                    </button>
+                    
+                    <button id="szenario-custom" class="szenario-btn"
+                            style="padding: 6px 12px; background: white; color: #374151; 
+                                   border: 1px solid #e5e7eb; border-radius: 4px; 
+                                   font-size: 11px; cursor: pointer; font-weight: 500;">
+                        ⚙️ Custom Builder
+                    </button>
                 </div>
-                <div style="font-size: 10px; color: #64748b;">
-                    Wählen Sie ein Szenario oder erstellen Sie ein individuelles
-                </div>
-            </div>
-            
-            <!-- Compact Buttons Row -->
-            <div style="display: flex; gap: 8px; align-items: center;">
                 
-                <!-- Base Button -->
-                <button 
-                    class="szenario-selector-btn"
-                    data-szenario-id="base"
-                    onclick="window.selectSzenario('base')"
-                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
-                           border: 2px solid ${activeSzenarioId === 'base' ? '#3b82f6' : '#e5e7eb'}; 
-                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
-                           display: flex; align-items: center; gap: 6px; font-size: 11px;
-                           font-weight: ${activeSzenarioId === 'base' ? '600' : '500'};
-                           color: ${activeSzenarioId === 'base' ? '#1e40af' : '#64748b'};">
-                    <span style="font-size: 14px;">📊</span>
-                    <span>Base</span>
-                </button>
-                
-                <!-- Best Button -->
-                <button 
-                    class="szenario-selector-btn"
-                    data-szenario-id="best-organic"
-                    onclick="window.selectSzenario('best-organic')"
-                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
-                           border: 2px solid ${activeSzenarioId === 'best-organic' ? '#10b981' : '#e5e7eb'}; 
-                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
-                           display: flex; align-items: center; gap: 6px; font-size: 11px;
-                           font-weight: ${activeSzenarioId === 'best-organic' ? '600' : '500'};
-                           color: ${activeSzenarioId === 'best-organic' ? '#047857' : '#64748b'};">
-                    <span style="font-size: 14px;">📈</span>
-                    <span>Best</span>
-                </button>
-                
-                <!-- Worst Button -->
-                <button 
-                    class="szenario-selector-btn"
-                    data-szenario-id="worst-conservative"
-                    onclick="window.selectSzenario('worst-conservative')"
-                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
-                           border: 2px solid ${activeSzenarioId === 'worst-conservative' ? '#ef4444' : '#e5e7eb'}; 
-                           border-radius: 6px; cursor: pointer; transition: all 0.2s;
-                           display: flex; align-items: center; gap: 6px; font-size: 11px;
-                           font-weight: ${activeSzenarioId === 'worst-conservative' ? '600' : '500'};
-                           color: ${activeSzenarioId === 'worst-conservative' ? '#dc2626' : '#64748b'};">
-                    <span style="font-size: 14px;">📉</span>
-                    <span>Worst</span>
-                </button>
-                
-                <!-- Custom Builder Button -->
-                <button 
-                    class="szenario-selector-btn"
-                    onclick="window.openSzenarioBuilder()"
-                    style="flex: 0 0 auto; padding: 8px 16px; background: white; 
-                           border: 2px dashed #94a3b8; border-radius: 6px; cursor: pointer; 
-                           transition: all 0.2s; display: flex; align-items: center; gap: 6px; 
-                           font-size: 11px; font-weight: 500; color: #64748b;">
-                    <span style="font-size: 14px;">⚙️</span>
-                    <span>Custom Builder</span>
-                </button>
-                
-                <!-- Active Scenario Info -->
-                <div id="active-szenario-info" 
-                     style="flex: 1; display: flex; align-items: center; gap: 8px; 
-                            padding: 6px 12px; background: white; border-radius: 6px; 
-                            border: 1px solid #e5e7eb; margin-left: 8px;">
-                    <span style="font-size: 14px;">ℹ️</span>
-                    <div style="flex: 1;">
-                        <span style="font-size: 10px; color: #64748b;">Aktiv:</span>
-                        <strong style="font-size: 11px; color: #1e40af; margin-left: 4px;">
-                            ${activePreset?.name || 'Base Case'}
-                        </strong>
-                    </div>
+                <div style="font-size: 10px; color: var(--gray);">
+                    Aktiv: <strong>${activeSzenarioId === 'base' ? 'Base Case' : 
+                                    activeSzenarioId === 'best' ? 'Best Case' : 
+                                    activeSzenarioId === 'worst' ? 'Worst Case' : 'Custom'}</strong>
                 </div>
             </div>
-            
-            <!-- ✨ NEU: Change Indicator (nur wenn nicht Base) -->
-            ${activeSzenarioId !== 'base' ? `
-                <div style="margin-top: 12px; padding: 10px 12px; background: white; 
-                            border-radius: 6px; border-left: 4px solid ${activePreset.color};">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-                        <div>
-                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
-                                📈 REVENUE
-                            </div>
-                            <div style="font-size: 14px; font-weight: 600; color: ${activePreset.config.revenue.adjustment > 0 ? '#10b981' : '#ef4444'};">
-                                ${activePreset.config.revenue.adjustment > 0 ? '+' : ''}${(activePreset.config.revenue.adjustment * 100).toFixed(0)}%
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
-                                💰 MATERIAL COSTS
-                            </div>
-                            <div style="font-size: 14px; font-weight: 600; color: #64748b;">
-                                ${activePreset.config.material_costs.mode === 'auto' ? '🤖 Auto (folgt Revenue)' : 'Fixed'}
-                            </div>
-                        </div>
-                        <div>
-                            <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">
-                                🏭 DEVELOPMENT OH
-                            </div>
-                            <div style="font-size: 14px; font-weight: 600; color: #64748b;">
-                                ${activePreset.config.development_overhead.mode === 'fixed' ? '💡 Fixed' : 'Variable'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
         </div>
     `;
 }
