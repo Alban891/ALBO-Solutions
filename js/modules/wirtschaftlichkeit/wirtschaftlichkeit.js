@@ -706,94 +706,114 @@ function renderBestWorstInlineControls(scenario, projekt, result) {
         text: '#991b1b'
     };
     
-    // Cost categories to show
+    // ✅ Default revenue adjustments
+    const defaultRevenue = scenario === 'best' ? 30 : -20;
+    
+    // Cost categories to show (WITH REVENUE!)
     const categories = [
-        { key: 'development', label: '🔬 Development', defaultPercent: 0 },
-        { key: 'selling', label: '🤝 Selling', defaultPercent: 0 },
-        { key: 'marketing', label: '📢 Marketing', defaultPercent: 0 },
+        { 
+            key: 'revenue', 
+            label: '💰 Revenue', 
+            defaultPercent: defaultRevenue,
+            isRevenue: true
+        },
+        { key: 'development', label: '🔬 Dev', defaultPercent: 0 },
+        { key: 'selling', label: '🤝 Sell', defaultPercent: 0 },
+        { key: 'marketing', label: '📢 Mkt', defaultPercent: 0 },
         { key: 'admin', label: '🏢 Admin', defaultPercent: 0 },
-        { key: 'distribution', label: '🚚 Distribution', defaultPercent: 0 }
+        { key: 'distribution', label: '🚚 Dist', defaultPercent: 0 }
     ];
     
-    return `
-        <div style="display: grid; gap: 12px;">
+   return `
+        <div style="display: grid; gap: 8px;">
             
-            <!-- Info Box -->
-            <div style="padding: 10px; background: ${colorScheme.bg}; border-left: 3px solid ${colorScheme.border}; 
-                        border-radius: 4px; font-size: 10px; color: ${colorScheme.text}; line-height: 1.5;">
-                💡 <strong>${scenario === 'best' ? 'Best Case' : 'Worst Case'}</strong><br>
-                • Revenue: ${scenario === 'best' ? '+30%' : '-20%'} (automatisch)<br>
-                • Variable Kosten: Folgen automatisch<br>
-                • Fixed Kosten: ${scenario === 'best' ? 'Bleiben stabil oder steigen leicht' : 'Reduktionspotenzial nutzen'}<br>
-                <br>
-                <strong>Anpassbare Parameter:</strong>
+            <!-- ✅ KOMPAKTE Info Box -->
+            <div style="padding: 8px 10px; background: ${colorScheme.bg}; border-left: 3px solid ${colorScheme.border}; 
+                        border-radius: 4px; font-size: 9px; color: ${colorScheme.text}; line-height: 1.4;">
+                💡 <strong>${scenario === 'best' ? 'Best' : 'Worst'}</strong>: 
+                Revenue ${scenario === 'best' ? '+30%' : '-20%'} (anpassbar) • 
+                Variable Kosten folgen Auto • 
+                Fixed ${scenario === 'best' ? 'stabil/↑' : 'reduzierbar'}
             </div>
+            
+            <!-- ✅ KOMPAKTE 2-Spalten Grid -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
             
             ${categories.map(cat => `
                 <!-- ${cat.label} -->
-                <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 11px; font-weight: 600; color: var(--gray);">
+                <div style="background: white; padding: 8px; border-radius: 4px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 600; color: ${cat.isRevenue ? 'var(--primary)' : 'var(--gray)'};">
                             ${cat.label}
                         </span>
                         
-                        <!-- Mode Buttons -->
-                        <div data-scenario="${scenario}" data-category="${cat.key}" style="display: flex; gap: 4px;">
+                        <!-- Mode Buttons (NICHT für Revenue!) - KOMPAKTER -->
+                        ${!cat.isRevenue ? `
+                        <div data-scenario="${scenario}" data-category="${cat.key}" style="display: flex; gap: 3px;">
                             <button class="mode-btn" data-mode="fixed"
                                     onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'fixed')"
-                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--primary);
-                                           background: var(--primary); color: white; border-radius: 3px; cursor: pointer;">
-                                Fixed
+                                    style="padding: 2px 6px; font-size: 8px; border: 1px solid var(--primary);
+                                           background: var(--primary); color: white; border-radius: 2px; cursor: pointer;">
+                                Fix
                             </button>
                             <button class="mode-btn" data-mode="auto"
                                     onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'auto')"
-                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--border);
-                                           background: white; color: var(--text); border-radius: 3px; cursor: pointer;">
+                                    style="padding: 2px 6px; font-size: 8px; border: 1px solid var(--border);
+                                           background: white; color: var(--text); border-radius: 2px; cursor: pointer;">
                                 Auto
                             </button>
                             <button class="mode-btn" data-mode="manual"
                                     onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'manual')"
-                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--border);
-                                           background: white; color: var(--text); border-radius: 3px; cursor: pointer;">
-                                Manual
+                                    style="padding: 2px 6px; font-size: 8px; border: 1px solid var(--border);
+                                           background: white; color: var(--text); border-radius: 2px; cursor: pointer;">
+                                Man
                             </button>
                         </div>
+                        ` : '<span style="font-size: 8px; color: var(--gray);">Anpassbar</span>'}
                     </div>
                     
-                    <!-- Slider (initially hidden) -->
-                    <div id="${scenario}-${cat.key}-slider-container" style="display: none; margin-top: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- Slider (für Revenue IMMER sichtbar, für Costs nur bei Manual) - KOMPAKTER -->
+                    <div id="${scenario}-${cat.key}-slider-container" 
+                         style="display: ${cat.isRevenue ? 'block' : 'none'}; margin-top: 4px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
                             <input type="range" 
                                    id="${scenario}-${cat.key}-slider"
                                    class="inline-slider"
-                                   min="-50" max="100" step="1" 
+                                   min="-50" 
+                                   max="100" 
+                                   step="1" 
                                    value="${cat.defaultPercent}"
                                    oninput="window.updateSzenarioSlider('${scenario}', '${cat.key}', this.value)"
-                                   style="flex: 1;">
+                                   style="flex: 1; height: 4px;">
                             <input type="number" 
                                    id="${scenario}-${cat.key}-value"
                                    value="${cat.defaultPercent}"
-                                   min="-50" max="100" step="1"
+                                   min="-50" 
+                                   max="100" 
+                                   step="1"
                                    oninput="window.updateSzenarioSliderFromInput('${scenario}', '${cat.key}', this.value)"
-                                   style="width: 50px; padding: 3px; border: 1px solid var(--border); 
-                                          border-radius: 3px; font-size: 10px; text-align: right;">
-                            <span style="font-size: 10px;">%</span>
+                                   style="width: 45px; padding: 2px 4px; border: 1px solid var(--border); 
+                                          border-radius: 3px; font-size: 10px; text-align: right; font-weight: 600;">
+                            <span style="font-size: 9px; color: var(--gray);">%</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 4px; 
-                                    font-size: 9px; color: var(--gray);">
-                            <span>-50%</span>
-                            <span>0%</span>
-                            <span>+100%</span>
+                        <div style="display: flex; justify-content: space-between; margin-top: 2px; 
+                                    font-size: 8px; color: var(--gray);">
+                            <span>-50</span>
+                            <span>0</span>
+                            <span>+100</span>
                         </div>
                     </div>
                     
-                    <!-- Mode Info -->
-                    <div id="${scenario}-${cat.key}-mode-info" style="margin-top: 6px; font-size: 9px; color: var(--gray);">
-                        💡 Bleibt unverändert (0%)
+                    <!-- Mode Info (NICHT für Revenue!) - KOMPAKTER -->
+                    ${!cat.isRevenue ? `
+                    <div id="${scenario}-${cat.key}-mode-info" style="margin-top: 4px; font-size: 8px; color: var(--gray);">
+                        💡 Unverändert (0%)
                     </div>
+                    ` : ''}
                 </div>
             `).join('')}
             
+            </div>
         </div>
     `;
 }
