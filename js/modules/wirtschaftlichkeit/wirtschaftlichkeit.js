@@ -85,18 +85,126 @@ export async function renderProjektWirtschaftlichkeit() {
         // Get FULL article list for display (unfiltered)
         const allArtikelListe = state.getArtikelByProjekt(projektId);
         
-        // Render complete UI
-        container.innerHTML = `
-            <div style="padding: 20px;">
-                ${renderHeader(projekt, allArtikelListe)}
-                ${renderOverheadConfigPanel(projekt)}
-                ${renderSzenarioSelector(window.currentActiveSzenarioId || 'base')}
-                ${renderArtikelOverview(allArtikelListe)}
-                ${renderContributionMarginTable(result)}
-                ${renderKPIDashboard(result, result.kpis, allArtikelListe[0]?.typ)}
-                ${renderActionButtons()}
+   // Render complete UI
+    container.innerHTML = `
+        <div style="padding: 20px;">
+            ${renderHeader(projekt, allArtikelListe)}
+            
+            <!-- ✅ NEU: Kombinierte Leiste (3 Balken nebeneinander) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <!-- Overhead Config -->
+                <div style="background: white; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="font-size: 11px; font-weight: 600; color: var(--gray); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        ⚙️ Overhead-Fallback:
+                        <button id="toggle-overhead-config" 
+                                style="padding: 3px 8px; border: 1px solid var(--border); 
+                                    border-radius: 3px; background: white; cursor: pointer; 
+                                    font-size: 10px; color: var(--primary);">
+                            <span id="toggle-icon">▼</span> Anpassen
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--gray);">
+                        <span>Dev: <strong>${projekt?.overheadSettings?.development_percent || 15}%</strong></span>
+                        <span>S&M: <strong>${projekt?.overheadSettings?.selling_marketing_percent || 15}%</strong></span>
+                        <span>A&D: <strong>${projekt?.overheadSettings?.admin_distribution_percent || 8}%</strong></span>
+                        <span>Other: <strong>${projekt?.overheadSettings?.other_expenses_percent || 2}%</strong></span>
+                    </div>
+                    
+                    <!-- Collapsible Detail Panel -->
+                    <div id="overhead-config-content" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">🔬 Development</label>
+                                <input type="number" id="overhead-development" value="${projekt?.overheadSettings?.development_percent || 15}" min="0" max="50" step="1"
+                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">📢 S&M</label>
+                                <input type="number" id="overhead-selling-marketing" value="${projekt?.overheadSettings?.selling_marketing_percent || 15}" min="0" max="50" step="1"
+                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">🏢 A&D</label>
+                                <input type="number" id="overhead-admin-distribution" value="${projekt?.overheadSettings?.admin_distribution_percent || 8}" min="0" max="30" step="1"
+                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
+                            </div>
+                            <div>
+                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">📋 Other</label>
+                                <input type="number" id="overhead-other-expenses" value="${projekt?.overheadSettings?.other_expenses_percent || 2}" min="0" max="10" step="0.5"
+                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 8px;">
+                            <button onclick="window.resetOverheadDefaults()" style="flex: 1; padding: 5px; border: 1px solid var(--border); border-radius: 3px; background: white; font-size: 10px;">↺</button>
+                            <button onclick="window.saveOverheadSettings()" class="btn btn-primary" style="flex: 2; padding: 5px; font-size: 10px;">💾 Speichern</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Szenario Selector -->
+                <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+                    <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                        📊 Szenario: <strong>${window.currentActiveSzenarioId === 'best' ? 'Best' : window.currentActiveSzenarioId === 'worst' ? 'Worst' : 'Base'}</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                        <button id="szenario-base" class="szenario-btn"
+                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'base' ? '#1e3a8a' : 'white'}; 
+                                    color: ${window.currentActiveSzenarioId === 'base' ? 'white' : '#374151'}; 
+                                    border: 1px solid ${window.currentActiveSzenarioId === 'base' ? '#1e3a8a' : '#e5e7eb'};
+                                    border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
+                            Base
+                        </button>
+                        <button id="szenario-best" class="szenario-btn"
+                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'best' ? '#059669' : 'white'}; 
+                                    color: ${window.currentActiveSzenarioId === 'best' ? 'white' : '#374151'}; 
+                                    border: 1px solid ${window.currentActiveSzenarioId === 'best' ? '#059669' : '#e5e7eb'};
+                                    border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
+                            ✓ Best
+                        </button>
+                        <button id="szenario-worst" class="szenario-btn"
+                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'worst' ? '#dc2626' : 'white'}; 
+                                    color: ${window.currentActiveSzenarioId === 'worst' ? 'white' : '#374151'}; 
+                                    border: 1px solid ${window.currentActiveSzenarioId === 'worst' ? '#dc2626' : '#e5e7eb'};
+                                    border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
+                            ✗ Worst
+                        </button>
+                        <button id="szenario-custom" class="szenario-btn"
+                                style="padding: 6px; background: white; color: #374151; 
+                                    border: 1px solid #e5e7eb; border-radius: 4px; 
+                                    font-size: 10px; cursor: pointer; font-weight: 500;">
+                            ⚙️ Custom
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Artikel Filter -->
+                <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+                    <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                        📦 Filter: <strong>${window.cfoDashboard?.artikelFilter ? 'Einzelprodukt' : 'Alle'}</strong>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <button id="filter-alle" data-artikel-id="null" class="artikel-filter-btn active"
+                                style="padding: 6px 10px; background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
+                                    border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 600;">
+                            📊 Alle
+                        </button>
+                        ${allArtikelListe.map(artikel => `
+                            <button id="filter-${artikel.id}" data-artikel-id="${artikel.id}" class="artikel-filter-btn"
+                                    style="padding: 6px 10px; background: white; color: #374151; border: 1px solid #e5e7eb;
+                                        border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
+                                <span style="color: ${getTypeColor(artikel.typ)};">●</span> ${artikel.name}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
             </div>
-        `;
+            
+            <!-- Rest of UI -->
+            ${renderContributionMarginTable(result)}
+            ${renderKPIDashboard(result, result.kpis, allArtikelListe[0]?.typ)}
+            ${renderActionButtons()}
+        </div>
+    `;
         
         // Initialize interactivity
         initializeEventHandlers();
@@ -1289,6 +1397,32 @@ function initializeEventHandlers() {
         });
     });
     
+    // ✅ NEU: Szenario buttons
+    const szenarioButtons = document.querySelectorAll('.szenario-btn');
+    szenarioButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const szenarioId = this.id.replace('szenario-', '');
+            console.log('🎯 Szenario clicked:', szenarioId);
+            
+            if (szenarioId === 'custom') {
+                // Open custom builder
+                if (typeof window.openSzenarioBuilder === 'function') {
+                    window.openSzenarioBuilder();
+                } else {
+                    alert('Custom Builder wird noch implementiert');
+                }
+            } else {
+                // Switch to scenario
+                if (typeof window.switchToSzenario === 'function') {
+                    window.switchToSzenario(szenarioId);
+                } else {
+                    console.warn('⚠️ window.switchToSzenario not found');
+                    alert(`Szenario "${szenarioId}" wird geladen...`);
+                }
+            }
+        });
+    });
+    
     // Restore active filter button state after re-render
     const activeFilter = window.cfoDashboard?.artikelFilter;
     if (activeFilter) {
@@ -1309,7 +1443,7 @@ function initializeEventHandlers() {
             targetBtn.style.border = '2px solid #1e3a8a';
             targetBtn.style.fontWeight = '600';
         }
- } else {
+    } else {
         // Ensure "Alle" is active
         const alleBtn = document.getElementById('filter-alle');
         if (alleBtn) {
@@ -1321,7 +1455,7 @@ function initializeEventHandlers() {
         }
     }
     
-    // ✅ NEU: Overhead config toggle
+    // ✅ Overhead config toggle
     const toggleBtn = document.getElementById('toggle-overhead-config');
     if (toggleBtn) {
         toggleBtn.addEventListener('click', function() {
