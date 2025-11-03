@@ -89,19 +89,33 @@ export async function renderProjektWirtschaftlichkeit() {
             }
         }
         
-        // ✨ NEU: Use scenario result if available
+       // ✨ KORRIGIERT: Check if filter changed, re-calculate if needed
         let result;
-        if (window.currentSzenarioResult) {
-            result = window.currentSzenarioResult;
-            console.log('✅ Using scenario result');
-        } else {
-            // Calculate profitability (with filtered articles)
+        const isFilterActive = activeFilter !== null;
+
+        // ✅ WICHTIG: Re-calculate if:
+        // 1. No cached result exists, OR
+        // 2. Filter state changed
+        if (!window.currentSzenarioResult || 
+            window.lastFilterState !== activeFilter) {
+            
+            console.log(`🔄 Recalculating (filter: ${activeFilter || 'ALLE'})`);
+            
+            // Calculate with filtered articles
             result = await calculateProjektWirtschaftlichkeit(projektId, {
                 wacc: 0.08,
                 validateInputs: true,
                 filteredArtikel: artikelListe  // Pass filtered list
             });
-            console.log('✅ Calculated base case');
+            
+            // ✅ Cache result and filter state
+            window.currentSzenarioResult = result;
+            window.lastFilterState = activeFilter;
+            
+            console.log(`✅ Calculated: ${helpers.formatCurrency(result.totals.sales_revenue)}`);
+        } else {
+            result = window.currentSzenarioResult;
+            console.log('✅ Using cached result');
         }
         
         console.log('💰 Calculated sales revenue:', result.totals?.sales_revenue);
@@ -1630,6 +1644,10 @@ window.filterArtikel = function(artikelId) {
     // Store filter state
     window.cfoDashboard = window.cfoDashboard || {};
     window.cfoDashboard.artikelFilter = artikelId;
+    
+    // ✅ WICHTIG: Clear scenario cache when filter changes
+    window.currentSzenarioResult = null;
+    window.currentActiveSzenarioId = 'base';  // Reset to base
     
     // Re-render with filter applied
     renderProjektWirtschaftlichkeit();
