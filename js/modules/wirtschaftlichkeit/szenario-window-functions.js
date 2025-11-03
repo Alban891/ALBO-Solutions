@@ -76,6 +76,24 @@ window.selectSzenario = async function(szenarioId) {
     
     activeSzenarioId = szenarioId;
     
+    // ✅ NEU: Toggle Base Case Panel visibility
+    const baseCasePanel = document.getElementById('base-case-panel');
+    if (baseCasePanel) {
+        baseCasePanel.style.display = szenarioId === 'base' ? 'block' : 'none';
+    }
+    
+    // ✅ NEU: Toggle Best/Worst Inline Panels visibility
+    const bestPanel = document.getElementById('best-inline-panel');
+    const worstPanel = document.getElementById('worst-inline-panel');
+    
+    if (bestPanel) {
+        bestPanel.style.display = szenarioId === 'best-organic' ? 'block' : 'none';
+    }
+    
+    if (worstPanel) {
+        worstPanel.style.display = szenarioId === 'worst-conservative' ? 'block' : 'none';
+    }
+    
     try {
         let result;
         
@@ -322,6 +340,97 @@ window.updateSliderFromInput = function(paramKey, value) {
     const sliderInput = document.getElementById(`slider-input-${paramKey}`);
     if (sliderInput) {
         sliderInput.value = value;
+    }
+};
+
+window.updateSliderFromInput = function(paramKey, value) {
+    const sliderInput = document.getElementById(`slider-input-${paramKey}`);
+    if (sliderInput) {
+        sliderInput.value = value;
+    }
+};
+
+// ==========================================
+// ✅ NEU: BEST/WORST INLINE SLIDER FUNCTIONS
+// ==========================================
+
+/**
+ * Update Best/Worst scenario slider value
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {number} value - New value (-50 to +100)
+ * 
+ * @public
+ */
+window.updateSzenarioSlider = function(scenario, category, value) {
+    const valueInput = document.getElementById(`${scenario}-${category}-value`);
+    if (valueInput) {
+        valueInput.value = value;
+    }
+    
+    // ✅ TODO: Trigger live recalculation
+    console.log(`📊 ${scenario.toUpperCase()} ${category}: ${value}%`);
+};
+
+/**
+ * Update Best/Worst slider from number input
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {number} value - New value
+ * 
+ * @public
+ */
+window.updateSzenarioSliderFromInput = function(scenario, category, value) {
+    const slider = document.getElementById(`${scenario}-${category}-slider`);
+    if (slider) {
+        slider.value = value;
+    }
+    
+    // ✅ TODO: Trigger live recalculation
+    console.log(`📊 ${scenario.toUpperCase()} ${category}: ${value}%`);
+};
+
+/**
+ * Change mode for Best/Worst scenario parameter
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {string} mode - 'fixed', 'auto', or 'manual'
+ * 
+ * @public
+ */
+window.changeSzenarioInlineMode = function(scenario, category, mode) {
+    console.log(`🔧 Changing ${scenario} ${category} mode to ${mode}`);
+    
+    // Update button states
+    const modeButtons = document.querySelectorAll(`[data-scenario="${scenario}"][data-category="${category}"] .mode-btn`);
+    modeButtons.forEach(btn => {
+        const btnMode = btn.dataset.mode;
+        const isActive = btnMode === mode;
+        
+        btn.style.background = isActive ? 'var(--primary)' : 'white';
+        btn.style.color = isActive ? 'white' : 'var(--text)';
+        btn.style.border = `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`;
+        btn.style.fontWeight = isActive ? '600' : '400';
+    });
+    
+    // Show/hide slider
+    const sliderContainer = document.getElementById(`${scenario}-${category}-slider-container`);
+    if (sliderContainer) {
+        sliderContainer.style.display = mode === 'manual' ? 'flex' : 'none';
+    }
+    
+    // Update mode info
+    const modeInfo = document.getElementById(`${scenario}-${category}-mode-info`);
+    if (modeInfo) {
+        const infoTexts = {
+            'fixed': '💡 Bleibt unverändert (0%)',
+            'auto': '🤖 Folgt Revenue-Entwicklung',
+            'manual': '✏️ Manuelle Anpassung aktiv'
+        };
+        modeInfo.textContent = infoTexts[mode] || '';
     }
 };
 
@@ -649,6 +758,48 @@ function injectSzenarioCSS() {
         
         .mode-btn:hover {
             opacity: 0.8;
+        }
+        
+        /* ✅ NEU: Inline Scenario Slider Styles */
+        .inline-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(to right, #ef4444, #fbbf24, #10b981);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        .inline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .inline-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .mode-btn {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .mode-btn:active {
+            transform: scale(0.95);
         }
     `;
     
