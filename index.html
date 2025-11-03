@@ -1277,9 +1277,13 @@
             });
         }
         else if (tabName === 'dashboard') {
-            // Import und render Dashboard
+            // 🆕 HORVÁTH DASHBOARD
             import('./js/modules/dashboard/dashboard.js').then(module => {
-                if (module.renderProjektDashboard) {
+                if (module.default && module.default.renderProjektDashboard) {
+                    // Horváth Version (export default)
+                    module.default.renderProjektDashboard();
+                } else if (module.renderProjektDashboard) {
+                    // Alte Version (export function)
                     module.renderProjektDashboard();
                 }
             }).catch(err => {
