@@ -44,40 +44,40 @@ export async function renderProjektWirtschaftlichkeit() {
     // Show loading state
     container.innerHTML = createLoadingState();
     
-try {
-    // ✨ NEU: Initialize Szenario-Analyse
-    await window.initializeSzenarioAnalysis();
-    
-    // Get article list
-    let artikelListe = state.getArtikelByProjekt(projektId);
-    console.log('📋 All articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
-    
-    // ✅ CRITICAL: Apply article filter if active
-    const activeFilter = window.cfoDashboard?.artikelFilter;
-    if (activeFilter) {
-        console.log('🔍 Active filter:', activeFilter);
-        artikelListe = artikelListe.filter(a => a.id === activeFilter);
-        console.log('📋 Filtered articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+    try {
+        // ✨ NEU: Initialize Szenario-Analyse
+        await window.initializeSzenarioAnalysis();
         
-        if (artikelListe.length === 0) {
-            console.error('❌ No articles after filter!');
+        // Get article list
+        let artikelListe = state.getArtikelByProjekt(projektId);
+        console.log('📋 All articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+        
+        // ✅ CRITICAL: Apply article filter if active
+        const activeFilter = window.cfoDashboard?.artikelFilter;
+        if (activeFilter) {
+            console.log('🔍 Active filter:', activeFilter);
+            artikelListe = artikelListe.filter(a => a.id === activeFilter);
+            console.log('📋 Filtered articles:', artikelListe.map(a => ({id: a.id, name: a.name})));
+            
+            if (artikelListe.length === 0) {
+                console.error('❌ No articles after filter!');
+            }
         }
-    }
-    
-    // ✨ NEU: Use scenario result if available
-    let result;
-    if (window.currentSzenarioResult) {
-        result = window.currentSzenarioResult;
-        console.log('✅ Using scenario result');
-    } else {
-        // Calculate profitability (with filtered articles)
-        result = await calculateProjektWirtschaftlichkeit(projektId, {
-            wacc: 0.08,
-            validateInputs: true,
-            filteredArtikel: artikelListe  // Pass filtered list
-        });
-        console.log('✅ Calculated base case');
-    }
+        
+        // ✨ NEU: Use scenario result if available
+        let result;
+        if (window.currentSzenarioResult) {
+            result = window.currentSzenarioResult;
+            console.log('✅ Using scenario result');
+        } else {
+            // Calculate profitability (with filtered articles)
+            result = await calculateProjektWirtschaftlichkeit(projektId, {
+                wacc: 0.08,
+                validateInputs: true,
+                filteredArtikel: artikelListe  // Pass filtered list
+            });
+            console.log('✅ Calculated base case');
+        }
         
         console.log('💰 Calculated sales revenue:', result.totals?.sales_revenue);
         console.log('📊 Full result:', result);
@@ -89,6 +89,7 @@ try {
         container.innerHTML = `
             <div style="padding: 20px;">
                 ${renderHeader(projekt, allArtikelListe)}
+                ${renderOverheadConfigPanel(projekt)}
                 ${renderSzenarioSelector(window.currentActiveSzenarioId || 'base')}
                 ${renderArtikelOverview(allArtikelListe)}
                 ${renderContributionMarginTable(result)}
@@ -217,6 +218,167 @@ function renderHeader(projekt, artikelListe) {
                         <option value="db5">Bis DB5 (vor EBIT)</option>
                         <option value="ebit">Nur EBIT</option>
                     </select>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// ✅ NEU: HIER EINFÜGEN (zwischen renderHeader und renderArtikelHeader)
+// ==========================================
+
+/**
+ * Render overhead configuration panel
+ * Allows users to customize fallback percentages
+ * 
+ * @param {Object} projekt - Project data
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderOverheadConfigPanel(projekt) {
+    // Get current settings from projekt or use defaults
+    const overheadSettings = projekt?.overheadSettings || {
+        development_percent: 15,
+        selling_marketing_percent: 15,
+        admin_distribution_percent: 8,
+        other_expenses_percent: 2
+    };
+    
+    return `
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+                    border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">
+                        ⚙️ Overhead-Konfiguration (Fallback-Prozentsätze)
+                    </h4>
+                    <div style="font-size: 11px; color: var(--gray);">
+                        Diese %-Sätze werden verwendet, wenn keine Projektkosten erfasst sind
+                    </div>
+                </div>
+                <button id="toggle-overhead-config" 
+                        style="padding: 6px 12px; border: 1px solid var(--border); 
+                               border-radius: 4px; background: white; cursor: pointer; 
+                               font-size: 11px; color: var(--primary);">
+                    <span id="toggle-icon">▼</span> Einstellungen
+                </button>
+            </div>
+            
+            <div id="overhead-config-content" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; 
+                            padding: 16px; background: #f8fafc; border-radius: 6px;">
+                    
+                    <!-- Development -->
+                    <div>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 6px;">
+                            🔬 Development (DB3)
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" 
+                                   id="overhead-development" 
+                                   value="${overheadSettings.development_percent}"
+                                   min="0" 
+                                   max="50"
+                                   step="1"
+                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
+                            <span style="font-size: 12px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
+                            Standard: 15%
+                        </div>
+                    </div>
+                    
+                    <!-- Selling & Marketing -->
+                    <div>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 6px;">
+                            📢 Sales & Marketing (DB4)
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" 
+                                   id="overhead-selling-marketing" 
+                                   value="${overheadSettings.selling_marketing_percent}"
+                                   min="0" 
+                                   max="50"
+                                   step="1"
+                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
+                            <span style="font-size: 12px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
+                            Standard: 15%
+                        </div>
+                    </div>
+                    
+                    <!-- Admin & Distribution -->
+                    <div>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 6px;">
+                            🏢 Admin & Distribution (DB5)
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" 
+                                   id="overhead-admin-distribution" 
+                                   value="${overheadSettings.admin_distribution_percent}"
+                                   min="0" 
+                                   max="30"
+                                   step="1"
+                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
+                            <span style="font-size: 12px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
+                            Standard: 8%
+                        </div>
+                    </div>
+                    
+                    <!-- Other Expenses -->
+                    <div>
+                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 6px;">
+                            📋 Other Expenses
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" 
+                                   id="overhead-other-expenses" 
+                                   value="${overheadSettings.other_expenses_percent}"
+                                   min="0" 
+                                   max="10"
+                                   step="0.5"
+                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
+                            <span style="font-size: 12px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
+                            Standard: 2%
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
+                    <button onclick="window.resetOverheadDefaults()" 
+                            style="padding: 8px 16px; border: 1px solid var(--border); 
+                                   border-radius: 4px; background: white; cursor: pointer; 
+                                   font-size: 12px; color: var(--gray);">
+                        ↺ Auf Standard zurücksetzen
+                    </button>
+                    <button onclick="window.saveOverheadSettings()" 
+                            class="btn btn-primary btn-sm"
+                            style="display: flex; align-items: center; gap: 6px;">
+                        <span>💾</span>
+                        <span>Einstellungen speichern</span>
+                    </button>
+                </div>
+                
+                <div style="margin-top: 12px; padding: 10px; background: #fef3c7; 
+                            border-left: 4px solid #f59e0b; border-radius: 4px; font-size: 11px;">
+                    <strong>💡 Hinweis:</strong> Diese Prozentsätze werden nur verwendet, wenn im 
+                    <a href="#projekt-tab-projektkosten" style="color: var(--primary);">Projektkosten-Tab</a> 
+                    keine Kosten erfasst sind. Sobald Sie Projektkosten eingeben, werden diese verwendet.
                 </div>
             </div>
         </div>
@@ -584,12 +746,40 @@ function renderTableRows(result, jahre) {
             ${renderValueCells(result, jahre, 'admin_overhead', 'danger', true)}
         </tr>
         
-        <!-- DB5 -->
+<!-- DB5 -->
         <tr style="background: #e0f2fe; font-weight: 600;" class="db5-row">
             <td style="padding: 10px; position: sticky; left: 0; background: #e0f2fe;">
                 = ${UI_LABELS.db_stufen.db5}
             </td>
             ${renderValueCells(result, jahre, 'db5', 'info')}
+        </tr>
+        
+        <!-- ========================================== -->
+        <!-- ✅ NEU: Other Operating Items -->
+        <!-- ========================================== -->
+        
+        <!-- Other Operating Income -->
+        <tr style="background: #d1fae5;" class="other-income-row">
+            <td style="padding: 10px; font-weight: 600; position: sticky; left: 0; background: #d1fae5;">
+                + ${UI_LABELS.kostenarten.other_operating_income}
+                <a href="#projekt-tab-projektkosten" 
+                   style="font-size: 10px; color: var(--primary); margin-left: 6px;">
+                    [aus Projektkosten]
+                </a>
+            </td>
+            ${renderValueCells(result, jahre, 'other_operating_income', 'success', false)}
+        </tr>
+        
+        <!-- Other Operating Expenses -->
+        <tr class="other-expenses-row">
+            <td style="padding: 8px 8px 8px 24px; color: var(--gray);">
+                └─ ${UI_LABELS.kostenarten.other_operating_expenses}
+                <a href="#projekt-tab-projektkosten" 
+                   style="font-size: 10px; color: var(--primary); margin-left: 6px;">
+                    [aus Projektkosten]
+                </a>
+            </td>
+            ${renderValueCells(result, jahre, 'other_operating_expenses', 'danger', true)}
         </tr>
         
         <!-- EBIT - FINALE ZEILE -->
@@ -1171,7 +1361,7 @@ function initializeEventHandlers() {
             targetBtn.style.border = '2px solid #1e3a8a';
             targetBtn.style.fontWeight = '600';
         }
-    } else {
+ } else {
         // Ensure "Alle" is active
         const alleBtn = document.getElementById('filter-alle');
         if (alleBtn) {
@@ -1181,6 +1371,23 @@ function initializeEventHandlers() {
             alleBtn.style.border = '2px solid #1e3a8a';
             alleBtn.style.fontWeight = '600';
         }
+    }
+    
+    // ✅ NEU: Overhead config toggle
+    const toggleBtn = document.getElementById('toggle-overhead-config');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            const content = document.getElementById('overhead-config-content');
+            const icon = document.getElementById('toggle-icon');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        });
     }
     
     console.log('✅ Event handlers initialized');
@@ -1323,6 +1530,8 @@ function grayOutProjectCostRows(shouldGray) {
         '.db4-row',
         '.db5-section',
         '.db5-row',
+        '.other-income-row',      // ✅ NEU
+        '.other-expenses-row',    // ✅ NEU
         '.ebit-row',
         '.ebit-margin-row'
     ];
@@ -1372,6 +1581,76 @@ window.updateViewLevel = function() {
     const viewLevel = document.getElementById('view-level');
     if (viewLevel) {
         handleViewLevelChange({ target: viewLevel });
+    }
+};
+
+// ==========================================
+// ✅ NEU: Overhead Settings Functions
+// ==========================================
+
+/**
+ * Save overhead settings to projekt
+ * 
+ * @public
+ */
+window.saveOverheadSettings = function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    
+    if (!projekt) {
+        alert('Kein Projekt ausgewählt');
+        return;
+    }
+    
+    // Get values from inputs
+    const settings = {
+        development_percent: parseFloat(document.getElementById('overhead-development').value) || 15,
+        selling_marketing_percent: parseFloat(document.getElementById('overhead-selling-marketing').value) || 15,
+        admin_distribution_percent: parseFloat(document.getElementById('overhead-admin-distribution').value) || 8,
+        other_expenses_percent: parseFloat(document.getElementById('overhead-other-expenses').value) || 2
+    };
+    
+    // Validate
+    if (settings.development_percent < 0 || settings.development_percent > 50) {
+        alert('Development Overhead muss zwischen 0% und 50% liegen');
+        return;
+    }
+    if (settings.selling_marketing_percent < 0 || settings.selling_marketing_percent > 50) {
+        alert('Sales & Marketing Overhead muss zwischen 0% und 50% liegen');
+        return;
+    }
+    if (settings.admin_distribution_percent < 0 || settings.admin_distribution_percent > 30) {
+        alert('Admin & Distribution Overhead muss zwischen 0% und 30% liegen');
+        return;
+    }
+    if (settings.other_expenses_percent < 0 || settings.other_expenses_percent > 10) {
+        alert('Other Expenses muss zwischen 0% und 10% liegen');
+        return;
+    }
+    
+    // Save to projekt
+    projekt.overheadSettings = settings;
+    state.saveProjekt(projekt);
+    
+    alert('✅ Overhead-Einstellungen gespeichert! Die Änderungen werden beim nächsten Neuberechnen verwendet.');
+    
+    // Re-calculate and re-render
+    renderProjektWirtschaftlichkeit();
+};
+
+/**
+ * Reset overhead settings to defaults
+ * 
+ * @public
+ */
+window.resetOverheadDefaults = function() {
+    if (confirm('Möchten Sie wirklich alle Overhead-Einstellungen auf die Standardwerte zurücksetzen?')) {
+        document.getElementById('overhead-development').value = 15;
+        document.getElementById('overhead-selling-marketing').value = 15;
+        document.getElementById('overhead-admin-distribution').value = 8;
+        document.getElementById('overhead-other-expenses').value = 2;
+        
+        alert('✅ Werte wurden zurückgesetzt. Klicken Sie auf "Speichern" um zu übernehmen.');
     }
 };
 
