@@ -129,56 +129,8 @@ export async function renderProjektWirtschaftlichkeit() {
         <div style="padding: 20px;">
             ${renderHeader(projekt, allArtikelListe)}
             
-            <!-- ✅ NEU: Kombinierte Leiste (3 Balken nebeneinander) -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                <!-- Overhead Config -->
-                <div style="background: white; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--gray); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                        ⚙️ Overhead-Fallback:
-                        <button id="toggle-overhead-config" 
-                                style="padding: 3px 8px; border: 1px solid var(--border); 
-                                    border-radius: 3px; background: white; cursor: pointer; 
-                                    font-size: 10px; color: var(--primary);">
-                            <span id="toggle-icon">▼</span> Anpassen
-                        </button>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px; color: var(--gray);">
-                        <span>Dev: <strong>${projekt?.overheadSettings?.development_percent || 15}%</strong></span>
-                        <span>S&M: <strong>${projekt?.overheadSettings?.selling_marketing_percent || 15}%</strong></span>
-                        <span>A&D: <strong>${projekt?.overheadSettings?.admin_distribution_percent || 8}%</strong></span>
-                        <span>Other: <strong>${projekt?.overheadSettings?.other_expenses_percent || 2}%</strong></span>
-                    </div>
-                    
-                    <!-- Collapsible Detail Panel -->
-                    <div id="overhead-config-content" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <div>
-                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">🔬 Development</label>
-                                <input type="number" id="overhead-development" value="${projekt?.overheadSettings?.development_percent || 15}" min="0" max="50" step="1"
-                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">📢 S&M</label>
-                                <input type="number" id="overhead-selling-marketing" value="${projekt?.overheadSettings?.selling_marketing_percent || 15}" min="0" max="50" step="1"
-                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">🏢 A&D</label>
-                                <input type="number" id="overhead-admin-distribution" value="${projekt?.overheadSettings?.admin_distribution_percent || 8}" min="0" max="30" step="1"
-                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 9px; font-weight: 600; color: var(--gray); display: block; margin-bottom: 3px;">📋 Other</label>
-                                <input type="number" id="overhead-other-expenses" value="${projekt?.overheadSettings?.other_expenses_percent || 2}" min="0" max="10" step="0.5"
-                                    style="width: 100%; padding: 4px; border: 1px solid var(--border); border-radius: 3px; font-size: 11px;">
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 6px; margin-top: 8px;">
-                            <button onclick="window.resetOverheadDefaults()" style="flex: 1; padding: 5px; border: 1px solid var(--border); border-radius: 3px; background: white; font-size: 10px;">↺</button>
-                            <button onclick="window.saveOverheadSettings()" class="btn btn-primary" style="flex: 2; padding: 5px; font-size: 10px;">💾 Speichern</button>
-                        </div>
-                    </div>
-                </div>
+            <!-- ✅ GEÄNDERT: Nur noch 2 Balken (Szenario + Filter) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                 
                 <!-- Szenario Selector -->
                 <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 12px; border-radius: 8px; border: 1px solid #dbeafe;">
@@ -206,7 +158,6 @@ export async function renderProjektWirtschaftlichkeit() {
                                     border: 1px solid ${window.currentActiveSzenarioId === 'worst-conservative' ? '#dc2626' : '#e5e7eb'};
                                     border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
                             ✗ Worst
-                        </button>
                         </button>
                         <button id="szenario-custom" class="szenario-btn"
                                 style="padding: 6px; background: white; color: #374151; 
@@ -264,6 +215,64 @@ export async function renderProjektWirtschaftlichkeit() {
                 <div id="base-case-details" style="display: none; margin-top: 12px; padding-top: 12px; 
                                                 border-top: 1px solid var(--border);">
                     ${renderBaseCaseDetails(projekt, result)}
+                </div>
+            </div>
+
+             <!-- ✅ NEU: Best Case Inline Panel -->
+            <div id="best-inline-panel" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0); 
+                                                padding: 12px; border-radius: 8px; margin-bottom: 16px; 
+                                                border: 1px solid #10b981; 
+                                                display: ${window.currentActiveSzenarioId === 'best-organic' ? 'block' : 'none'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
+                     onclick="window.toggleBestInlineDetails()">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 12px; font-weight: 600; color: #065f46;">
+                            ✓ Best Case Anpassungen
+                        </span>
+                        <span id="best-inline-toggle-icon" style="font-size: 10px; color: #6b7280;">
+                            ▼ Details anzeigen
+                        </span>
+                    </div>
+                    <button onclick="event.stopPropagation(); window.applyBestInline();" 
+                            class="btn btn-sm"
+                            style="padding: 4px 10px; font-size: 10px; background: #10b981; color: white; border: none;">
+                        ✅ Anwenden
+                    </button>
+                </div>
+                
+                <!-- Collapsible Content -->
+                <div id="best-inline-details" style="display: none; margin-top: 12px; padding-top: 12px; 
+                                                     border-top: 1px solid #10b981;">
+                    ${renderBestWorstInlineControls('best', projekt, result)}
+                </div>
+            </div>
+            
+            <!-- ✅ NEU: Worst Case Inline Panel -->
+            <div id="worst-inline-panel" style="background: linear-gradient(135deg, #fee2e2, #fecaca); 
+                                                 padding: 12px; border-radius: 8px; margin-bottom: 16px; 
+                                                 border: 1px solid #ef4444; 
+                                                 display: ${window.currentActiveSzenarioId === 'worst-conservative' ? 'block' : 'none'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
+                     onclick="window.toggleWorstInlineDetails()">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 12px; font-weight: 600; color: #991b1b;">
+                            ✗ Worst Case Anpassungen
+                        </span>
+                        <span id="worst-inline-toggle-icon" style="font-size: 10px; color: #6b7280;">
+                            ▼ Details anzeigen
+                        </span>
+                    </div>
+                    <button onclick="event.stopPropagation(); window.applyWorstInline();" 
+                            class="btn btn-sm"
+                            style="padding: 4px 10px; font-size: 10px; background: #ef4444; color: white; border: none;">
+                        ✅ Anwenden
+                    </button>
+                </div>
+                
+                <!-- Collapsible Content -->
+                <div id="worst-inline-details" style="display: none; margin-top: 12px; padding-top: 12px; 
+                                                      border-top: 1px solid #ef4444;">
+                    ${renderBestWorstInlineControls('worst', projekt, result)}
                 </div>
             </div>
             
@@ -674,139 +683,117 @@ function renderBaseCaseDetails(projekt, result) {
     `;
 }
 
-// ==========================================
-// ✅ NEU: HIER EINFÜGEN (zwischen renderHeader und renderArtikelHeader)
-// ==========================================
-
 /**
- * Render overhead configuration panel
- * KOMPAKTE VERSION - Inline mit Toggle
+ * Render Best/Worst inline controls
+ * Shows cost adjustments with mode switchers and sliders
  * 
+ * @param {string} scenario - 'best' or 'worst'
  * @param {Object} projekt - Project data
+ * @param {Object} result - Calculation result
  * @returns {string} HTML
  * 
  * @private
  */
-function renderOverheadConfigPanel(projekt) {
-    const overheadSettings = projekt?.overheadSettings || {
-        development_percent: 15,
-        selling_marketing_percent: 15,
-        admin_distribution_percent: 8,
-        other_expenses_percent: 2
+function renderBestWorstInlineControls(scenario, projekt, result) {
+    const totalRevenue = result.totals?.sales_revenue_total || 0;
+    const colorScheme = scenario === 'best' ? {
+        bg: '#d1fae5',
+        border: '#10b981',
+        text: '#065f46'
+    } : {
+        bg: '#fee2e2',
+        border: '#ef4444',
+        text: '#991b1b'
     };
     
+    // Cost categories to show
+    const categories = [
+        { key: 'development', label: '🔬 Development', defaultPercent: 0 },
+        { key: 'selling', label: '🤝 Selling', defaultPercent: 0 },
+        { key: 'marketing', label: '📢 Marketing', defaultPercent: 0 },
+        { key: 'admin', label: '🏢 Admin', defaultPercent: 0 },
+        { key: 'distribution', label: '🚚 Distribution', defaultPercent: 0 }
+    ];
+    
     return `
-        <div style="background: white; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; 
-                    border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 11px; font-weight: 600; color: var(--gray);">⚙️ Overhead-Fallback:</span>
-                        <button id="toggle-overhead-config" 
-                                style="padding: 4px 10px; border: 1px solid var(--border); 
-                                       border-radius: 4px; background: white; cursor: pointer; 
-                                       font-size: 10px; color: var(--primary);">
-                            <span id="toggle-icon">▼</span> Anpassen
-                        </button>
-                    </div>
-                    
-                    <!-- Quick Preview -->
-                    <div style="display: flex; gap: 16px; font-size: 11px; color: var(--gray);">
-                        <span>Dev: <strong>${overheadSettings.development_percent}%</strong></span>
-                        <span>S&M: <strong>${overheadSettings.selling_marketing_percent}%</strong></span>
-                        <span>A&D: <strong>${overheadSettings.admin_distribution_percent}%</strong></span>
-                        <span>Other: <strong>${overheadSettings.other_expenses_percent}%</strong></span>
-                    </div>
-                </div>
+        <div style="display: grid; gap: 12px;">
+            
+            <!-- Info Box -->
+            <div style="padding: 10px; background: ${colorScheme.bg}; border-left: 3px solid ${colorScheme.border}; 
+                        border-radius: 4px; font-size: 10px; color: ${colorScheme.text}; line-height: 1.5;">
+                💡 <strong>${scenario === 'best' ? 'Best Case' : 'Worst Case'}</strong><br>
+                • Revenue: ${scenario === 'best' ? '+30%' : '-20%'} (automatisch)<br>
+                • Variable Kosten: Folgen automatisch<br>
+                • Fixed Kosten: ${scenario === 'best' ? 'Bleiben stabil oder steigen leicht' : 'Reduktionspotenzial nutzen'}<br>
+                <br>
+                <strong>Anpassbare Parameter:</strong>
             </div>
             
-            <div id="overhead-config-content" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-                    
-                    <!-- Development -->
-                    <div>
-                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 4px;">
-                            🔬 Development (DB3)
-                        </label>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" 
-                                   id="overhead-development" 
-                                   value="${overheadSettings.development_percent}"
-                                   min="0" max="50" step="1"
-                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
-                            <span style="font-size: 11px; color: var(--gray);">%</span>
+            ${categories.map(cat => `
+                <!-- ${cat.label} -->
+                <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--gray);">
+                            ${cat.label}
+                        </span>
+                        
+                        <!-- Mode Buttons -->
+                        <div data-scenario="${scenario}" data-category="${cat.key}" style="display: flex; gap: 4px;">
+                            <button class="mode-btn" data-mode="fixed"
+                                    onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'fixed')"
+                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--primary);
+                                           background: var(--primary); color: white; border-radius: 3px; cursor: pointer;">
+                                Fixed
+                            </button>
+                            <button class="mode-btn" data-mode="auto"
+                                    onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'auto')"
+                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--border);
+                                           background: white; color: var(--text); border-radius: 3px; cursor: pointer;">
+                                Auto
+                            </button>
+                            <button class="mode-btn" data-mode="manual"
+                                    onclick="window.changeSzenarioInlineMode('${scenario}', '${cat.key}', 'manual')"
+                                    style="padding: 3px 8px; font-size: 9px; border: 1px solid var(--border);
+                                           background: white; color: var(--text); border-radius: 3px; cursor: pointer;">
+                                Manual
+                            </button>
                         </div>
                     </div>
                     
-                    <!-- Selling & Marketing -->
-                    <div>
-                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 4px;">
-                            📢 Sales & Marketing (DB4)
-                        </label>
-                        <div style="display: flex; align-items: center; gap: 6px;">
+                    <!-- Slider (initially hidden) -->
+                    <div id="${scenario}-${cat.key}-slider-container" style="display: none; margin-top: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" 
+                                   id="${scenario}-${cat.key}-slider"
+                                   class="inline-slider"
+                                   min="-50" max="100" step="1" 
+                                   value="${cat.defaultPercent}"
+                                   oninput="window.updateSzenarioSlider('${scenario}', '${cat.key}', this.value)"
+                                   style="flex: 1;">
                             <input type="number" 
-                                   id="overhead-selling-marketing" 
-                                   value="${overheadSettings.selling_marketing_percent}"
-                                   min="0" max="50" step="1"
-                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
-                            <span style="font-size: 11px; color: var(--gray);">%</span>
+                                   id="${scenario}-${cat.key}-value"
+                                   value="${cat.defaultPercent}"
+                                   min="-50" max="100" step="1"
+                                   oninput="window.updateSzenarioSliderFromInput('${scenario}', '${cat.key}', this.value)"
+                                   style="width: 50px; padding: 3px; border: 1px solid var(--border); 
+                                          border-radius: 3px; font-size: 10px; text-align: right;">
+                            <span style="font-size: 10px;">%</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 4px; 
+                                    font-size: 9px; color: var(--gray);">
+                            <span>-50%</span>
+                            <span>0%</span>
+                            <span>+100%</span>
                         </div>
                     </div>
                     
-                    <!-- Admin & Distribution -->
-                    <div>
-                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 4px;">
-                            🏢 Admin & Distribution (DB5)
-                        </label>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" 
-                                   id="overhead-admin-distribution" 
-                                   value="${overheadSettings.admin_distribution_percent}"
-                                   min="0" max="30" step="1"
-                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
-                            <span style="font-size: 11px; color: var(--gray);">%</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Other Expenses -->
-                    <div>
-                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 4px;">
-                            📋 Other Expenses
-                        </label>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="number" 
-                                   id="overhead-other-expenses" 
-                                   value="${overheadSettings.other_expenses_percent}"
-                                   min="0" max="10" step="0.5"
-                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
-                            <span style="font-size: 11px; color: var(--gray);">%</span>
-                        </div>
+                    <!-- Mode Info -->
+                    <div id="${scenario}-${cat.key}-mode-info" style="margin-top: 6px; font-size: 9px; color: var(--gray);">
+                        💡 Bleibt unverändert (0%)
                     </div>
                 </div>
-                
-                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
-                    <button onclick="window.resetOverheadDefaults()" 
-                            style="padding: 6px 12px; border: 1px solid var(--border); 
-                                   border-radius: 4px; background: white; cursor: pointer; 
-                                   font-size: 11px; color: var(--gray);">
-                        ↺ Zurücksetzen
-                    </button>
-                    <button onclick="window.saveOverheadSettings()" 
-                            class="btn btn-primary btn-sm"
-                            style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px;">
-                        <span>💾</span>
-                        <span>Speichern</span>
-                    </button>
-                </div>
-            </div>
+            `).join('')}
+            
         </div>
     `;
 }
@@ -2209,6 +2196,73 @@ window.saveBaseCase = async function() {
         alert('❌ Fehler beim Speichern des Base Case');
     }
 };
+
+// ==========================================
+// ✅ NEU: BEST/WORST INLINE FUNCTIONS
+// ==========================================
+
+/**
+ * Toggle Best inline details
+ * 
+ * @public
+ */
+window.toggleBestInlineDetails = function() {
+    const detailsPanel = document.getElementById('best-inline-details');
+    const toggleIcon = document.getElementById('best-inline-toggle-icon');
+    
+    if (!detailsPanel) return;
+    
+    if (detailsPanel.style.display === 'none') {
+        detailsPanel.style.display = 'block';
+        toggleIcon.textContent = '▲ Details ausblenden';
+    } else {
+        detailsPanel.style.display = 'none';
+        toggleIcon.textContent = '▼ Details anzeigen';
+    }
+};
+
+/**
+ * Toggle Worst inline details
+ * 
+ * @public
+ */
+window.toggleWorstInlineDetails = function() {
+    const detailsPanel = document.getElementById('worst-inline-details');
+    const toggleIcon = document.getElementById('worst-inline-toggle-icon');
+    
+    if (!detailsPanel) return;
+    
+    if (detailsPanel.style.display === 'none') {
+        detailsPanel.style.display = 'block';
+        toggleIcon.textContent = '▲ Details ausblenden';
+    } else {
+        detailsPanel.style.display = 'none';
+        toggleIcon.textContent = '▼ Details anzeigen';
+    }
+};
+
+/**
+ * Apply Best inline adjustments
+ * 
+ * @public
+ */
+window.applyBestInline = async function() {
+    console.log('✅ Applying Best Case inline adjustments...');
+    // TODO: Collect values and trigger recalculation
+    alert('Best Case wird angewendet... (TODO: Live-Update)');
+};
+
+/**
+ * Apply Worst inline adjustments
+ * 
+ * @public
+ */
+window.applyWorstInline = async function() {
+    console.log('✅ Applying Worst Case inline adjustments...');
+    // TODO: Collect values and trigger recalculation
+    alert('Worst Case wird angewendet... (TODO: Live-Update)');
+};
+
 
 // ========================================
 // EXPORTS
