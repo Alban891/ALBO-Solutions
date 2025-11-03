@@ -1630,7 +1630,21 @@ window.saveOverheadSettings = function() {
     
     // Save to projekt
     projekt.overheadSettings = settings;
-    state.saveProjekt(projekt);
+
+    // ✅ Korrekte Save-Funktion
+    if (typeof state.updateProjekt === 'function') {
+        state.updateProjekt(projektId, projekt);
+    } else if (typeof state.saveProjekt === 'function') {
+        state.saveProjekt(projekt);
+    } else {
+        // Fallback: Direct assignment (für lokale Tests)
+        console.warn('⚠️ Keine Save-Funktion gefunden - using direct assignment');
+        const allProjects = state.getAllProjekte();
+        const index = allProjects.findIndex(p => p.id === projektId);
+        if (index !== -1) {
+            allProjects[index] = projekt;
+        }
+    }
     
     alert('✅ Overhead-Einstellungen gespeichert! Die Änderungen werden beim nächsten Neuberechnen verwendet.');
     
