@@ -1,10 +1,14 @@
 /**
- * CFO Dashboard - Chart Factory
- * Centralized Chart.js management and configuration
- * All chart types, styles, and update logic in one place
+ * ALBO Solutions - Chart Factory (Horváth Edition)
+ * Professional Chart.js implementations with Horváth design system
+ * 
+ * Chart Types:
+ * - Waterfall Charts (Revenue, Costs)
+ * - Margin Bridge (DB1 → DB2 → DB3)
+ * - Sensitivity Tornado
+ * - Sparklines (Executive Summary)
+ * - Stacked Bars (Artikel Breakdown)
  */
-
-import { state } from '../../state.js';
 
 const Chart = window.Chart;
 
@@ -15,31 +19,64 @@ const Chart = window.Chart;
 const chartInstances = {};
 
 // ==========================================
+// HORVÁTH COLOR SYSTEM
+// ==========================================
+
+const HORVATH_COLORS = {
+    // Primary
+    navy: '#003366',
+    blue: '#0066CC',
+    
+    // Status
+    success: '#00A651',
+    warning: '#FF6600',
+    danger: '#DC0032',
+    neutral: '#8C9BA5',
+    
+    // Chart Specific
+    hardware: '#003366',
+    software: '#0066CC',
+    services: '#00A651',
+    
+    // Backgrounds
+    lightBlue: 'rgba(0, 102, 204, 0.1)',
+    lightGreen: 'rgba(0, 166, 81, 0.1)',
+    lightRed: 'rgba(220, 0, 50, 0.1)',
+    
+    // Grid
+    gridLight: '#E2E8F0',
+    gridMedium: '#CBD5E0'
+};
+
+// ==========================================
 // CHART.JS DEFAULTS
 // ==========================================
 
-/**
- * Initialize Chart.js global defaults
- */
 export function initializeChartDefaults() {
     if (!Chart) {
         console.error('❌ Chart.js not loaded');
         return false;
     }
     
-    // Global font settings
-    Chart.defaults.font.size = 9;
-    Chart.defaults.font.family = "'Inter', -apple-system, sans-serif";
-    Chart.defaults.color = '#6b7280';
+    // Global defaults
+    Chart.defaults.font.family = "'Roboto', -apple-system, sans-serif";
+    Chart.defaults.font.size = 11;
+    Chart.defaults.color = '#4A5568';
     
-    // Global legend settings
-    Chart.defaults.plugins.legend.display = false;
+    // Plugin defaults
+    Chart.defaults.plugins.legend.display = true;
+    Chart.defaults.plugins.legend.position = 'bottom';
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.padding = 15;
+    Chart.defaults.plugins.legend.labels.font = { size: 10, weight: 500 };
     
-    // Global tooltip settings
-    Chart.defaults.plugins.tooltip.titleFont = { size: 10 };
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0, 51, 102, 0.95)';
+    Chart.defaults.plugins.tooltip.titleFont = { size: 11, weight: 600 };
     Chart.defaults.plugins.tooltip.bodyFont = { size: 10 };
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 6;
     
-    console.log('✅ Chart.js defaults initialized');
+    console.log('✅ Horváth Chart defaults initialized');
     return true;
 }
 
@@ -47,173 +84,577 @@ export function initializeChartDefaults() {
 // STANDARD OPTIONS
 // ==========================================
 
-/**
- * Get standard chart options
- * Applies to all charts for consistency
- */
-function getStandardOptions() {
+function getStandardOptions(customOptions = {}) {
     return {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: 0 },
+        layout: { 
+            padding: { top: 10, bottom: 10, left: 10, right: 10 }
+        },
         plugins: {
-            legend: { display: false },
-            tooltip: { 
+            legend: {
+                display: customOptions.showLegend !== false,
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: { size: 10, weight: 500 }
+                }
+            },
+            tooltip: {
                 enabled: true,
-                titleFont: { size: 10 },
-                bodyFont: { size: 10 }
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) label += ': ';
+                        
+                        const value = context.parsed.y || context.parsed;
+                        label += new Intl.NumberFormat('de-DE', {
+                            style: 'currency',
+                            currency: 'EUR',
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1
+                        }).format(value) + 'M';
+                        
+                        return label;
+                    }
+                }
             }
         },
-        scales: {
+        scales: customOptions.scales || {
             x: getStandardXScale(),
             y: getStandardYScale()
-        }
+        },
+        ...customOptions
     };
 }
 
-/**
- * Standard X-Axis configuration
- */
 function getStandardXScale() {
     return {
-        grid: { display: false },
+        grid: { 
+            display: false,
+            drawBorder: false
+        },
         ticks: { 
-            font: { size: 8 },
-            autoSkip: true,
-            maxTicksLimit: 10
+            font: { size: 10, weight: 500 },
+            color: '#4A5568'
         }
     };
 }
 
-/**
- * Standard Y-Axis configuration
- */
 function getStandardYScale() {
     return {
-        grid: { color: '#f3f4f6' },
+        grid: { 
+            color: HORVATH_COLORS.gridLight,
+            drawBorder: false
+        },
         ticks: { 
-            font: { size: 8 },
+            font: { size: 10 },
+            color: '#718096',
             callback: function(value) {
-                return value.toFixed(1);
+                return value.toFixed(1) + 'M';
             }
         }
     };
 }
 
 // ==========================================
-// CHART CREATORS
+// SPARKLINES (Executive Summary)
 // ==========================================
 
-/**
- * Create Umsatz (Revenue) Bar Chart
- */
-export function createUmsatzChart(canvasId, data) {
+export function createSparkline(elementId, data) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`Sparkline element ${elementId} not found`);
+        return null;
+    }
+    
+    // Create mini canvas
+    element.innerHTML = '<canvas style="width: 100%; height: 30px;"></canvas>';
+    const canvas = element.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing
+    const chartId = `sparkline-${elementId}`;
+    destroyChart(chartId);
+    
+    // Create sparkline
+    chartInstances[chartId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                borderColor: HORVATH_COLORS.blue,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            }
+        }
+    });
+    
+    return chartInstances[chartId];
+}
+
+// ==========================================
+// WATERFALL CHART (Revenue)
+// ==========================================
+
+export function createRevenueWaterfall(canvasId, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
         console.error(`Canvas ${canvasId} not found`);
         return null;
     }
     
-    // Destroy existing chart
-    destroyChart('umsatz');
+    destroyChart('revenueWaterfall');
+    
+    // Prepare waterfall data
+    const waterfallData = prepareWaterfallData(data);
     
     const ctx = canvas.getContext('2d');
-    chartInstances.umsatz = new Chart(ctx, {
+    chartInstances.revenueWaterfall = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: waterfallData.labels,
+            datasets: [{
+                label: 'Revenue',
+                data: waterfallData.values,
+                backgroundColor: waterfallData.colors,
+                borderWidth: 0,
+                borderRadius: 4
+            }]
+        },
+        options: getStandardOptions({
+            showLegend: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            return 'Revenue: ' + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M';
+                        },
+                        afterLabel: function(context) {
+                            // Show delta for growth years
+                            if (context.dataIndex > 0) {
+                                const delta = waterfallData.deltas[context.dataIndex];
+                                if (delta) {
+                                    return 'Wachstum: +' + new Intl.NumberFormat('de-DE', {
+                                        style: 'currency',
+                                        currency: 'EUR',
+                                        minimumFractionDigits: 1
+                                    }).format(delta) + 'M';
+                                }
+                            }
+                            return '';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: getStandardYScale()
+            }
+        })
+    });
+    
+    return chartInstances.revenueWaterfall;
+}
+
+/**
+ * Prepare waterfall data structure
+ */
+function prepareWaterfallData(data) {
+    const labels = [];
+    const values = [];
+    const colors = [];
+    const deltas = [];
+    
+    data.labels.forEach((label, idx) => {
+        labels.push(label);
+        values.push(data.values[idx]);
+        
+        // First year: Navy, others: Green (growth)
+        colors.push(idx === 0 ? HORVATH_COLORS.navy : HORVATH_COLORS.success);
+        
+        // Calculate delta
+        if (idx > 0) {
+            deltas.push(data.values[idx] - data.values[idx - 1]);
+        } else {
+            deltas.push(null);
+        }
+    });
+    
+    return { labels, values, colors, deltas };
+}
+
+// ==========================================
+// MARGIN BRIDGE (DB1 → DB2 → DB3)
+// ==========================================
+
+export function createMarginBridge(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart('marginBridge');
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances.marginBridge = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: data.labels,
             datasets: [{
+                label: 'Margin Bridge',
                 data: data.values,
-                backgroundColor: data.color || '#9ca3af',
+                backgroundColor: data.values.map(v => v >= 0 ? HORVATH_COLORS.success : HORVATH_COLORS.danger),
+                borderWidth: 0,
                 borderRadius: 4
             }]
         },
-        options: getStandardOptions()
+        options: getStandardOptions({
+            showLegend: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = Math.abs(context.parsed.y);
+                            const prefix = context.parsed.y >= 0 ? '+' : '-';
+                            return context.label + ': ' + prefix + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: {
+                    ...getStandardYScale(),
+                    beginAtZero: false
+                }
+            }
+        })
     });
     
-    return chartInstances.umsatz;
+    return chartInstances.marginBridge;
 }
 
-/**
- * Create Absatz (Volume) Bar Chart
- */
-export function createAbsatzChart(canvasId, data) {
+// ==========================================
+// COST WATERFALL
+// ==========================================
+
+export function createCostWaterfall(canvasId, data) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
     
-    destroyChart('absatz');
+    destroyChart('costWaterfall');
     
     const ctx = canvas.getContext('2d');
-    chartInstances.absatz = new Chart(ctx, {
+    chartInstances.costWaterfall = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: data.labels,
             datasets: [{
+                label: 'Projektkosten',
                 data: data.values,
-                backgroundColor: data.color || '#9ca3af',
+                backgroundColor: HORVATH_COLORS.neutral,
+                borderWidth: 0,
                 borderRadius: 4
             }]
         },
-        options: getStandardOptions()
+        options: getStandardOptions({
+            showLegend: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed.y;
+                            return 'Kosten: ' + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: getStandardYScale()
+            }
+        })
     });
     
-    return chartInstances.absatz;
+    return chartInstances.costWaterfall;
 }
 
-/**
- * Create DB2 Combo Chart (Bar + Line)
- * Dual-axis: absolute values (bar) + percentage (line)
- */
-export function createDB2Chart(canvasId, data) {
+// ==========================================
+// SENSITIVITY TORNADO
+// ==========================================
+
+export function createSensitivityTornado(canvasId, data) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
     
-    destroyChart('db2');
+    destroyChart('sensitivityTornado');
     
     const ctx = canvas.getContext('2d');
-    chartInstances.db2 = new Chart(ctx, {
+    chartInstances.sensitivityTornado = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Negative Impact',
+                    data: data.negativeImpact.map(v => -v),
+                    backgroundColor: HORVATH_COLORS.danger,
+                    borderWidth: 0,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Positive Impact',
+                    data: data.positiveImpact,
+                    backgroundColor: HORVATH_COLORS.success,
+                    borderWidth: 0,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: getStandardOptions({
+            indexAxis: 'y',  // Horizontal bars!
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = Math.abs(context.parsed.x);
+                            return context.dataset.label + ': ±' + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { 
+                        color: HORVATH_COLORS.gridLight,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return Math.abs(value).toFixed(1) + 'M';
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { size: 10, weight: 500 }
+                    }
+                }
+            }
+        })
+    });
+    
+    return chartInstances.sensitivityTornado;
+}
+
+// ==========================================
+// STACKED BAR (Artikel Breakdown)
+// ==========================================
+
+export function createStackedBar(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`stacked-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`stacked-${canvasId}`] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: data.datasets.map((ds, idx) => ({
+                label: ds.label,
+                data: ds.data,
+                backgroundColor: ds.color || HORVATH_COLORS.blue,
+                borderWidth: 0,
+                borderRadius: 4
+            }))
+        },
+        options: getStandardOptions({
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: {
+                    ...getStandardYScale(),
+                    stacked: true
+                },
+                x: {
+                    ...getStandardXScale(),
+                    stacked: true
+                }
+            }
+        })
+    });
+    
+    return chartInstances[`stacked-${canvasId}`];
+}
+
+// ==========================================
+// LINE CHART (Trend)
+// ==========================================
+
+export function createTrendLine(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`trend-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`trend-${canvasId}`] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: data.datasets.map(ds => ({
+                label: ds.label,
+                data: ds.data,
+                borderColor: ds.color || HORVATH_COLORS.blue,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: ds.color || HORVATH_COLORS.blue,
+                tension: 0.3
+            }))
+        },
+        options: getStandardOptions({
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: getStandardYScale()
+            }
+        })
+    });
+    
+    return chartInstances[`trend-${canvasId}`];
+}
+
+// ==========================================
+// COMBO CHART (Bar + Line)
+// ==========================================
+
+export function createComboChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`combo-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`combo-${canvasId}`] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: data.labels,
             datasets: [
                 {
                     type: 'bar',
-                    label: 'DB2 (Mio. €)',
-                    data: data.absolute,
-                    backgroundColor: data.colors.bar || '#9ca3af',
+                    label: data.barLabel || 'Absolute',
+                    data: data.barData,
+                    backgroundColor: HORVATH_COLORS.navy,
+                    borderWidth: 0,
                     borderRadius: 4,
                     yAxisID: 'y'
                 },
                 {
                     type: 'line',
-                    label: 'DB2 (%)',
-                    data: data.percent,
-                    borderColor: data.colors.line || '#374151',
+                    label: data.lineLabel || 'Percent',
+                    data: data.lineData,
+                    borderColor: HORVATH_COLORS.warning,
                     backgroundColor: 'transparent',
                     borderWidth: 2,
-                    pointRadius: 3,
-                    pointBackgroundColor: data.colors.line || '#374151',
+                    pointRadius: 4,
+                    pointBackgroundColor: HORVATH_COLORS.warning,
                     yAxisID: 'y1'
                 }
             ]
         },
-        options: {
-            ...getStandardOptions(),
+        options: getStandardOptions({
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom'
+                }
+            },
             scales: {
                 x: getStandardXScale(),
                 y: {
                     ...getStandardYScale(),
                     type: 'linear',
-                    display: true,
                     position: 'left'
                 },
                 y1: {
                     type: 'linear',
-                    display: true,
                     position: 'right',
                     grid: { drawOnChartArea: false },
                     ticks: {
-                        font: { size: 8 },
+                        font: { size: 10 },
                         callback: function(value) {
                             return value.toFixed(0) + '%';
                         }
@@ -222,204 +663,80 @@ export function createDB2Chart(canvasId, data) {
                     max: 100
                 }
             }
-        }
+        })
     });
     
-    return chartInstances.db2;
+    return chartInstances[`combo-${canvasId}`];
 }
 
-/**
- * Create Projektkosten Bar Chart
- */
-export function createProjektkostenChart(canvasId, data) {
+// ==========================================
+// DOUGHNUT CHART (Breakdown)
+// ==========================================
+
+export function createDoughnut(canvasId, data) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
-    
-    destroyChart('projektkosten');
-    
-    console.log('📊 Creating Projektkosten chart');
-    console.log('  Initial data source:', data.source || 'unknown');
-    console.log('  Initial values:', data.values);
-    
-    // ALWAYS try to get from state first (most accurate)
-    const projektId = window.cfoDashboard?.currentProjekt;
-    if (projektId) {
-        const stateData = getProjektkostenFromState(projektId, data.labels);
-        if (stateData) {
-            console.log('✅ Using STATE data (overriding calculator)');
-            data = stateData;
-        } else {
-            console.warn('⚠️ State data unavailable, using provided data');
-        }
-    }
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances.projektkosten = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                backgroundColor: data.color || '#9ca3af',
-                borderRadius: 4
-            }]
-        },
-        options: getStandardOptions()
-    });
-    
-    return chartInstances.projektkosten;
-}
-
-/**
- * Helper: Get Projektkosten directly from State
- * Uses projekt.kostenWerte structure
- */
-function getProjektkostenFromState(projektId, jahre) {
-    try {
-        // Get projekt from state
-        const projekt = state.getProjekt(projektId);
-        
-        if (!projekt) {
-            console.warn('No projekt found');
-            return null;
-        }
-        
-        // Initialize kostenWerte if it doesn't exist
-        if (!projekt.kostenWerte) {
-            console.log('⚠️ Initializing kostenWerte (was undefined)');
-            projekt.kostenWerte = {};
-            state.setProjekt(projektId, projekt);
-        }
-        
-        const blockIds = Object.keys(projekt.kostenWerte);
-        console.log(`✅ Found ${blockIds.length} cost blocks in projekt.kostenWerte`);
-        
-        if (blockIds.length === 0) {
-            console.warn('⚠️ No cost blocks yet - returning zeros');
-            // Return zeros for all years
-            return {
-                labels: jahre,
-                values: jahre.map(() => 0),
-                color: '#9ca3af',
-                source: 'state-empty'
-            };
-        }
-        
-        // Calculate costs per year
-        const values = jahre.map(jahr => {
-            let yearTotal = 0;
-            
-            blockIds.forEach(blockId => {
-                const value = parseFloat(projekt.kostenWerte[blockId]?.[jahr]) || 0;
-                yearTotal += value;
-            });
-            
-            console.log(`  ${jahr}: ${yearTotal.toLocaleString('de-DE')}€ = ${(yearTotal/1000000).toFixed(2)} Mio.`);
-            return yearTotal / 1000000; // Convert to Mio
-        });
-        
-        console.log('✅ Values from projekt.kostenWerte:', values.map(v => v.toFixed(2)));
-        
-        return {
-            labels: jahre,
-            values,
-            color: '#9ca3af',
-            source: 'state'
-        };
-    } catch (error) {
-        console.error('❌ Failed to get Projektkosten from state:', error);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
         return null;
     }
-}
-
-/**
- * Create DB3 Jahr Bar Chart
- * Supports negative values with red coloring
- */
-export function createDB3JahrChart(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
     
-    destroyChart('db3Jahr');
+    destroyChart(`doughnut-${canvasId}`);
     
     const ctx = canvas.getContext('2d');
-    chartInstances.db3Jahr = new Chart(ctx, {
-        type: 'bar',
+    chartInstances[`doughnut-${canvasId}`] = new Chart(ctx, {
+        type: 'doughnut',
         data: {
             labels: data.labels,
             datasets: [{
                 data: data.values,
-                backgroundColor: function(context) {
-                    const value = context.parsed.y;
-                    return data.colorFunction ? data.colorFunction(value) : '#9ca3af';
+                backgroundColor: data.colors || [
+                    HORVATH_COLORS.navy,
+                    HORVATH_COLORS.blue,
+                    HORVATH_COLORS.success,
+                    HORVATH_COLORS.neutral
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 10 }
+                    }
                 },
-                borderRadius: 4
-            }]
-        },
-        options: {
-            ...getStandardOptions(),
-            scales: {
-                x: getStandardXScale(),
-                y: {
-                    ...getStandardYScale(),
-                    beginAtZero: false
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M (' + percent + '%)';
+                        }
+                    }
                 }
             }
         }
     });
     
-    return chartInstances.db3Jahr;
-}
-
-/**
- * Create DB3 Kumuliert Line Chart
- * Shows cumulative profitability over time
- */
-export function createDB3KumuliertChart(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
-    
-    destroyChart('db3Kumuliert');
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances.db3Kumuliert = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                data: data.values,
-                borderColor: data.colors.line || '#374151',
-                backgroundColor: data.colors.fill || 'rgba(55, 65, 81, 0.1)',
-                borderWidth: 2,
-                pointRadius: 4,
-                pointBackgroundColor: data.colors.line || '#374151',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            ...getStandardOptions(),
-            scales: {
-                x: getStandardXScale(),
-                y: {
-                    ...getStandardYScale(),
-                    beginAtZero: false
-                }
-            }
-        }
-    });
-    
-    return chartInstances.db3Kumuliert;
+    return chartInstances[`doughnut-${canvasId}`];
 }
 
 // ==========================================
 // CHART UPDATES
 // ==========================================
 
-/**
- * Update chart data without destroying
- * Performance optimized with 'none' animation mode
- */
 export function updateChart(chartName, newData) {
     const chart = chartInstances[chartName];
     if (!chart) {
@@ -427,7 +744,7 @@ export function updateChart(chartName, newData) {
         return false;
     }
     
-    // Update labels if provided
+    // Update labels
     if (newData.labels) {
         chart.data.labels = newData.labels;
     }
@@ -437,50 +754,23 @@ export function updateChart(chartName, newData) {
         chart.data.datasets[0].data = newData.values;
     }
     
-    // For dual-axis charts (DB2)
-    if (newData.absolute && newData.percent) {
-        chart.data.datasets[0].data = newData.absolute;
-        chart.data.datasets[1].data = newData.percent;
+    if (newData.datasets) {
+        newData.datasets.forEach((ds, idx) => {
+            if (chart.data.datasets[idx]) {
+                chart.data.datasets[idx].data = ds.data;
+            }
+        });
     }
     
-    // Update without animation for performance
+    // Update without animation
     chart.update('none');
-    
     return true;
-}
-
-/**
- * Update all dashboard charts
- */
-export function updateAllCharts(processedData) {
-    console.log('🔄 Updating all charts...');
-    
-    const updates = [
-        { name: 'umsatz', data: processedData.umsatzData },
-        { name: 'absatz', data: processedData.absatzData },
-        { name: 'db2', data: processedData.db2Data },
-        { name: 'projektkosten', data: processedData.projektkostenData },
-        { name: 'db3Jahr', data: processedData.db3JahrData },
-        { name: 'db3Kumuliert', data: processedData.db3KumuliertData }
-    ];
-    
-    let successCount = 0;
-    updates.forEach(update => {
-        if (updateChart(update.name, update.data)) {
-            successCount++;
-        }
-    });
-    
-    console.log(`✅ Updated ${successCount}/${updates.length} charts`);
 }
 
 // ==========================================
 // CHART CLEANUP
 // ==========================================
 
-/**
- * Destroy specific chart instance
- */
 export function destroyChart(chartName) {
     if (chartInstances[chartName]) {
         chartInstances[chartName].destroy();
@@ -488,10 +778,6 @@ export function destroyChart(chartName) {
     }
 }
 
-/**
- * Destroy all chart instances
- * Use before re-rendering dashboard
- */
 export function destroyAllCharts() {
     Object.keys(chartInstances).forEach(key => {
         if (chartInstances[key]) {
@@ -499,33 +785,18 @@ export function destroyAllCharts() {
         }
     });
     
-    // Clear registry
     Object.keys(chartInstances).forEach(key => delete chartInstances[key]);
-    
-    console.log('🧹 All charts destroyed');
+    console.log('🧹 All Horváth charts destroyed');
 }
 
-/**
- * Get chart instance by name
- */
 export function getChart(chartName) {
     return chartInstances[chartName] || null;
-}
-
-/**
- * Check if all charts are initialized
- */
-export function areChartsInitialized() {
-    return Object.keys(chartInstances).length > 0;
 }
 
 // ==========================================
 // CHART UTILITIES
 // ==========================================
 
-/**
- * Resize all charts (for responsive behavior)
- */
 export function resizeAllCharts() {
     Object.values(chartInstances).forEach(chart => {
         if (chart) {
@@ -534,9 +805,6 @@ export function resizeAllCharts() {
     });
 }
 
-/**
- * Download chart as image
- */
 export function downloadChartAsImage(chartName, filename = 'chart.png') {
     const chart = chartInstances[chartName];
     if (!chart) {
@@ -553,24 +821,40 @@ export function downloadChartAsImage(chartName, filename = 'chart.png') {
     return true;
 }
 
+export function areChartsInitialized() {
+    return Object.keys(chartInstances).length > 0;
+}
+
 // ==========================================
-// EXPORT
+// EXPORT ALL
 // ==========================================
 
 export default {
+    // Initialization
     initializeChartDefaults,
-    createUmsatzChart,
-    createAbsatzChart,
-    createDB2Chart,
-    createProjektkostenChart,
-    createDB3JahrChart,
-    createDB3KumuliertChart,
+    
+    // Chart Creators
+    createSparkline,
+    createRevenueWaterfall,
+    createMarginBridge,
+    createCostWaterfall,
+    createSensitivityTornado,
+    createStackedBar,
+    createTrendLine,
+    createComboChart,
+    createDoughnut,
+    
+    // Chart Management
     updateChart,
-    updateAllCharts,
     destroyChart,
     destroyAllCharts,
     getChart,
     areChartsInitialized,
+    
+    // Utilities
     resizeAllCharts,
-    downloadChartAsImage
+    downloadChartAsImage,
+    
+    // Colors
+    HORVATH_COLORS
 };
