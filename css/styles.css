@@ -1394,44 +1394,6 @@ body {
   font-size: 12px;
 }
 
-/* Detail Tabs - direkt nach Breadcrumb */
-.detail-tabs {
-  display: flex;
-  gap: 4px; /* ✅ Reduziert */
-  margin-bottom: 20px; /* ✅ Reduziert von 24px */
-  border-bottom: 2px solid var(--border);
-  background: white; /* ✅ Weißer Hintergrund für bessere Abgrenzung */
-  padding: 0 16px; /* ✅ Etwas Padding links/rechts */
-  position: sticky; /* ✅ Tabs bleiben beim Scrollen sichtbar */
-  top: 120px; /* ✅ Unter Header + Main-Nav */
-  z-index: 100;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* ✅ Subtiler Schatten */
-}
-
-.detail-tab {
-  padding: 12px 20px; /* ✅ Kompakter: vorher 16px 24px */
-  border: none;
-  background: transparent;
-  color: var(--text-light);
-  font-size: 13px; /* ✅ Etwas kleiner: vorher 14px */
-  font-weight: 600;
-  cursor: pointer;
-  position: relative;
-  transition: var(--transition);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-}
-
-.detail-tab:hover {
-  color: var(--text);
-  background: var(--gray-50);
-}
-
-.detail-tab.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-}
-
 /* ========================================== */
 /* LOADING INDICATOR */
 /* ========================================== */
@@ -1583,6 +1545,7 @@ body {
 
 .detail-tab:hover {
   color: var(--text);
+  background: var(--gray-50);  /* ✅ ERGÄNZT */
 }
 
 .detail-tab.active {
