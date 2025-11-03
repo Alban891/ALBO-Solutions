@@ -10,7 +10,7 @@
 
 import { state } from '../../state.js';
 import * as helpers from '../../helpers.js';
-import { calculateProjektWirtschaftlichkeit } from '../wirtschaftlichkeit/calculator.js';
+import { processDataForDashboard, validateDashboardData } from './data-processor.js';
 import * as ChartFactory from './chart-factory-horvath.js';
 import * as Widgets from './widgets-horvath.js';
 
@@ -41,6 +41,76 @@ const dashboardState = {
 // ==========================================
 // MOCK DATA (FALLBACK)
 // ==========================================
+
+/**
+ * Transform processed data to our dashboard format
+ */
+function transformProcessedData(processed) {
+    console.log('🔄 Transforming processed data to dashboard format...');
+    
+    // Extract years from labels
+    const jahre = processed.umsatzData?.labels || [];
+    
+    // Build jahreDaten from chart data
+    const jahreDaten = {};
+    jahre.forEach((jahr, index) => {
+        jahreDaten[jahr] = {
+            gesamtRevenue: (processed.umsatzData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
+            gesamtDB1: (processed.db2Data?.datasets?.[0]?.data?.[index] || 0) * 1000000,
+            gesamtDB3: (processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
+            gesamtProjektkosten: (processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
+            gesamtMarketing: 0,
+            gesamtRnD: 0,
+            gesamtOverhead: 0
+        };
+    });
+    
+    // Calculate totals
+    let gesamtRevenue5Y = 0;
+    let gesamtDB3_5Y = 0;
+    let gesamtProjektkosten = 0;
+    
+    Object.values(jahreDaten).forEach(jahresDaten => {
+        gesamtRevenue5Y += jahresDaten.gesamtRevenue;
+        gesamtDB3_5Y += jahresDaten.gesamtDB3;
+        gesamtProjektkosten += jahresDaten.gesamtProjektkosten;
+    });
+    
+    // Find break-even
+    let breakEvenJahr = '-';
+    let kumuliertDB3 = 0;
+    for (let i = 0; i < jahre.length; i++) {
+        kumuliertDB3 += jahreDaten[jahre[i]].gesamtDB3;
+        if (kumuliertDB3 > 0 && breakEvenJahr === '-') {
+            breakEvenJahr = i + 1;
+            break;
+        }
+    }
+    
+    // Calculate NPV (simplified)
+    const npv = gesamtDB3_5Y - gesamtProjektkosten;
+    
+    // Get artikel from state
+    const projektId = window.cfoDashboard?.currentProjekt;
+    const artikelListe = state.getArtikelByProjekt(projektId) || [];
+    
+    return {
+        projekt: state.getProjekt(projektId),
+        projektName: processed.projektName,
+        jahre: jahre,
+        artikelListe: artikelListe.map(a => ({
+            ...a,
+            gesamtRevenue5Y: 0 // TODO: Calculate from revenueModel
+        })),
+        jahreDaten: jahreDaten,
+        gesamtRevenue5Y: gesamtRevenue5Y,
+        gesamtDB3_5Y: gesamtDB3_5Y,
+        gesamtProjektkosten: gesamtProjektkosten,
+        breakEvenJahr: breakEvenJahr,
+        npv: npv,
+        irr: npv > 0 ? 0.15 : 0.05
+    };
+}
 
 /**
  * Create mock data for demo purposes when no real data available
@@ -121,6 +191,90 @@ function createMockData(projektId) {
     };
 }
 
+/**
+ * Build data structure from state when calculator is not available
+ */
+function buildDataFromState(projektId, projekt, artikelListe) {
+    console.log('🔨 Building data from state...');
+    
+    // Extract years from artikel
+    const alleJahre = new Set();
+    artikelListe.forEach(artikel => {
+        if (artikel.revenueModel?.jahre) {
+            Object.keys(artikel.revenueModel.jahre).forEach(jahr => alleJahre.add(jahr));
+        }
+    });
+    
+    const jahre = Array.from(alleJahre).sort();
+    console.log('📅 Found years:', jahre);
+    
+    if (jahre.length === 0) {
+        jahre.push('2025', '2026', '2027', '2028', '2029');
+    }
+    
+    // Calculate totals per year
+    const jahreDaten = {};
+    let gesamtRevenue5Y = 0;
+    let gesamtDB3_5Y = 0;
+    
+    jahre.forEach(jahr => {
+        let jahresRevenue = 0;
+        let jahresDB1 = 0;
+        let jahresDB3 = 0;
+        
+        artikelListe.forEach(artikel => {
+            const menge = artikel.revenueModel?.jahre?.[jahr]?.menge || 0;
+            const preis = artikel.revenueModel?.jahre?.[jahr]?.preis || 0;
+            const hk = artikel.revenueModel?.jahre?.[jahr]?.hk || 0;
+            
+            const revenue = menge * preis;
+            const db1 = menge * (preis - hk);
+            
+            jahresRevenue += revenue;
+            jahresDB1 += db1;
+        });
+        
+        // Simplified: DB3 = 50% of DB1 (without real cost data)
+        jahresDB3 = jahresDB1 * 0.5;
+        
+        jahreDaten[jahr] = {
+            gesamtRevenue: jahresRevenue,
+            gesamtDB1: jahresDB1,
+            gesamtDB3: jahresDB3,
+            gesamtProjektkosten: 0, // TODO: Get from projekt
+            gesamtMarketing: jahresDB1 * 0.1,
+            gesamtRnD: jahresDB1 * 0.15,
+            gesamtOverhead: jahresDB1 * 0.05
+        };
+        
+        gesamtRevenue5Y += jahresRevenue;
+        gesamtDB3_5Y += jahresDB3;
+    });
+    
+    console.log('💰 Calculated totals:', {
+        revenue: gesamtRevenue5Y,
+        db3: gesamtDB3_5Y,
+        jahre: jahre.length
+    });
+    
+    return {
+        projekt: projekt,
+        jahre: jahre,
+        artikelListe: artikelListe.map(a => ({
+            ...a,
+            gesamtRevenue5Y: Object.values(a.revenueModel?.jahre || {}).reduce((sum, j) => 
+                sum + (j.menge * j.preis), 0)
+        })),
+        jahreDaten: jahreDaten,
+        gesamtRevenue5Y: gesamtRevenue5Y,
+        gesamtDB3_5Y: gesamtDB3_5Y,
+        gesamtProjektkosten: 0,
+        breakEvenJahr: '-',
+        npv: gesamtDB3_5Y - gesamtRevenue5Y * 0.3, // Simplified
+        irr: 0.15
+    };
+}
+
 // ==========================================
 // MAIN RENDER
 // ==========================================
@@ -128,7 +282,7 @@ function createMockData(projektId) {
 /**
  * Main entry point - renders complete dashboard
  */
-export function renderProjektDashboard() {
+export async function renderProjektDashboard() {
     console.log('🎨 Rendering Story-Driven Dashboard...');
     
     const projektId = window.cfoDashboard?.currentProjekt || state.currentProjekt;
@@ -148,20 +302,23 @@ export function renderProjektDashboard() {
     container.innerHTML = Widgets.renderLoadingWidget();
     
     // Fetch and calculate data
-    setTimeout(() => {
+    setTimeout(async () => {
         try {
-            let result = calculateProjektWirtschaftlichkeit(projektId);
+            console.log('🔍 DEBUG: Starting dashboard calculation for projekt:', projektId);
             
-            // FALLBACK: Create mock data if calculation fails
-            if (!result || !result.projekt) {
-                console.warn('⚠️ No data from calculator, using mock data');
-                result = createMockData(projektId);
+            // Use the SAME data processor as old dashboard!
+            const processedData = await processDataForDashboard(projektId);
+            console.log('✅ DEBUG: Processed data:', processedData);
+            
+            // Validate
+            const validation = validateDashboardData(processedData);
+            if (validation.hasWarnings) {
+                console.warn('⚠️ Dashboard warnings:', validation.warnings);
             }
             
-            // Ensure required data structure
-            result.jahre = result.jahre || [2025, 2026, 2027, 2028, 2029];
-            result.artikelListe = result.artikelListe || [];
-            result.jahreDaten = result.jahreDaten || {};
+            // Transform to our format
+            const result = transformProcessedData(processedData);
+            console.log('✅ DEBUG: Transformed result:', result);
             
             // Store in state
             dashboardState.projektId = projektId;
@@ -180,22 +337,9 @@ export function renderProjektDashboard() {
             
         } catch (error) {
             console.error('❌ Dashboard calculation failed:', error);
+            console.error('❌ Error stack:', error.stack);
             
-            // Show error but also try with mock data
-            console.warn('⚠️ Trying with mock data...');
-            const mockData = createMockData(projektId);
-            
-            dashboardState.projektId = projektId;
-            dashboardState.rawData = mockData;
-            dashboardState.calculationResult = mockData;
-            dashboardState.lastUpdate = new Date();
-            dashboardState.isInitialized = true;
-            
-            container.innerHTML = createDashboardLayout();
-            
-            requestAnimationFrame(() => {
-                initializeExecutiveSummaryCharts();
-            });
+            container.innerHTML = Widgets.renderErrorWidget(error);
         }
     }, 100);
 }
