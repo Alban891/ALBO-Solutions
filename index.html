@@ -12,7 +12,6 @@
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/artikel-modal-styles.css">
-    <link rel="stylesheet" href="css/ai-business-partner.css">
     <link rel="stylesheet" href="css/cockpit-COMPLETE.css">
     <link rel="stylesheet" href="css/market-sizing.css">
 
@@ -1534,17 +1533,6 @@
 
     console.log('✅ All modules and navigation functions loaded');
 
-    // ========================================
-    // AI ADVISOR MODULE
-    // ========================================
-    import('./js/modules/ai-business-partner.js').then(module => {
-        const { renderAIBusinessPartner } = module;
-        renderAIBusinessPartner('ai-partner-container');
-        console.log('✅ AI Business Partner ready');
-    }).catch(error => {
-        console.error('❌ Failed to load AI Partner:', error);
-    });
-
     // Revenue Model Module
     import('./js/modules/revenue-model/revenue-model.js').then(() => {
         console.log('✅ Revenue Model module loaded');
@@ -1553,11 +1541,6 @@
     });
 
     </script>
-
-    <!-- AI Business Partner Panel -->
-    <div id="ai-partner-panel">
-        <div id="ai-partner-container"></div>
-    </div>
 
 </body>
 </html>
