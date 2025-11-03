@@ -222,20 +222,21 @@ body {
 .main-navigation {
   background: var(--background);
   border-bottom: 1px solid var(--border);
-  padding: 0 var(--spacing-xl);
+  padding: 0 32px;  /* ✅ Explizit statt var */
   display: flex;
-  gap: var(--spacing-sm);
+  gap: 4px;  /* ✅ Kleiner Gap */
   position: sticky;
-  top: 60px; /* ✅ ANGEPASST von 73px auf 60px */
+  top: 60px;
   z-index: 1020;
+  margin-bottom: 0;  /* ✅ NEU: Kein Abstand nach unten */
 }
 
 .tab-btn {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: 12px 20px;  /* ✅ Kompakter */
   border: none;
   background: transparent;
   color: var(--text-light);
-  font-size: var(--font-size-sm);
+  font-size: 13px;  /* ✅ Kleiner */
   font-weight: 500;
   cursor: pointer;
   position: relative;
@@ -275,7 +276,7 @@ body {
 .dashboard-main {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-xl);
+  padding: 16px 32px;  /* ✅ Reduziert: oben nur 16px statt 32px */
   background: var(--background-alt);
 }
 
@@ -1361,8 +1362,9 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
-  padding: 4px 0;
+  margin-bottom: 4px;  /* ✅ VON 8px auf 4px */
+  margin-top: 0;  /* ✅ NEU */
+  padding: 0;  /* ✅ KEIN Padding */
   font-size: 12px;
 }
 
@@ -1518,7 +1520,7 @@ body {
 .detail-tabs {
   display: flex;
   gap: 2px;
-  margin-bottom: 0px;  /* ✅ VON 12px AUF 0px */
+  margin-bottom: 0;
   margin-top: 0;
   border-bottom: 2px solid var(--border);
   background: white;
@@ -1526,15 +1528,15 @@ body {
   position: sticky;
   top: 120px;
   z-index: 100;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: none;  /* ✅ ÄNDERE: Kein Schatten */
 }
 
 .detail-tab {
-  padding: 8px 16px;
+  padding: 6px 14px;  /* ✅ NOCH kleiner: 6px statt 8px */
   border: none;
   background: transparent;
   color: var(--text-light);
-  font-size: 12px;
+  font-size: 11px;  /* ✅ NOCH kleiner: 11px statt 12px */
   font-weight: 600;
   cursor: pointer;
   position: relative;
@@ -2340,12 +2342,13 @@ body {
 /* ========================================== */
 
 #projekt-detail-view {
-  padding-top: 12px;
+  padding-top: 0;  /* ✅ KEIN Padding */
+  margin-top: 0;  /* ✅ KEIN Margin */
 }
 
 /* Tab Content: Minimaler Top-Padding */
 .projekt-tab-content {
-  padding-top: 16px;  /* ✅ ÄNDERE von 0 auf 16px */
+  padding-top: 8x;
 }
 
 .projekt-tab-content:not(.active) {
