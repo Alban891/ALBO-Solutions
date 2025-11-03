@@ -71,18 +71,39 @@ window.initializeSzenarioAnalysis = async function() {
 window.selectSzenario = async function(szenarioId) {
     console.log('🎯 Selecting scenario:', szenarioId);
     
-    if (!baseCalculationResult) {
-        await window.initializeSzenarioAnalysis();
-    }
+    const projektId = window.cfoDashboard.currentProjekt;
+    const activeFilter = window.cfoDashboard?.artikelFilter;
     
     activeSzenarioId = szenarioId;
     
     try {
         let result;
         
+        // ✅ WICHTIG: Calculate base case WITH current filter
+        let baseForSzenario;
+        
+        if (activeFilter) {
+            // Filter active: Calculate base ONLY for this article
+            console.log(`🔍 Calculating base for filtered article: ${activeFilter}`);
+            const artikelListe = state.getArtikelByProjekt(projektId);
+            const filteredListe = artikelListe.filter(a => a.id === activeFilter);
+            
+            baseForSzenario = await calculateProjektWirtschaftlichkeit(projektId, {
+                wacc: 0.08,
+                validateInputs: true,
+                filteredArtikel: filteredListe
+            });
+        } else {
+            // No filter: Use cached base or calculate new
+            if (!baseCalculationResult) {
+                await window.initializeSzenarioAnalysis();
+            }
+            baseForSzenario = baseCalculationResult;
+        }
+        
         if (szenarioId === 'base') {
             // Use base calculation
-            result = baseCalculationResult;
+            result = baseForSzenario;
         } else {
             // Apply scenario adjustments
             const preset = SZENARIO_PRESETS[szenarioId];
@@ -91,7 +112,7 @@ window.selectSzenario = async function(szenarioId) {
             }
             
             console.log('⚙️ Applying scenario:', preset.name);
-            result = applySzenario(baseCalculationResult, preset.config);
+            result = applySzenario(baseForSzenario, preset.config);
         }
         
         // Update UI
