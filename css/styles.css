@@ -1521,15 +1521,15 @@ body {
   display: flex;
   gap: 2px;
   margin-bottom: 0;
-  margin-top: 0;  /* ✅ Direkt nach Breadcrumb */
+  margin-top: 0;
   border-bottom: 2px solid var(--border);
-  border-top: 1px solid #f1f5f9;  /* ✅ NEU: Dezente obere Linie */
+  border-top: none;  /* ✅ ÄNDERE: keine obere Linie */
   background: white;
   padding: 0 12px;
   position: sticky;
-  top: 108px;  /* ✅ GEÄNDERT: 108px statt 120px (Header 60px + Main-Nav 48px) */
-  z-index: 1000;  /* ✅ HÖHER: 1000 statt 100 */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.08);  /* ✅ Schatten für bessere Sichtbarkeit */
+  top: 106px;  /* ✅ ÄNDERE: 106px statt 108px */
+  z-index: 1020;  /* ✅ ÄNDERE: 1020 statt 1000 (höher als main-nav) */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);  /* ✅ ÄNDERE: weniger Schatten */
 }
 
 .detail-tab {
