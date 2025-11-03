@@ -2290,50 +2290,6 @@ body {
   }
 }
 
-/* ========================================
-   AI BUSINESS PARTNER PANEL CONTAINER
-   ======================================== */
-
-/* Fixed Panel rechts */
-#ai-partner-panel {
-  position: fixed !important;
-  right: 0 !important;
-  top: 0 !important;
-  width: 400px !important;
-  height: 100vh !important;
-  z-index: 9999 !important;
-  background: white !important;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1) !important;
-  overflow: hidden !important;
-}
-
-/* Container muss 100% Height sein */
-#ai-partner-container {
-  height: 100% !important;
-}
-
-/* Main Content - Platz für Panel */
-.main-content {
-  margin-right: 400px !important;
-  transition: margin-right 0.3s ease;
-}
-
-/* Header - Platz für Panel */
-.dashboard-header {
-  margin-right: 400px !important;
-  transition: margin-right 0.3s ease;
-}
-
-/* Falls Panel collapsed werden soll (optional future feature) */
-body.ai-panel-hidden .main-content,
-body.ai-panel-hidden .dashboard-header {
-  margin-right: 0 !important;
-}
-
-body.ai-panel-hidden #ai-partner-panel {
-  right: -400px !important;
-}
-
 /* Sortable Table Headers */
 .data-table th {
     position: relative;
