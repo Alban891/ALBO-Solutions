@@ -1413,10 +1413,10 @@ function initializeEventHandlers() {
                 }
             } else {
                 // Switch to scenario
-                if (typeof window.switchToSzenario === 'function') {
-                    window.switchToSzenario(szenarioId);
+                if (typeof window.selectSzenario === 'function') {
+                    window.selectSzenario(szenarioId);  // ✅ RICHTIGE FUNKTION!
                 } else {
-                    console.warn('⚠️ window.switchToSzenario not found');
+                    console.warn('⚠️ window.selectSzenario not found');
                     alert(`Szenario "${szenarioId}" wird geladen...`);
                 }
             }
