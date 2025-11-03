@@ -186,54 +186,20 @@
     <!-- HEADER -->
     <!-- ========================================== -->
     <header class="dashboard-header">
-        <div class="header-left">
-            <h1>ALBO Solutions - Business Case Management</h1>
-            <span class="header-subtitle">KI-gestützte Echtzeit-Analyse mit intelligenten Handlungsempfehlungen</span>
-        </div>
-        <!-- RECHTS: KPIs -->
-        <div class="header-stats">
-            <div class="stat">
-                <div class="stat-value" id="npv-value">+44,7M€</div>
-                <div class="stat-label">NPV (9 JAHRE)</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="payback-value">3,4J</div>
-                <div class="stat-label">PAYBACK</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="revenue-value">117,8M€</div>
-                <div class="stat-label">TOTAL REVENUE</div>
-            </div>
-            <div class="stat">
-                <div class="stat-value" id="margin-value">34%</div>
-                <div class="stat-label">Ø DB2-MARGE</div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Zurück zur Platform -->
-    <div style="background: #f1f5f9; padding: 0.75rem 2rem; border-bottom: 1px solid #e2e8f0;">
+    <div class="header-left">
+        <h1>ALBO Solutions - Business Case Management</h1>
+        <span class="header-subtitle">KI-gestützte Echtzeit-Analyse mit intelligenten Handlungsempfehlungen</span>
+    </div>
+    <!-- RECHTS: Zurück-Button -->
+    <div class="header-actions">
         <button 
             onclick="window.location.href='platform.html?section=cases'" 
-            style="
-                background: white;
-                border: 1px solid #e2e8f0;
-                padding: 0.5rem 1rem;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 14px;
-                color: #475569;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                transition: all 0.2s ease;
-            "
-            onmouseover="this.style.background='#f8fafc'; this.style.borderColor='#3b82f6'; this.style.color='#3b82f6';"
-            onmouseout="this.style.background='white'; this.style.borderColor='#e2e8f0'; this.style.color='#475569';"
+            class="btn-back-to-platform"
         >
             ← Zurück zur Platform
         </button>
     </div>
+</header>
 
     <!-- ========================================== -->
     <!-- MAIN NAVIGATION (Horvath-Style) -->
