@@ -238,6 +238,34 @@ export async function renderProjektWirtschaftlichkeit() {
                     </div>
                 </div>
             </div>
+
+            <!-- ✅ NEU: Base Case Info Panel (Collapsible) -->
+            <div id="base-case-panel" style="background: white; padding: 12px; border-radius: 8px; 
+                                            margin-bottom: 16px; border: 1px solid var(--border); 
+                                            display: ${window.currentActiveSzenarioId === 'base' ? 'block' : 'none'};">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
+                    onclick="window.toggleBaseCaseDetails()">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--primary);">
+                            📊 Base Case Annahmen
+                        </span>
+                        <span id="base-case-toggle-icon" style="font-size: 10px; color: var(--gray);">
+                            ▼ Details anzeigen
+                        </span>
+                    </div>
+                    <button onclick="event.stopPropagation(); window.saveBaseCase();" 
+                            class="btn btn-primary btn-sm"
+                            style="padding: 4px 10px; font-size: 10px;">
+                        💾 Base Case speichern
+                    </button>
+                </div>
+                
+                <!-- Collapsible Content -->
+                <div id="base-case-details" style="display: none; margin-top: 12px; padding-top: 12px; 
+                                                border-top: 1px solid var(--border);">
+                    ${renderBaseCaseDetails(projekt, result)}
+                </div>
+            </div>
             
             <!-- Rest of UI -->
             ${renderContributionMarginTable(result)}
@@ -371,6 +399,276 @@ function renderHeader(projekt, artikelListe) {
                         <option value="ebit">Nur EBIT</option>
                     </select>
                 </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render Base Case details with fallback sliders
+ * Shows current values from Revenue Model + Projektkosten
+ * Editable fallback percentages when Projektkosten are missing
+ * 
+ * @param {Object} projekt - Project data
+ * @param {Object} result - Calculation result (for current values)
+ * @returns {string} HTML
+ * 
+ * @private
+ */
+function renderBaseCaseDetails(projekt, result) {
+    // Get current values from calculation
+    const totalRevenue = result.totals?.sales_revenue_total || 0;
+    
+    // Get projektkosten aktive blocks
+    const projektkosten = projekt?.kostenWerte || {};
+    const aktiveBlöcke = projekt?.aktiveKostenblöcke || [];
+    
+    // Check which categories have actual Projektkosten
+    const hasDevCosts = aktiveBlöcke.some(id => ['personal', 'cloud', 'lizenzen'].includes(id));
+    const hasSellingCosts = aktiveBlöcke.some(id => ['marketing', 'vertrieb'].includes(id));
+    const hasAdminCosts = aktiveBlöcke.some(id => ['verwaltung', 'it'].includes(id));
+    
+    // Get fallback settings (or defaults)
+    const fallbackSettings = projekt?.baseCaseFallbacks || {
+        development_percent: 15,
+        selling_percent: 10,
+        marketing_percent: 5,
+        admin_percent: 5,
+        distribution_percent: 3
+    };
+    
+    return `
+        <div style="display: grid; gap: 16px;">
+            
+            <!-- Revenue Section -->
+            <div style="background: #f0f9ff; padding: 12px; border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                    💰 Revenue (aus Revenue Model)
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;">
+                    <span style="font-size: 10px; color: var(--gray);">Total Sales Revenue:</span>
+                    <strong style="font-size: 13px; color: var(--primary);">
+                        ${helpers.formatCurrency(totalRevenue)}
+                    </strong>
+                </div>
+                <div style="font-size: 9px; color: var(--gray); margin-top: 6px;">
+                    ℹ️ Wird automatisch aus Artikel-Forecasts berechnet
+                </div>
+            </div>
+            
+            <!-- Cost Section -->
+            <div style="background: #fef3c7; padding: 12px; border-radius: 6px;">
+                <div style="font-size: 11px; font-weight: 600; color: #92400e; margin-bottom: 8px;">
+                    💼 Projektkosten & Fallback
+                </div>
+                
+                <!-- Development -->
+                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #fde68a;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--gray);">
+                            🔬 Development
+                        </span>
+                        ${hasDevCosts ? `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #10b981; color: white; 
+                                         border-radius: 3px;">✓ Projektkosten</span>
+                        ` : `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #f59e0b; color: white; 
+                                         border-radius: 3px;">⚠️ Fallback aktiv</span>
+                        `}
+                    </div>
+                    
+                    ${!hasDevCosts ? `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" 
+                                   id="fallback-development" 
+                                   class="fallback-slider"
+                                   min="0" max="50" step="0.5" 
+                                   value="${fallbackSettings.development_percent}"
+                                   oninput="window.updateFallbackValue('development', this.value)"
+                                   style="flex: 1;">
+                            <input type="number" 
+                                   id="fallback-development-value"
+                                   value="${fallbackSettings.development_percent}"
+                                   min="0" max="50" step="0.5"
+                                   oninput="window.updateFallbackSlider('development', this.value)"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 3px; font-size: 11px; font-weight: 600;">
+                            <span style="font-size: 10px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                            = ${helpers.formatCurrency(totalRevenue * fallbackSettings.development_percent / 100)}
+                        </div>
+                    ` : `
+                        <div style="font-size: 10px; color: var(--gray);">
+                            Werte aus Projektkosten-Tab
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Selling -->
+                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #fde68a;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--gray);">
+                            📢 Selling
+                        </span>
+                        ${hasSellingCosts ? `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #10b981; color: white; 
+                                         border-radius: 3px;">✓ Projektkosten</span>
+                        ` : `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #f59e0b; color: white; 
+                                         border-radius: 3px;">⚠️ Fallback aktiv</span>
+                        `}
+                    </div>
+                    
+                    ${!hasSellingCosts ? `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" 
+                                   id="fallback-selling" 
+                                   class="fallback-slider"
+                                   min="0" max="30" step="0.5" 
+                                   value="${fallbackSettings.selling_percent}"
+                                   oninput="window.updateFallbackValue('selling', this.value)"
+                                   style="flex: 1;">
+                            <input type="number" 
+                                   id="fallback-selling-value"
+                                   value="${fallbackSettings.selling_percent}"
+                                   min="0" max="30" step="0.5"
+                                   oninput="window.updateFallbackSlider('selling', this.value)"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 3px; font-size: 11px; font-weight: 600;">
+                            <span style="font-size: 10px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                            = ${helpers.formatCurrency(totalRevenue * fallbackSettings.selling_percent / 100)}
+                        </div>
+                    ` : `
+                        <div style="font-size: 10px; color: var(--gray);">
+                            Werte aus Projektkosten-Tab
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Marketing -->
+                <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #fde68a;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--gray);">
+                            🎯 Marketing
+                        </span>
+                        ${hasSellingCosts ? `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #10b981; color: white; 
+                                         border-radius: 3px;">✓ Projektkosten</span>
+                        ` : `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #f59e0b; color: white; 
+                                         border-radius: 3px;">⚠️ Fallback aktiv</span>
+                        `}
+                    </div>
+                    
+                    ${!hasSellingCosts ? `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" 
+                                   id="fallback-marketing" 
+                                   class="fallback-slider"
+                                   min="0" max="30" step="0.5" 
+                                   value="${fallbackSettings.marketing_percent}"
+                                   oninput="window.updateFallbackValue('marketing', this.value)"
+                                   style="flex: 1;">
+                            <input type="number" 
+                                   id="fallback-marketing-value"
+                                   value="${fallbackSettings.marketing_percent}"
+                                   min="0" max="30" step="0.5"
+                                   oninput="window.updateFallbackSlider('marketing', this.value)"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 3px; font-size: 11px; font-weight: 600;">
+                            <span style="font-size: 10px; color: var(--gray);">%</span>
+                        </div>
+                        <div style="font-size: 9px; color: var(--gray); margin-top: 4px;">
+                            = ${helpers.formatCurrency(totalRevenue * fallbackSettings.marketing_percent / 100)}
+                        </div>
+                    ` : `
+                        <div style="font-size: 10px; color: var(--gray);">
+                            Werte aus Projektkosten-Tab
+                        </div>
+                    `}
+                </div>
+                
+                <!-- Admin + Distribution combined -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--gray);">
+                            🏢 Admin & Distribution
+                        </span>
+                        ${hasAdminCosts ? `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #10b981; color: white; 
+                                         border-radius: 3px;">✓ Projektkosten</span>
+                        ` : `
+                            <span style="font-size: 9px; padding: 2px 6px; background: #f59e0b; color: white; 
+                                         border-radius: 3px;">⚠️ Fallback aktiv</span>
+                        `}
+                    </div>
+                    
+                    ${!hasAdminCosts ? `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <!-- Admin -->
+                            <div>
+                                <div style="font-size: 9px; color: var(--gray); margin-bottom: 4px;">Admin:</div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="range" 
+                                           id="fallback-admin" 
+                                           class="fallback-slider"
+                                           min="0" max="20" step="0.5" 
+                                           value="${fallbackSettings.admin_percent}"
+                                           oninput="window.updateFallbackValue('admin', this.value)"
+                                           style="flex: 1;">
+                                    <input type="number" 
+                                           id="fallback-admin-value"
+                                           value="${fallbackSettings.admin_percent}"
+                                           min="0" max="20" step="0.5"
+                                           oninput="window.updateFallbackSlider('admin', this.value)"
+                                           style="width: 50px; padding: 2px; border: 1px solid var(--border); 
+                                                  border-radius: 3px; font-size: 10px;">
+                                    <span style="font-size: 9px;">%</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Distribution -->
+                            <div>
+                                <div style="font-size: 9px; color: var(--gray); margin-bottom: 4px;">Distribution:</div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="range" 
+                                           id="fallback-distribution" 
+                                           class="fallback-slider"
+                                           min="0" max="20" step="0.5" 
+                                           value="${fallbackSettings.distribution_percent}"
+                                           oninput="window.updateFallbackValue('distribution', this.value)"
+                                           style="flex: 1;">
+                                    <input type="number" 
+                                           id="fallback-distribution-value"
+                                           value="${fallbackSettings.distribution_percent}"
+                                           min="0" max="20" step="0.5"
+                                           oninput="window.updateFallbackSlider('distribution', this.value)"
+                                           style="width: 50px; padding: 2px; border: 1px solid var(--border); 
+                                                  border-radius: 3px; font-size: 10px;">
+                                    <span style="font-size: 9px;">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="font-size: 10px; color: var(--gray);">
+                            Werte aus Projektkosten-Tab
+                        </div>
+                    `}
+                </div>
+            </div>
+            
+            <!-- Info Box -->
+            <div style="padding: 10px; background: #e0f2fe; border-left: 3px solid #0ea5e9; 
+                        border-radius: 4px; font-size: 10px; color: #0c4a6e; line-height: 1.5;">
+                💡 <strong>Base Case</strong> = Ihre Planungsgrundlage<br>
+                • Revenue aus Forecasts (unveränderlich)<br>
+                • Kosten aus Projektkosten-Tab (wenn vorhanden)<br>
+                • Fallback-% für fehlende Kostenblöcke (editierbar)<br>
+                <br>
+                Alle Szenarien (Best/Worst/Custom) bauen auf diesem Base Case auf!
             </div>
         </div>
     `;
@@ -1803,6 +2101,112 @@ window.resetOverheadDefaults = function() {
         document.getElementById('overhead-other-expenses').value = 2;
         
         alert('✅ Werte wurden zurückgesetzt. Klicken Sie auf "Speichern" um zu übernehmen.');
+    }
+};
+
+// ==========================================
+// ✅ NEU: Base Case Management Functions
+// ==========================================
+
+/**
+ * Toggle Base Case details panel
+ * 
+ * @public
+ */
+window.toggleBaseCaseDetails = function() {
+    const detailsPanel = document.getElementById('base-case-details');
+    const toggleIcon = document.getElementById('base-case-toggle-icon');
+    
+    if (!detailsPanel) return;
+    
+    if (detailsPanel.style.display === 'none') {
+        detailsPanel.style.display = 'block';
+        toggleIcon.textContent = '▲ Details ausblenden';
+    } else {
+        detailsPanel.style.display = 'none';
+        toggleIcon.textContent = '▼ Details anzeigen';
+    }
+};
+
+/**
+ * Update fallback value from slider
+ * 
+ * @param {string} category - Cost category
+ * @param {number} value - New value
+ * 
+ * @public
+ */
+window.updateFallbackValue = function(category, value) {
+    const valueInput = document.getElementById(`fallback-${category}-value`);
+    if (valueInput) {
+        valueInput.value = value;
+    }
+    
+    // TODO: Trigger live update of table
+    console.log(`📊 Fallback ${category} updated to ${value}%`);
+};
+
+/**
+ * Update fallback slider from input
+ * 
+ * @param {string} category - Cost category
+ * @param {number} value - New value
+ * 
+ * @public
+ */
+window.updateFallbackSlider = function(category, value) {
+    const slider = document.getElementById(`fallback-${category}`);
+    if (slider) {
+        slider.value = value;
+    }
+    
+    // TODO: Trigger live update of table
+    console.log(`📊 Fallback ${category} slider updated to ${value}%`);
+};
+
+/**
+ * Save Base Case to database
+ * 
+ * @public
+ */
+window.saveBaseCase = async function() {
+    const projektId = window.cfoDashboard.currentProjekt;
+    const projekt = state.getProjekt(projektId);
+    
+    if (!projekt) {
+        alert('❌ Kein Projekt ausgewählt');
+        return;
+    }
+    
+    // Collect fallback values
+    const fallbackSettings = {
+        development_percent: parseFloat(document.getElementById('fallback-development-value')?.value || 15),
+        selling_percent: parseFloat(document.getElementById('fallback-selling-value')?.value || 10),
+        marketing_percent: parseFloat(document.getElementById('fallback-marketing-value')?.value || 5),
+        admin_percent: parseFloat(document.getElementById('fallback-admin-value')?.value || 5),
+        distribution_percent: parseFloat(document.getElementById('fallback-distribution-value')?.value || 3)
+    };
+    
+    // Save to projekt
+    projekt.baseCaseFallbacks = fallbackSettings;
+    projekt.baseCaseLastUpdated = new Date().toISOString();
+    
+    // Save via state
+    try {
+        if (typeof state.updateProjekt === 'function') {
+            await state.updateProjekt(projektId, projekt);
+        } else if (typeof state.saveProjekt === 'function') {
+            await state.saveProjekt(projekt);
+        }
+        
+        alert('✅ Base Case erfolgreich gespeichert!');
+        
+        // Re-render to apply changes
+        renderProjektWirtschaftlichkeit();
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern:', error);
+        alert('❌ Fehler beim Speichern des Base Case');
     }
 };
 
