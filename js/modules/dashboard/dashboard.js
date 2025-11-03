@@ -47,6 +47,7 @@ const dashboardState = {
  */
 function transformProcessedData(processed) {
     console.log('🔄 Transforming processed data to dashboard format...');
+    console.log('📊 Input data:', processed);
     
     // Extract years from labels
     const jahre = processed.umsatzData?.labels || [];
@@ -54,11 +55,24 @@ function transformProcessedData(processed) {
     // Build jahreDaten from chart data
     const jahreDaten = {};
     jahre.forEach((jahr, index) => {
+        // Data is ALREADY in millions from data-processor!
+        const revenueInMio = processed.umsatzData?.datasets?.[0]?.data?.[index] || 0;
+        const db2InMio = processed.db2Data?.datasets?.[0]?.data?.[index] || 0;
+        const db3JahrInMio = processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0;
+        const projektkostenInMio = processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0;
+        
+        console.log(`📅 Jahr ${jahr}:`, {
+            revenue: revenueInMio + 'M',
+            db2: db2InMio + 'M',
+            db3: db3JahrInMio + 'M',
+            kosten: projektkostenInMio + 'M'
+        });
+        
         jahreDaten[jahr] = {
-            gesamtRevenue: (processed.umsatzData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
-            gesamtDB1: (processed.db2Data?.datasets?.[0]?.data?.[index] || 0) * 1000000,
-            gesamtDB3: (processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
-            gesamtProjektkosten: (processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0) * 1000000,
+            gesamtRevenue: revenueInMio * 1000000,  // Convert to actual value
+            gesamtDB1: db2InMio * 1000000,
+            gesamtDB3: db3JahrInMio * 1000000,
+            gesamtProjektkosten: projektkostenInMio * 1000000,
             gesamtMarketing: 0,
             gesamtRnD: 0,
             gesamtOverhead: 0
@@ -76,14 +90,22 @@ function transformProcessedData(processed) {
         gesamtProjektkosten += jahresDaten.gesamtProjektkosten;
     });
     
-    // Find break-even
+    console.log('💰 Totals:', {
+        revenue: (gesamtRevenue5Y / 1000000).toFixed(2) + 'M',
+        db3: (gesamtDB3_5Y / 1000000).toFixed(2) + 'M',
+        kosten: (gesamtProjektkosten / 1000000).toFixed(2) + 'M'
+    });
+    
+    // Find break-even from kumuliert data
     let breakEvenJahr = '-';
-    let kumuliertDB3 = 0;
-    for (let i = 0; i < jahre.length; i++) {
-        kumuliertDB3 += jahreDaten[jahre[i]].gesamtDB3;
-        if (kumuliertDB3 > 0 && breakEvenJahr === '-') {
-            breakEvenJahr = i + 1;
-            break;
+    if (processed.db3KumuliertData?.datasets?.[0]?.data) {
+        const kumuliertData = processed.db3KumuliertData.datasets[0].data;
+        for (let i = 0; i < kumuliertData.length; i++) {
+            if (kumuliertData[i] > 0) {
+                breakEvenJahr = jahre[i];
+                console.log('🎯 Break-Even found in:', breakEvenJahr);
+                break;
+            }
         }
     }
     
@@ -94,7 +116,7 @@ function transformProcessedData(processed) {
     const projektId = window.cfoDashboard?.currentProjekt;
     const artikelListe = state.getArtikelByProjekt(projektId) || [];
     
-    return {
+    const result = {
         projekt: state.getProjekt(projektId),
         projektName: processed.projektName,
         jahre: jahre,
@@ -110,6 +132,10 @@ function transformProcessedData(processed) {
         npv: npv,
         irr: npv > 0 ? 0.15 : 0.05
     };
+    
+    console.log('✅ Final transformed data:', result);
+    
+    return result;
 }
 
 /**
