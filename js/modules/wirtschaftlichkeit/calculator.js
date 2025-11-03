@@ -253,41 +253,78 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     const db2_margin_prozent = sales_revenue > 0 ? (db2 / sales_revenue * 100) : 0;
     
-    // Step 6: Get Development Costs from Project Costs (DB3)
-    const development_overhead = sumProjectCostsByCategory(
-        projektkosten, 
-        KOSTEN_MAPPING.development, 
-        jahr
+// ========== ✅ NEU: Hybrid-Berechnung für Overheads ==========
+    
+    console.log(`\n📊 Calculating Overheads for ${jahr}:`);
+    
+    // Step 6: Development Overhead (DB3)
+    const development_overhead = calculateOverheadHybrid(
+        projektkosten,  // Das ist jetzt das PROJEKT-Objekt
+        KOSTEN_MAPPING.development,
+        jahr,
+        sales_revenue
     );
     const db3 = db2 - development_overhead;
     
-    // Step 7: Get Selling & Marketing Costs (DB4)
-    const selling_marketing_costs = sumProjectCostsByCategory(
+    // Step 7: Selling & Marketing Overhead (DB4)
+    const selling_marketing_total = calculateOverheadHybrid(
         projektkosten,
         KOSTEN_MAPPING.selling_marketing,
-        jahr
+        jahr,
+        sales_revenue
     );
-    // Split into selling and marketing for detailed view
-    const selling_overhead = selling_marketing_costs * 0.6;  // 60% selling
-    const marketing_overhead = selling_marketing_costs * 0.4;  // 40% marketing
+    
+    // Split into Selling (60%) and Marketing (40%)
+    const selling_overhead = selling_marketing_total * 
+        KOSTEN_MAPPING.selling_marketing.split.selling;
+    const marketing_overhead = selling_marketing_total * 
+        KOSTEN_MAPPING.selling_marketing.split.marketing;
     
     const db4 = db3 - selling_overhead - marketing_overhead;
     
-    // Step 8: Get Admin & Distribution Costs (DB5)
-    const admin_distribution_costs = sumProjectCostsByCategory(
+    // Step 8: Admin & Distribution Overhead (DB5)
+    const admin_distribution_total = calculateOverheadHybrid(
         projektkosten,
         KOSTEN_MAPPING.admin_distribution,
-        jahr
+        jahr,
+        sales_revenue
     );
-    // Split into distribution and admin for detailed view
-    const distribution_overhead = admin_distribution_costs * 0.4;  // 40% distribution
-    const admin_overhead = admin_distribution_costs * 0.6;  // 60% admin
+    
+    // Split into Distribution (30%) and Admin (70%)
+    const distribution_overhead = admin_distribution_total * 
+        KOSTEN_MAPPING.admin_distribution.split.distribution;
+    const admin_overhead = admin_distribution_total * 
+        KOSTEN_MAPPING.admin_distribution.split.admin;
     
     const db5 = db4 - distribution_overhead - admin_overhead;
     
-    // Step 9: EBIT = DB5 (no other adjustments for now)
-    const ebit = db5;
+    // ========== ✅ NEU: Other Operating Items ==========
+    
+    // Other Operating Income (positiv - erhöht EBIT)
+    const other_operating_income = calculateOverheadHybrid(
+        projektkosten,
+        KOSTEN_MAPPING.other_operating_income,
+        jahr,
+        sales_revenue
+    );
+    
+    // Other Operating Expenses (negativ - senkt EBIT)
+    const other_operating_expenses = calculateOverheadHybrid(
+        projektkosten,
+        KOSTEN_MAPPING.other_operating_expenses,
+        jahr,
+        sales_revenue
+    );
+    
+    // ========== EBIT = DB5 + Other Income - Other Expenses ==========
+    const ebit = db5 + other_operating_income - other_operating_expenses;
     const ebit_margin_prozent = sales_revenue > 0 ? (ebit / sales_revenue * 100) : 0;
+    
+    console.log(`\n📊 Jahr ${jahr} - EBIT Berechnung:`);
+    console.log(`   DB5: ${helpers.formatCurrency(db5)}`);
+    console.log(`   + Other Income: ${helpers.formatCurrency(other_operating_income)}`);
+    console.log(`   - Other Expenses: ${helpers.formatCurrency(other_operating_expenses)}`);
+    console.log(`   = EBIT: ${helpers.formatCurrency(ebit)} (${ebit_margin_prozent.toFixed(1)}%)\n`);
     
     return {
         sales_revenue,
@@ -298,8 +335,8 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
         manufacturing_overhead,
         db2,
         db2_margin_prozent,
-        manufacturing_margin: db2,  // Alias for dashboard
-        manufacturing_margin_percent: db2_margin_prozent,  // Alias for dashboard
+        manufacturing_margin: db2,
+        manufacturing_margin_percent: db2_margin_prozent,
         development_overhead,
         db3,
         selling_overhead,
@@ -308,6 +345,11 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
         distribution_overhead,
         admin_overhead,
         db5,
+        
+        // ✅ NEU: Other Operating Items
+        other_operating_income,
+        other_operating_expenses,
+        
         ebit,
         ebit_margin_prozent
     };
@@ -626,6 +668,50 @@ function getProjektkosten(projektId) {
     
     // Return the complete project object (not an array)
     return projekt;
+}
+
+/**
+ * ✅ NEU: Hybrid Overhead Calculation
+ * 
+ * Priorität:
+ * 1. Nutze direkte Projektkosten (aus Projektkosten-Tab)
+ * 2. Falls keine vorhanden: Nutze %-Satz vom Umsatz (Fallback)
+ * 
+ * @param {Object|null} projekt - Project object with kostenWerte
+ * @param {Object} kategorieConfig - Category config from KOSTEN_MAPPING
+ * @param {string} jahr - Year (YYYY)
+ * @param {number} umsatz - Sales revenue for percentage calculation
+ * @returns {number} Overhead cost
+ * 
+ * @private
+ */
+function calculateOverheadHybrid(projekt, kategorieConfig, jahr, umsatz) {
+    
+    // STEP 1: Versuche direkte Projektkosten zu holen
+    const direkteKosten = sumProjectCostsByCategory(
+        projekt, 
+        kategorieConfig.blocks, 
+        jahr
+    );
+    
+    if (direkteKosten > 0) {
+        console.log(`  ✅ Using direct project costs: ${helpers.formatCurrency(direkteKosten)}`);
+        return direkteKosten;
+    }
+    
+    // STEP 2: Fallback auf %-Satz
+    const prozentsatz = kategorieConfig.fallback_percent || 0;
+    
+    if (prozentsatz === 0) {
+        console.log(`  ℹ️ Keine Projektkosten, kein Fallback-% → 0€`);
+        return 0;
+    }
+    
+    const prozentualeKosten = umsatz * (prozentsatz / 100);
+    console.log(`  ⚙️ Fallback ${prozentsatz}% vom Umsatz (${helpers.formatCurrency(umsatz)}): ` +
+                `${helpers.formatCurrency(prozentualeKosten)}`);
+    
+    return prozentualeKosten;
 }
 
 /**
@@ -981,7 +1067,7 @@ function validateCalculationInputs(artikelListe, projekt) {
     if (!projekt || !projekt.kostenWerte || Object.keys(projekt.kostenWerte).length === 0) {
         warnings.push({
             field: 'projektkosten',
-            message: 'Keine Projektkosten definiert - DB3-DB5 werden 0 sein',
+            message: 'Keine Projektkosten definiert - DB3-DB5 nutzen Fallback-Prozentsätze',
             recommendation: 'Projektkosten im Projektkosten-Tab erfassen'
         });
     } else {
@@ -1027,7 +1113,7 @@ function createMetadata(projektId, artikelListe, projekt, jahre) {
         verwendete_kostenblöcke: verwendeteKostenblöcke,
         anzahl_kostenblöcke: verwendeteKostenblöcke.length,
         hk_aufteilungs_faktoren: {},
-        version: '4.1.0 - Fixed Project Cost Integration'
+        version: '4.2.0 - Hybrid Overhead Model + Other Operating Items'
     };
 }
 
