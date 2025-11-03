@@ -1520,15 +1520,12 @@ body {
 .detail-tabs {
   display: flex;
   gap: 2px;
-  margin-bottom: 0;
-  margin-top: 0;
+  margin: 0;
   border-bottom: 2px solid var(--border);
   background: white;
   padding: 0 12px;
-  position: relative;
-  top: 155px;  /* ✅ Header(60) + MainNav(48) + Breadcrumb(20) + Padding(27) = 155px */
-  z-index: 1020;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  position: relative;  /* ✅ Bleibt relative */
+  z-index: 100;
 }
 
 .detail-tab {
