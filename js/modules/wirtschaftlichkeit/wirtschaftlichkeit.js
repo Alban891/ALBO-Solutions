@@ -183,6 +183,7 @@ export async function renderWirtschaftlichkeit() {
 
 /**
  * Render header section with project info
+ * KOMPAKTE VERSION - Alles in einer Zeile
  * 
  * @param {Object} projekt - Project data
  * @param {Array} artikelListe - List of articles
@@ -192,30 +193,33 @@ export async function renderWirtschaftlichkeit() {
  */
 function renderHeader(projekt, artikelListe) {
     return `
-        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+        <div style="background: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; 
                     border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--primary);">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                <!-- Left: Title -->
+                <div style="flex-shrink: 0;">
+                    <h3 style="margin: 0; font-size: 16px; color: var(--primary); display: flex; align-items: center; gap: 8px;">
                         📊 Projekt-Wirtschaftlichkeit
+                        <span style="font-size: 12px; font-weight: 400; color: var(--gray);">
+                            ${projekt?.name || 'Projekt'} • ${artikelListe?.length || 0} Artikel
+                        </span>
                     </h3>
-                    <div style="font-size: 13px; color: var(--gray);">
-                        ${projekt?.name || 'Projekt'} • ${artikelListe?.length || 0} Artikel
-                    </div>
                 </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
+                
+                <!-- Right: Controls -->
+                <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
                     <button onclick="window.exportWirtschaftlichkeit()" 
                             class="btn btn-secondary btn-sm"
-                            style="display: flex; align-items: center; gap: 6px;">
+                            style="display: flex; align-items: center; gap: 4px; padding: 6px 10px; font-size: 11px;">
                         <span>📥</span>
-                        <span>Export Excel</span>
+                        <span>Export</span>
                     </button>
                     <select id="view-level" onchange="window.updateViewLevel()" 
-                            style="padding: 6px 12px; border: 1px solid var(--border); 
-                                   border-radius: 4px; font-size: 12px; background: white;">
-                        <option value="all" selected>Alle Stufen anzeigen</option>
-                        <option value="db2">Bis Manufacturing Margin (DB2)</option>
-                        <option value="db5">Bis DB5 (vor EBIT)</option>
+                            style="padding: 6px 10px; border: 1px solid var(--border); 
+                                   border-radius: 4px; font-size: 11px; background: white;">
+                        <option value="all" selected>Alle Stufen</option>
+                        <option value="db2">Bis DB2</option>
+                        <option value="db5">Bis DB5</option>
                         <option value="ebit">Nur EBIT</option>
                     </select>
                 </div>
@@ -230,7 +234,7 @@ function renderHeader(projekt, artikelListe) {
 
 /**
  * Render overhead configuration panel
- * Allows users to customize fallback percentages
+ * KOMPAKTE VERSION - Inline mit Toggle
  * 
  * @param {Object} projekt - Project data
  * @returns {string} HTML
@@ -238,7 +242,6 @@ function renderHeader(projekt, artikelListe) {
  * @private
  */
 function renderOverheadConfigPanel(projekt) {
-    // Get current settings from projekt or use defaults
     const overheadSettings = projekt?.overheadSettings || {
         development_percent: 15,
         selling_marketing_percent: 15,
@@ -247,138 +250,115 @@ function renderOverheadConfigPanel(projekt) {
     };
     
     return `
-        <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
+        <div style="background: white; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; 
                     border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">
-                        ⚙️ Overhead-Konfiguration (Fallback-Prozentsätze)
-                    </h4>
-                    <div style="font-size: 11px; color: var(--gray);">
-                        Diese %-Sätze werden verwendet, wenn keine Projektkosten erfasst sind
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--gray);">⚙️ Overhead-Fallback:</span>
+                        <button id="toggle-overhead-config" 
+                                style="padding: 4px 10px; border: 1px solid var(--border); 
+                                       border-radius: 4px; background: white; cursor: pointer; 
+                                       font-size: 10px; color: var(--primary);">
+                            <span id="toggle-icon">▼</span> Anpassen
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Preview -->
+                    <div style="display: flex; gap: 16px; font-size: 11px; color: var(--gray);">
+                        <span>Dev: <strong>${overheadSettings.development_percent}%</strong></span>
+                        <span>S&M: <strong>${overheadSettings.selling_marketing_percent}%</strong></span>
+                        <span>A&D: <strong>${overheadSettings.admin_distribution_percent}%</strong></span>
+                        <span>Other: <strong>${overheadSettings.other_expenses_percent}%</strong></span>
                     </div>
                 </div>
-                <button id="toggle-overhead-config" 
-                        style="padding: 6px 12px; border: 1px solid var(--border); 
-                               border-radius: 4px; background: white; cursor: pointer; 
-                               font-size: 11px; color: var(--primary);">
-                    <span id="toggle-icon">▼</span> Einstellungen
-                </button>
             </div>
             
-            <div id="overhead-config-content" style="display: none;">
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; 
-                            padding: 16px; background: #f8fafc; border-radius: 6px;">
+            <div id="overhead-config-content" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
                     
                     <!-- Development -->
                     <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 6px;">
+                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 4px;">
                             🔬 Development (DB3)
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
                             <input type="number" 
                                    id="overhead-development" 
                                    value="${overheadSettings.development_percent}"
-                                   min="0" 
-                                   max="50"
-                                   step="1"
-                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
-                            <span style="font-size: 12px; color: var(--gray);">%</span>
-                        </div>
-                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
-                            Standard: 15%
+                                   min="0" max="50" step="1"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
+                            <span style="font-size: 11px; color: var(--gray);">%</span>
                         </div>
                     </div>
                     
                     <!-- Selling & Marketing -->
                     <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 6px;">
+                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 4px;">
                             📢 Sales & Marketing (DB4)
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
                             <input type="number" 
                                    id="overhead-selling-marketing" 
                                    value="${overheadSettings.selling_marketing_percent}"
-                                   min="0" 
-                                   max="50"
-                                   step="1"
-                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
-                            <span style="font-size: 12px; color: var(--gray);">%</span>
-                        </div>
-                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
-                            Standard: 15%
+                                   min="0" max="50" step="1"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
+                            <span style="font-size: 11px; color: var(--gray);">%</span>
                         </div>
                     </div>
                     
                     <!-- Admin & Distribution -->
                     <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 6px;">
+                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 4px;">
                             🏢 Admin & Distribution (DB5)
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
                             <input type="number" 
                                    id="overhead-admin-distribution" 
                                    value="${overheadSettings.admin_distribution_percent}"
-                                   min="0" 
-                                   max="30"
-                                   step="1"
-                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
-                            <span style="font-size: 12px; color: var(--gray);">%</span>
-                        </div>
-                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
-                            Standard: 8%
+                                   min="0" max="30" step="1"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
+                            <span style="font-size: 11px; color: var(--gray);">%</span>
                         </div>
                     </div>
                     
                     <!-- Other Expenses -->
                     <div>
-                        <label style="font-size: 11px; font-weight: 600; color: var(--gray); 
-                                      display: block; margin-bottom: 6px;">
+                        <label style="font-size: 10px; font-weight: 600; color: var(--gray); 
+                                      display: block; margin-bottom: 4px;">
                             📋 Other Expenses
                         </label>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
                             <input type="number" 
                                    id="overhead-other-expenses" 
                                    value="${overheadSettings.other_expenses_percent}"
-                                   min="0" 
-                                   max="10"
-                                   step="0.5"
-                                   style="width: 70px; padding: 6px; border: 1px solid var(--border); 
-                                          border-radius: 4px; font-size: 14px; font-weight: 600;">
-                            <span style="font-size: 12px; color: var(--gray);">%</span>
-                        </div>
-                        <div style="font-size: 10px; color: var(--gray); margin-top: 4px;">
-                            Standard: 2%
+                                   min="0" max="10" step="0.5"
+                                   style="width: 60px; padding: 4px; border: 1px solid var(--border); 
+                                          border-radius: 4px; font-size: 12px; font-weight: 600;">
+                            <span style="font-size: 11px; color: var(--gray);">%</span>
                         </div>
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px;">
                     <button onclick="window.resetOverheadDefaults()" 
-                            style="padding: 8px 16px; border: 1px solid var(--border); 
+                            style="padding: 6px 12px; border: 1px solid var(--border); 
                                    border-radius: 4px; background: white; cursor: pointer; 
-                                   font-size: 12px; color: var(--gray);">
-                        ↺ Auf Standard zurücksetzen
+                                   font-size: 11px; color: var(--gray);">
+                        ↺ Zurücksetzen
                     </button>
                     <button onclick="window.saveOverheadSettings()" 
                             class="btn btn-primary btn-sm"
-                            style="display: flex; align-items: center; gap: 6px;">
+                            style="display: flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 11px;">
                         <span>💾</span>
-                        <span>Einstellungen speichern</span>
+                        <span>Speichern</span>
                     </button>
-                </div>
-                
-                <div style="margin-top: 12px; padding: 10px; background: #fef3c7; 
-                            border-left: 4px solid #f59e0b; border-radius: 4px; font-size: 11px;">
-                    <strong>💡 Hinweis:</strong> Diese Prozentsätze werden nur verwendet, wenn im 
-                    <a href="#projekt-tab-projektkosten" style="color: var(--primary);">Projektkosten-Tab</a> 
-                    keine Kosten erfasst sind. Sobald Sie Projektkosten eingeben, werden diese verwendet.
                 </div>
             </div>
         </div>
@@ -427,89 +407,57 @@ function renderArtikelHeader(artikel) {
  */
 function renderArtikelOverview(artikelListe) {
     if (!artikelListe || artikelListe.length === 0) {
-        return `
-            <div style="background: #fff3cd; padding: 16px; border-radius: 8px; margin-bottom: 20px; 
-                        border: 1px solid #ffc107;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 24px;">⚠️</span>
-                    <div>
-                        <div style="font-weight: 600; margin-bottom: 4px;">Keine Artikel vorhanden</div>
-                        <div style="font-size: 12px; color: var(--gray);">
-                            Bitte legen Sie zunächst Artikel im Artikel-Tab an.
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        return '';
     }
     
     return `
-        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 16px; 
-                    border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="font-size: 12px; font-weight: 600; color: var(--primary);">
-                    📦 Artikel-Filter
-                </div>
-                <div style="font-size: 11px; color: var(--gray);">
-                    Wählen Sie einen Artikel für Produkt-Analyse (bis DB2)
-                </div>
-            </div>
-            
-            <!-- Filter Buttons -->
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <!-- "Alle" Button -->
-                <button 
-                    id="filter-alle"
-                    data-artikel-id="null"
-                    class="artikel-filter-btn active"
-                    style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
-                           background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
-                           border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;
-                           transition: all 0.2s;">
-                    <span style="font-size: 16px;">📊</span>
-                    <span>Alle Artikel (Projekt-Gesamt)</span>
-                </button>
-                
-                ${artikelListe.map(artikel => `
+        <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 16px; 
+                    border-radius: 8px; margin-bottom: 16px; border: 1px solid #dbeafe;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <span style="font-size: 11px; font-weight: 600; color: var(--primary);">📦 Filter:</span>
+                    
+                    <!-- "Alle" Button -->
                     <button 
-                        id="filter-${artikel.id}"
-                        data-artikel-id="${artikel.id}"
-                        class="artikel-filter-btn"
-                        style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; 
-                               background: white; color: #374151; border: 1px solid #e5e7eb;
-                               border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500;
-                               transition: all 0.2s;">
-                        <span style="color: ${getTypeColor(artikel.typ)}; font-size: 14px;">●</span>
-                        <span>${artikel.name || 'Unbenannt'}</span>
-                        <span style="color: var(--gray); font-size: 10px;">${artikel.typ || 'N/A'}</span>
+                        id="filter-alle"
+                        data-artikel-id="null"
+                        class="artikel-filter-btn active"
+                        style="padding: 6px 12px; background: #1e3a8a; color: white; border: 2px solid #1e3a8a;
+                               border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">
+                        📊 Alle (Projekt-Gesamt)
                     </button>
-                `).join('')}
+                    
+                    ${artikelListe.map(artikel => `
+                        <button 
+                            id="filter-${artikel.id}"
+                            data-artikel-id="${artikel.id}"
+                            class="artikel-filter-btn"
+                            style="padding: 6px 12px; background: white; color: #374151; border: 1px solid #e5e7eb;
+                                   border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">
+                            <span style="color: ${getTypeColor(artikel.typ)};">●</span> ${artikel.name}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <div style="font-size: 10px; color: var(--gray); white-space: nowrap;">
+                    Produkt-Analyse (bis DB2)
+                </div>
             </div>
             
             <!-- Info-Box (initially hidden) -->
-            <div id="artikel-filter-info" style="display: none; margin-top: 12px; padding: 12px; 
-                                                  background: #fef3c7; border-left: 4px solid #f59e0b;
+            <div id="artikel-filter-info" style="display: none; margin-top: 10px; padding: 10px; 
+                                                  background: #fef3c7; border-left: 3px solid #f59e0b;
                                                   border-radius: 4px;">
-                <div style="display: flex; gap: 10px;">
-                    <span style="font-size: 20px;">ℹ️</span>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; font-size: 12px; margin-bottom: 4px; color: #92400e;">
-                            PRODUKT-ANALYSE MODUS
-                        </div>
-                        <div style="font-size: 11px; color: #78350f; line-height: 1.5;">
-                            Sie sehen die Wirtschaftlichkeit für: <strong id="filtered-artikel-name"></strong><br>
-                            <strong>Angezeigt:</strong> DB1 & DB2 (Manufacturing Margin)<br>
-                            <strong>Ausgegraut:</strong> DB3-EBIT (Projektkosten sind nicht artikelspezifisch zuordenbar)
-                        </div>
-                        <button id="back-to-all-btn"
-                                data-artikel-id="null"
-                                class="artikel-filter-btn"
-                                style="margin-top: 8px; padding: 6px 12px; background: white; 
-                                       border: 1px solid #f59e0b; border-radius: 4px; 
-                                       font-size: 11px; cursor: pointer; font-weight: 500;">
-                            ← Zur Projekt-Gesamtsicht wechseln
-                        </button>
-                    </div>
+                <div style="font-size: 11px; color: #78350f; line-height: 1.4;">
+                    <strong id="filtered-artikel-name"></strong> | 
+                    Angezeigt: DB1 & DB2 | 
+                    Ausgegraut: DB3-EBIT (nicht zuordenbar) |
+                    <button id="back-to-all-btn" data-artikel-id="null" class="artikel-filter-btn"
+                            style="margin-left: 8px; padding: 4px 10px; background: white; 
+                                   border: 1px solid #f59e0b; border-radius: 4px; 
+                                   font-size: 10px; cursor: pointer;">
+                        ← Zurück
+                    </button>
                 </div>
             </div>
         </div>
