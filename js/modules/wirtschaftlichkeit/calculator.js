@@ -172,11 +172,11 @@ export async function calculateProjektWirtschaftlichkeit(projektId, options = {}
         // 3. Determine year range
         const jahre = determineYearRange(artikelListe, projektkosten);
         
-        // 4. Calculate per year
+     // 4. Calculate per year
         const jahresErgebnisse = {};
-        
+
         jahre.forEach(jahr => {
-            jahresErgebnisse[jahr] = calculateJahresWirtschaftlichkeit(
+            jahresErgebnisse[jahr] = calculateJahresWirtschaftlichkeitSingle(
                 artikelListe,
                 projektkosten,
                 jahr,
@@ -213,14 +213,16 @@ export async function calculateProjektWirtschaftlichkeit(projektId, options = {}
  * ✅ NEUE VERSION: Verwendet Forecast-Daten aus Datenbank-Cache
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - List of articles
- * @param {import('./types').Kostenblock[]} projektkosten - Project cost blocks
+ * @param {Object|null} projekt - Project object with kostenWerte
  * @param {string} jahr - Year to calculate (YYYY)
  * @param {import('./types').CalculationOptions} options - Calculation options
  * @returns {import('./types').JahresWirtschaftlichkeit} Year profitability
  * 
  * @private
  */
-function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, options = {}) {
+function calculateJahresWirtschaftlichkeitSingle(artikelListe, projekt, jahr, options = {}) {
+    console.log(`\n📅 Calculating year ${jahr}:`, { artikelCount: artikelListe.length });
+    
     // Step 1: Calculate Sales Revenue FROM FORECAST DATABASE
     const sales_revenue = calculateSalesRevenueFromForecast(artikelListe, jahr);
     
@@ -253,13 +255,13 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     const db2_margin_prozent = sales_revenue > 0 ? (db2 / sales_revenue * 100) : 0;
     
-// ========== ✅ NEU: Hybrid-Berechnung für Overheads ==========
+    // ========== ✅ NEU: Hybrid-Berechnung für Overheads ==========
     
     console.log(`\n📊 Calculating Overheads for ${jahr}:`);
     
     // Step 6: Development Overhead (DB3)
     const development_overhead = calculateOverheadHybrid(
-        projektkosten,  // Das ist jetzt das PROJEKT-Objekt
+        projekt,
         KOSTEN_MAPPING.development,
         jahr,
         sales_revenue
@@ -268,7 +270,7 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     // Step 7: Selling & Marketing Overhead (DB4)
     const selling_marketing_total = calculateOverheadHybrid(
-        projektkosten,
+        projekt,
         KOSTEN_MAPPING.selling_marketing,
         jahr,
         sales_revenue
@@ -284,7 +286,7 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     // Step 8: Admin & Distribution Overhead (DB5)
     const admin_distribution_total = calculateOverheadHybrid(
-        projektkosten,
+        projekt,
         KOSTEN_MAPPING.admin_distribution,
         jahr,
         sales_revenue
@@ -302,7 +304,7 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     // Other Operating Income (positiv - erhöht EBIT)
     const other_operating_income = calculateOverheadHybrid(
-        projektkosten,
+        projekt,
         KOSTEN_MAPPING.other_operating_income,
         jahr,
         sales_revenue
@@ -310,7 +312,7 @@ function calculateJahresWirtschaftlichkeit(artikelListe, projektkosten, jahr, op
     
     // Other Operating Expenses (negativ - senkt EBIT)
     const other_operating_expenses = calculateOverheadHybrid(
-        projektkosten,
+        projekt,
         KOSTEN_MAPPING.other_operating_expenses,
         jahr,
         sales_revenue
