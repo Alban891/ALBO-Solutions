@@ -51,6 +51,50 @@
     background: #F5F7FA;
 }
 
+/* Mock Data Banner */
+.mock-data-banner {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border-bottom: 2px solid #F59E0B;
+    padding: var(--space-md) var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.mock-data-banner .banner-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.mock-data-banner .banner-content {
+    flex: 1;
+    font-size: var(--font-sm);
+    color: #78350F;
+}
+
+.mock-data-banner .banner-content strong {
+    font-weight: 700;
+    color: #92400E;
+}
+
+.mock-data-banner .banner-btn {
+    padding: var(--space-sm) var(--space-lg);
+    background: white;
+    border: 1px solid #F59E0B;
+    border-radius: 6px;
+    color: #92400E;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.mock-data-banner .banner-btn:hover {
+    background: #92400E;
+    color: white;
+}
+
 /* ==========================================
    STICKY EXECUTIVE SUMMARY
    ========================================== */
