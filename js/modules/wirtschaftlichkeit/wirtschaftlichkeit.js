@@ -1398,30 +1398,42 @@ function initializeEventHandlers() {
     });
     
     // ✅ NEU: Szenario buttons
-    const szenarioButtons = document.querySelectorAll('.szenario-btn');
-    szenarioButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const szenarioId = this.id.replace('szenario-', '');
-            console.log('🎯 Szenario clicked:', szenarioId);
-            
-            if (szenarioId === 'custom') {
-                // Open custom builder
-                if (typeof window.openSzenarioBuilder === 'function') {
-                    window.openSzenarioBuilder();
-                } else {
-                    alert('Custom Builder wird noch implementiert');
-                }
+const szenarioButtons = document.querySelectorAll('.szenario-btn');
+szenarioButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+        const buttonId = this.id.replace('szenario-', '');
+        console.log('🎯 Szenario button clicked:', buttonId);
+        
+        // ✅ MAP button ID to preset ID
+        const szenarioMapping = {
+            'base': 'base',
+            'best': 'best-organic',
+            'worst': 'worst-conservative',
+            'custom': 'custom'
+        };
+        
+        const szenarioId = szenarioMapping[buttonId];
+        console.log('📊 Mapped to preset:', szenarioId);
+        
+        if (buttonId === 'custom') {
+            // Open custom builder
+            if (typeof window.openSzenarioBuilder === 'function') {
+                window.openSzenarioBuilder();
             } else {
-                // Switch to scenario
-                if (typeof window.selectSzenario === 'function') {
-                    window.selectSzenario(szenarioId);  // ✅ RICHTIGE FUNKTION!
-                } else {
-                    console.warn('⚠️ window.selectSzenario not found');
-                    alert(`Szenario "${szenarioId}" wird geladen...`);
-                }
+                console.warn('⚠️ window.openSzenarioBuilder not found');
+                alert('Custom Builder wird noch implementiert');
             }
-        });
+        } else {
+            // Switch to scenario
+            if (typeof window.selectSzenario === 'function') {
+                window.selectSzenario(szenarioId);  // ✅ Verwendet gemappte ID
+            } else {
+                console.warn('⚠️ window.selectSzenario not found');
+                alert(`Szenario "${szenarioId}" wird geladen...`);
+            }
+        }
     });
+});
     
     // Restore active filter button state after re-render
     const activeFilter = window.cfoDashboard?.artikelFilter;
