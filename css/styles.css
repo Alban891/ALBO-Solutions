@@ -2426,5 +2426,41 @@ body {
 }
 
 /* ========================================== */
+/* ZURÜCK-BUTTON IM HEADER */
+/* ========================================== */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-back-to-platform {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-back-to-platform:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
+.btn-back-to-platform:active {
+  transform: translateX(-4px);
+}
+
+/* ========================================== */
 /* END OF FILE */
 /* ========================================== */
