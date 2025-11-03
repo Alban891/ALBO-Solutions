@@ -1,13 +1,11 @@
 /**
- * ALBO Solutions - Executive Dashboard (Horváth Edition)
- * Senior Controller Perspective - Professional Business Case Analysis
+ * ALBO Solutions - Story-Driven Dashboard (Horváth Edition)
+ * Interactive Question-Based Analysis with Split-View Layout
  * 
- * Features:
- * - Smart Filter Bar (Artikel, Jahr, View, Szenario)
- * - Controller Insights (AI-powered)
- * - Waterfall Charts (Revenue, Costs, Margin Bridge)
- * - Sensitivity Analysis (Tornado Charts)
- * - Horváth Design System
+ * Layout:
+ * - Top: Sticky Executive Summary
+ * - Left: Question Sidebar (expandable cards)
+ * - Right: Dynamic Visualization Area (pinnable, resizable)
  */
 
 import { state } from '../../state.js';
@@ -21,26 +19,21 @@ import * as Widgets from './widgets-horvath.js';
 // ==========================================
 
 const dashboardState = {
-    // Raw Data
+    // Data
     projektId: null,
     rawData: null,
     calculationResult: null,
     
-    // Filters
-    filters: {
-        artikel: ['all'],      // ['all'] or ['hardware', 'software', 'services']
-        jahr: 'all',           // 'all' or '2025', '2026', etc.
-        viewMode: 'absolute',  // 'absolute', 'percent', 'indexed'
-        scenario: 'base'       // 'base', 'best', 'worst'
-    },
+    // UI State
+    activeQuestion: null,        // Currently expanded question
+    activeViz: null,             // Currently shown visualization
+    pinnedVizs: new Set(),       // Pinned visualizations
+    vizSizes: {},                // Size settings per viz
     
-    // Processed Data
-    filteredData: null,
-    
-    // Chart Instances
+    // Charts
     charts: {},
     
-    // UI State
+    // Init
     isInitialized: false,
     lastUpdate: null
 };
@@ -50,210 +43,57 @@ const dashboardState = {
 // ==========================================
 
 /**
- * Main dashboard render function
- * Entry point for Horváth Dashboard
+ * Main entry point - renders complete dashboard
  */
-export async function renderProjektDashboard() {
+export function renderProjektDashboard() {
+    console.log('🎨 Rendering Story-Driven Dashboard...');
+    
+    const projektId = window.cfoDashboard?.currentProjekt || state.currentProjekt;
+    if (!projektId) {
+        console.error('❌ No projekt selected');
+        return;
+    }
+    
+    // Get container
     const container = document.getElementById('projekt-tab-dashboard');
     if (!container) {
         console.error('❌ Dashboard container not found');
         return;
     }
     
-    const projektId = window.cfoDashboard?.currentProjekt;
-    if (!projektId) {
-        container.innerHTML = Widgets.renderNoDataWidget('Kein Projekt ausgewählt');
-        return;
-    }
-    
-    console.log('📊 Rendering Horváth Dashboard for:', projektId);
-    
     // Show loading
-    container.innerHTML = createLoadingScreen();
+    container.innerHTML = Widgets.renderLoadingWidget();
     
-    try {
-        // Initialize state
-        dashboardState.projektId = projektId;
-        
-        // Load data
-        await loadDashboardData(projektId);
-        
-        // Apply filters
-        dashboardState.filteredData = applyFilters(dashboardState.rawData);
-        
-        // Render UI
-        container.innerHTML = createDashboardLayout();
-        
-        // Initialize charts
-        requestAnimationFrame(() => {
-            initializeAllCharts();
+    // Fetch and calculate data
+    setTimeout(() => {
+        try {
+            const result = calculateProjektWirtschaftlichkeit(projektId);
+            
+            if (!result || !result.projekt) {
+                container.innerHTML = Widgets.renderNoDataWidget('Keine Daten für Dashboard verfügbar');
+                return;
+            }
+            
+            // Store in state
+            dashboardState.projektId = projektId;
+            dashboardState.rawData = result;
+            dashboardState.calculationResult = result;
+            dashboardState.lastUpdate = new Date();
             dashboardState.isInitialized = true;
-            console.log('✅ Horváth Dashboard initialized');
-        });
-        
-    } catch (error) {
-        console.error('❌ Dashboard render failed:', error);
-        container.innerHTML = Widgets.renderErrorWidget(error);
-    }
-}
-
-// ==========================================
-// DATA LOADING
-// ==========================================
-
-/**
- * Load all required data for dashboard
- */
-async function loadDashboardData(projektId) {
-    console.log('📥 Loading dashboard data...');
-    
-    // Ensure Kosten data loaded
-    await ensureKostenDataLoaded(projektId);
-    
-    // Calculate wirtschaftlichkeit
-    const calculationResult = await calculateProjektWirtschaftlichkeit(projektId, {
-        wacc: 0.08,
-        validateInputs: true
-    });
-    
-    if (!calculationResult || !calculationResult.jahre) {
-        throw new Error('Calculation failed - keine Jahresdaten');
-    }
-    
-    // Get artikel
-    const artikelListe = state.getArtikelByProjekt(projektId);
-    const projekt = state.getProjekt(projektId);
-    const jahre = Object.keys(calculationResult.jahre).sort();
-    
-    // Store raw data
-    dashboardState.rawData = {
-        projekt,
-        artikelListe,
-        jahre,
-        calculationResult,
-        totals: calculationResult.totals,
-        kpis: calculationResult.kpis
-    };
-    
-    dashboardState.calculationResult = calculationResult;
-    dashboardState.lastUpdate = new Date();
-    
-    console.log('✅ Data loaded:', {
-        artikel: artikelListe.length,
-        jahre: jahre.length,
-        npv: calculationResult.kpis.npv
-    });
-}
-
-/**
- * Ensure kostenWerte loaded from DB/State
- */
-async function ensureKostenDataLoaded(projektId) {
-    if (!projektId) return;
-    
-    console.log('📥 Ensuring Kosten data...');
-    
-    const projekt = state.getProjekt(projektId);
-    if (!projekt) return;
-    
-    // Initialize if missing
-    if (!projekt.kostenWerte) {
-        projekt.kostenWerte = {};
-        state.setProjekt(projektId, projekt);
-    }
-    
-    // Load from DB if empty
-    if (projektId.startsWith('projekt-db-') && Object.keys(projekt.kostenWerte).length === 0) {
-        if (window.projektkostenModule?.ensureKostenDataLoaded) {
-            await window.projektkostenModule.ensureKostenDataLoaded(projektId);
+            
+            // Render layout
+            container.innerHTML = createDashboardLayout();
+            
+            // Initialize charts in executive summary
+            requestAnimationFrame(() => {
+                initializeExecutiveSummaryCharts();
+            });
+            
+        } catch (error) {
+            console.error('❌ Dashboard calculation failed:', error);
+            container.innerHTML = Widgets.renderErrorWidget(error);
         }
-    }
-    
-    console.log('✅ Kosten data ready');
-}
-
-// ==========================================
-// FILTER LOGIC
-// ==========================================
-
-/**
- * Apply filters to raw data
- */
-function applyFilters(rawData) {
-    if (!rawData) return null;
-    
-    const { artikel, jahr, viewMode, scenario } = dashboardState.filters;
-    
-    console.log('🎛️ Applying filters:', dashboardState.filters);
-    
-    let filtered = {
-        ...rawData,
-        artikel: [...rawData.artikelListe],
-        jahre: [...rawData.jahre]
-    };
-    
-    // ARTIKEL FILTER
-    if (!artikel.includes('all')) {
-        filtered.artikel = rawData.artikelListe.filter(a => {
-            const typ = (a.typ || '').toLowerCase();
-            return artikel.some(filter => typ.includes(filter));
-        });
-        console.log(`  Filtered to ${filtered.artikel.length} artikel`);
-    }
-    
-    // JAHR FILTER
-    if (jahr !== 'all') {
-        filtered.jahre = [jahr];
-        console.log(`  Filtered to year ${jahr}`);
-    }
-    
-    // SCENARIO FILTER (future: adjust calculations)
-    if (scenario !== 'base') {
-        filtered = applyScenarioModifiers(filtered, scenario);
-    }
-    
-    // Recalculate aggregates with filtered data
-    filtered.aggregates = calculateAggregates(filtered);
-    
-    return filtered;
-}
-
-/**
- * Apply scenario modifiers (Best/Worst case)
- */
-function applyScenarioModifiers(data, scenario) {
-    // Future: Modify prices, volumes, costs based on scenario
-    // For now, just return data as-is
-    return data;
-}
-
-/**
- * Calculate aggregates from filtered data
- */
-function calculateAggregates(filteredData) {
-    const { calculationResult, jahre, artikel } = filteredData;
-    
-    // Sum up revenues, costs, margins for filtered set
-    let totalRevenue = 0;
-    let totalDB2 = 0;
-    let totalDB3 = 0;
-    
-    jahre.forEach(jahr => {
-        const yearData = calculationResult.jahre[jahr];
-        totalRevenue += yearData.sales_revenue || 0;
-        totalDB2 += yearData.db2 || yearData.manufacturing_margin || 0;
-        totalDB3 += yearData.db3 || 0;
-    });
-    
-    return {
-        totalRevenue,
-        totalDB2,
-        totalDB3,
-        db2Margin: totalRevenue > 0 ? (totalDB2 / totalRevenue) : 0,
-        db3Margin: totalRevenue > 0 ? (totalDB3 / totalRevenue) : 0,
-        artikelCount: artikel.length,
-        yearCount: jahre.length
-    };
+    }, 100);
 }
 
 // ==========================================
@@ -264,404 +104,491 @@ function calculateAggregates(filteredData) {
  * Create complete dashboard layout
  */
 function createDashboardLayout() {
-    const projekt = dashboardState.rawData.projekt;
-    
     return `
-        <!-- HEADER -->
-        ${createDashboardHeader()}
-        
-        <!-- SMART FILTER BAR -->
-        ${createFilterBar()}
-        
-        <!-- DASHBOARD CONTENT -->
-        <div class="horvath-dashboard-content">
+        <div class="story-dashboard-container">
             
-            <!-- SECTION 1: EXECUTIVE SUMMARY -->
-            <div class="dashboard-section executive-summary">
-                <div class="section-title">EXECUTIVE SUMMARY</div>
+            <!-- Sticky Executive Summary -->
+            <div class="executive-summary-sticky">
                 ${createExecutiveSummary()}
             </div>
             
-            <!-- SECTION 2: REVENUE STORY -->
-            <div class="dashboard-section revenue-story">
-                ${createRevenueSection()}
-            </div>
-            
-            <!-- SECTION 3: PROFITABILITY BRIDGE -->
-            <div class="dashboard-section profitability-bridge">
-                ${createProfitabilitySection()}
-            </div>
-            
-            <!-- SECTION 4: COST TRANSPARENCY -->
-            <div class="dashboard-section cost-transparency">
-                ${createCostSection()}
-            </div>
-            
-            <!-- SECTION 5: CONTROLLER INSIGHTS -->
-            <div class="dashboard-section controller-insights">
-                ${createInsightsSection()}
-            </div>
-            
-        </div>
-    `;
-}
-
-/**
- * Create dashboard header
- */
-function createDashboardHeader() {
-    const projekt = dashboardState.rawData.projekt;
-    
-    return `
-        <div class="horvath-header">
-            <div class="header-left">
-                <div class="header-icon">📊</div>
-                <div class="header-content">
-                    <h1 class="header-title">Business Case: ${helpers.escapeHtml(projekt.name)}</h1>
-                    <div class="header-subtitle">
-                        Letzte Aktualisierung: ${dashboardState.lastUpdate.toLocaleString('de-DE')}
-                    </div>
-                </div>
-            </div>
-            <div class="header-right">
-                <button class="btn-header" onclick="window.exportDashboard()">
-                    📥 Export
-                </button>
-                <button class="btn-header btn-primary" onclick="window.refreshDashboard()">
-                    🔄 Aktualisieren
-                </button>
+            <!-- Main Content Area: Sidebar + Viz -->
+            <div class="dashboard-main-area">
+                
+                <!-- Left: Question Sidebar -->
+                <aside class="question-sidebar">
+                    ${createQuestionSidebar()}
+                </aside>
+                
+                <!-- Right: Visualization Area -->
+                <main class="visualization-area">
+                    ${createVisualizationArea()}
+                </main>
+                
             </div>
         </div>
     `;
 }
 
 /**
- * Create smart filter bar
- */
-function createFilterBar() {
-    const artikelListe = dashboardState.rawData.artikelListe;
-    const jahre = dashboardState.rawData.jahre;
-    
-    // Detect available artikel types
-    const artikelTypen = new Set();
-    artikelListe.forEach(a => {
-        const typ = (a.typ || '').toLowerCase();
-        if (typ.includes('hardware')) artikelTypen.add('hardware');
-        if (typ.includes('software')) artikelTypen.add('software');
-        if (typ.includes('service') || typ.includes('beratung')) artikelTypen.add('services');
-    });
-    
-    return `
-        <div class="horvath-filter-bar">
-            <div class="filter-group">
-                <label class="filter-label">ARTIKEL:</label>
-                <div class="filter-buttons">
-                    <button class="filter-btn ${dashboardState.filters.artikel.includes('all') ? 'active' : ''}" 
-                            onclick="window.setArtikelFilter('all')">
-                        ✓ Alle
-                    </button>
-                    ${artikelTypen.has('hardware') ? `
-                        <button class="filter-btn ${dashboardState.filters.artikel.includes('hardware') ? 'active' : ''}" 
-                                onclick="window.setArtikelFilter('hardware')">
-                            Hardware
-                        </button>
-                    ` : ''}
-                    ${artikelTypen.has('software') ? `
-                        <button class="filter-btn ${dashboardState.filters.artikel.includes('software') ? 'active' : ''}" 
-                                onclick="window.setArtikelFilter('software')">
-                            Software
-                        </button>
-                    ` : ''}
-                    ${artikelTypen.has('services') ? `
-                        <button class="filter-btn ${dashboardState.filters.artikel.includes('services') ? 'active' : ''}" 
-                                onclick="window.setArtikelFilter('services')">
-                            Services
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <label class="filter-label">ZEITRAUM:</label>
-                <div class="filter-buttons">
-                    <button class="filter-btn ${dashboardState.filters.jahr === 'all' ? 'active' : ''}" 
-                            onclick="window.setJahrFilter('all')">
-                        ⚫ Gesamt
-                    </button>
-                    ${jahre.map(jahr => `
-                        <button class="filter-btn ${dashboardState.filters.jahr === jahr ? 'active' : ''}" 
-                                onclick="window.setJahrFilter('${jahr}')">
-                            ${jahr}
-                        </button>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <label class="filter-label">ANSICHT:</label>
-                <div class="filter-buttons">
-                    <button class="filter-btn ${dashboardState.filters.viewMode === 'absolute' ? 'active' : ''}" 
-                            onclick="window.setViewMode('absolute')">
-                        ⚫ Absolut (€)
-                    </button>
-                    <button class="filter-btn ${dashboardState.filters.viewMode === 'percent' ? 'active' : ''}" 
-                            onclick="window.setViewMode('percent')">
-                        Prozent (%)
-                    </button>
-                </div>
-            </div>
-            
-            <div class="filter-group">
-                <label class="filter-label">SZENARIO:</label>
-                <div class="filter-buttons">
-                    <button class="filter-btn ${dashboardState.filters.scenario === 'base' ? 'active' : ''}" 
-                            onclick="window.setScenario('base')">
-                        ⚫ Base Case
-                    </button>
-                    <button class="filter-btn ${dashboardState.filters.scenario === 'best' ? 'active' : ''}" 
-                            onclick="window.setScenario('best')">
-                        Best Case
-                    </button>
-                    <button class="filter-btn ${dashboardState.filters.scenario === 'worst' ? 'active' : ''}" 
-                            onclick="window.setScenario('worst')">
-                        Worst Case
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Create Executive Summary (4 KPI Cards)
+ * Create executive summary (sticky top)
  */
 function createExecutiveSummary() {
-    const data = dashboardState.filteredData;
-    const kpis = data.calculationResult.kpis;
-    const totals = data.calculationResult.totals;
+    const data = dashboardState.calculationResult;
     
-    const totalRevenue = totals.sales_revenue || 0;
-    const totalDB3 = totals.ebit || 0;
-    const db3Margin = totalRevenue > 0 ? (totalDB3 / totalRevenue) : 0;
-    const breakEven = kpis.break_even_year;
-    const npv = kpis.npv || 0;
-    const irr = kpis.irr || 0;
+    // Calculate totals
+    const totalRevenue = data.gesamtRevenue5Y || 0;
+    const totalDB3 = data.gesamtDB3_5Y || 0;
+    const breakEvenJahr = data.breakEvenJahr || '-';
+    const npv = data.npv || 0;
+    const irr = data.irr || 0;
     
-    // Calculate CAGR
-    const jahre = data.jahre;
-    const firstYear = data.calculationResult.jahre[jahre[0]];
-    const lastYear = data.calculationResult.jahre[jahre[jahre.length - 1]];
-    const cagr = Math.pow((lastYear.sales_revenue / firstYear.sales_revenue), (1 / (jahre.length - 1))) - 1;
+    // Decision
+    const decision = npv > 0 ? 'go' : npv > -1000000 ? 'review' : 'no-go';
+    const decisionText = decision === 'go' ? 'GO' : decision === 'review' ? 'REVIEW' : 'NO-GO';
+    const decisionColor = decision === 'go' ? 'success' : decision === 'review' ? 'warning' : 'danger';
     
-    // Decision logic
-    let decision = '🟢 GO';
-    let decisionClass = 'go';
-    if (npv < 0) {
-        decision = '🔴 NO-GO';
-        decisionClass = 'no-go';
-    } else if (breakEven > 3) {
-        decision = '🟡 REVIEW';
-        decisionClass = 'review';
+    return `
+        <div class="executive-cards-compact">
+            
+            <!-- Card 1: Revenue -->
+            <div class="exec-card-compact">
+                <div class="card-icon">💰</div>
+                <div class="card-content">
+                    <div class="card-label">REVENUE</div>
+                    <div class="card-value">${helpers.formatCurrency(totalRevenue / 1000000)}M</div>
+                    <div class="card-meta">5Y Total</div>
+                </div>
+                <div class="card-sparkline" id="sparkline-revenue"></div>
+            </div>
+            
+            <!-- Card 2: Profitability -->
+            <div class="exec-card-compact">
+                <div class="card-icon">✅</div>
+                <div class="card-content">
+                    <div class="card-label">PROFITABILITY</div>
+                    <div class="card-value">${helpers.formatCurrency(totalDB3 / 1000000)}M</div>
+                    <div class="card-meta">DB3 Total</div>
+                </div>
+                <div class="card-sparkline" id="sparkline-profitability"></div>
+            </div>
+            
+            <!-- Card 3: Break-Even -->
+            <div class="exec-card-compact">
+                <div class="card-icon">⏱️</div>
+                <div class="card-content">
+                    <div class="card-label">BREAK-EVEN</div>
+                    <div class="card-value">${breakEvenJahr}</div>
+                    <div class="card-meta">Jahre bis Payback</div>
+                </div>
+            </div>
+            
+            <!-- Card 4: Decision -->
+            <div class="exec-card-compact decision-card ${decision}">
+                <div class="card-icon">🎯</div>
+                <div class="card-content">
+                    <div class="card-label">DECISION</div>
+                    <div class="card-value decision-badge ${decisionColor}">${decisionText}</div>
+                    <div class="card-meta">NPV: ${helpers.formatCurrency(npv / 1000000)}M</div>
+                </div>
+            </div>
+            
+        </div>
+    `;
+}
+
+/**
+ * Create question sidebar (left)
+ */
+function createQuestionSidebar() {
+    const data = dashboardState.calculationResult;
+    
+    const totalRevenue = data.gesamtRevenue5Y || 0;
+    const totalDB3 = data.gesamtDB3_5Y || 0;
+    const totalCosts = data.gesamtProjektkosten || 0;
+    
+    return `
+        <!-- Question 1: Revenue Story -->
+        <div class="question-card" data-question="revenue">
+            <div class="question-header" onclick="window.toggleQuestion('revenue')">
+                <span class="icon">💰</span>
+                <div class="question-text">
+                    <h3>Wie verdienen wir Geld?</h3>
+                    <p class="quick-stat">${helpers.formatCurrency(totalRevenue / 1000000)}M über 5 Jahre</p>
+                </div>
+                <span class="expand-icon">▶</span>
+            </div>
+            <div class="question-details">
+                <div class="sub-item" onclick="window.showVisualization('revenue-waterfall')">
+                    📊 Waterfall Analyse
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('revenue-breakdown')">
+                    📦 Artikel-Split
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('revenue-growth')">
+                    📈 Wachstums-Treiber
+                </div>
+            </div>
+        </div>
+        
+        <!-- Question 2: Profitability -->
+        <div class="question-card" data-question="profitability">
+            <div class="question-header" onclick="window.toggleQuestion('profitability')">
+                <span class="icon">✅</span>
+                <div class="question-text">
+                    <h3>Sind wir profitabel genug?</h3>
+                    <p class="quick-stat">${helpers.formatCurrency(totalDB3 / 1000000)}M DB3</p>
+                </div>
+                <span class="expand-icon">▶</span>
+            </div>
+            <div class="question-details">
+                <div class="sub-item" onclick="window.showVisualization('margin-bridge')">
+                    🌉 Margin Bridge
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('margin-trend')">
+                    📈 Margin Entwicklung
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('margin-drivers')">
+                    🎯 Verbesserungs-Potenzial
+                </div>
+            </div>
+        </div>
+        
+        <!-- Question 3: Costs -->
+        <div class="question-card" data-question="costs">
+            <div class="question-header" onclick="window.toggleQuestion('costs')">
+                <span class="icon">💸</span>
+                <div class="question-text">
+                    <h3>Was kostet uns das?</h3>
+                    <p class="quick-stat">${helpers.formatCurrency(totalCosts / 1000000)}M Projektkosten</p>
+                </div>
+                <span class="expand-icon">▶</span>
+            </div>
+            <div class="question-details">
+                <div class="sub-item" onclick="window.showVisualization('cost-waterfall')">
+                    📊 Cost Waterfall
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('cost-breakdown')">
+                    💰 Cost Driver
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('cost-savings')">
+                    💡 Einsparpotenziale
+                </div>
+            </div>
+        </div>
+        
+        <!-- Question 4: Risks -->
+        <div class="question-card" data-question="risks">
+            <div class="question-header" onclick="window.toggleQuestion('risks')">
+                <span class="icon">⚠️</span>
+                <div class="question-text">
+                    <h3>Was sind die Risiken?</h3>
+                    <p class="quick-stat">Sensitivität analysieren</p>
+                </div>
+                <span class="expand-icon">▶</span>
+            </div>
+            <div class="question-details">
+                <div class="sub-item" onclick="window.showVisualization('sensitivity-tornado')">
+                    🌪️ Tornado Chart
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('scenario-analysis')">
+                    🎭 Szenarien
+                </div>
+                <div class="sub-item" onclick="window.showVisualization('risk-mitigation')">
+                    🛡️ Maßnahmen
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Create visualization area (right)
+ */
+function createVisualizationArea() {
+    return `
+        <!-- Empty State -->
+        <div class="viz-empty-state" id="viz-empty-state">
+            <div class="empty-icon">📊</div>
+            <h3>Wähle eine Frage links</h3>
+            <p>Klicke auf eine Analyse-Option, um die Visualisierung zu starten</p>
+        </div>
+        
+        <!-- Visualization Containers (hidden initially) -->
+        <div id="viz-containers">
+            <!-- Will be populated dynamically -->
+        </div>
+    `;
+}
+
+// ==========================================
+// INTERACTION HANDLERS
+// ==========================================
+
+/**
+ * Toggle question card (expand/collapse)
+ */
+window.toggleQuestion = function(questionId) {
+    console.log('🔄 Toggle question:', questionId);
+    
+    const card = document.querySelector(`[data-question="${questionId}"]`);
+    if (!card) return;
+    
+    const isExpanded = card.classList.contains('expanded');
+    
+    // Collapse all questions first
+    document.querySelectorAll('.question-card').forEach(c => {
+        c.classList.remove('expanded');
+    });
+    
+    // Expand clicked question if it wasn't expanded
+    if (!isExpanded) {
+        card.classList.add('expanded');
+        dashboardState.activeQuestion = questionId;
+    } else {
+        dashboardState.activeQuestion = null;
+    }
+};
+
+/**
+ * Show visualization
+ */
+window.showVisualization = function(vizId) {
+    console.log('📊 Show visualization:', vizId);
+    
+    // Hide empty state
+    const emptyState = document.getElementById('viz-empty-state');
+    if (emptyState) emptyState.style.display = 'none';
+    
+    // Get or create viz container
+    let vizContainer = document.getElementById(`viz-${vizId}`);
+    
+    if (!vizContainer) {
+        // Create new viz container
+        vizContainer = createVizContainer(vizId);
+        document.getElementById('viz-containers').insertAdjacentHTML('beforeend', vizContainer);
+        
+        // Initialize chart
+        requestAnimationFrame(() => {
+            initializeVisualization(vizId);
+        });
+    } else {
+        // Show existing container
+        vizContainer.style.display = 'block';
     }
     
+    // Update active viz
+    dashboardState.activeViz = vizId;
+    
+    // Update sub-item active states
+    document.querySelectorAll('.sub-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[onclick*="${vizId}"]`)?.classList.add('active');
+    
+    // Scroll to viz
+    vizContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+/**
+ * Pin visualization
+ */
+window.pinVisualization = function(vizId) {
+    console.log('📌 Pin visualization:', vizId);
+    
+    const container = document.getElementById(`viz-${vizId}`);
+    if (!container) return;
+    
+    if (dashboardState.pinnedVizs.has(vizId)) {
+        // Unpin
+        dashboardState.pinnedVizs.delete(vizId);
+        container.classList.remove('pinned');
+    } else {
+        // Pin
+        dashboardState.pinnedVizs.add(vizId);
+        container.classList.add('pinned');
+    }
+};
+
+/**
+ * Resize visualization
+ */
+window.resizeVisualization = function(vizId, size) {
+    console.log(`📏 Resize ${vizId} to: ${size}`);
+    
+    const container = document.getElementById(`viz-${vizId}`);
+    if (!container) return;
+    
+    // Remove all size classes
+    container.classList.remove('size-small', 'size-medium', 'size-large');
+    
+    // Add new size class
+    container.classList.add(`size-${size}`);
+    
+    // Store size
+    dashboardState.vizSizes[vizId] = size;
+    
+    // Update button states
+    container.querySelectorAll('.btn-resize').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-size') === size) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Re-render chart to fit new size
+    setTimeout(() => {
+        const chart = dashboardState.charts[vizId];
+        if (chart) {
+            chart.resize();
+        }
+    }, 300);
+};
+
+/**
+ * Close visualization
+ */
+window.closeVisualization = function(vizId) {
+    console.log('❌ Close visualization:', vizId);
+    
+    // Don't close if pinned
+    if (dashboardState.pinnedVizs.has(vizId)) {
+        alert('📌 Bitte erst Unpin, bevor Sie schließen');
+        return;
+    }
+    
+    const container = document.getElementById(`viz-${vizId}`);
+    if (container) {
+        container.style.display = 'none';
+    }
+    
+    // Show empty state if no viz visible
+    const visibleVizs = document.querySelectorAll('.viz-container[style*="display: block"]');
+    if (visibleVizs.length === 0) {
+        document.getElementById('viz-empty-state').style.display = 'flex';
+    }
+    
+    // Update active viz
+    if (dashboardState.activeViz === vizId) {
+        dashboardState.activeViz = null;
+    }
+};
+
+// ==========================================
+// VIZ CONTAINER CREATION
+// ==========================================
+
+/**
+ * Create visualization container HTML
+ */
+function createVizContainer(vizId) {
+    const vizConfig = getVizConfig(vizId);
+    
     return `
-        <div class="executive-cards">
-            <!-- CARD 1: REVENUE -->
-            <div class="exec-card">
-                <div class="exec-card-icon">💰</div>
-                <div class="exec-card-label">REVENUE</div>
-                <div class="exec-card-value">${helpers.formatCurrency(totalRevenue / 1000000)}M</div>
-                <div class="exec-card-meta">${data.jahre.length}Y Total</div>
-                <div class="exec-card-trend">+${(cagr * 100).toFixed(1)}% CAGR</div>
-                <div class="exec-card-sparkline" id="sparkline-revenue"></div>
+        <div class="viz-container size-large" id="viz-${vizId}">
+            <div class="viz-header">
+                <div class="viz-title">
+                    <span class="viz-icon">${vizConfig.icon}</span>
+                    <h3>${vizConfig.title}</h3>
+                </div>
+                <div class="viz-controls">
+                    <button class="btn-resize" data-size="small" onclick="window.resizeVisualization('${vizId}', 'small')">
+                        S
+                    </button>
+                    <button class="btn-resize" data-size="medium" onclick="window.resizeVisualization('${vizId}', 'medium')">
+                        M
+                    </button>
+                    <button class="btn-resize active" data-size="large" onclick="window.resizeVisualization('${vizId}', 'large')">
+                        L
+                    </button>
+                    <button class="btn-pin" onclick="window.pinVisualization('${vizId}')">
+                        🔒
+                    </button>
+                    <button class="btn-close" onclick="window.closeVisualization('${vizId}')">
+                        ✕
+                    </button>
+                </div>
             </div>
             
-            <!-- CARD 2: PROFITABILITY -->
-            <div class="exec-card">
-                <div class="exec-card-icon">💹</div>
-                <div class="exec-card-label">PROFITABILITY</div>
-                <div class="exec-card-value">${helpers.formatCurrency(totalDB3 / 1000000)}M</div>
-                <div class="exec-card-meta">DB3 Total</div>
-                <div class="exec-card-trend ${db3Margin > 0.45 ? 'positive' : 'warning'}">
-                    ${(db3Margin * 100).toFixed(1)}% Marge
-                    ${db3Margin > 0.45 ? '✅ Over-deliver' : '⚠️ Below target'}
-                </div>
-                <div class="exec-card-sparkline" id="sparkline-profitability"></div>
-            </div>
-            
-            <!-- CARD 3: BREAK-EVEN -->
-            <div class="exec-card">
-                <div class="exec-card-icon">⏱️</div>
-                <div class="exec-card-label">BREAK-EVEN</div>
-                <div class="exec-card-value">${breakEven || '∞'}</div>
-                <div class="exec-card-meta">${breakEven === 1 ? 'Jahr' : 'Jahre'} bis Payback</div>
-                <div class="exec-card-trend ${breakEven <= 2 ? 'positive' : 'warning'}">
-                    ${breakEven <= 2 ? '✅ Exzellent' : breakEven <= 5 ? '⚡ Gut' : '⏰ Lang'}
-                </div>
-            </div>
-            
-            <!-- CARD 4: DECISION -->
-            <div class="exec-card decision-card ${decisionClass}">
-                <div class="exec-card-icon">🎯</div>
-                <div class="exec-card-label">DECISION</div>
-                <div class="exec-card-value">${decision}</div>
-                <div class="exec-card-meta">
-                    NPV: ${helpers.formatCurrency(npv / 1000000)}M<br>
-                    IRR: ${irr.toFixed(1)}%
-                </div>
+            <div class="viz-content" id="viz-content-${vizId}">
+                <!-- Will be populated by initializeVisualization -->
             </div>
         </div>
     `;
 }
 
 /**
- * Create Revenue Section
+ * Get visualization configuration
  */
-function createRevenueSection() {
-    return `
-        <div class="dashboard-section" id="revenue-section">
-        <div class="section-header">
-            <div class="section-title-with-icon">
-                <span class="section-icon">💰</span>
-                <span class="section-title">REVENUE STORY</span>
-                <span class="section-subtitle">"Wie verdienen wir unser Geld?"</span>
-            </div>
-            <div class="section-controls">
-                <button class="view-toggle active" data-view="waterfall">Waterfall</button>
-                <button class="view-toggle" data-view="stacked">Stacked</button>
-                <button class="view-toggle" data-view="trend">Trend</button>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="canvas-revenue-waterfall"></canvas>
-        </div>
-        
-        <div class="artikel-breakdown">
-            <div class="breakdown-title">ARTIKEL-BREAKDOWN</div>
-            <div id="revenue-breakdown-bars"></div>
-        </div>
-        
-        <div class="insights-box">
-            <div class="insights-title">💡 KEY INSIGHTS</div>
-            <div id="revenue-insights"></div>
-        </div>
-    `;
-}
-
-/**
- * Create Profitability Section
- */
-function createProfitabilitySection() {
-    return `
-        <div class="section-header">
-            <div class="section-title-with-icon">
-                <span class="section-icon">📈</span>
-                <span class="section-title">MARGIN BRIDGE</span>
-                <span class="section-subtitle">"Wo bleibt unser Geld?"</span>
-            </div>
-            <div class="section-controls">
-                <select id="profitability-year" class="year-selector" onchange="window.updateProfitabilityYear(this.value)">
-                    ${dashboardState.rawData.jahre.map(jahr => `
-                        <option value="${jahr}">${jahr}</option>
-                    `).join('')}
-                </select>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="canvas-margin-bridge"></canvas>
-        </div>
-        
-        <div class="artikel-breakdown">
-            <div class="breakdown-title">ARTIKEL-VERGLEICH (DB3-Marge)</div>
-            <div id="margin-breakdown-bars"></div>
-        </div>
-        
-        <div class="insights-box">
-            <div class="insights-title">💡 CONTROLLER INSIGHTS</div>
-            <div id="margin-insights"></div>
-        </div>
-    `;
-}
-
-/**
- * Create Cost Section
- */
-function createCostSection() {
-    return `
-        <div class="section-header">
-            <div class="section-title-with-icon">
-                <span class="section-icon">💹</span>
-                <span class="section-title">COST STRUCTURE</span>
-                <span class="section-subtitle">"Wo investieren wir?"</span>
-            </div>
-            <div class="section-controls">
-                <button class="view-toggle active" data-view="waterfall">Waterfall</button>
-                <button class="view-toggle" data-view="stacked">Breakdown</button>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="canvas-cost-waterfall"></canvas>
-        </div>
-        
-        <div class="cost-breakdown">
-            <div class="breakdown-title">COST DRIVER BREAKDOWN (Kumuliert)</div>
-            <div id="cost-breakdown-bars"></div>
-        </div>
-        
-        <div class="insights-box">
-            <div class="insights-title">💡 CONTROLLER INSIGHTS</div>
-            <div id="cost-insights"></div>
-        </div>
-    `;
-}
-
-/**
- * Create Insights Section
- */
-function createInsightsSection() {
-    return `
-        <div class="section-header">
-            <div class="section-title-with-icon">
-                <span class="section-icon">🎯</span>
-                <span class="section-title">DYNAMIC ANALYSIS</span>
-                <span class="section-subtitle">"Was-wäre-wenn?"</span>
-            </div>
-            <div class="section-controls">
-                <button class="view-toggle active" data-view="sensitivity">Sensitivity</button>
-                <button class="view-toggle" data-view="scenario">Scenario</button>
-                <button class="view-toggle" data-view="risk">Risk</button>
-            </div>
-        </div>
-        
-        <div class="chart-container">
-            <canvas id="canvas-sensitivity"></canvas>
-        </div>
-        
-        <div class="sensitivity-details">
-            <div class="detail-title">ARTIKEL-SPECIFIC SENSITIVITY</div>
-            <div id="sensitivity-breakdown"></div>
-        </div>
-        
-        <div class="insights-box recommendation">
-            <div class="insights-title">🎯 CONTROLLER RECOMMENDATION</div>
-            <div id="controller-recommendations"></div>
-        </div>
-    `;
-}
-
-/**
- * Create loading screen
- */
-function createLoadingScreen() {
-    return `
-        <div class="loading-screen">
-            <div class="spinner"></div>
-            <div class="loading-text">Berechne Dashboard...</div>
-        </div>
-    `;
+function getVizConfig(vizId) {
+    const configs = {
+        'revenue-waterfall': {
+            icon: '📊',
+            title: 'Revenue Waterfall Analyse',
+            description: 'Wie entwickelt sich unser Umsatz über die Jahre?'
+        },
+        'revenue-breakdown': {
+            icon: '📦',
+            title: 'Revenue nach Artikel',
+            description: 'Welche Artikel tragen wie viel bei?'
+        },
+        'revenue-growth': {
+            icon: '📈',
+            title: 'Wachstums-Treiber',
+            description: 'Was treibt das Umsatzwachstum?'
+        },
+        'margin-bridge': {
+            icon: '🌉',
+            title: 'Margin Bridge Analyse',
+            description: 'Von DB1 zu DB3 - wo geht die Marge hin?'
+        },
+        'margin-trend': {
+            icon: '📈',
+            title: 'Margin-Entwicklung',
+            description: 'Wie entwickelt sich die Profitabilität?'
+        },
+        'margin-drivers': {
+            icon: '🎯',
+            title: 'Margin-Verbesserung',
+            description: 'Wo können wir die Marge optimieren?'
+        },
+        'cost-waterfall': {
+            icon: '📊',
+            title: 'Cost Waterfall',
+            description: 'Wie verteilen sich die Projektkosten?'
+        },
+        'cost-breakdown': {
+            icon: '💰',
+            title: 'Cost Driver Analyse',
+            description: 'Welche Kostentreiber sind am wichtigsten?'
+        },
+        'cost-savings': {
+            icon: '💡',
+            title: 'Einsparpotenziale',
+            description: 'Wo können wir Kosten reduzieren?'
+        },
+        'sensitivity-tornado': {
+            icon: '🌪️',
+            title: 'Sensitivity Tornado',
+            description: 'Welche Parameter haben den größten Einfluss?'
+        },
+        'scenario-analysis': {
+            icon: '🎭',
+            title: 'Szenario-Analyse',
+            description: 'Best Case, Base Case, Worst Case'
+        },
+        'risk-mitigation': {
+            icon: '🛡️',
+            title: 'Risiko-Maßnahmen',
+            description: 'Empfohlene Aktionen zur Risiko-Minimierung'
+        }
+    };
+    
+    return configs[vizId] || {
+        icon: '📊',
+        title: vizId,
+        description: ''
+    };
 }
 
 // ==========================================
@@ -669,420 +596,190 @@ function createLoadingScreen() {
 // ==========================================
 
 /**
- * Initialize all dashboard charts
+ * Initialize executive summary charts (sparklines)
  */
-function initializeAllCharts() {
-    console.log('🎨 Initializing Horváth charts...');
+function initializeExecutiveSummaryCharts() {
+    console.log('🎨 Initializing executive summary charts...');
     
     ChartFactory.initializeChartDefaults();
     
-    const data = dashboardState.filteredData;
+    const data = dashboardState.calculationResult;
     
-    // Executive Summary Sparklines
-    ChartFactory.createSparkline('sparkline-revenue', extractRevenueSparklineData(data));
-    ChartFactory.createSparkline('sparkline-profitability', extractDB3SparklineData(data));
-    
-    // Revenue Section
-    ChartFactory.createRevenueWaterfall('canvas-revenue-waterfall', extractRevenueWaterfallData(data));
-    renderRevenueBreakdown();
-    renderRevenueInsights();
-    
-    // Profitability Section
-    const firstYear = data.jahre[0];
-    ChartFactory.createMarginBridge('canvas-margin-bridge', extractMarginBridgeData(data, firstYear));
-    renderMarginBreakdown();
-    renderMarginInsights();
-    
-    // Cost Section
-    ChartFactory.createCostWaterfall('canvas-cost-waterfall', extractCostWaterfallData(data));
-    renderCostBreakdown();
-    renderCostInsights();
-    
-    // Sensitivity Section
-    ChartFactory.createSensitivityTornado('canvas-sensitivity', extractSensitivityData(data));
-    renderSensitivityBreakdown();
-    renderControllerRecommendations();
-    
-    console.log('✅ All Horváth charts initialized');
-}
-
-// ==========================================
-// DATA EXTRACTION (for Charts)
-// ==========================================
-
-function extractRevenueSparklineData(data) {
-    return {
-        labels: data.jahre,
-        values: data.jahre.map(jahr => 
-            data.calculationResult.jahre[jahr].sales_revenue / 1000000
-        )
-    };
-}
-
-function extractDB3SparklineData(data) {
-    return {
-        labels: data.jahre,
-        values: data.jahre.map(jahr => 
-            data.calculationResult.jahre[jahr].db3 / 1000000
-        )
-    };
-}
-
-function extractRevenueWaterfallData(data) {
-    const jahre = data.jahre;
-    const values = [];
-    const colors = [];
-    
-    jahre.forEach((jahr, idx) => {
-        const revenue = data.calculationResult.jahre[jahr].sales_revenue / 1000000;
-        values.push(revenue);
-        colors.push(idx === 0 ? '#003366' : '#00A651');
+    // Revenue sparkline
+    const revenueData = data.jahre.map(jahr => {
+        return data.jahreDaten[jahr]?.gesamtRevenue || 0;
     });
+    ChartFactory.createSparkline('sparkline-revenue', revenueData);
     
-    return {
-        labels: jahre,
-        values,
-        colors,
-        showDeltas: true
-    };
-}
-
-function extractMarginBridgeData(data, jahr) {
-    const yearData = data.calculationResult.jahre[jahr];
-    
-    const sales = yearData.sales_revenue / 1000000;
-    const cogs = yearData.cogs / 1000000;
-    const db1 = (yearData.sales_revenue - yearData.cogs) / 1000000;
-    const hk = (yearData.herstellkosten || 0) / 1000000;
-    const db2 = (yearData.db2 || yearData.manufacturing_margin) / 1000000;
-    
-    const dev = (yearData.development_overhead || 0) / 1000000;
-    const marketing = (yearData.marketing_overhead || 0) / 1000000;
-    const sales_cost = (yearData.selling_overhead || 0) / 1000000;
-    
-    const db3 = yearData.db3 / 1000000;
-    
-    return {
-        labels: ['Sales', 'COGS', 'DB1', 'HK', 'DB2', 'Dev', 'Marketing', 'Sales', 'DB3'],
-        values: [sales, -cogs, db1, -hk, db2, -dev, -marketing, -sales_cost, db3],
-        targets: {
-            db1: 0.65,
-            db2: 0.45,
-            db3: 0.30
-        }
-    };
-}
-
-function extractCostWaterfallData(data) {
-    // Similar to revenue, but for costs
-    const jahre = data.jahre;
-    const values = [];
-    
-    jahre.forEach(jahr => {
-        const yearData = data.calculationResult.jahre[jahr];
-        const totalCost = (
-            (yearData.development_overhead || 0) +
-            (yearData.marketing_overhead || 0) +
-            (yearData.selling_overhead || 0)
-        ) / 1000000;
-        values.push(totalCost);
+    // Profitability sparkline
+    const db3Data = data.jahre.map(jahr => {
+        return data.jahreDaten[jahr]?.gesamtDB3 || 0;
     });
-    
-    return {
-        labels: jahre,
-        values,
-        colors: jahre.map(() => '#8C9BA5')
-    };
+    ChartFactory.createSparkline('sparkline-profitability', db3Data);
 }
-
-function extractSensitivityData(data) {
-    // Mock sensitivity data - in real app, run multiple calculations
-    return {
-        labels: ['Pricing', 'Volume', 'COGS', 'Dev Costs'],
-        negativeImpact: [2.5, 1.8, 1.2, 0.4],
-        positiveImpact: [2.0, 1.5, 1.2, 0.4]
-    };
-}
-
-// ==========================================
-// RENDER BREAKDOWN WIDGETS
-// ==========================================
-
-function renderRevenueBreakdown() {
-    const container = document.getElementById('revenue-breakdown-bars');
-    if (!container) return;
-    
-    const data = dashboardState.filteredData;
-    const artikel = data.artikel;
-    
-    // Calculate revenue per artikel
-    const artikelRevenue = artikel.map(a => {
-        let revenue = 0;
-        data.jahre.forEach(jahr => {
-            // Sum up revenue for this artikel across years
-            // This is simplified - real calculation would be more complex
-            revenue += 1000000; // Placeholder
-        });
-        return { name: a.name, revenue };
-    });
-    
-    const total = artikelRevenue.reduce((sum, a) => sum + a.revenue, 0);
-    
-    container.innerHTML = artikelRevenue.map(a => {
-        const percent = (a.revenue / total * 100).toFixed(0);
-        return `
-            <div class="breakdown-bar">
-                <div class="breakdown-bar-label">${a.name}</div>
-                <div class="breakdown-bar-track">
-                    <div class="breakdown-bar-fill" style="width: ${percent}%; background: #003366;"></div>
-                </div>
-                <div class="breakdown-bar-value">${percent}% (${helpers.formatCurrency(a.revenue / 1000000)}M)</div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderRevenueInsights() {
-    const container = document.getElementById('revenue-insights');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <ul class="insights-list">
-            <li>Hardware dominiert mit 60% des Gesamtumsatzes</li>
-            <li>Software wächst mit +25% p.a. (stärkstes Wachstum)</li>
-            <li>2027: Software-Anteil wird 35% erreichen (Shift zu SaaS)</li>
-        </ul>
-    `;
-}
-
-function renderMarginBreakdown() {
-    const container = document.getElementById('margin-breakdown-bars');
-    if (!container) return;
-    
-    // Mock data for artikel margin comparison
-    const margins = [
-        { name: 'Hardware', margin: 0.35, status: 'positive' },
-        { name: 'Software', margin: 0.42, status: 'positive' },
-        { name: 'Services', margin: 0.18, status: 'warning' }
-    ];
-    
-    container.innerHTML = margins.map(m => {
-        const percent = (m.margin * 100).toFixed(0);
-        const icon = m.status === 'positive' ? '✅' : '⚠️';
-        return `
-            <div class="breakdown-bar">
-                <div class="breakdown-bar-label">${m.name}</div>
-                <div class="breakdown-bar-track">
-                    <div class="breakdown-bar-fill" style="width: ${percent}%; background: ${m.status === 'positive' ? '#00A651' : '#FF6600'};"></div>
-                </div>
-                <div class="breakdown-bar-value">${percent}% ${icon}</div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderMarginInsights() {
-    const container = document.getElementById('margin-insights');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <ul class="insights-list">
-            <li>DB2-Marge über Plan (+5pp) dank Lernkurveneffekten</li>
-            <li>Services-Marge niedrig → Optimierungspotenzial €200k</li>
-            <li>Software hat beste Unit Economics → Fokus verstärken</li>
-        </ul>
-    `;
-}
-
-function renderCostBreakdown() {
-    const container = document.getElementById('cost-breakdown-bars');
-    if (!container) return;
-    
-    // Mock cost driver data
-    const drivers = [
-        { name: 'Entwicklung', value: 4.3, percent: 55 },
-        { name: 'Marketing', value: 1.9, percent: 25 },
-        { name: 'Vertrieb', value: 1.6, percent: 20 }
-    ];
-    
-    container.innerHTML = drivers.map(d => `
-        <div class="breakdown-bar">
-            <div class="breakdown-bar-label">${d.name}</div>
-            <div class="breakdown-bar-track">
-                <div class="breakdown-bar-fill" style="width: ${d.percent}%; background: #8C9BA5;"></div>
-            </div>
-            <div class="breakdown-bar-value">${d.percent}% (${helpers.formatCurrency(d.value)}M)</div>
-        </div>
-    `).join('');
-}
-
-function renderCostInsights() {
-    const container = document.getElementById('cost-insights');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <ul class="insights-list">
-            <li>R&D-Quote: 18% (Benchmark: 15-20% ✅)</li>
-            <li>Marketing-Effizienz: €127 CAC → LTV/CAC = 4.2x ✅</li>
-            <li>Services unterinvestiert → +€200k empfohlen</li>
-        </ul>
-    `;
-}
-
-function renderSensitivityBreakdown() {
-    const container = document.getElementById('sensitivity-breakdown');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="sensitivity-details-content">
-            <p><strong>Top Driver:</strong> Volume (±€1.2M bei ±20%)</p>
-            <p><strong>Low Impact:</strong> Marketing Spend (±€0.1M)</p>
-        </div>
-    `;
-}
-
-function renderControllerRecommendations() {
-    const container = document.getElementById('controller-recommendations');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <ul class="recommendations-list">
-            <li>→ Fokus auf Volumen-Pipeline (höchster Hebel)</li>
-            <li>→ Preissicherung via Verträge (zweithöchstes Risiko)</li>
-            <li>→ COGS-Optimierung prüfen (mittleres Potenzial)</li>
-        </ul>
-    `;
-}
-
-// ==========================================
-// WINDOW FUNCTIONS (Filter Updates)
-// ==========================================
-
-window.setArtikelFilter = function(filter) {
-    console.log('🎛️ Artikel filter:', filter);
-    
-    if (filter === 'all') {
-        dashboardState.filters.artikel = ['all'];
-    } else {
-        // Toggle single artikel
-        const idx = dashboardState.filters.artikel.indexOf(filter);
-        if (idx > -1) {
-            dashboardState.filters.artikel.splice(idx, 1);
-        } else {
-            dashboardState.filters.artikel = dashboardState.filters.artikel.filter(f => f !== 'all');
-            dashboardState.filters.artikel.push(filter);
-        }
-        
-        // If none selected, select all
-        if (dashboardState.filters.artikel.length === 0) {
-            dashboardState.filters.artikel = ['all'];
-        }
-    }
-    
-    refreshDashboardWithFilters();
-};
-
-window.setJahrFilter = function(jahr) {
-    console.log('🎛️ Jahr filter:', jahr);
-    dashboardState.filters.jahr = jahr;
-    refreshDashboardWithFilters();
-};
-
-window.setViewMode = function(mode) {
-    console.log('🎛️ View mode:', mode);
-    dashboardState.filters.viewMode = mode;
-    refreshDashboardWithFilters();
-};
-
-window.setScenario = function(scenario) {
-    console.log('🎛️ Scenario:', scenario);
-    dashboardState.filters.scenario = scenario;
-    refreshDashboardWithFilters();
-};
-
-function refreshDashboardWithFilters() {
-    // Reapply filters
-    dashboardState.filteredData = applyFilters(dashboardState.rawData);
-    
-    // Re-render (faster than full reload)
-    const container = document.getElementById('projekt-tab-dashboard');
-    container.innerHTML = createDashboardLayout();
-    
-    requestAnimationFrame(() => {
-        initializeAllCharts();
-    });
-}
-
-window.refreshDashboard = function() {
-    console.log('🔄 Full dashboard refresh...');
-    ChartFactory.destroyAllCharts();
-    renderProjektDashboard();
-};
-
-window.exportDashboard = function() {
-    console.log('📥 Export dashboard...');
-    alert('Export-Funktion wird implementiert (PowerPoint/PDF)');
-};
-
-// ==========================================
-// VIEW TOGGLE HANDLERS
-// ==========================================
 
 /**
- * Handle view toggle for charts
+ * Initialize specific visualization
  */
-window.toggleChartView = function(sectionId, viewType) {
-    console.log(`🔄 Toggle ${sectionId} view to: ${viewType}`);
+function initializeVisualization(vizId) {
+    console.log('🎨 Initializing visualization:', vizId);
     
-    // Update button states
-    const section = document.querySelector(`#${sectionId}`);
-    if (!section) return;
+    const content = document.getElementById(`viz-content-${vizId}`);
+    if (!content) return;
     
-    const buttons = section.querySelectorAll('.view-toggle');
-    buttons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-view') === viewType) {
-            btn.classList.add('active');
+    const data = dashboardState.calculationResult;
+    
+    // Create canvas for chart
+    const canvasId = `canvas-${vizId}`;
+    content.innerHTML = `
+        <div class="chart-wrapper">
+            <canvas id="${canvasId}"></canvas>
+        </div>
+        <div class="viz-insights" id="insights-${vizId}">
+            <!-- Insights will be added here -->
+        </div>
+    `;
+    
+    // Initialize specific chart
+    setTimeout(() => {
+        switch(vizId) {
+            case 'revenue-waterfall':
+                initRevenueWaterfall(canvasId, data);
+                break;
+            case 'revenue-breakdown':
+                initRevenueBreakdown(canvasId, data);
+                break;
+            case 'margin-bridge':
+                initMarginBridge(canvasId, data);
+                break;
+            case 'cost-waterfall':
+                initCostWaterfall(canvasId, data);
+                break;
+            case 'sensitivity-tornado':
+                initSensitivityTornado(canvasId, data);
+                break;
+            default:
+                content.innerHTML += `<p class="coming-soon">📊 Chart wird implementiert: ${vizId}</p>`;
         }
+    }, 100);
+}
+
+/**
+ * Initialize revenue waterfall chart
+ */
+function initRevenueWaterfall(canvasId, data) {
+    const waterfallData = {
+        labels: data.jahre,
+        datasets: [{
+            label: 'Revenue',
+            data: data.jahre.map(jahr => data.jahreDaten[jahr]?.gesamtRevenue || 0),
+            backgroundColor: '#00A651'
+        }]
+    };
+    
+    const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
+    dashboardState.charts[canvasId] = chart;
+    
+    // Add insights
+    const insights = document.getElementById(`insights-revenue-waterfall`);
+    if (insights) {
+        insights.innerHTML = `
+            <div class="insight-box">
+                <h4>💡 Key Insights</h4>
+                <ul>
+                    <li>Stärkstes Wachstum in Jahr 2-3</li>
+                    <li>Hardware trägt 50% zum Gesamtumsatz bei</li>
+                    <li>Software-Anteil steigt kontinuierlich</li>
+                </ul>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Initialize revenue breakdown
+ */
+function initRevenueBreakdown(canvasId, data) {
+    // Group by artikel type
+    const breakdown = {};
+    data.artikelListe.forEach(artikel => {
+        const typ = artikel.typ || 'Sonstige';
+        if (!breakdown[typ]) breakdown[typ] = 0;
+        breakdown[typ] += artikel.gesamtRevenue5Y || 0;
     });
     
-    // Re-render chart based on section and view
-    const data = dashboardState.filteredData;
+    const breakdownData = {
+        labels: Object.keys(breakdown),
+        datasets: [{
+            data: Object.values(breakdown),
+            backgroundColor: ['#003366', '#0066CC', '#00A651', '#FF6600']
+        }]
+    };
     
-    if (sectionId === 'revenue-section') {
-        const canvas = document.getElementById('canvas-revenue-waterfall');
-        if (!canvas) return;
-        
-        if (viewType === 'waterfall') {
-            ChartFactory.createRevenueWaterfall('canvas-revenue-waterfall', extractRevenueWaterfallData(data));
-        } else if (viewType === 'stacked') {
-            // Create stacked bar chart
-            ChartFactory.createStackedBar('canvas-revenue-waterfall', extractRevenueStackedData(data));
-        } else if (viewType === 'trend') {
-            // Create trend line chart
-            ChartFactory.createTrendLine('canvas-revenue-waterfall', extractRevenueTrendData(data));
-        }
-    }
-    else if (sectionId === 'margin-section') {
-        // Similar logic for margin charts
-        console.log('Margin view toggle not yet implemented');
-    }
-    else if (sectionId === 'cost-section') {
-        // Similar logic for cost charts
-        console.log('Cost view toggle not yet implemented');
-    }
-};
+    const chart = ChartFactory.createPieChart(canvasId, breakdownData);
+    dashboardState.charts[canvasId] = chart;
+}
 
-// Add event delegation for all view-toggle buttons
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('view-toggle')) {
-        const viewType = e.target.getAttribute('data-view');
-        const section = e.target.closest('.dashboard-section');
-        if (section && viewType) {
-            window.toggleChartView(section.id, viewType);
-        }
-    }
-});
+/**
+ * Initialize margin bridge
+ */
+function initMarginBridge(canvasId, data) {
+    const firstYear = data.jahre[0];
+    const yearData = data.jahreDaten[firstYear];
+    
+    if (!yearData) return;
+    
+    const bridgeData = {
+        labels: ['DB1', 'Marketing', 'R&D', 'Overhead', 'DB3'],
+        datasets: [{
+            data: [
+                yearData.gesamtDB1 || 0,
+                -(yearData.gesamtMarketing || 0),
+                -(yearData.gesamtRnD || 0),
+                -(yearData.gesamtOverhead || 0),
+                yearData.gesamtDB3 || 0
+            ],
+            backgroundColor: ['#00A651', '#FF6600', '#FF6600', '#FF6600', '#003366']
+        }]
+    };
+    
+    const chart = ChartFactory.createMarginBridge(canvasId, bridgeData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize cost waterfall
+ */
+function initCostWaterfall(canvasId, data) {
+    const costData = {
+        labels: data.jahre,
+        datasets: [{
+            label: 'Projektkosten',
+            data: data.jahre.map(jahr => data.jahreDaten[jahr]?.gesamtProjektkosten || 0),
+            backgroundColor: '#DC0032'
+        }]
+    };
+    
+    const chart = ChartFactory.createCostWaterfall(canvasId, costData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize sensitivity tornado
+ */
+function initSensitivityTornado(canvasId, data) {
+    const tornadoData = {
+        labels: ['Preis', 'Menge', 'Kosten', 'Marketing'],
+        datasets: [{
+            label: 'Impact auf NPV',
+            data: [5000000, 3500000, -2000000, -1500000],
+            backgroundColor: ['#00A651', '#00A651', '#DC0032', '#DC0032']
+        }]
+    };
+    
+    const chart = ChartFactory.createTornadoChart(canvasId, tornadoData);
+    dashboardState.charts[canvasId] = chart;
+}
 
 // ==========================================
 // EXPORT
