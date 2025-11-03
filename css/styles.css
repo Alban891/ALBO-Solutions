@@ -776,7 +776,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 12px;
+  margin-top: 0;
 }
 
 .section-header h2 {
@@ -1359,10 +1360,10 @@ body {
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px; /* ✅ Reduziert von 12px */
-  margin-bottom: 16px; /* ✅ Reduziert von 24px */
-  padding: 8px 0; /* ✅ NEU: Etwas Padding für bessere Lesbarkeit */
-  font-size: 13px; /* ✅ Minimal kleiner */
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  font-size: 12px;
 }
 
 .breadcrumb-link {
@@ -1370,8 +1371,8 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px; /* ✅ Kompakter */
-  font-size: 13px;
+  padding: 2px 6px;
+  font-size: 12px;
   transition: var(--transition);
   border-radius: 4px;
 }
@@ -1383,13 +1384,14 @@ body {
 
 .breadcrumb-separator {
   color: var(--text-light);
-  font-size: 12px; /* ✅ Minimal kleiner */
+  font-size: 11px;
 }
 
 .breadcrumb-current {
   color: var(--text);
   font-weight: 600;
-  padding: 4px 0; /* ✅ Minimal Padding */
+  padding: 2px 0;
+  font-size: 12px;
 }
 
 /* Detail Tabs - direkt nach Breadcrumb */
@@ -1477,7 +1479,8 @@ body {
   background: var(--background);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
 .form-section-full {
@@ -1485,12 +1488,14 @@ body {
 }
 
 .form-section h3 {
-  font-size: var(--font-size-lg);
+  font-size: 15px;
   font-weight: 600;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 12px;
+  margin-top: 0;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 8px;
+  line-height: 1.2;
 }
 
 .form-group {
@@ -1550,17 +1555,24 @@ body {
 
 .detail-tabs {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  gap: 2px;
+  margin-bottom: 12px;
+  margin-top: 0;
   border-bottom: 2px solid var(--border);
+  background: white;
+  padding: 0 12px;
+  position: sticky;
+  top: 120px;
+  z-index: 100;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 .detail-tab {
-  padding: var(--spacing) var(--spacing-lg);
+  padding: 8px 16px;
   border: none;
   background: transparent;
   color: var(--text-light);
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
@@ -2358,6 +2370,96 @@ body {
 .data-table th[onclick]:hover .sort-arrow {
     opacity: 1;
     color: #1e40af;
+}
+
+/* ========================================== */
+/* PROJEKT-DETAIL KOMPAKT-OPTIMIERUNG */
+/* ========================================== */
+
+#projekt-detail-view {
+  padding-top: 12px;
+}
+
+/* Tab Content: Kein Extra-Padding */
+.projekt-tab-content {
+  padding-top: 0;
+}
+
+.projekt-tab-content:not(.active) {
+  display: none;
+}
+
+/* Alle Überschriften in Projekt-Detail kompakter */
+#projekt-detail-view h2,
+#projekt-detail-view h3,
+#projekt-detail-view h4 {
+  margin-top: 0;
+  line-height: 1.2;
+}
+
+#projekt-detail-view h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+#projekt-detail-view h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+#projekt-detail-view h4 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+/* Paragraphen kompakter */
+#projekt-detail-view p {
+  margin-top: 0;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* Info-Boxen kompakter */
+#projekt-detail-view [style*="background:"],
+#projekt-detail-view [style*="background-color:"],
+#projekt-detail-view [style*="border-left:"] {
+  padding: 10px 14px !important;
+  margin-bottom: 10px !important;
+}
+
+/* Grids kompakter */
+#projekt-detail-view [style*="grid-template-columns"] {
+  gap: 10px !important;
+}
+
+/* Wirtschaftlichkeit: Extra-kompakt */
+#projekt-tab-wirtschaftlichkeit > *:first-child {
+  margin-top: 0 !important;
+}
+
+#projekt-tab-wirtschaftlichkeit > div {
+  margin-bottom: 12px !important;
+}
+
+/* Header Actions kompakter */
+.header-actions {
+  gap: 8px;
+}
+
+.header-actions .btn {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+/* Buttons generell kompakter im Detail */
+#projekt-detail-view .btn {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+#projekt-detail-view .btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }
 
 /* ========================================== */
