@@ -1521,14 +1521,15 @@ body {
   display: flex;
   gap: 2px;
   margin-bottom: 0;
-  margin-top: 0;
+  margin-top: 0;  /* ✅ Direkt nach Breadcrumb */
   border-bottom: 2px solid var(--border);
+  border-top: 1px solid #f1f5f9;  /* ✅ NEU: Dezente obere Linie */
   background: white;
   padding: 0 12px;
   position: sticky;
-  top: 120px;
-  z-index: 100;
-  box-shadow: none;  /* ✅ ÄNDERE: Kein Schatten */
+  top: 108px;  /* ✅ GEÄNDERT: 108px statt 120px (Header 60px + Main-Nav 48px) */
+  z-index: 1000;  /* ✅ HÖHER: 1000 statt 100 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);  /* ✅ Schatten für bessere Sichtbarkeit */
 }
 
 .detail-tab {
