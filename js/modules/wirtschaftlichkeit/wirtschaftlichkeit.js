@@ -22,6 +22,31 @@ import {
 } from './constants.js';
 
 // ========================================
+// ✅ NEU: HELPER FUNCTIONS
+// ========================================
+
+/**
+ * Get display name for scenario ID
+ * 
+ * @param {string} szenarioId - Scenario ID
+ * @returns {string} Display name
+ * 
+ * @private
+ */
+function getSzenarioDisplayName(szenarioId) {
+    const displayNames = {
+        'base': 'Base',
+        'best-organic': 'Best',
+        'best-investment': 'Best+',
+        'worst-conservative': 'Worst',
+        'worst-aggressive': 'Worst-',
+        'custom': 'Custom'
+    };
+    
+    return displayNames[szenarioId] || 'Base';
+}
+
+// ========================================
 // PROJEKT-WIRTSCHAFTLICHKEIT (Aggregiert)
 // ========================================
 
@@ -143,8 +168,8 @@ export async function renderProjektWirtschaftlichkeit() {
                 
                 <!-- Szenario Selector -->
                 <div style="background: linear-gradient(135deg, #f0f9ff, #e0e7ff); padding: 10px 12px; border-radius: 8px; border: 1px solid #dbeafe;">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 8px;">
-                        📊 Szenario: <strong>${window.currentActiveSzenarioId === 'best' ? 'Best' : window.currentActiveSzenarioId === 'worst' ? 'Worst' : 'Base'}</strong>
+                   <div style="font-size: 11px; font-weight: 600; color: var(--primary); margin-bottom: 8px;">
+                        📊 Szenario: <strong>${getSzenarioDisplayName(window.currentActiveSzenarioId || 'base')}</strong>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                         <button id="szenario-base" class="szenario-btn"
@@ -155,18 +180,19 @@ export async function renderProjektWirtschaftlichkeit() {
                             Base
                         </button>
                         <button id="szenario-best" class="szenario-btn"
-                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'best' ? '#059669' : 'white'}; 
-                                    color: ${window.currentActiveSzenarioId === 'best' ? 'white' : '#374151'}; 
-                                    border: 1px solid ${window.currentActiveSzenarioId === 'best' ? '#059669' : '#e5e7eb'};
+                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'best-organic' ? '#059669' : 'white'}; 
+                                    color: ${window.currentActiveSzenarioId === 'best-organic' ? 'white' : '#374151'}; 
+                                    border: 1px solid ${window.currentActiveSzenarioId === 'best-organic' ? '#059669' : '#e5e7eb'};
                                     border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
                             ✓ Best
                         </button>
                         <button id="szenario-worst" class="szenario-btn"
-                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'worst' ? '#dc2626' : 'white'}; 
-                                    color: ${window.currentActiveSzenarioId === 'worst' ? 'white' : '#374151'}; 
-                                    border: 1px solid ${window.currentActiveSzenarioId === 'worst' ? '#dc2626' : '#e5e7eb'};
+                                style="padding: 6px; background: ${window.currentActiveSzenarioId === 'worst-conservative' ? '#dc2626' : 'white'}; 
+                                    color: ${window.currentActiveSzenarioId === 'worst-conservative' ? 'white' : '#374151'}; 
+                                    border: 1px solid ${window.currentActiveSzenarioId === 'worst-conservative' ? '#dc2626' : '#e5e7eb'};
                                     border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: 500;">
                             ✗ Worst
+                        </button>
                         </button>
                         <button id="szenario-custom" class="szenario-btn"
                                 style="padding: 6px; background: white; color: #374151; 
