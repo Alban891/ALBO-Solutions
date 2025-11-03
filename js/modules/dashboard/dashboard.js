@@ -519,6 +519,7 @@ function createExecutiveSummary() {
  */
 function createRevenueSection() {
     return `
+        <div class="dashboard-section" id="revenue-section">
         <div class="section-header">
             <div class="section-title-with-icon">
                 <span class="section-icon">💰</span>
@@ -1022,6 +1023,66 @@ window.exportDashboard = function() {
     console.log('📥 Export dashboard...');
     alert('Export-Funktion wird implementiert (PowerPoint/PDF)');
 };
+
+// ==========================================
+// VIEW TOGGLE HANDLERS
+// ==========================================
+
+/**
+ * Handle view toggle for charts
+ */
+window.toggleChartView = function(sectionId, viewType) {
+    console.log(`🔄 Toggle ${sectionId} view to: ${viewType}`);
+    
+    // Update button states
+    const section = document.querySelector(`#${sectionId}`);
+    if (!section) return;
+    
+    const buttons = section.querySelectorAll('.view-toggle');
+    buttons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-view') === viewType) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Re-render chart based on section and view
+    const data = dashboardState.filteredData;
+    
+    if (sectionId === 'revenue-section') {
+        const canvas = document.getElementById('canvas-revenue-waterfall');
+        if (!canvas) return;
+        
+        if (viewType === 'waterfall') {
+            ChartFactory.createRevenueWaterfall('canvas-revenue-waterfall', extractRevenueWaterfallData(data));
+        } else if (viewType === 'stacked') {
+            // Create stacked bar chart
+            ChartFactory.createStackedBar('canvas-revenue-waterfall', extractRevenueStackedData(data));
+        } else if (viewType === 'trend') {
+            // Create trend line chart
+            ChartFactory.createTrendLine('canvas-revenue-waterfall', extractRevenueTrendData(data));
+        }
+    }
+    else if (sectionId === 'margin-section') {
+        // Similar logic for margin charts
+        console.log('Margin view toggle not yet implemented');
+    }
+    else if (sectionId === 'cost-section') {
+        // Similar logic for cost charts
+        console.log('Cost view toggle not yet implemented');
+    }
+};
+
+// Add event delegation for all view-toggle buttons
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('view-toggle')) {
+        const viewType = e.target.getAttribute('data-view');
+        const section = e.target.closest('.dashboard-section');
+        if (section && viewType) {
+            window.toggleChartView(section.id, viewType);
+        }
+    }
+});
 
 // ==========================================
 // EXPORT
