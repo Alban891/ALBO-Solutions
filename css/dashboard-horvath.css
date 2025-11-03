@@ -105,26 +105,26 @@
     z-index: 100;
     background: linear-gradient(135deg, var(--horvath-light-blue) 0%, #F0F9FF 100%);
     border-bottom: 2px solid var(--horvath-blue);
-    padding: var(--space-lg);
+    padding: 8px 12px; /* Kleiner! */
     box-shadow: var(--shadow-sm);
 }
 
 .executive-cards-compact {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
+    gap: 8px; /* Kleiner! */
     max-width: 1400px;
     margin: 0 auto;
 }
 
 .exec-card-compact {
     background: white;
-    border-radius: 8px;
-    padding: var(--space-md);
+    border-radius: 6px; /* Kleiner! */
+    padding: 8px; /* Kleiner! */
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 4px; /* Kleiner! */
     transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
@@ -136,7 +136,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    height: 3px;
+    height: 2px; /* Dünner! */
     background: var(--horvath-blue);
 }
 
@@ -146,8 +146,8 @@
 }
 
 .exec-card-compact .card-icon {
-    font-size: 24px;
-    margin-bottom: var(--space-xs);
+    font-size: 18px; /* Kleiner! */
+    margin-bottom: 2px;
 }
 
 .exec-card-compact .card-content {
@@ -155,30 +155,30 @@
 }
 
 .exec-card-compact .card-label {
-    font-size: var(--font-xs);
+    font-size: 9px; /* Kleiner! */
     font-weight: 700;
     color: #6B7280;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: var(--space-xs);
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
 }
 
 .exec-card-compact .card-value {
-    font-size: var(--font-xl);
+    font-size: 16px; /* Kleiner! */
     font-weight: 700;
     color: var(--horvath-navy);
     line-height: 1;
-    margin-bottom: var(--space-xs);
+    margin-bottom: 2px;
 }
 
 .exec-card-compact .card-meta {
-    font-size: var(--font-xs);
+    font-size: 9px; /* Kleiner! */
     color: #9CA3AF;
 }
 
 .exec-card-compact .card-sparkline {
-    height: 30px;
-    margin-top: var(--space-sm);
+    height: 20px; /* Kleiner! */
+    margin-top: 4px;
 }
 
 /* Decision Card */
@@ -232,18 +232,18 @@
    ========================================== */
 
 .question-sidebar {
-    width: 320px;
-    min-width: 320px;
+    width: 240px; /* Schmaler! War 320px */
+    min-width: 240px;
     background: #FAFBFC;
     border-right: 1px solid #E5E7EB;
     overflow-y: auto;
-    padding: var(--space-lg);
+    padding: 8px; /* Kleiner! */
 }
 
 .question-card {
     background: white;
-    border-radius: 8px;
-    margin-bottom: var(--space-md);
+    border-radius: 6px; /* Kleiner! */
+    margin-bottom: 6px; /* Kleiner! */
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
     overflow: hidden;
@@ -254,11 +254,11 @@
 }
 
 .question-header {
-    padding: var(--space-md);
+    padding: 8px; /* Kleiner! */
     cursor: pointer;
     display: flex;
     align-items: flex-start;
-    gap: var(--space-md);
+    gap: 8px; /* Kleiner! */
     transition: background 0.2s ease;
 }
 
@@ -267,7 +267,7 @@
 }
 
 .question-header .icon {
-    font-size: 28px;
+    font-size: 20px; /* Kleiner! */
     flex-shrink: 0;
 }
 
@@ -276,21 +276,21 @@
 }
 
 .question-text h3 {
-    font-size: var(--font-md);
+    font-size: 12px; /* Kleiner! */
     font-weight: 600;
     color: var(--horvath-navy);
-    margin: 0 0 var(--space-xs) 0;
-    line-height: 1.3;
+    margin: 0 0 2px 0; /* Kleiner! */
+    line-height: 1.2;
 }
 
 .question-text .quick-stat {
-    font-size: var(--font-xs);
+    font-size: 9px; /* Kleiner! */
     color: #6B7280;
     font-weight: 500;
 }
 
 .expand-icon {
-    font-size: 12px;
+    font-size: 10px; /* Kleiner! */
     color: #9CA3AF;
     transition: transform 0.2s ease;
     flex-shrink: 0;
@@ -313,20 +313,20 @@
 }
 
 .sub-item {
-    padding: var(--space-sm) var(--space-md);
+    padding: 6px 8px; /* Kleiner! */
     cursor: pointer;
-    font-size: var(--font-sm);
+    font-size: 11px; /* Kleiner! */
     color: #4B5563;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: 6px;
 }
 
 .sub-item:hover {
     background: var(--horvath-light-blue);
     color: var(--horvath-blue);
-    padding-left: calc(var(--space-md) + 4px);
+    padding-left: calc(8px + 4px); /* Kleiner! */
 }
 
 .sub-item.active {
@@ -342,7 +342,7 @@
 .visualization-area {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-lg);
+    padding: 8px; /* Kleiner! */
     background: #F5F7FA;
 }
 
