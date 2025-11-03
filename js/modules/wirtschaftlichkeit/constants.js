@@ -77,39 +77,181 @@ export const HK_DEFAULTS = {
 };
 
 /**
- * Kostenblock-Mapping zu DB-Stufen
+ * Kostenblock-Mapping zu DB-Stufen mit Hybrid-Unterstützung
  * Nach HGB § 275 Abs. 2 und IAS 1
  * 
- * @type {import('./types').KostenMapping}
+ * @type {Object}
  * @constant
  */
 export const KOSTEN_MAPPING = {
-    // DB3: Forschungs- und Entwicklungskosten (HGB § 275 Abs. 2 Nr. 5)
-    development: [
-        'personal',           // Entwicklungspersonal
-        'cloud',             // Cloud-Entwicklungsumgebung
-        'lizenzen',          // Entwicklungs-Tools & IDEs
-        'testing',           // QA & Testing
-        'compute',           // GPU/Compute Resources (AI/ML)
-        'daten'              // Daten-Beschaffung & Labeling
-    ],
     
-    // DB4: Vertriebskosten (HGB § 275 Abs. 2 Nr. 6)
-    selling_marketing: [
-        'schulung',          // Kundenschulungen (Vertriebsunterstützung)
-        'marketing',         // Marketing-Kampagnen
-        'vertrieb',          // Vertriebskosten
-        'reise'             // Reisekosten Vertrieb
-    ],
+    // =============================================
+    // DB3: DEVELOPMENT OVERHEAD
+    // HGB § 275 Abs. 2 Nr. 5 - F&E-Aufwendungen
+    // =============================================
+    development: {
+        // Direkt zuordenbare Kostenblöcke aus Projektkosten
+        blocks: [
+            'personal',              // ✅ Entwicklungsteam
+            'cloud',                 // ✅ Cloud-Infrastruktur (Dev)
+            'lizenzen',              // ✅ Development Tools
+            'testing',               // ✅ QA & Testing
+            'compute',               // ✅ GPU/Compute Resources
+            'daten',                 // ✅ Daten-Beschaffung
+            'security-tools',        // ✅ Security Tools (Dev-Phase)
+            'audits'                 // ✅ Security Audits & Pentesting (Dev-Phase)
+        ],
+        
+        // Fallback: %-Satz vom Umsatz (wenn keine Projektkosten erfasst)
+        fallback_percent: 15,
+        
+        // Rechtsgrundlage
+        legal_basis: 'HGB § 275 Abs. 2 Nr. 5',
+        description: 'Forschungs- und Entwicklungskosten',
+        
+        // Branchenbenchmarks für Validierung
+        benchmark: {
+            consulting: { min: 12, median: 18, max: 25 },
+            hardware: { min: 8, median: 12, max: 18 },
+            software: { min: 15, median: 22, max: 30 }
+        }
+    },
     
-    // DB5: Allgemeine Verwaltungskosten (HGB § 275 Abs. 2 Nr. 7)
-    admin_distribution: [
-        'compliance',        // Compliance & Legal
-        'admin',            // Verwaltung
-        'material',         // Materialverwaltung (nicht Produktion)
-        'werkzeuge',        // Allgemeine Betriebsmittel
-        'zertifizierung'    // Zertifizierungskosten (falls nicht F&E)
-    ]
+    // =============================================
+    // DB4: SELLING & MARKETING OVERHEAD
+    // HGB § 275 Abs. 2 Nr. 6 - Vertriebskosten
+    // =============================================
+    selling_marketing: {
+        // Direkt zuordenbare Kostenblöcke
+        blocks: [
+            'vertrieb',              // ✅ Vertriebsteam
+            'marketing',             // ✅ Marketing-Kampagnen
+            'reise',                 // ✅ Reisekosten Vertrieb
+            'schulung-kunde'         // ✅ Kundenschulungen
+        ],
+        
+        // Fallback: %-Satz vom Umsatz
+        fallback_percent: 15,       // Total S&M: 15%
+        
+        // Aufteilung in Selling (60%) und Marketing (40%)
+        split: {
+            selling: 0.60,          // 60% → 9% vom Umsatz
+            marketing: 0.40         // 40% → 6% vom Umsatz
+        },
+        
+        legal_basis: 'HGB § 275 Abs. 2 Nr. 6',
+        description: 'Vertriebskosten',
+        
+        benchmark: {
+            consulting: { min: 10, median: 15, max: 25 },
+            saas: { min: 20, median: 35, max: 50 },
+            hardware: { min: 8, median: 12, max: 18 }
+        }
+    },
+    
+    // =============================================
+    // DB5: ADMIN & DISTRIBUTION OVERHEAD
+    // HGB § 275 Abs. 2 Nr. 7 - Verwaltungskosten
+    // =============================================
+    admin_distribution: {
+        // Direkt zuordenbare Kostenblöcke
+        blocks: [
+            'compliance',            // ✅ Compliance & Legal
+            'admin',                 // ✅ Verwaltung
+            'zertifizierung',        // ✅ ISO-Zertifizierungen
+            'schulung-mitarbeiter',  // ✅ Mitarbeiterschulungen (Compliance)
+            'material',              // ✅ Büromaterial
+            'werkzeuge'              // ✅ Allgemeine Betriebsmittel
+        ],
+        
+        // Fallback: %-Satz vom Umsatz
+        fallback_percent: 8,        // Total Admin & Distribution: 8%
+        
+        // Aufteilung in Distribution (30%) und Admin (70%)
+        split: {
+            distribution: 0.30,     // 30% → 2,4% vom Umsatz
+            admin: 0.70             // 70% → 5,6% vom Umsatz
+        },
+        
+        legal_basis: 'HGB § 275 Abs. 2 Nr. 7',
+        description: 'Allgemeine Verwaltungskosten',
+        
+        benchmark: {
+            consulting: { min: 5, median: 8, max: 12 },
+            hardware: { min: 6, median: 10, max: 15 },
+            software: { min: 4, median: 7, max: 10 }
+        }
+    },
+    
+    // =============================================
+    // ✅ NEU: OTHER OPERATING INCOME
+    // HGB § 275 Abs. 2 Nr. 4
+    // =============================================
+    other_operating_income: {
+        blocks: [
+            'anlagenverkaeufe',          // Verkauf Anlagevermögen (über Buchwert)
+            'rueckstellungsaufloesungen', // Auflösung Rückstellungen
+            'versicherungserstattungen',  // Versicherungserstattungen
+            'schadensersatz',             // Schadensersatz erhalten
+            'waehrungsgewinne',           // Währungsgewinne (operativ)
+            'mietertraege',               // Mieterträge (Untervermietung)
+            'zuschuesse',                 // Zuschüsse & Fördermittel
+            'foerderung',                 // Staatliche Förderung
+            'nebengeschaeft'              // Erlöse Nebengeschäft
+        ],
+        
+        fallback_percent: 0,              // Normalerweise projektspezifisch
+        
+        legal_basis: 'HGB § 275 Abs. 2 Nr. 4',
+        description: 'Sonstige betriebliche Erträge',
+        
+        examples: [
+            'Verkaufserlöse Anlagevermögen (über Buchwert)',
+            'Auflösung nicht benötigter Rückstellungen',
+            'Erhaltene Versicherungserstattungen',
+            'Fördermittel & Zuschüsse'
+        ]
+    },
+    
+    // =============================================
+    // ✅ NEU: OTHER OPERATING EXPENSES
+    // HGB § 275 Abs. 2 Nr. 8
+    // =============================================
+    other_operating_expenses: {
+        blocks: [
+            'rechtsberatung',            // Rechts- und Beratungskosten (nicht F&E)
+            'unternehmensberatung',      // Unternehmensberatung
+            'wirtschaftsprüfung',        // Wirtschaftsprüfung & Jahresabschluss
+            'versicherungen',            // Versicherungsprämien
+            'spenden',                   // Spenden
+            'sponsoring',                // Sponsoring
+            'mitgliedsbeitraege',        // Verbandsbeiträge (IHK, etc.)
+            'forderungsabschreibungen',  // Forderungsausfälle
+            'waehrungsverluste',         // Währungsverluste (operativ)
+            'sonstige-steuern',          // Sonstige Steuern (GrundSt, KfzSt)
+            'schadensfaelle',            // Schadensfälle
+            'bussgelder',                // Bußgelder & Strafen
+            'anlagenabgaenge',           // Verluste Anlagenverkäufe
+            'nicht-aktivierbar',         // Nicht aktivierbare Kosten
+            'sonstiges'                  // Catch-all für Unklassifizierbares
+        ],
+        
+        fallback_percent: 2,             // Konservativ: 2% für Kontingenzen
+        
+        legal_basis: 'HGB § 275 Abs. 2 Nr. 8',
+        description: 'Sonstige betriebliche Aufwendungen - Parking Zone für nicht-zuordenbare Kosten',
+        
+        examples: [
+            'Rechtskosten (nicht F&E)',
+            'Jahresabschlusskosten',
+            'Versicherungen',
+            'Forderungsausfälle',
+            'Nicht aktivierbare Gründungskosten',
+            'Sonstige Steuern'
+        ],
+        
+        verwendungszweck: '⚠️ Parking Zone: Für schwer zuordenbare betriebliche Aufwendungen'
+    }
 };
 
 /**
@@ -435,12 +577,20 @@ export const UI_LABELS = {
         selling_overhead: 'Selling Overhead',
         marketing_overhead: 'Marketing Overhead',
         distribution_overhead: 'Distribution Overhead',
-        admin_overhead: 'Administration Overhead'
+        admin_overhead: 'Administration Overhead',
+        
+        // ✅ NEU
+        other_operating_income: 'Other Operating Income',
+        other_operating_expenses: 'Other Operating Expenses'
     },
     kategorien: {
         development: '🔬 Development (DB3)',
         selling_marketing: '📢 Sales & Marketing (DB4)',
-        admin_distribution: '🏢 Administration (DB5)'
+        admin_distribution: '🏢 Administration (DB5)',
+        
+        // ✅ NEU
+        other_operating_income: '💰 Other Income',
+        other_operating_expenses: '📋 Other Expenses'
     }
 };
 
