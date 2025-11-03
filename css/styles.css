@@ -1518,7 +1518,7 @@ body {
 .detail-tabs {
   display: flex;
   gap: 2px;
-  margin-bottom: 12px;
+  margin-bottom: 0px;  /* ✅ VON 12px AUF 0px */
   margin-top: 0;
   border-bottom: 2px solid var(--border);
   background: white;
@@ -2343,9 +2343,9 @@ body {
   padding-top: 12px;
 }
 
-/* Tab Content: Kein Extra-Padding */
+/* Tab Content: Minimaler Top-Padding */
 .projekt-tab-content {
-  padding-top: 0;
+  padding-top: 16px;  /* ✅ ÄNDERE von 0 auf 16px */
 }
 
 .projekt-tab-content:not(.active) {
