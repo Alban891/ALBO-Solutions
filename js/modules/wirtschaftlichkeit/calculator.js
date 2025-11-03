@@ -606,60 +606,84 @@ function getArtikelValueForYear(artikel, field, jahr) {
 }
 
 /**
- * Get project costs (Kostenblöcke)
+ * Get project costs (returns the projekt object itself with kostenWerte)
  * 
  * @param {string} projektId - Project ID
- * @returns {Array} Cost blocks
+ * @returns {Object|null} Project object with kostenWerte or null
  * 
  * @private
  */
 function getProjektkosten(projektId) {
     const projekt = state.getProjekt(projektId);
     
-    if (!projekt || !projekt.kostenblöcke) {
-        return [];
+    if (!projekt || !projekt.kostenWerte) {
+        console.warn(`⚠️ Projekt ${projektId}: Keine kostenWerte vorhanden`);
+        return null;
     }
     
-    // Return active cost blocks
-    return projekt.kostenblöcke.filter(block => block.isActive);
+    console.log(`✅ Projekt ${projektId}: ${Object.keys(projekt.kostenWerte).length} Kostenblöcke, ` +
+                `${projekt.aktiveKostenblöcke?.length || 0} aktiv`);
+    
+    // Return the complete project object (not an array)
+    return projekt;
 }
 
 /**
  * Sum project costs by category for a specific year
  * 
- * @param {Array} projektkosten - Cost blocks
- * @param {Array} categoryIds - Category IDs to sum
- * @param {string} jahr - Year
- * @returns {number} Total costs
+ * @param {Object|null} projekt - Project object with kostenWerte
+ * @param {Array} categoryIds - Category IDs to sum (e.g., ['personal', 'cloud', 'lizenzen'])
+ * @param {string} jahr - Year (YYYY)
+ * @returns {number} Total costs for this category and year
  * 
  * @private
  */
-function sumProjectCostsByCategory(projektkosten, categoryIds, jahr) {
-    return projektkosten.reduce((sum, block) => {
-        // Check if block matches any of the category IDs
-        const blockId = block.id || block.name.toLowerCase().replace(/\s+/g, '-');
-        
+function sumProjectCostsByCategory(projekt, categoryIds, jahr) {
+    // Safety check: projekt might be null if no kostenWerte exist
+    if (!projekt || !projekt.kostenWerte) {
+        console.log(`  ℹ️ Jahr ${jahr}: Keine Projektkosten verfügbar`);
+        return 0;
+    }
+    
+    let total = 0;
+    
+    // Get active cost blocks (or all if not defined)
+    const aktiveBlöcke = projekt.aktiveKostenblöcke || Object.keys(projekt.kostenWerte);
+    
+    // Iterate over active blocks and sum matching categories
+    aktiveBlöcke.forEach(blockId => {
+        // Check if this block belongs to the requested category
         if (categoryIds.includes(blockId)) {
-            const value = block.kostenWerte && block.kostenWerte[jahr];
-            if (value !== undefined) {
-                return sum + parseFloat(value);
+            // Get the value for this year
+            const jahresWert = projekt.kostenWerte[blockId]?.[jahr];
+            
+            if (jahresWert !== undefined && jahresWert !== null) {
+                const wert = parseFloat(jahresWert);
+                if (!isNaN(wert)) {
+                    total += wert;
+                    console.log(`    ✓ ${blockId}[${jahr}]: ${wert.toFixed(2)}€`);
+                }
             }
         }
-        
-        return sum;
-    }, 0);
+    });
+    
+    if (total > 0) {
+        console.log(`  💰 Total ${categoryIds.join('+')}[${jahr}]: ${total.toFixed(2)}€`);
+    }
+    
+    return total;
 }
 
 /**
- * Determine year range from articles and cost blocks
+ * Determine year range from articles and project costs
  * 
  * @param {Array} artikelListe - Articles
- * @param {Array} projektkosten - Cost blocks
+ * @param {Object|null} projekt - Project object with kostenWerte
  * @returns {Array} Array of years (strings)
  * 
  * @private
  */
-function determineYearRange(artikelListe, projektkosten) {
+function determineYearRange(artikelListe, projekt) {
     const jahre = new Set();
     
     // Get years from forecast cache
@@ -677,20 +701,28 @@ function determineYearRange(artikelListe, projektkosten) {
         }
     });
     
-    // Get years from cost blocks
-    projektkosten.forEach(block => {
-        if (block.kostenWerte) {
-            Object.keys(block.kostenWerte).forEach(jahr => jahre.add(jahr));
-        }
-    });
+    // Get years from project costs (kostenWerte structure)
+    if (projekt && projekt.kostenWerte) {
+        // Iterate over all cost blocks
+        Object.keys(projekt.kostenWerte).forEach(blockId => {
+            const blockKosten = projekt.kostenWerte[blockId];
+            if (blockKosten && typeof blockKosten === 'object') {
+                // Add all years from this block
+                Object.keys(blockKosten).forEach(jahr => jahre.add(jahr));
+            }
+        });
+    }
     
     // If no years found, default to 2025-2029
     if (jahre.size === 0) {
+        console.warn('⚠️ No years found in data, using default 2025-2029');
         return ['2025', '2026', '2027', '2028', '2029'];
     }
     
     // Convert to sorted array
-    return Array.from(jahre).sort();
+    const sortedJahre = Array.from(jahre).sort();
+    console.log(`📅 Determined year range: ${sortedJahre.join(', ')}`);
+    return sortedJahre;
 }
 
 /**
@@ -910,12 +942,12 @@ function calculatePaybackPeriod(cashflows) {
  * Validate calculation inputs
  * 
  * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
+ * @param {Object|null} projekt - Project object with kostenWerte
  * @returns {import('./types').ValidationResult} Validation result
  * 
  * @private
  */
-function validateCalculationInputs(artikelListe, projektkosten) {
+function validateCalculationInputs(artikelListe, projekt) {
     const errors = [];
     const warnings = [];
     
@@ -945,13 +977,23 @@ function validateCalculationInputs(artikelListe, projektkosten) {
         }
     });
     
-    // Check project costs
-    if (!projektkosten || projektkosten.length === 0) {
+    // Check project costs (kostenWerte structure)
+    if (!projekt || !projekt.kostenWerte || Object.keys(projekt.kostenWerte).length === 0) {
         warnings.push({
             field: 'projektkosten',
             message: 'Keine Projektkosten definiert - DB3-DB5 werden 0 sein',
             recommendation: 'Projektkosten im Projektkosten-Tab erfassen'
         });
+    } else {
+        // Additional check: Are there any active cost blocks?
+        const aktiveBlöcke = projekt.aktiveKostenblöcke || [];
+        if (aktiveBlöcke.length === 0) {
+            warnings.push({
+                field: 'projektkosten',
+                message: 'Keine aktiven Kostenblöcke - alle Projektkosten werden ignoriert',
+                recommendation: 'Aktivieren Sie Kostenblöcke im Projektkosten-Tab'
+            });
+        }
     }
     
     return {
@@ -966,21 +1008,26 @@ function validateCalculationInputs(artikelListe, projektkosten) {
  * 
  * @param {string} projektId - Project ID
  * @param {import('./types').ArtikelExtended[]} artikelListe - Articles
- * @param {import('./types').Kostenblock[]} projektkosten - Cost blocks
+ * @param {Object|null} projekt - Project object with kostenWerte
  * @param {string[]} jahre - Years
  * @returns {import('./types').WirtschaftlichkeitMetadata} Metadata
  * 
  * @private
  */
-function createMetadata(projektId, artikelListe, projektkosten, jahre) {
+function createMetadata(projektId, artikelListe, projekt, jahre) {
+    // Get list of used cost block IDs
+    const verwendeteKostenblöcke = projekt?.aktiveKostenblöcke || 
+                                   (projekt?.kostenWerte ? Object.keys(projekt.kostenWerte) : []);
+    
     return {
         berechnet_am: new Date().toISOString(),
         artikel_id: 'projekt-aggregiert',
         projekt_id: projektId,
         anzahl_artikel: artikelListe.length,
-        verwendete_kostenblöcke: projektkosten.map(b => b.id),
+        verwendete_kostenblöcke: verwendeteKostenblöcke,
+        anzahl_kostenblöcke: verwendeteKostenblöcke.length,
         hk_aufteilungs_faktoren: {},
-        version: '4.0.0 - Database Integration'
+        version: '4.1.0 - Fixed Project Cost Integration'
     };
 }
 
