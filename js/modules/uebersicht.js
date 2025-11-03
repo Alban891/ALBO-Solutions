@@ -17,6 +17,8 @@ import { calculateProjektWirtschaftlichkeit } from './wirtschaftlichkeit/calcula
 /**
  * Render Executive Summary WITH RAG
  * @public
+ * 
+ * ⚠️ ASYNC function - calculator is async!
  */
 export async function renderUebersicht() {
     const projektId = window.cfoDashboard.currentProjekt;
@@ -31,19 +33,49 @@ export async function renderUebersicht() {
     const projekt = state.getProjekt(projektId);
     const artikel = state.getArtikelByProjekt(projektId);
     
-    // Calculate wirtschaftlichkeit - WITH ERROR HANDLING
+    // Calculate wirtschaftlichkeit - WITH ERROR HANDLING AND AWAIT!
     let calc = null;
     try {
-        calc = calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
+        console.log('🧮 Calling calculateProjektWirtschaftlichkeit (ASYNC)...');
+        
+        // ✅ KRITISCH: await hinzugefügt!
+        calc = await calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
+        
+        console.log('📊 Calc result:', calc);
+        
+        if (calc === undefined) {
+            console.warn('⚠️ Calculator returned undefined - check calculator.js export and return statement');
+            calc = null;
+        }
+        
+        if (calc) {
+            console.log('✅ Calc data:', {
+                hasKpis: !!calc.kpis,
+                hasJahre: !!calc.jahre,
+                jahreCount: Object.keys(calc.jahre || {}).length
+            });
+        }
     } catch (error) {
-        console.warn('⚠️ Wirtschaftlichkeit calculation failed:', error);
+        console.error('❌ Wirtschaftlichkeit calculation failed:', error);
+        calc = null;
     }
     
+    // Check if we have valid data
+    const hasValidData = calc && 
+                        calc.kpis && 
+                        calc.jahre && 
+                        Object.keys(calc.jahre).length > 0;
+    
+    console.log('🔍 Has valid data:', hasValidData);
+    
     // If no wirtschaftlichkeit data, show placeholder
-    if (!calc || !calc.kpis || !calc.jahre || Object.keys(calc.jahre).length === 0) {
+    if (!hasValidData) {
+        console.warn('⚠️ Showing placeholder - missing wirtschaftlichkeit data');
         container.innerHTML = renderPlaceholder(projekt);
         return;
     }
+    
+    console.log('✅ Rendering full executive summary with RAG intelligence');
     
     // Determine recommendation
     const recommendation = getRecommendation(calc);
