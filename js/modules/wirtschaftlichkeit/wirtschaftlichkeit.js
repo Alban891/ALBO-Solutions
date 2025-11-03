@@ -2268,8 +2268,53 @@ window.toggleWorstInlineDetails = function() {
  */
 window.applyBestInline = async function() {
     console.log('✅ Applying Best Case inline adjustments...');
-    // TODO: Collect values and trigger recalculation
-    alert('Best Case wird angewendet... (TODO: Live-Update)');
+    
+    const projektId = window.cfoDashboard.currentProjekt;
+    if (!projektId) {
+        alert('❌ Kein Projekt ausgewählt');
+        return;
+    }
+    
+    // ✅ Collect slider values
+    const adjustments = {
+        revenue_percent: parseFloat(document.getElementById('best-revenue-value')?.value || 30),
+        development_percent: parseFloat(document.getElementById('best-development-value')?.value || 0),
+        selling_percent: parseFloat(document.getElementById('best-selling-value')?.value || 0),
+        marketing_percent: parseFloat(document.getElementById('best-marketing-value')?.value || 0),
+        admin_percent: parseFloat(document.getElementById('best-admin-value')?.value || 0),
+        distribution_percent: parseFloat(document.getElementById('best-distribution-value')?.value || 0)
+    };
+    
+    console.log('📊 Best Case Adjustments:', adjustments);
+    
+    // ✅ Create custom scenario based on best preset
+    const customSzenario = {
+        id: 'best-custom',
+        name: 'Best (Custom)',
+        preset: 'best-organic',
+        adjustments: adjustments,
+        timestamp: new Date().toISOString()
+    };
+    
+    // ✅ Apply scenario
+    if (typeof window.applySzenarioAdjustments === 'function') {
+        await window.applySzenarioAdjustments(customSzenario);
+        alert('✅ Best Case mit angepassten Werten wurde angewendet!');
+    } else {
+        console.warn('⚠️ window.applySzenarioAdjustments not found - using fallback');
+        
+        // ✅ FALLBACK: Trigger re-calculation with adjustments
+        window.currentSzenarioAdjustments = adjustments;
+        window.currentActiveSzenarioId = 'best-organic';
+        
+        // Clear cache to force recalculation
+        window.currentSzenarioResult = null;
+        
+        // Re-render
+        await renderProjektWirtschaftlichkeit();
+        
+        alert('✅ Best Case mit angepassten Werten wurde angewendet!');
+    }
 };
 
 /**
@@ -2279,8 +2324,132 @@ window.applyBestInline = async function() {
  */
 window.applyWorstInline = async function() {
     console.log('✅ Applying Worst Case inline adjustments...');
-    // TODO: Collect values and trigger recalculation
-    alert('Worst Case wird angewendet... (TODO: Live-Update)');
+    
+    const projektId = window.cfoDashboard.currentProjekt;
+    if (!projektId) {
+        alert('❌ Kein Projekt ausgewählt');
+        return;
+    }
+    
+    // ✅ Collect slider values
+    const adjustments = {
+        revenue_percent: parseFloat(document.getElementById('worst-revenue-value')?.value || -20),
+        development_percent: parseFloat(document.getElementById('worst-development-value')?.value || 0),
+        selling_percent: parseFloat(document.getElementById('worst-selling-value')?.value || 0),
+        marketing_percent: parseFloat(document.getElementById('worst-marketing-value')?.value || 0),
+        admin_percent: parseFloat(document.getElementById('worst-admin-value')?.value || 0),
+        distribution_percent: parseFloat(document.getElementById('worst-distribution-value')?.value || 0)
+    };
+    
+    console.log('📊 Worst Case Adjustments:', adjustments);
+    
+    // ✅ Create custom scenario based on worst preset
+    const customSzenario = {
+        id: 'worst-custom',
+        name: 'Worst (Custom)',
+        preset: 'worst-conservative',
+        adjustments: adjustments,
+        timestamp: new Date().toISOString()
+    };
+    
+    // ✅ Apply scenario
+    if (typeof window.applySzenarioAdjustments === 'function') {
+        await window.applySzenarioAdjustments(customSzenario);
+        alert('✅ Worst Case mit angepassten Werten wurde angewendet!');
+    } else {
+        console.warn('⚠️ window.applySzenarioAdjustments not found - using fallback');
+        
+        // ✅ FALLBACK: Trigger re-calculation with adjustments
+        window.currentSzenarioAdjustments = adjustments;
+        window.currentActiveSzenarioId = 'worst-conservative';
+        
+        // Clear cache to force recalculation
+        window.currentSzenarioResult = null;
+        
+        // Re-render
+        await renderProjektWirtschaftlichkeit();
+        
+        alert('✅ Worst Case mit angepassten Werten wurde angewendet!');
+    }
+};
+
+/**
+ * Update scenario slider value (from slider)
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {number} value - New percentage value
+ * 
+ * @public
+ */
+window.updateSzenarioSlider = function(scenario, category, value) {
+    const valueInput = document.getElementById(`${scenario}-${category}-value`);
+    if (valueInput) {
+        valueInput.value = value;
+    }
+    console.log(`📊 ${scenario} ${category} updated to ${value}%`);
+};
+
+/**
+ * Update scenario slider (from number input)
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {number} value - New percentage value
+ * 
+ * @public
+ */
+window.updateSzenarioSliderFromInput = function(scenario, category, value) {
+    const slider = document.getElementById(`${scenario}-${category}-slider`);
+    if (slider) {
+        slider.value = value;
+    }
+    console.log(`📊 ${scenario} ${category} slider updated to ${value}%`);
+};
+
+/**
+ * Change inline mode for cost category
+ * 
+ * @param {string} scenario - 'best' or 'worst'
+ * @param {string} category - Cost category
+ * @param {string} mode - 'fixed', 'auto', or 'manual'
+ * 
+ * @public
+ */
+window.changeSzenarioInlineMode = function(scenario, category, mode) {
+    console.log(`🔄 Changing ${scenario} ${category} to ${mode} mode`);
+    
+    // Update button states
+    const container = document.querySelector(`[data-scenario="${scenario}"][data-category="${category}"]`);
+    if (container) {
+        container.querySelectorAll('.mode-btn').forEach(btn => {
+            const btnMode = btn.getAttribute('data-mode');
+            if (btnMode === mode) {
+                btn.style.background = 'var(--primary)';
+                btn.style.color = 'white';
+                btn.style.border = '1px solid var(--primary)';
+            } else {
+                btn.style.background = 'white';
+                btn.style.color = 'var(--text)';
+                btn.style.border = '1px solid var(--border)';
+            }
+        });
+    }
+    
+    // Show/hide slider based on mode
+    const sliderContainer = document.getElementById(`${scenario}-${category}-slider-container`);
+    const modeInfo = document.getElementById(`${scenario}-${category}-mode-info`);
+    
+    if (mode === 'manual') {
+        if (sliderContainer) sliderContainer.style.display = 'block';
+        if (modeInfo) modeInfo.textContent = '📊 Manuelle Anpassung aktiv';
+    } else if (mode === 'fixed') {
+        if (sliderContainer) sliderContainer.style.display = 'none';
+        if (modeInfo) modeInfo.textContent = '💡 Bleibt unverändert (0%)';
+    } else if (mode === 'auto') {
+        if (sliderContainer) sliderContainer.style.display = 'none';
+        if (modeInfo) modeInfo.textContent = '🤖 Folgt Revenue automatisch';
+    }
 };
 
 
