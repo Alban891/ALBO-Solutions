@@ -1,0 +1,809 @@
+/**
+ * ALBO Solutions - Horváth Dashboard Styles
+ * Professional Consulting Design System
+ * 
+ * Sections:
+ * 1. CSS Variables (Colors, Fonts, Spacing)
+ * 2. Global Styles
+ * 3. Header & Navigation
+ * 4. Filter Bar
+ * 5. Executive Summary (KPI Cards)
+ * 6. Section Layouts
+ * 7. Charts & Widgets
+ * 8. Breakdown Bars
+ * 9. Insights & Recommendations
+ * 10. Responsive Design
+ */
+
+/* ==========================================
+   1. CSS VARIABLES - HORVÁTH DESIGN SYSTEM
+   ========================================== */
+
+:root {
+    /* Primary Colors */
+    --horvath-navy: #003366;
+    --horvath-blue: #0066CC;
+    --horvath-light-blue: #E6F2FF;
+    
+    /* Status Colors */
+    --color-success: #00A651;
+    --color-warning: #FF6600;
+    --color-danger: #DC0032;
+    --color-neutral: #8C9BA5;
+    
+    /* Background Colors */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F7FA;
+    --bg-tertiary: #EDF2F7;
+    --bg-dark: #1A202C;
+    
+    /* Text Colors */
+    --text-primary: #1A202C;
+    --text-secondary: #4A5568;
+    --text-muted: #718096;
+    --text-light: #A0AEC0;
+    
+    /* Border Colors */
+    --border-light: #E2E8F0;
+    --border-medium: #CBD5E0;
+    --border-dark: #A0AEC0;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+    
+    /* Typography */
+    --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-size-xs: 10px;
+    --font-size-sm: 11px;
+    --font-size-base: 13px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 20px;
+    --font-size-2xl: 24px;
+    --font-size-3xl: 32px;
+    --font-size-4xl: 42px;
+    
+    /* Font Weights */
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 32px;
+    --space-3xl: 48px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+}
+
+/* ==========================================
+   2. GLOBAL STYLES
+   ========================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+/* ==========================================
+   3. HEADER & NAVIGATION
+   ========================================== */
+
+.horvath-header {
+    background: linear-gradient(135deg, var(--horvath-navy) 0%, var(--horvath-blue) 100%);
+    color: white;
+    padding: var(--space-xl) var(--space-2xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-md);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.header-icon {
+    font-size: var(--font-size-3xl);
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.header-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-bold);
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.header-subtitle {
+    font-size: var(--font-size-sm);
+    opacity: 0.9;
+    margin-top: var(--space-xs);
+}
+
+.header-right {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.btn-header {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    backdrop-filter: blur(10px);
+}
+
+.btn-header:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.btn-header.btn-primary {
+    background: white;
+    color: var(--horvath-navy);
+    border: none;
+}
+
+.btn-header.btn-primary:hover {
+    background: #f0f0f0;
+}
+
+/* ==========================================
+   4. FILTER BAR
+   ========================================== */
+
+.horvath-filter-bar {
+    background: white;
+    padding: var(--space-lg) var(--space-2xl);
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xl);
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.filter-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-semibold);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.filter-btn {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--border-medium);
+    background: white;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    border-color: var(--horvath-blue);
+    color: var(--horvath-blue);
+    background: var(--horvath-light-blue);
+}
+
+.filter-btn.active {
+    background: var(--horvath-navy);
+    color: white;
+    border-color: var(--horvath-navy);
+}
+
+/* ==========================================
+   5. DASHBOARD CONTENT
+   ========================================== */
+
+.horvath-dashboard-content {
+    padding: var(--space-2xl);
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+.dashboard-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-2xl);
+    margin-bottom: var(--space-2xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--border-light);
+}
+
+.section-title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.section-icon {
+    font-size: var(--font-size-2xl);
+}
+
+.section-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-bold);
+    color: var(--horvath-navy);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.section-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    margin-left: var(--space-sm);
+    font-style: italic;
+}
+
+.section-controls {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.view-toggle {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--border-medium);
+    background: white;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.view-toggle:hover {
+    border-color: var(--horvath-blue);
+    color: var(--horvath-blue);
+}
+
+.view-toggle.active {
+    background: var(--horvath-navy);
+    color: white;
+    border-color: var(--horvath-navy);
+}
+
+.year-selector {
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid var(--border-medium);
+    background: white;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+}
+
+/* ==========================================
+   6. EXECUTIVE SUMMARY (KPI CARDS)
+   ========================================== */
+
+.executive-summary {
+    background: linear-gradient(135deg, var(--horvath-light-blue) 0%, #F0F9FF 100%);
+    border: 2px solid var(--horvath-blue);
+}
+
+.executive-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-xl);
+}
+
+.exec-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+    position: relative;
+    overflow: hidden;
+}
+
+.exec-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--horvath-blue);
+}
+
+.exec-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.exec-card-icon {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--space-md);
+}
+
+.exec-card-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-bold);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-sm);
+}
+
+.exec-card-value {
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-bold);
+    color: var(--horvath-navy);
+    margin-bottom: var(--space-sm);
+    line-height: 1;
+}
+
+.exec-card-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.exec-card-trend {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+}
+
+.exec-card-trend.positive {
+    background: rgba(0, 166, 81, 0.1);
+    color: var(--color-success);
+}
+
+.exec-card-trend.warning {
+    background: rgba(255, 102, 0, 0.1);
+    color: var(--color-warning);
+}
+
+.exec-card-sparkline {
+    margin-top: var(--space-md);
+    height: 30px;
+}
+
+/* Decision Card (4th card) */
+.exec-card.decision-card {
+    border: 2px solid var(--border-medium);
+}
+
+.exec-card.decision-card.go::before {
+    background: var(--color-success);
+}
+
+.exec-card.decision-card.review::before {
+    background: var(--color-warning);
+}
+
+.exec-card.decision-card.no-go::before {
+    background: var(--color-danger);
+}
+
+/* ==========================================
+   7. CHARTS & CANVAS
+   ========================================== */
+
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: var(--space-xl);
+}
+
+.chart-container canvas {
+    max-height: 100%;
+}
+
+/* ==========================================
+   8. BREAKDOWN BARS
+   ========================================== */
+
+.artikel-breakdown,
+.cost-breakdown,
+.sensitivity-details {
+    margin-top: var(--space-xl);
+}
+
+.breakdown-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-md);
+}
+
+.breakdown-bar {
+    margin-bottom: var(--space-lg);
+}
+
+.breakdown-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.breakdown-bar-label {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+}
+
+.breakdown-bar-value {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+}
+
+.breakdown-bar-track {
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.breakdown-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width var(--transition-slow);
+}
+
+/* ==========================================
+   9. INSIGHTS & RECOMMENDATIONS
+   ========================================== */
+
+.insights-box {
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--horvath-blue);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-top: var(--space-xl);
+}
+
+.insights-header {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-bold);
+    color: var(--horvath-navy);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.insights-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.insights-list li {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    padding: var(--space-sm) 0;
+    padding-left: var(--space-lg);
+    position: relative;
+}
+
+.insights-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--horvath-blue);
+    font-weight: var(--font-bold);
+}
+
+.insights-empty {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Recommendations */
+.recommendations-box {
+    background: #FFFBEB;
+    border-left: 4px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-top: var(--space-xl);
+}
+
+.recommendations-header {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-bold);
+    color: var(--horvath-navy);
+    margin-bottom: var(--space-md);
+}
+
+.recommendations-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.recommendations-list li {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    padding: var(--space-sm) 0;
+    padding-left: var(--space-lg);
+    position: relative;
+}
+
+.recommendations-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--color-warning);
+    font-weight: var(--font-bold);
+}
+
+/* ==========================================
+   10. STATUS BADGES
+   ========================================== */
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   11. LOADING & ERROR STATES
+   ========================================== */
+
+.loading-widget,
+.error-widget,
+.no-data-widget {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3xl);
+    text-align: center;
+}
+
+.spinner {
+    border: 3px solid var(--border-light);
+    border-top: 3px solid var(--horvath-blue);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text,
+.error-message,
+.no-data-subtitle {
+    margin-top: var(--space-md);
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.error-icon,
+.no-data-icon {
+    font-size: var(--font-size-4xl);
+    margin-bottom: var(--space-md);
+}
+
+.error-title,
+.no-data-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+/* ==========================================
+   12. BUTTONS
+   ========================================== */
+
+.btn {
+    padding: var(--space-sm) var(--space-lg);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.btn-primary {
+    background: var(--horvath-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--horvath-navy);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+    background: var(--border-medium);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #B80028;
+}
+
+/* ==========================================
+   13. UTILITY CLASSES
+   ========================================== */
+
+.no-data-text {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    font-style: italic;
+    padding: var(--space-xl);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* ==========================================
+   14. RESPONSIVE DESIGN
+   ========================================== */
+
+@media (max-width: 1400px) {
+    .executive-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .horvath-header {
+        flex-direction: column;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+    
+    .horvath-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-buttons {
+        flex-wrap: wrap;
+    }
+    
+    .executive-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .horvath-dashboard-content {
+        padding: var(--space-lg);
+    }
+    
+    .dashboard-section {
+        padding: var(--space-lg);
+    }
+    
+    .exec-card-value {
+        font-size: var(--font-size-2xl);
+    }
+}
+
+/* ==========================================
+   15. PRINT STYLES
+   ========================================== */
+
+@media print {
+    .horvath-header,
+    .horvath-filter-bar,
+    .btn,
+    .section-controls {
+        display: none;
+    }
+    
+    .dashboard-section {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid var(--border-light);
+    }
+    
+    .chart-container {
+        height: auto;
+    }
+}
