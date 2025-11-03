@@ -627,25 +627,72 @@ function calculateHKComponentsFallback(artikel, jahr) {
  * @private
  */
 function getArtikelValueForYear(artikel, field, jahr) {
-    // Try jahr_X structure first (e.g., jahr_1 for 2025)
-    const jahrIndex = parseInt(jahr) - 2024;
+    // ✅ KRITISCH: Try both number and string keys
+    const jahrNum = parseInt(jahr);
+    const jahrStr = jahr.toString();
+    
+    // ✅ PRIORITÄT 1: volumes/prices structure (HÖCHSTE PRIORITÄT)
+    if (field === 'menge' && artikel.volumes) {
+        // Try number key first, then string key
+        let value = artikel.volumes[jahrNum];
+        if (value === undefined) {
+            value = artikel.volumes[jahrStr];
+        }
+        
+        if (value !== undefined && value !== null) {
+            console.log(`  ✅ ${artikel.name}: volumes[${jahr}] = ${value}`);
+            return parseFloat(value) || 0;
+        }
+    }
+    
+    if (field === 'preis' && artikel.prices) {
+        // Try number key first, then string key
+        let value = artikel.prices[jahrNum];
+        if (value === undefined) {
+            value = artikel.prices[jahrStr];
+        }
+        
+        if (value !== undefined && value !== null) {
+            console.log(`  ✅ ${artikel.name}: prices[${jahr}] = ${value}`);
+            return parseFloat(value) || 0;
+        }
+    }
+    
+    // ✅ PRIORITÄT 2: jahr_X structure
+    const jahrIndex = jahrNum - 2024;
     const jahrKey = `jahr_${jahrIndex}`;
     
     if (artikel[jahrKey] && artikel[jahrKey][field] !== undefined) {
-        return parseFloat(artikel[jahrKey][field]) || 0;
+        const value = artikel[jahrKey][field];
+        console.log(`  ✅ ${artikel.name}: ${jahrKey}.${field} = ${value}`);
+        return parseFloat(value) || 0;
     }
     
-    // Try mengen/preise object structure
-    if (artikel[field + 'n'] && artikel[field + 'n'][jahr] !== undefined) {
-        return parseFloat(artikel[field + 'n'][jahr]) || 0;
+    // ✅ PRIORITÄT 3: mengen/preise object structure
+    const fieldPlural = field === 'menge' ? 'mengen' : 'preise';
+    
+    if (artikel[fieldPlural]) {
+        // Try both number and string keys
+        let value = artikel[fieldPlural][jahrNum];
+        if (value === undefined) {
+            value = artikel[fieldPlural][jahrStr];
+        }
+        
+        if (value !== undefined) {
+            console.log(`  ✅ ${artikel.name}: ${fieldPlural}[${jahr}] = ${value}`);
+            return parseFloat(value) || 0;
+        }
     }
     
-    // Try direct field_{jahr} structure
+    // ✅ PRIORITÄT 4: direct field_{jahr} structure
     const directField = `${field}_${jahr}`;
     if (artikel[directField] !== undefined) {
-        return parseFloat(artikel[directField]) || 0;
+        const value = artikel[directField];
+        console.log(`  ✅ ${artikel.name}: ${directField} = ${value}`);
+        return parseFloat(value) || 0;
     }
     
+    console.warn(`  ❌ ${artikel.name}: NO DATA for ${field} in ${jahr}`);
     return 0;
 }
 
