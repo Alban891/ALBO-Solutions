@@ -320,21 +320,58 @@ function buildDataFromState(projektId, projekt, artikelListe) {
 function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
     console.log('🔨 Building data DIRECTLY from state in data-processor format...');
     
-    // Extract all years
+    // Extract all years from ALL possible structures
     const alleJahre = new Set();
+    
     artikelListe.forEach(artikel => {
+        // Try struktur 1: artikel.revenueModel.jahre
         if (artikel.revenueModel?.jahre) {
             Object.keys(artikel.revenueModel.jahre).forEach(jahr => alleJahre.add(jahr));
         }
+        
+        // Try struktur 2: artikel.jahr_1, artikel.jahr_2, etc.
+        Object.keys(artikel).forEach(key => {
+            if (key.startsWith('jahr_')) {
+                const jahrNum = parseInt(key.split('_')[1]);
+                const jahr = String(2024 + jahrNum);
+                alleJahre.add(jahr);
+            }
+        });
+        
+        // Try struktur 3: artikel.mengen
+        if (artikel.mengen) {
+            Object.keys(artikel.mengen).forEach(jahr => alleJahre.add(String(jahr)));
+        }
+        
+        // Try struktur 4: artikel.volumes
+        if (artikel.volumes) {
+            Object.keys(artikel.volumes).forEach(jahr => alleJahre.add(String(jahr)));
+        }
     });
+    
+    // Get years from projekt timeline
+    if (projekt.timeline) {
+        const startYear = new Date(projekt.timeline.projektStart).getFullYear();
+        const endYear = new Date(projekt.timeline.projektEnde).getFullYear();
+        for (let year = startYear; year <= endYear; year++) {
+            alleJahre.add(String(year));
+        }
+    }
+    
+    // Fallback: Use 2025-2029 if nothing found
+    if (alleJahre.size === 0) {
+        console.warn('⚠️ No years found in any structure, using default 2025-2029');
+        ['2025', '2026', '2027', '2028', '2029'].forEach(y => alleJahre.add(y));
+    }
     
     const jahre = Array.from(alleJahre).sort();
     console.log('📅 Found years:', jahre);
-    
-    if (jahre.length === 0) {
-        console.warn('⚠️ No years found in revenue model');
-        return null;
-    }
+    console.log('📅 Years from sources:', {
+        revenueModel: artikelListe.some(a => a.revenueModel?.jahre),
+        jahrKeys: artikelListe.some(a => Object.keys(a).some(k => k.startsWith('jahr_'))),
+        mengen: artikelListe.some(a => a.mengen),
+        timeline: !!projekt.timeline
+    });
     
     // Initialize arrays for chart data
     const umsatzArray = [];
@@ -353,31 +390,71 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
         
         // Sum across all artikel
         artikelListe.forEach(artikel => {
-            const jahresDaten = artikel.revenueModel?.jahre?.[jahr];
-            if (jahresDaten) {
-                const menge = jahresDaten.menge || 0;
-                const preis = jahresDaten.preis || 0;
-                const hk = jahresDaten.hk || 0;
-                
-                // Umsatz in T€
-                const umsatz = (menge * preis) / 1000;
-                const db1 = (menge * (preis - hk)) / 1000;
+            let menge = 0;
+            let preis = 0;
+            let hk = 0;
+            
+            // Try different data structures to find the values
+            
+            // Structure 1: artikel.revenueModel.jahre[jahr]
+            if (artikel.revenueModel?.jahre?.[jahr]) {
+                const jahresDaten = artikel.revenueModel.jahre[jahr];
+                menge = jahresDaten.menge || 0;
+                preis = jahresDaten.preis || 0;
+                hk = jahresDaten.hk || 0;
+            }
+            // Structure 2: artikel.jahr_X
+            else if (Object.keys(artikel).some(k => k.startsWith('jahr_'))) {
+                const jahrIndex = parseInt(jahr) - 2024;
+                const jahrKey = `jahr_${jahrIndex}`;
+                if (artikel[jahrKey]) {
+                    menge = artikel[jahrKey].menge || 0;
+                    preis = artikel[jahrKey].preis || 0;
+                    hk = artikel[jahrKey].hk || artikel[jahrKey].herstellkosten || 0;
+                }
+            }
+            // Structure 3: artikel.mengen[jahr] + artikel.preise[jahr]
+            else if (artikel.mengen || artikel.volumes) {
+                menge = artikel.mengen?.[jahr] || artikel.volumes?.[parseInt(jahr)] || 0;
+                preis = artikel.preise?.[jahr] || artikel.preis || 0;
+                hk = artikel.herstellkosten?.[jahr] || artikel.hk || 0;
+            }
+            
+            // Calculate if we found data
+            if (menge > 0 || preis > 0) {
+                const umsatz = (menge * preis) / 1000; // T€
+                const db1 = (menge * (preis - hk)) / 1000; // T€
                 
                 jahresUmsatz += umsatz;
                 jahresDB1 += db1;
+                
+                console.log(`  📦 ${artikel.name || 'Artikel'}: ${menge} × ${preis}€ = ${umsatz.toFixed(0)}T€`);
             }
         });
         
         // DB2 = DB1 (simplified, without overhead)
         jahresDB2 = jahresDB1;
         
-        // Get Projektkosten from kostenWerte
+        // Get Projektkosten from kostenWerte (multiple structures supported)
         const kostenWerte = projekt.kostenWerte || {};
         let jahresProjektkosten = 0;
+        
+        // Structure 1: kostenWerte with jahr_X keys
         Object.values(kostenWerte).forEach(block => {
-            const kosten = block.jahre?.[jahr] || 0;
+            const jahrIndex = parseInt(jahr) - 2024;
+            const jahrKey = `jahr_${jahrIndex}`;
+            const kosten = block.jahre?.[jahr] || block[jahrKey] || 0;
             jahresProjektkosten += kosten / 1000; // Convert to T€
         });
+        
+        // Structure 2: Direct projektkosten property
+        if (projekt.projektkosten) {
+            const jahrIndex = parseInt(jahr) - 2024;
+            const jahrKey = `jahr_${jahrIndex}`;
+            jahresProjektkosten += (projekt.projektkosten[jahr] || projekt.projektkosten[jahrKey] || 0) / 1000;
+        }
+        
+        console.log(`  💰 Projektkosten: ${jahresProjektkosten.toFixed(0)}T€`);
         
         // DB3 = DB2 - Projektkosten
         const jahresDB3 = jahresDB2 - jahresProjektkosten;
