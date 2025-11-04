@@ -1337,11 +1337,19 @@ function initRevenueWaterfall(canvasId, data) {
 function initRevenueBreakdown(canvasId, data) {
     console.log('📊 Init Revenue Breakdown');
     console.log('📊 Data received:', data);
+    console.log('📊 Data keys:', Object.keys(data || {}));
+    console.log('📊 artikelBreakdown:', data.artikelBreakdown);
+    console.log('📊 artikelListe:', data.artikelListe);
     
     let breakdownData;
     
-    // Format 1: Demo data has artikelBreakdown array
-    if (data.artikelBreakdown && Array.isArray(data.artikelBreakdown)) {
+    // CRITICAL: Check Demo Data FIRST (it has actual values!)
+    // Format 1: Demo data has artikelBreakdown array WITH VALUES
+    if (data.artikelBreakdown && 
+        Array.isArray(data.artikelBreakdown) && 
+        data.artikelBreakdown.length > 0 &&
+        data.artikelBreakdown[0].value > 0) {
+        
         console.log('✅ Using Demo Data format (artikelBreakdown)');
         const breakdown = data.artikelBreakdown;
         
@@ -1350,43 +1358,72 @@ function initRevenueBreakdown(canvasId, data) {
             data: breakdown.map(a => a.value),
             backgroundColor: breakdown.map(a => a.color)
         };
+        
+        console.log('📊 Breakdown data prepared (DEMO):', breakdownData);
     }
-    // Format 2: Real data has artikelListe
-    else if (data.artikelListe && Array.isArray(data.artikelListe)) {
+    // Format 2: Real data has artikelListe WITH actual revenue
+    else if (data.artikelListe && 
+             Array.isArray(data.artikelListe) && 
+             data.artikelListe.length > 0) {
+        
         console.log('✅ Using Real Data format (artikelListe)');
+        
         // Group by artikel type
         const breakdown = {};
+        let hasRevenue = false;
+        
         data.artikelListe.forEach(artikel => {
             const typ = artikel.typ || 'Sonstige';
+            const revenue = (artikel.gesamtRevenue5Y || 0) / 1000000;
+            
             if (!breakdown[typ]) breakdown[typ] = 0;
-            breakdown[typ] += (artikel.gesamtRevenue5Y || 0) / 1000000;
+            breakdown[typ] += revenue;
+            
+            if (revenue > 0) hasRevenue = true;
         });
         
+        // Only use real data if it has actual revenue
+        if (hasRevenue && Object.keys(breakdown).length > 0) {
+            breakdownData = {
+                labels: Object.keys(breakdown),
+                data: Object.values(breakdown),
+                backgroundColor: ['#003366', '#0066CC', '#00A651', '#FF6600']
+            };
+            console.log('📊 Breakdown data prepared (REAL):', breakdownData);
+        } else {
+            console.warn('⚠️ Real data has no revenue! Using fallback');
+            breakdownData = {
+                labels: ['Software', 'Hardware', 'Services'],
+                data: [30, 50, 20],
+                backgroundColor: ['#003366', '#0066CC', '#00A651']
+            };
+        }
+    }
+    // Format 3: Fallback - create mock data
+    else {
+        console.warn('⚠️ No artikel data found! Using fallback data');
         breakdownData = {
-            labels: Object.keys(breakdown),
-            data: Object.values(breakdown),
-            backgroundColor: ['#003366', '#0066CC', '#00A651', '#FF6600']
+            labels: ['Software', 'Hardware', 'Services'],
+            data: [30, 50, 20],
+            backgroundColor: ['#003366', '#0066CC', '#00A651']
         };
     }
-    // Format 3: Fallback
-    else {
-        console.error('❌ No artikel data found!');
-        return;
-    }
     
-    console.log('📊 Breakdown data prepared:', breakdownData);
+    console.log('📊 Final breakdown data:', breakdownData);
+    console.log('📊 Calling ChartFactory.createPieChart with canvas:', canvasId);
     
     try {
         const chart = ChartFactory.createPieChart(canvasId, breakdownData);
         dashboardState.charts[canvasId] = chart;
-        console.log('✅ Revenue Breakdown chart created');
+        console.log('✅ Revenue Breakdown chart created:', chart);
     } catch (error) {
         console.error('❌ Failed to create breakdown:', error);
+        console.error('❌ Error stack:', error.stack);
         throw error;
     }
     
     // Add insights for demo data
-    if (data.artikelBreakdown) {
+    if (data.artikelBreakdown && data.artikelBreakdown.length > 0) {
         const insights = document.getElementById(`insights-revenue-breakdown`);
         if (insights) {
             insights.innerHTML = `
