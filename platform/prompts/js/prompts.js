@@ -534,7 +534,7 @@ renderPromptDetail(prompt) {
                 <button class="btn-action btn-copy" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e0;" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
                     📋 Kopieren
                 </button>
-                <button class="btn-action btn-execute" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                <button class="btn-action btn-execute" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled>
                     ⚡ Ausführen
                 </button>
             </div>
@@ -542,6 +542,16 @@ renderPromptDetail(prompt) {
     `;
 
     this.updateProgress(prompt.id, extractedQuestions.length);
+
+    // Add click event listener to execute button
+    setTimeout(() => {
+        const executeBtn = document.getElementById('execute-btn-' + prompt.id);
+        if (executeBtn) {
+            executeBtn.addEventListener('click', () => {
+                window.promptsEngine.executePrompt(prompt.id);
+            });
+        }
+    }, 100);
 }
 
 // Clean Preview Rendering
