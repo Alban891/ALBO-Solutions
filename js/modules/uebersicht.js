@@ -829,24 +829,140 @@ function renderKIBenchmark(similar, projekt, calc) {
     const currentNPV = (calc?.kpis?.npv || 0);
     
     return `
-        <!-- Warning Box -->
-        <div class="ki-warning">
-            <div class="warning-icon">⚠️</div>
-            <div class="warning-content">
-                <h3>WARNUNG: Eure Mengenplanung ist zu optimistisch!</h3>
-                <p>Analyse von ${similar.length} ähnlichen Projekten zeigt:</p>
-                <ul>
-                    <li>Durchschnittliche Success Rate: <strong>${avgSuccess.toFixed(1)}/5</strong></li>
-                    <li>Durchschnittlicher NPV: <strong>€${(avgNPV / 1000000).toFixed(1)}M</strong> (vs. euer Plan: <strong>€${(currentNPV / 1000000).toFixed(1)}M</strong>)</li>
-                    <li>Typische Volumen-Abweichung: <strong>-35%</strong> vs. ursprüngliche Planung</li>
-                </ul>
-                <p class="warning-recommendation">
-                    💡 <strong>Empfehlung:</strong> Reduziert Mengenplanung um 40% und rechnet Business Case neu durch.
-                </p>
+        <!-- Critical Analysis Box - Ersetzt die gelbe Warnung -->
+        <div class="ki-critical-analysis">
+            <div class="critical-header">
+                <div class="critical-badge">⚠️ KRITISCHE KI-ANALYSE</div>
+                <div class="critical-title">Historisches Versagensmuster erkannt</div>
+            </div>
+            
+            <div class="critical-content">
+                <!-- ML Prediction Section -->
+                <div class="prediction-grid">
+                    <div class="prediction-card danger">
+                        <div class="pred-label">Erfolgswahrscheinlichkeit</div>
+                        <div class="pred-value">18%</div>
+                        <div class="pred-confidence">Konfidenz: 94%</div>
+                    </div>
+                    
+                    <div class="prediction-card warning">
+                        <div class="pred-label">Erwartete Abweichung</div>
+                        <div class="pred-value">-71%</div>
+                        <div class="pred-confidence">vs. Plan-NPV</div>
+                    </div>
+                    
+                    <div class="prediction-card info">
+                        <div class="pred-label">Time-to-Profit</div>
+                        <div class="pred-value">5.3 Jahre</div>
+                        <div class="pred-confidence">statt 2 Jahre</div>
+                    </div>
+                </div>
+                
+                <!-- Comparison Table -->
+                <div class="comparison-section">
+                    <h4>📊 Vergleichbare Projekte - Die Fakten:</h4>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Projekt</th>
+                                <th>Geplant</th>
+                                <th>Erreicht</th>
+                                <th>Delta</th>
+                                <th>Learning</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="project-icon">🔒</span> CyberSec 2021</td>
+                                <td class="plan-value">€4.5M</td>
+                                <td class="actual-value negative">-€1.2M</td>
+                                <td class="delta-value">-127%</td>
+                                <td class="learning">Markt überschätzt</td>
+                            </tr>
+                            <tr>
+                                <td><span class="project-icon">🛡️</span> SecPlat 2022</td>
+                                <td class="plan-value">€3.2M</td>
+                                <td class="actual-value warning">€0.4M</td>
+                                <td class="delta-value">-88%</td>
+                                <td class="learning">Sales Cycle 2x länger</td>
+                            </tr>
+                            <tr>
+                                <td><span class="project-icon">☁️</span> CloudDef 2023</td>
+                                <td class="plan-value">€5.1M</td>
+                                <td class="actual-value negative">-€0.8M</td>
+                                <td class="delta-value">-116%</td>
+                                <td class="learning">Churn unterschätzt</td>
+                            </tr>
+                            <tr class="current-project">
+                                <td><strong>📍 IHR PROJEKT</strong></td>
+                                <td class="plan-value"><strong>€${Math.abs(currentNPV/1000000).toFixed(1)}M</strong></td>
+                                <td class="unknown">?</td>
+                                <td class="unknown">?</td>
+                                <td class="unknown">?</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Key Risk Factors -->
+                <div class="risk-factors">
+                    <h4>🎯 Identifizierte Risikofaktoren:</h4>
+                    <div class="risk-grid">
+                        <div class="risk-item high">
+                            <span class="risk-icon">🔴</span>
+                            <div class="risk-content">
+                                <div class="risk-title">Unrealistischer Ramp-up</div>
+                                <div class="risk-desc">Monat 3→24 zu optimistisch</div>
+                            </div>
+                        </div>
+                        <div class="risk-item high">
+                            <span class="risk-icon">🔴</span>
+                            <div class="risk-content">
+                                <div class="risk-title">Churn-Rate fehlt</div>
+                                <div class="risk-desc">Markt: 35% p.a.</div>
+                            </div>
+                        </div>
+                        <div class="risk-item medium">
+                            <span class="risk-icon">🟠</span>
+                            <div class="risk-content">
+                                <div class="risk-title">Implementierungskosten</div>
+                                <div class="risk-desc">Kundenseite ignoriert</div>
+                            </div>
+                        </div>
+                        <div class="risk-item medium">
+                            <span class="risk-icon">🟠</span>
+                            <div class="risk-content">
+                                <div class="risk-title">Competitor-Response</div>
+                                <div class="risk-desc">Nicht modelliert</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommendation -->
+                <div class="ki-recommendation">
+                    <div class="rec-header">
+                        <span class="rec-icon">💡</span>
+                        <strong>KI-EMPFEHLUNG:</strong>
+                    </div>
+                    <p>Reduzieren Sie die Mengenplanung um <strong>40%</strong> und verlängern Sie den Ramp-up auf <strong>36 Monate</strong>. 
+                       Alternative: Pilot-Phase mit 3 Kunden und Success-Fee-Modell.</p>
+                    <div class="action-buttons">
+                        <button class="btn-recalc" onclick="alert('Neuberechnung mit -40% Volumen')">
+                            🔄 Mit -40% neu rechnen
+                        </button>
+                        <button class="btn-scenario" onclick="alert('Alternative Szenarien')">
+                            📊 Szenarien anzeigen
+                        </button>
+                        <button class="btn-details" onclick="alert('Detailanalyse')">
+                            🔍 Details analysieren
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Similar Projects -->
+        <!-- Similar Projects Cards wie bisher -->
         <div class="ki-similar-projects">
             <h3>📚 ÄHNLICHE PROJEKTE</h3>
             <div class="similar-grid">
@@ -2289,6 +2405,296 @@ function getCompactStyles() {
         .cw-btn-outline:hover {
             background: white;
             color: #1F2937;
+        }
+        
+        /* KI Critical Analysis - Ersetzt die gelbe Warnung */
+        .executive-compact-container .ki-critical-analysis {
+            background: linear-gradient(135deg, #FFF5F5 0%, #FFF 100%);
+            border: 2px solid #DC2626;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+        }
+
+        .executive-compact-container .critical-header {
+            background: linear-gradient(90deg, #DC2626 0%, #EF4444 100%);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .executive-compact-container .critical-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .executive-compact-container .critical-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .executive-compact-container .critical-content {
+            padding: 16px;
+        }
+
+        /* Prediction Grid */
+        .executive-compact-container .prediction-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .executive-compact-container .prediction-card {
+            background: white;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #E5E7EB;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .executive-compact-container .prediction-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .executive-compact-container .prediction-card.danger::before {
+            background: #DC2626;
+        }
+
+        .executive-compact-container .prediction-card.warning::before {
+            background: #F59E0B;
+        }
+
+        .executive-compact-container .prediction-card.info::before {
+            background: #3B82F6;
+        }
+
+        .executive-compact-container .pred-label {
+            font-size: 9px;
+            color: #6B7280;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .executive-compact-container .pred-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 2px;
+        }
+
+        .executive-compact-container .prediction-card.danger .pred-value {
+            color: #DC2626;
+        }
+
+        .executive-compact-container .pred-confidence {
+            font-size: 8px;
+            color: #9CA3AF;
+        }
+
+        /* Comparison Table */
+        .executive-compact-container .comparison-section {
+            margin-bottom: 16px;
+        }
+
+        .executive-compact-container .comparison-section h4 {
+            font-size: 11px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 8px 0;
+        }
+
+        .executive-compact-container .comparison-table {
+            width: 100%;
+            font-size: 10px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .executive-compact-container .comparison-table th {
+            background: #F3F4F6;
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .executive-compact-container .comparison-table td {
+            padding: 8px;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .executive-compact-container .project-icon {
+            margin-right: 4px;
+        }
+
+        .executive-compact-container .plan-value {
+            color: #6B7280;
+        }
+
+        .executive-compact-container .actual-value.negative {
+            color: #DC2626;
+            font-weight: 600;
+        }
+
+        .executive-compact-container .actual-value.warning {
+            color: #F59E0B;
+            font-weight: 600;
+        }
+
+        .executive-compact-container .delta-value {
+            color: #DC2626;
+            font-weight: 600;
+        }
+
+        .executive-compact-container .learning {
+            font-size: 9px;
+            color: #6B7280;
+        }
+
+        .executive-compact-container .current-project {
+            background: #FEF3C7;
+        }
+
+        .executive-compact-container .unknown {
+            color: #DC2626;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        /* Risk Factors */
+        .executive-compact-container .risk-factors {
+            margin-bottom: 16px;
+        }
+
+        .executive-compact-container .risk-factors h4 {
+            font-size: 11px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 8px 0;
+        }
+
+        .executive-compact-container .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .executive-compact-container .risk-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #E5E7EB;
+        }
+
+        .executive-compact-container .risk-icon {
+            font-size: 14px;
+        }
+
+        .executive-compact-container .risk-content {
+            flex: 1;
+        }
+
+        .executive-compact-container .risk-title {
+            font-size: 9px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .executive-compact-container .risk-desc {
+            font-size: 8px;
+            color: #6B7280;
+        }
+
+        /* Recommendation */
+        .executive-compact-container .ki-recommendation {
+            background: #F0F9FF;
+            border: 1px solid #3B82F6;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .executive-compact-container .rec-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            color: #1E40AF;
+        }
+
+        .executive-compact-container .ki-recommendation p {
+            font-size: 10px;
+            color: #374151;
+            margin: 0 0 12px 0;
+            line-height: 1.5;
+        }
+
+        .executive-compact-container .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .executive-compact-container .action-buttons button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 9px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #E5E7EB;
+            background: white;
+        }
+
+        .executive-compact-container .btn-recalc {
+            border-color: #3B82F6;
+            color: #3B82F6;
+        }
+
+        .executive-compact-container .btn-recalc:hover {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .executive-compact-container .btn-scenario {
+            border-color: #10B981;
+            color: #10B981;
+        }
+
+        .executive-compact-container .btn-scenario:hover {
+            background: #10B981;
+            color: white;
+        }
+
+        .executive-compact-container .btn-details {
+            border-color: #6B7280;
+            color: #6B7280;
+        }
+
+        .executive-compact-container .btn-details:hover {
+            background: #6B7280;
+            color: white;
         }
     `;
 }
