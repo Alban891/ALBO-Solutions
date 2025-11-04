@@ -534,7 +534,11 @@ renderPromptDetail(prompt) {
                 <button class="btn-action btn-copy" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e0;" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
                     📋 Kopieren
                 </button>
-                <button class="btn-action btn-execute" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled>
+                <button class="btn-action btn-execute" 
+                    style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" 
+                    id="execute-btn-${prompt.id}" 
+                    onclick="window.promptsEngine.showExecuteModal('${prompt.id}')"
+                    disabled>
                     ⚡ Ausführen
                 </button>
             </div>
@@ -1000,6 +1004,106 @@ renderPreview(prompt, fullPromptText) {
             modal.remove();
         }
     });
+}
+
+showExecuteModal(promptId) {
+    console.log('showExecuteModal called with:', promptId);
+    
+    // Erstelle das Modal direkt mit allen Styles inline
+    const modalHTML = `
+        <div id="execute-modal-${promptId}" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+        ">
+            <div style="
+                background: white;
+                padding: 30px;
+                border-radius: 10px;
+                max-width: 600px;
+                width: 90%;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            ">
+                <h2 style="margin-top: 0;">⚡ Prompt ausführen</h2>
+                <p style="color: #666;">Wähle deine Ausführungsmethode:</p>
+                
+                <div style="margin: 20px 0;">
+                    <div style="
+                        padding: 15px;
+                        margin: 10px 0;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
+                       onclick="window.promptsEngine.executeWithAI('${promptId}', 'claude')">
+                        <strong>🤖 Claude AI (Opus)</strong><br>
+                        <small>Beste Qualität für komplexe Finance-Analysen (~0.15€)</small>
+                    </div>
+                    
+                    <div style="
+                        padding: 15px;
+                        margin: 10px 0;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
+                       onclick="window.promptsEngine.executeWithAI('${promptId}', 'gpt4')">
+                        <strong>💚 GPT-4 Turbo</strong><br>
+                        <small>Schnell und kosteneffizient (~0.08€)</small>
+                    </div>
+                    
+                    <div style="
+                        padding: 15px;
+                        margin: 10px 0;
+                        border: 2px solid #e0e0e0;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
+                       onclick="window.promptsEngine.copyToClipboardAndClose('${promptId}')">
+                        <strong>📋 Kopieren & selbst ausführen</strong><br>
+                        <small>In ChatGPT/Claude.ai einfügen (kostenlos)</small>
+                    </div>
+                </div>
+                
+                <button style="
+                    padding: 10px 20px;
+                    background: #f3f4f6;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    width: 100%;
+                " onclick="document.getElementById('execute-modal-${promptId}').remove()">
+                    Abbrechen
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Füge das Modal zum Body hinzu
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    console.log('Modal inserted into DOM');
+}
+
+// Neue Hilfsmethode zum Kopieren und Schließen
+copyToClipboardAndClose(promptId) {
+    const previewContent = document.getElementById('code-preview-' + promptId);
+    if (previewContent) {
+        navigator.clipboard.writeText(previewContent.textContent).then(() => {
+            alert('✅ Prompt wurde in die Zwischenablage kopiert!');
+            document.getElementById('execute-modal-' + promptId).remove();
+        });
+    }
 }
 
 // AI Execution Method
