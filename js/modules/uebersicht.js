@@ -97,7 +97,7 @@ function injectDemoData(projekt, artikel, calc) {
         },
         totals: {
             sales_revenue: 84400000,
-            total_quantity: 110000
+            total_quantity: 223000
         },
         kpis: {
             npv: -7900000,
@@ -464,14 +464,11 @@ function injectStyles() {
 // ==========================================
 
 function createKPIScorecard(calc, artikel) {
-    // Calculate total quantity
-    const totalMenge = artikel.reduce((sum, art) => {
-        const artMenge = Object.values(calc?.jahre || {}).reduce((s, j) => {
-            const artData = j.artikel?.find(a => a.artikel_id === art.id);
-            return s + (artData?.menge || 0);
-        }, 0);
-        return sum + artMenge;
-    }, 0);
+    // FIX: Verwende die richtige Quelle für totalMenge
+    const totalMenge = calc?.totals?.total_quantity || 
+                      Object.values(calc?.jahre || {}).reduce((total, jahr) => {
+                          return total + (jahr.artikel?.reduce((sum, art) => sum + (art.menge || 0), 0) || 0);
+                      }, 0);
     
     const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
     const totalDB2 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db2 || 0), 0) / 1000000;
@@ -490,7 +487,7 @@ function createKPIScorecard(calc, artikel) {
         decisionIcon = '🟢';
     } else if (npv < -5) {
         decision = 'NO-GO';
-        decisionColor = '#ef4444';
+        decisionColor = '#EA580C';  // Orange statt Rot
         decisionIcon = '🔴';
     }
     
@@ -2474,7 +2471,7 @@ function getCompactStyles() {
         }
 
         .executive-compact-container .prediction-card.danger .pred-value {
-            color: #DC2626;
+            color: #EA580C;
         }
 
         .executive-compact-container .pred-confidence {
@@ -2526,7 +2523,7 @@ function getCompactStyles() {
         }
 
         .executive-compact-container .actual-value.negative {
-            color: #DC2626;
+            color: #EA580C;
             font-weight: 600;
         }
 
@@ -2536,7 +2533,7 @@ function getCompactStyles() {
         }
 
         .executive-compact-container .delta-value {
-            color: #DC2626;
+            color: #EA580C;
             font-weight: 600;
         }
 
@@ -2550,7 +2547,7 @@ function getCompactStyles() {
         }
 
         .executive-compact-container .unknown {
-            color: #DC2626;
+            color: #EA580C;
             font-size: 14px;
             font-weight: 700;
         }
