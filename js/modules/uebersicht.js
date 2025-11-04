@@ -1127,20 +1127,20 @@ function getCompactStyles() {
             margin: 0 0 2px 0;
         }
         
-        .header-meta {
+        .executive-compact-container .header-meta {
             font-size: 10px;
             color: #6B7280;
         }
         
         /* KPI Scorecard */
-        .kpi-scorecard {
+        .executive-compact-container .kpi-scorecard {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
             margin-bottom: 8px;
         }
         
-        .kpi-card {
+        .executive-compact-container .kpi-card {
             background: white;
             border-radius: 4px;
             padding: 8px;
@@ -1152,26 +1152,26 @@ function getCompactStyles() {
             transition: all 0.2s ease;
         }
         
-        .kpi-card:hover {
+        .executive-compact-container .kpi-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
-        .kpi-card.decision-card {
+        .executive-compact-container .kpi-card.decision-card {
             border-top-color: var(--decision-color);
         }
         
-        .kpi-icon {
+        .executive-compact-container .kpi-icon {
             font-size: 16px;
             flex-shrink: 0;
         }
         
-        .kpi-content {
+        .executive-compact-container .kpi-content {
             flex: 1;
             min-width: 0;
         }
         
-        .kpi-label {
+        .executive-compact-container .kpi-label {
             font-size: 8px;
             font-weight: 700;
             color: #6B7280;
@@ -1180,7 +1180,7 @@ function getCompactStyles() {
             margin-bottom: 1px;
         }
         
-        .kpi-value {
+        .executive-compact-container .kpi-value {
             font-size: 13px;
             font-weight: 700;
             color: #003366;
@@ -1188,35 +1188,35 @@ function getCompactStyles() {
             margin-bottom: 1px;
         }
         
-        .kpi-meta {
+        .executive-compact-container .kpi-meta {
             font-size: 8px;
             color: #9CA3AF;
         }
         
         /* Management Summary */
-        .management-summary {
+        .executive-compact-container .management-summary {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin-bottom: 8px;
         }
         
-        .summary-col {
+        .executive-compact-container .summary-col {
             background: white;
             border-radius: 6px;
             padding: 10px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
         
-        .summary-section {
+        .executive-compact-container .summary-section {
             margin-bottom: 8px;
         }
         
-        .summary-section:last-child {
+        .executive-compact-container .summary-section:last-child {
             margin-bottom: 0;
         }
         
-        .summary-section h3 {
+        .executive-compact-container .summary-section h3 {
             font-size: 10px;
             font-weight: 700;
             color: #003366;
@@ -1225,92 +1225,92 @@ function getCompactStyles() {
             letter-spacing: 0.2px;
         }
         
-        .summary-section p {
+        .executive-compact-container .summary-section p {
             font-size: 10px;
             color: #4B5563;
             line-height: 1.4;
             margin: 0;
         }
         
-        .bc-metrics {
+        .executive-compact-container .bc-metrics {
             background: #F9FAFB;
             border-radius: 4px;
             padding: 6px;
         }
         
-        .bc-row {
+        .executive-compact-container .bc-row {
             display: flex;
             justify-content: space-between;
             padding: 3px 0;
             font-size: 10px;
         }
         
-        .bc-label {
+        .executive-compact-container .bc-label {
             color: #6B7280;
         }
         
-        .bc-value {
+        .executive-compact-container .bc-value {
             font-weight: 600;
             color: #111827;
         }
         
-        .recommendation-section {
+        .executive-compact-container .recommendation-section {
             margin: 8px 0;
         }
         
-        .recommendation-box {
+        .executive-compact-container .recommendation-box {
             border-radius: 4px;
             padding: 6px;
             border-left: 3px solid #0066CC;
         }
         
-        .recommendation-box.success {
+        .executive-compact-container .recommendation-box.success {
             background: #F0FDF4;
             border-left-color: #10b981;
         }
         
-        .recommendation-box.warning {
+        .executive-compact-container .recommendation-box.warning {
             background: #FFFBEB;
             border-left-color: #f59e0b;
         }
         
-        .recommendation-box.danger {
+        .executive-compact-container .recommendation-box.danger {
             background: #FEF2F2;
             border-left-color: #ef4444;
         }
         
-        .rec-header {
+        .executive-compact-container .rec-header {
             display: flex;
             align-items: center;
             gap: 4px;
             margin-bottom: 3px;
         }
         
-        .rec-icon {
+        .executive-compact-container .rec-icon {
             font-size: 12px;
         }
         
-        .rec-title {
+        .executive-compact-container .rec-title {
             font-size: 9px;
             font-weight: 700;
             color: #111827;
             text-transform: uppercase;
         }
         
-        .rec-text {
+        .executive-compact-container .rec-text {
             font-size: 9px;
             color: #4B5563;
             margin: 0;
             line-height: 1.3;
         }
         
-        .action-buttons-compact {
+        .executive-compact-container .action-buttons-compact {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 4px;
         }
         
-        .action-btn-compact {
+        .executive-compact-container .action-btn-compact {
             padding: 6px 4px;
             background: white;
             border: 1px solid #E5E7EB;
@@ -1322,23 +1322,23 @@ function getCompactStyles() {
             transition: all 0.2s ease;
         }
         
-        .action-btn-compact:hover {
+        .executive-compact-container .action-btn-compact:hover {
             border-color: #0066CC;
             background: #F0F9FF;
         }
         
-        .action-btn-compact.active {
+        .executive-compact-container .action-btn-compact.active {
             background: #0066CC;
             color: white;
             border-color: #0066CC;
         }
         
         /* KI Benchmark Section */
-        .ki-benchmark-section {
+        .executive-compact-container .ki-benchmark-section {
             margin-bottom: 8px;
         }
         
-        .ki-loading {
+        .executive-compact-container .ki-loading {
             background: white;
             border-radius: 6px;
             padding: 20px;
@@ -1346,7 +1346,7 @@ function getCompactStyles() {
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
         
-        .loading-spinner {
+        .executive-compact-container .loading-spinner {
             width: 20px;
             height: 20px;
             border: 2px solid #E5E7EB;
@@ -1360,13 +1360,13 @@ function getCompactStyles() {
             to { transform: rotate(360deg); }
         }
         
-        .ki-loading p {
+        .executive-compact-container .ki-loading p {
             font-size: 10px;
             color: #6B7280;
             margin: 0;
         }
         
-        .ki-warning {
+        .executive-compact-container .ki-warning {
             background: linear-gradient(135deg, #FEF3C7, #FDE68A);
             border: 2px solid #F59E0B;
             border-radius: 6px;
@@ -1377,26 +1377,26 @@ function getCompactStyles() {
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
         
-        .warning-icon {
+        .executive-compact-container .warning-icon {
             font-size: 20px;
             flex-shrink: 0;
         }
         
-        .warning-content h3 {
+        .executive-compact-container .warning-content h3 {
             font-size: 11px;
             font-weight: 700;
             color: #92400E;
             margin: 0 0 4px 0;
         }
         
-        .warning-content p {
+        .executive-compact-container .warning-content p {
             font-size: 9px;
             color: #78350F;
             margin: 0 0 4px 0;
             line-height: 1.3;
         }
         
-        .warning-content ul {
+        .executive-compact-container .warning-content ul {
             margin: 0 0 4px 0;
             padding-left: 14px;
             font-size: 9px;
@@ -1404,7 +1404,7 @@ function getCompactStyles() {
             line-height: 1.4;
         }
         
-        .warning-recommendation {
+        .executive-compact-container .warning-recommendation {
             background: rgba(255,255,255,0.7);
             padding: 6px;
             border-radius: 3px;
@@ -1412,14 +1412,14 @@ function getCompactStyles() {
             font-size: 9px;
         }
         
-        .ki-similar-projects {
+        .executive-compact-container .ki-similar-projects {
             background: white;
             border-radius: 6px;
             padding: 10px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
         
-        .ki-similar-projects h3 {
+        .executive-compact-container .ki-similar-projects h3 {
             font-size: 10px;
             font-weight: 700;
             color: #003366;
@@ -1428,84 +1428,84 @@ function getCompactStyles() {
             letter-spacing: 0.2px;
         }
         
-        .similar-grid {
+        .executive-compact-container .similar-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 6px;
         }
         
-        .similar-card {
+        .executive-compact-container .similar-card {
             background: #F9FAFB;
             border: 1px solid #E5E7EB;
             border-radius: 4px;
             padding: 6px;
         }
         
-        .card-header {
+        .executive-compact-container .card-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
             margin-bottom: 4px;
         }
         
-        .card-title {
+        .executive-compact-container .card-title {
             display: flex;
             align-items: center;
             gap: 4px;
         }
         
-        .card-icon {
+        .executive-compact-container .card-icon {
             font-size: 12px;
         }
         
-        .card-header h4 {
+        .executive-compact-container .card-header h4 {
             font-size: 9px;
             font-weight: 600;
             color: #111827;
             margin: 0;
         }
         
-        .success-badge {
+        .executive-compact-container .success-badge {
             padding: 2px 4px;
             border-radius: 2px;
             font-size: 8px;
             font-weight: 700;
         }
         
-        .card-meta {
+        .executive-compact-container .card-meta {
             font-size: 8px;
             color: #6B7280;
             margin-bottom: 4px;
         }
         
-        .card-metrics {
+        .executive-compact-container .card-metrics {
             background: white;
             border-radius: 3px;
             padding: 4px;
             margin-bottom: 4px;
         }
         
-        .metric-row {
+        .executive-compact-container .metric-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 2px;
             font-size: 8px;
         }
         
-        .metric-row:last-child {
+        .executive-compact-container .metric-row:last-child {
             margin-bottom: 0;
         }
         
-        .metric-label {
+        .executive-compact-container .metric-label {
             color: #6B7280;
         }
         
-        .metric-value {
+        .executive-compact-container .metric-value {
             font-weight: 600;
             color: #111827;
         }
         
-        .card-lessons {
+        .executive-compact-container .card-lessons {
             font-size: 8px;
             color: #4B5563;
             line-height: 1.3;
@@ -1514,15 +1514,15 @@ function getCompactStyles() {
             border-radius: 3px;
         }
         
-        .card-lessons strong {
+        .executive-compact-container .card-lessons strong {
             color: #92400E;
             display: block;
             margin-bottom: 2px;
         }
         
-        .ki-info,
+        .executive-compact-container .ki-info,
         .ki-pioneer,
-        .ki-error {
+        .executive-compact-container .ki-error {
             background: white;
             border-radius: 8px;
             padding: 30px;
@@ -1530,38 +1530,38 @@ function getCompactStyles() {
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .info-icon,
-        .pioneer-icon,
-        .error-icon {
+        .executive-compact-container .info-icon,
+        .executive-compact-container .pioneer-icon,
+        .executive-compact-container .error-icon {
             font-size: 36px;
             margin-bottom: 12px;
         }
         
-        .ki-pioneer {
+        .executive-compact-container .ki-pioneer {
             background: #FFFBEB;
         }
         
-        .pioneer-note {
+        .executive-compact-container .pioneer-note {
             font-size: 10px;
             color: #78350F;
             font-style: italic;
             margin-top: 8px;
         }
         
-        .ki-error {
+        .executive-compact-container .ki-error {
             background: #FEF2F2;
             color: #991B1B;
         }
         
         /* Visualizations Section */
-        .visualizations-section {
+        .executive-compact-container .visualizations-section {
             background: white;
             border-radius: 6px;
             padding: 10px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.08);
         }
         
-        .visualizations-section h2 {
+        .executive-compact-container .visualizations-section h2 {
             font-size: 11px;
             font-weight: 700;
             color: #003366;
@@ -1570,39 +1570,39 @@ function getCompactStyles() {
             letter-spacing: 0.2px;
         }
         
-        .viz-grid {
+        .executive-compact-container .viz-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
         }
         
-        .viz-card {
+        .executive-compact-container .viz-card {
             background: #F9FAFB;
             border: 1px solid #E5E7EB;
             border-radius: 4px;
             padding: 6px;
         }
         
-        .viz-card h3 {
+        .executive-compact-container .viz-card h3 {
             font-size: 9px;
             font-weight: 600;
             color: #003366;
             margin: 0 0 6px 0;
         }
         
-        .chart-container {
+        .executive-compact-container .chart-container {
             min-height: 140px;
             position: relative;
         }
         
         /* Line Chart */
-        .line-chart {
+        .executive-compact-container .line-chart {
             position: relative;
             height: 120px;
             margin-bottom: 8px;
         }
         
-        .chart-grid {
+        .executive-compact-container .chart-grid {
             position: absolute;
             top: 0;
             left: 0;
@@ -1610,14 +1610,14 @@ function getCompactStyles() {
             bottom: 20px;
         }
         
-        .grid-line {
+        .executive-compact-container .grid-line {
             position: absolute;
             left: 0;
             right: 0;
             border-top: 1px solid #E5E7EB;
         }
         
-        .grid-label {
+        .executive-compact-container .grid-label {
             position: absolute;
             left: 0;
             top: -8px;
@@ -1625,7 +1625,7 @@ function getCompactStyles() {
             color: #9CA3AF;
         }
         
-        .chart-svg {
+        .executive-compact-container .chart-svg {
             position: absolute;
             top: 0;
             left: 0;
@@ -1635,20 +1635,20 @@ function getCompactStyles() {
             height: calc(100% - 20px);
         }
         
-        .line-revenue {
+        .executive-compact-container .line-revenue {
             fill: none;
             stroke: #0066CC;
             stroke-width: 2;
         }
         
-        .line-db2 {
+        .executive-compact-container .line-db2 {
             fill: none;
             stroke: #10b981;
             stroke-width: 2;
             stroke-dasharray: 4 2;
         }
         
-        .chart-x-axis {
+        .executive-compact-container .chart-x-axis {
             position: absolute;
             bottom: 0;
             left: 0;
@@ -1658,56 +1658,56 @@ function getCompactStyles() {
             padding: 0 5px;
         }
         
-        .x-label {
+        .executive-compact-container .x-label {
             font-size: 9px;
             color: #6B7280;
         }
         
-        .chart-data-table {
+        .executive-compact-container .chart-data-table {
             margin-top: 4px;
         }
         
-        .data-table {
+        .executive-compact-container .data-table {
             width: 100%;
             font-size: 8px;
             border-collapse: collapse;
         }
         
-        .data-table th,
-        .data-table td {
+        .executive-compact-container .data-table th,
+        .executive-compact-container .data-table td {
             padding: 2px 3px;
             text-align: right;
             border: 1px solid #E5E7EB;
         }
         
-        .data-table th {
+        .executive-compact-container .data-table th {
             background: #F3F4F6;
             font-weight: 600;
             color: #374151;
         }
         
-        .data-table td:first-child,
-        .data-table th:first-child {
+        .executive-compact-container .data-table td:first-child,
+        .executive-compact-container .data-table th:first-child {
             text-align: left;
             font-weight: 600;
         }
         
         /* Kosten Chart */
-        .kosten-breakdown {
+        .executive-compact-container .kosten-breakdown {
             margin-bottom: 8px;
         }
         
-        .kosten-item {
+        .executive-compact-container .kosten-item {
             margin-bottom: 4px;
         }
         
-        .kosten-label {
+        .executive-compact-container .kosten-label {
             font-size: 8px;
             color: #4B5563;
             margin-bottom: 2px;
         }
         
-        .kosten-bar-container {
+        .executive-compact-container .kosten-bar-container {
             background: #E5E7EB;
             height: 12px;
             border-radius: 2px;
@@ -1715,19 +1715,19 @@ function getCompactStyles() {
             margin-bottom: 1px;
         }
         
-        .kosten-bar {
+        .executive-compact-container .kosten-bar {
             height: 100%;
             background: linear-gradient(90deg, #0066CC, #0099FF);
             transition: width 0.3s ease;
         }
         
-        .kosten-value {
+        .executive-compact-container .kosten-value {
             font-size: 8px;
             font-weight: 600;
             color: #111827;
         }
         
-        .kosten-total {
+        .executive-compact-container .kosten-total {
             padding: 6px;
             background: #F0F9FF;
             border-radius: 4px;
@@ -1737,48 +1737,48 @@ function getCompactStyles() {
             font-size: 9px;
         }
         
-        .kosten-total strong {
+        .executive-compact-container .kosten-total strong {
             color: #003366;
         }
         
-        .kosten-total span {
+        .executive-compact-container .kosten-total span {
             font-weight: 700;
             color: #0066CC;
             font-size: 11px;
         }
         
         /* Szenarien Chart */
-        .szenarien-grid {
+        .executive-compact-container .szenarien-grid {
             display: grid;
             grid-template-columns: 1fr;
             gap: 4px;
         }
         
-        .szenario-card {
+        .executive-compact-container .szenario-card {
             background: white;
             border: 1px solid #E5E7EB;
             border-radius: 4px;
             padding: 6px;
         }
         
-        .szenario-card h4 {
+        .executive-compact-container .szenario-card h4 {
             font-size: 9px;
             font-weight: 700;
             margin: 0 0 4px 0;
             text-align: center;
         }
         
-        .szenario-metrics {
+        .executive-compact-container .szenario-metrics {
             display: flex;
             justify-content: space-around;
             margin-bottom: 4px;
         }
         
-        .szenario-metric {
+        .executive-compact-container .szenario-metric {
             text-align: center;
         }
         
-        .sm-label {
+        .executive-compact-container .sm-label {
             display: block;
             font-size: 7px;
             color: #6B7280;
@@ -1786,14 +1786,14 @@ function getCompactStyles() {
             font-weight: 600;
         }
         
-        .sm-value {
+        .executive-compact-container .sm-value {
             display: block;
             font-size: 9px;
             font-weight: 700;
             color: #111827;
         }
         
-        .szenario-assumptions {
+        .executive-compact-container .szenario-assumptions {
             font-size: 7px;
             color: #6B7280;
             text-align: center;
@@ -1804,30 +1804,30 @@ function getCompactStyles() {
         
         /* Responsive */
         @media (max-width: 1200px) {
-            .kpi-scorecard {
+            .executive-compact-container .kpi-scorecard {
                 grid-template-columns: repeat(3, 1fr);
             }
             
-            .kpi-scorecard .kpi-card:nth-child(4),
-            .kpi-scorecard .kpi-card:nth-child(5) {
+            .executive-compact-container .kpi-scorecard .kpi-card:nth-child(4),
+            .executive-compact-container .kpi-scorecard .kpi-card:nth-child(5) {
                 grid-column: span 1;
             }
             
-            .viz-grid {
+            .executive-compact-container .viz-grid {
                 grid-template-columns: 1fr;
             }
             
-            .similar-grid {
+            .executive-compact-container .similar-grid {
                 grid-template-columns: 1fr;
             }
         }
         
         @media (max-width: 768px) {
-            .management-summary {
+            .executive-compact-container .management-summary {
                 grid-template-columns: 1fr;
             }
             
-            .kpi-scorecard {
+            .executive-compact-container .kpi-scorecard {
                 grid-template-columns: 1fr;
             }
         }
