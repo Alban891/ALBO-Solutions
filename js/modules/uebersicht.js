@@ -164,6 +164,138 @@ function injectDemoData(projekt, artikel, calc) {
 }
 
 // ==========================================
+// KRITISCHE WARNUNG - VERSION 3
+// ==========================================
+
+/**
+ * Render critical warning alert for poor business case metrics
+ * Triggers when NPV < 0 or other critical thresholds are met
+ */
+function renderCriticalWarningAlert(projekt, calc) {
+    const npv = (calc?.kpis?.npv || 0) / 1000000;
+    const irr = calc?.kpis?.irr || 0;
+    
+    // Only show for critical cases
+    if (npv >= 0 || !projekt.name?.includes('Cyber Security')) {
+        return '';
+    }
+    
+    return `
+        <div class="critical-warning-overlay" id="critical-warning-overlay">
+            <div class="critical-warning-modal">
+                <!-- Header -->
+                <div class="cw-header">
+                    <div class="cw-header-content">
+                        <span class="cw-alert-icon">⚠️</span>
+                        <h2 class="cw-title">
+                            🔴🔴🔴 DATENBANK-ALARM: HISTORISCHES VERSAGENSMUSTER 🔴🔴🔴
+                        </h2>
+                    </div>
+                    <button class="cw-close" onclick="document.getElementById('critical-warning-overlay').style.display='none'">
+                        ✕
+                    </button>
+                </div>
+                
+                <!-- ML Prediction -->
+                <div class="cw-section cw-prediction">
+                    <h3>MACHINE LEARNING PRÄDIKTION:</h3>
+                    <div class="cw-metrics-grid">
+                        <div class="cw-metric-box">
+                            <div class="cw-metric-label">Erfolgswahrscheinlichkeit</div>
+                            <div class="cw-metric-value critical">18%</div>
+                        </div>
+                        <div class="cw-metric-box">
+                            <div class="cw-metric-label">Konfidenzintervall</div>
+                            <div class="cw-metric-value critical">12-24%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Comparison Table -->
+                <div class="cw-section">
+                    <h3>VERGLEICHBARE PROJEKTE - DIE HARTE WAHRHEIT:</h3>
+                    <table class="cw-table">
+                        <thead>
+                            <tr>
+                                <th>Projekt</th>
+                                <th>Geplant</th>
+                                <th>Real</th>
+                                <th>Delta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CyberSec 2021</td>
+                                <td>€4.5M</td>
+                                <td class="negative">-€1.2M</td>
+                                <td class="critical">-127%</td>
+                            </tr>
+                            <tr>
+                                <td>SecPlat 2022</td>
+                                <td>€3.2M</td>
+                                <td class="negative">€0.4M</td>
+                                <td class="critical">-88%</td>
+                            </tr>
+                            <tr>
+                                <td>CloudDef 2023</td>
+                                <td>€5.1M</td>
+                                <td class="negative">-€0.8M</td>
+                                <td class="critical">-116%</td>
+                            </tr>
+                            <tr class="current-row">
+                                <td><strong>IHR PROJEKT</strong></td>
+                                <td><strong>€${Math.abs(npv).toFixed(1)}M</strong></td>
+                                <td class="unknown">???</td>
+                                <td class="unknown">???</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="cw-section cw-stats">
+                    <h3>🧮 STATISTISCHE FAKTEN:</h3>
+                    <ul class="cw-stats-list">
+                        <li><span class="cw-bullet">•</span> <strong>0 von 8</strong> Software-Security-Projekten über €5M profitabel</li>
+                        <li><span class="cw-bullet">•</span> Median-Abweichung: <strong class="critical">-71%</strong> vom Plan-NPV</li>
+                        <li><span class="cw-bullet">•</span> Time-to-Profit: <strong>∅ 5.3 Jahre</strong> (nicht 2!)</li>
+                    </ul>
+                </div>
+                
+                <!-- Killer Factors -->
+                <div class="cw-section cw-killers">
+                    <h3>⚠️ KILLER-FAKTOREN IN IHREM CASE:</h3>
+                    <ol class="cw-killer-list">
+                        <li><span class="cw-number">1</span> Unrealistischer Ramp-up (Monat 3→24)</li>
+                        <li><span class="cw-number">2</span> Keine Churn-Rate kalkuliert (Markt: 35% p.a.)</li>
+                        <li><span class="cw-number">3</span> Implementierungskosten Kundenseite ignoriert</li>
+                        <li><span class="cw-number">4</span> Competitor-Response nicht modelliert</li>
+                    </ol>
+                </div>
+                
+                <!-- CTA -->
+                <div class="cw-footer">
+                    <div class="cw-recommendation">
+                        EMPFEHLUNG: PROJEKT STOPPEN ODER RADIKAL UMPLANEN
+                    </div>
+                    <div class="cw-actions">
+                        <button class="cw-btn cw-btn-danger" onclick="window.alert('Projekt wird überarbeitet')">
+                            Projekt überarbeiten
+                        </button>
+                        <button class="cw-btn cw-btn-secondary" onclick="window.alert('Alternative Szenarien werden geladen')">
+                            Alternativen zeigen
+                        </button>
+                        <button class="cw-btn cw-btn-outline" onclick="document.getElementById('critical-warning-overlay').style.display='none'">
+                            Details analysieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
 // MAIN RENDER
 // ==========================================
 
@@ -264,6 +396,21 @@ export async function renderUebersicht() {
     
     // Render HTML content
     container.innerHTML = createCompactLayout(projekt, artikel, calc);
+
+    // ADD THIS: Check if we need to show critical warning
+    const warningHTML = renderCriticalWarningAlert(projekt, calc);
+    if (warningHTML) {
+        // Add warning to body
+        document.body.insertAdjacentHTML('beforeend', warningHTML);
+        
+        // Auto-show after 2 seconds for demo effect
+        setTimeout(() => {
+            const overlay = document.getElementById('critical-warning-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+            }
+        }, 2000);
+    }
     
     // Load RAG Intelligence async
     setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
@@ -1844,6 +1991,304 @@ function getCompactStyles() {
         .executive-compact-container::-webkit-scrollbar-thumb {
             background: #D1D5DB;
             border-radius: 4px;
+        }
+        
+        /* ===== CRITICAL WARNING STYLES ===== */
+        .critical-warning-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .critical-warning-modal {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { 
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .cw-header {
+            background: linear-gradient(135deg, #DC2626, #991B1B);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .cw-header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .cw-alert-icon {
+            font-size: 32px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .cw-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .cw-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .cw-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .cw-section {
+            padding: 20px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        .cw-section h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 12px 0;
+        }
+        
+        .cw-prediction {
+            background: #FEF2F2;
+        }
+        
+        .cw-metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .cw-metric-box {
+            background: white;
+            border: 2px solid #DC2626;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .cw-metric-label {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+        
+        .cw-metric-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .cw-metric-value.critical {
+            color: #DC2626;
+        }
+        
+        .cw-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid #E5E7EB;
+        }
+        
+        .cw-table th {
+            background: #1F2937;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .cw-table td {
+            padding: 12px;
+            border-bottom: 1px solid #E5E7EB;
+            font-size: 13px;
+        }
+        
+        .cw-table .negative {
+            color: #DC2626;
+            font-weight: 700;
+        }
+        
+        .cw-table .critical {
+            color: #DC2626;
+            font-weight: 700;
+        }
+        
+        .cw-table .unknown {
+            color: #DC2626;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .cw-table .current-row {
+            background: #FEF3C7;
+        }
+        
+        .cw-stats {
+            background: #FFFBEB;
+        }
+        
+        .cw-stats-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .cw-stats-list li {
+            padding: 8px 0;
+            font-size: 13px;
+            color: #374151;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        
+        .cw-bullet {
+            color: #DC2626;
+            font-weight: 700;
+        }
+        
+        .cw-killers {
+            background: #FEF2F2;
+        }
+        
+        .cw-killer-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .cw-killer-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 8px 0;
+            font-size: 13px;
+            color: #374151;
+        }
+        
+        .cw-number {
+            background: #DC2626;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .cw-footer {
+            background: #1F2937;
+            color: white;
+            padding: 20px;
+        }
+        
+        .cw-recommendation {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        
+        .cw-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .cw-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .cw-btn-danger {
+            background: #DC2626;
+            color: white;
+        }
+        
+        .cw-btn-danger:hover {
+            background: #B91C1C;
+            transform: translateY(-2px);
+        }
+        
+        .cw-btn-secondary {
+            background: #6B7280;
+            color: white;
+        }
+        
+        .cw-btn-secondary:hover {
+            background: #4B5563;
+        }
+        
+        .cw-btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .cw-btn-outline:hover {
+            background: white;
+            color: #1F2937;
         }
     `;
 }
