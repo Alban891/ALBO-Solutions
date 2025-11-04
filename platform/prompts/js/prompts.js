@@ -606,6 +606,47 @@ updateCleanPreview(promptId, fieldIndex, value) {
     }
 }
 
+// Update Progress
+updateProgress(promptId, totalQuestions) {
+    let filledCount = 0;
+    
+    // Count filled questions
+    for (let i = 0; i < totalQuestions; i++) {
+        const input = document.getElementById(`input-${promptId}-${i}`);
+        if (input && input.value.trim() !== '') {
+            filledCount++;
+        }
+    }
+    
+    // Update completion status text
+    const completionStatus = document.getElementById(`completion-status-${promptId}`);
+    if (completionStatus) {
+        completionStatus.textContent = `${filledCount}/${totalQuestions} Fragen beantwortet`;
+        
+        if (filledCount === totalQuestions) {
+            completionStatus.style.background = '#d1fae5';
+            completionStatus.style.color = '#065f46';
+        } else {
+            completionStatus.style.background = '#fef3c7';
+            completionStatus.style.color = '#92400e';
+        }
+    }
+    
+    // Enable/Disable execute button
+    const executeBtn = document.getElementById(`execute-btn-${promptId}`);
+    if (executeBtn) {
+        if (filledCount === totalQuestions) {
+            executeBtn.disabled = false;
+            executeBtn.style.opacity = '1';
+            executeBtn.style.cursor = 'pointer';
+        } else {
+            executeBtn.disabled = true;
+            executeBtn.style.opacity = '0.5';
+            executeBtn.style.cursor = 'not-allowed';
+        }
+    }
+}
+
 // Update Additional Clean
 updateAdditionalClean(promptId, value) {
     const placeholder = document.getElementById(`additional-placeholder-${promptId}`);
@@ -867,7 +908,7 @@ renderPreview(prompt, fullPromptText) {
     }
 
   async executePrompt(promptId) {
-    const previewContent = document.getElementById(`code-preview-${promptId}`);
+    const previewContent = document.getElementById(`code-preview-${promptId}`) || document.getElementById(`preview-content-${promptId}`);
     if (!previewContent) return;
     
     const promptText = previewContent.textContent;
@@ -1928,7 +1969,7 @@ showAIResult(result, promptData, provider) {
      * Copy Prompt to Clipboard
      */
     copyPrompt(promptId) {
-        const previewContent = document.getElementById(`preview-content-${promptId}`);
+        const previewContent = document.getElementById(`code-preview-${promptId}`) || document.getElementById(`preview-content-${promptId}`);
         if (!previewContent) {
             console.error('Preview content not found');
             return;
