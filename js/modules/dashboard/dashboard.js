@@ -1187,9 +1187,19 @@ function initializeVisualization(vizId) {
     console.log('🎨 Initializing visualization:', vizId);
     
     const content = document.getElementById(`viz-content-${vizId}`);
-    if (!content) return;
+    if (!content) {
+        console.error('Content container not found for', vizId);
+        return;
+    }
     
     const data = dashboardState.calculationResult;
+    if (!data) {
+        console.error('No calculation result available');
+        content.innerHTML = '<p class="error-text">Keine Daten verfügbar</p>';
+        return;
+    }
+    
+    console.log('📊 Data for visualization:', data);
     
     // Create canvas for chart
     const canvasId = `canvas-${vizId}`;
@@ -1202,26 +1212,55 @@ function initializeVisualization(vizId) {
         </div>
     `;
     
-    // Initialize specific chart
+    // Wait for DOM to be ready
     setTimeout(() => {
-        switch(vizId) {
-            case 'revenue-waterfall':
-                initRevenueWaterfall(canvasId, data);
-                break;
-            case 'revenue-breakdown':
-                initRevenueBreakdown(canvasId, data);
-                break;
-            case 'margin-bridge':
-                initMarginBridge(canvasId, data);
-                break;
-            case 'cost-waterfall':
-                initCostWaterfall(canvasId, data);
-                break;
-            case 'sensitivity-tornado':
-                initSensitivityTornado(canvasId, data);
-                break;
-            default:
-                content.innerHTML += `<p class="coming-soon">📊 Chart wird implementiert: ${vizId}</p>`;
+        try {
+            // Initialize specific chart based on vizId
+            switch(vizId) {
+                case 'revenue-waterfall':
+                    initRevenueWaterfall(canvasId, data);
+                    break;
+                case 'revenue-breakdown':
+                    initRevenueBreakdown(canvasId, data);
+                    break;
+                case 'revenue-growth':
+                    initRevenueGrowth(canvasId, data);
+                    break;
+                case 'margin-bridge':
+                    initMarginBridge(canvasId, data);
+                    break;
+                case 'margin-trend':
+                    initMarginTrend(canvasId, data);
+                    break;
+                case 'margin-drivers':
+                    initMarginDrivers(canvasId, data);
+                    break;
+                case 'cost-waterfall':
+                    initCostWaterfall(canvasId, data);
+                    break;
+                case 'cost-breakdown':
+                    initCostBreakdown(canvasId, data);
+                    break;
+                case 'cost-savings':
+                    initCostSavings(canvasId, data);
+                    break;
+                case 'sensitivity-tornado':
+                    initSensitivityTornado(canvasId, data);
+                    break;
+                case 'scenario-analysis':
+                    initScenarioAnalysis(canvasId, data);
+                    break;
+                case 'risk-mitigation':
+                    initRiskMitigation(canvasId, data);
+                    break;
+                default:
+                    content.innerHTML += `<p class="coming-soon">📊 Visualisierung "${vizId}" wird implementiert...</p>`;
+            }
+            
+            console.log('✅ Visualization initialized:', vizId);
+        } catch (error) {
+            console.error('❌ Failed to initialize visualization:', vizId, error);
+            content.innerHTML = `<p class="error-text">Fehler: ${error.message}</p>`;
         }
     }, 100);
 }
@@ -1230,20 +1269,47 @@ function initializeVisualization(vizId) {
  * Initialize revenue waterfall chart
  */
 function initRevenueWaterfall(canvasId, data) {
-    console.log('📊 Init Revenue Waterfall with data:', data);
+    console.log('📊 Init Revenue Waterfall');
+    console.log('📊 Data received:', data);
+    console.log('📊 Data keys:', Object.keys(data || {}));
     
-    // Use demo data format
-    const waterfallData = {
-        labels: data.jahre,
-        values: data.revenueData?.values || data.jahre.map(jahr => {
-            return (data.jahreDaten?.[jahr]?.gesamtRevenue || 0) / 1000000;
-        })
-    };
+    // CRITICAL: Support BOTH formats - real data AND demo data!
+    let waterfallData;
     
-    console.log('📊 Waterfall data:', waterfallData);
+    // Format 1: Demo data has revenueData.values directly
+    if (data.revenueData && Array.isArray(data.revenueData.values)) {
+        console.log('✅ Using Demo Data format (revenueData.values)');
+        waterfallData = {
+            labels: data.jahre,
+            values: data.revenueData.values
+        };
+    }
+    // Format 2: Real data has jahreDaten object
+    else if (data.jahreDaten && data.jahre) {
+        console.log('✅ Using Real Data format (jahreDaten)');
+        waterfallData = {
+            labels: data.jahre,
+            values: data.jahre.map(jahr => {
+                return (data.jahreDaten[jahr]?.gesamtRevenue || 0) / 1000000;
+            })
+        };
+    }
+    // Format 3: Fallback
+    else {
+        console.error('❌ Unknown data format!');
+        return;
+    }
     
-    const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
-    dashboardState.charts[canvasId] = chart;
+    console.log('📊 Waterfall data prepared:', waterfallData);
+    
+    try {
+        const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
+        dashboardState.charts[canvasId] = chart;
+        console.log('✅ Revenue Waterfall chart created successfully');
+    } catch (error) {
+        console.error('❌ Failed to create waterfall:', error);
+        throw error;
+    }
     
     // Add insights
     const insights = document.getElementById(`insights-revenue-waterfall`);
@@ -1269,35 +1335,71 @@ function initRevenueWaterfall(canvasId, data) {
  * Initialize revenue breakdown
  */
 function initRevenueBreakdown(canvasId, data) {
-    console.log('📊 Init Revenue Breakdown with data:', data);
+    console.log('📊 Init Revenue Breakdown');
+    console.log('📊 Data received:', data);
     
-    // Use artikelBreakdown from demo data
-    const breakdown = data.artikelBreakdown || [];
+    let breakdownData;
     
-    const breakdownData = {
-        labels: breakdown.map(a => a.name),
-        data: breakdown.map(a => a.value),
-        backgroundColor: breakdown.map(a => a.color)
-    };
+    // Format 1: Demo data has artikelBreakdown array
+    if (data.artikelBreakdown && Array.isArray(data.artikelBreakdown)) {
+        console.log('✅ Using Demo Data format (artikelBreakdown)');
+        const breakdown = data.artikelBreakdown;
+        
+        breakdownData = {
+            labels: breakdown.map(a => a.name),
+            data: breakdown.map(a => a.value),
+            backgroundColor: breakdown.map(a => a.color)
+        };
+    }
+    // Format 2: Real data has artikelListe
+    else if (data.artikelListe && Array.isArray(data.artikelListe)) {
+        console.log('✅ Using Real Data format (artikelListe)');
+        // Group by artikel type
+        const breakdown = {};
+        data.artikelListe.forEach(artikel => {
+            const typ = artikel.typ || 'Sonstige';
+            if (!breakdown[typ]) breakdown[typ] = 0;
+            breakdown[typ] += (artikel.gesamtRevenue5Y || 0) / 1000000;
+        });
+        
+        breakdownData = {
+            labels: Object.keys(breakdown),
+            data: Object.values(breakdown),
+            backgroundColor: ['#003366', '#0066CC', '#00A651', '#FF6600']
+        };
+    }
+    // Format 3: Fallback
+    else {
+        console.error('❌ No artikel data found!');
+        return;
+    }
     
-    console.log('📊 Breakdown data:', breakdownData);
+    console.log('📊 Breakdown data prepared:', breakdownData);
     
-    const chart = ChartFactory.createPieChart(canvasId, breakdownData);
-    dashboardState.charts[canvasId] = chart;
+    try {
+        const chart = ChartFactory.createPieChart(canvasId, breakdownData);
+        dashboardState.charts[canvasId] = chart;
+        console.log('✅ Revenue Breakdown chart created');
+    } catch (error) {
+        console.error('❌ Failed to create breakdown:', error);
+        throw error;
+    }
     
-    // Add insights
-    const insights = document.getElementById(`insights-revenue-breakdown`);
-    if (insights) {
-        insights.innerHTML = `
-            <div class="insight-box">
-                <h4>💡 Artikel-Analyse</h4>
-                <ul>
-                    ${breakdown.map(a => `
-                        <li><strong>${a.name}:</strong> ${a.value.toFixed(1)}M€ (${a.percent.toFixed(1)}%)</li>
-                    `).join('')}
-                </ul>
-            </div>
-        `;
+    // Add insights for demo data
+    if (data.artikelBreakdown) {
+        const insights = document.getElementById(`insights-revenue-breakdown`);
+        if (insights) {
+            insights.innerHTML = `
+                <div class="insight-box">
+                    <h4>💡 Artikel-Analyse</h4>
+                    <ul>
+                        ${data.artikelBreakdown.map(a => `
+                            <li><strong>${a.name}:</strong> ${a.value.toFixed(1)}M€ (${a.percent.toFixed(1)}%)</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+        }
     }
 }
 
@@ -1366,6 +1468,131 @@ function initCostWaterfall(canvasId, data) {
 }
 
 /**
+ * Initialize cost breakdown
+ */
+function initCostBreakdown(canvasId, data) {
+    console.log('📊 Init Cost Breakdown');
+    
+    const breakdown = data.costBreakdown || [];
+    
+    const breakdownData = {
+        labels: breakdown.map(c => c.name),
+        data: breakdown.map(c => c.value),
+        backgroundColor: breakdown.map(c => c.color)
+    };
+    
+    const chart = ChartFactory.createDoughnut(canvasId, breakdownData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize cost savings
+ */
+function initCostSavings(canvasId, data) {
+    console.log('📊 Init Cost Savings');
+    
+    const savings = data.costSavingsData || [];
+    const content = document.getElementById(`viz-content-cost-savings`);
+    
+    content.innerHTML = `
+        <div class="savings-list">
+            ${savings.map(s => `
+                <div class="savings-item">
+                    <div class="savings-header">
+                        <h4>${s.category}</h4>
+                        <span class="savings-amount">💰 ${(s.potential / 1000000).toFixed(2)}M€</span>
+                    </div>
+                    <div class="savings-current">Aktuell: ${(s.current / 1000000).toFixed(2)}M€</div>
+                    <div class="savings-recommendation">→ ${s.recommendation}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Initialize revenue growth
+ */
+function initRevenueGrowth(canvasId, data) {
+    console.log('📊 Init Revenue Growth');
+    
+    const growthData = {
+        labels: data.jahre,
+        datasets: [{
+            label: 'Revenue',
+            data: data.revenueData?.values || [],
+            color: '#0066CC'
+        }]
+    };
+    
+    const chart = ChartFactory.createTrendLine(canvasId, growthData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize margin trend
+ */
+function initMarginTrend(canvasId, data) {
+    console.log('📊 Init Margin Trend');
+    
+    const marginData = data.marginTrendData || {
+        labels: data.jahre,
+        datasets: [
+            {
+                label: 'DB3 Margin %',
+                data: data.jahre.map((jahr, idx) => {
+                    const revenue = data.jahreDaten?.[jahr]?.gesamtRevenue || 1;
+                    const db3 = data.jahreDaten?.[jahr]?.gesamtDB3 || 0;
+                    return (db3 / revenue * 100);
+                }),
+                color: '#00A651'
+            }
+        ]
+    };
+    
+    const chart = ChartFactory.createTrendLine(canvasId, marginData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize margin drivers
+ */
+function initMarginDrivers(canvasId, data) {
+    console.log('📊 Init Margin Drivers');
+    
+    const content = document.getElementById(`viz-content-margin-drivers`);
+    
+    content.innerHTML = `
+        <div class="drivers-list">
+            <div class="driver-item positive">
+                <span class="driver-icon">✅</span>
+                <div class="driver-content">
+                    <h4>Skaleneffekte</h4>
+                    <p>Höheres Volumen reduziert Unit-Kosten um ~5%</p>
+                    <span class="driver-impact">+1.2% Marge</span>
+                </div>
+            </div>
+            <div class="driver-item positive">
+                <span class="driver-icon">📈</span>
+                <div class="driver-content">
+                    <h4>Pricing Power</h4>
+                    <p>Differenzierung erlaubt Premium-Pricing</p>
+                    <span class="driver-impact">+0.8% Marge</span>
+                </div>
+            </div>
+            <div class="driver-item negative">
+                <span class="driver-icon">⚠️</span>
+                <div class="driver-content">
+                    <h4>Marketing-Ausgaben</h4>
+                    <p>Hohe Akquisekosten belasten Marge</p>
+                    <span class="driver-impact">-2.1% Marge</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Initialize sensitivity tornado
  */
 function initSensitivityTornado(canvasId, data) {
@@ -1379,6 +1606,67 @@ function initSensitivityTornado(canvasId, data) {
     
     const chart = ChartFactory.createTornadoChart(canvasId, tornadoData);
     dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize scenario analysis
+ */
+function initScenarioAnalysis(canvasId, data) {
+    console.log('📊 Init Scenario Analysis');
+    
+    const scenarioData = data.scenarioData || {
+        labels: data.jahre,
+        datasets: [
+            {
+                label: 'Best Case (+20%)',
+                data: data.db3JahrData?.values?.map(v => v * 1.2) || [],
+                color: '#00A651'
+            },
+            {
+                label: 'Base Case',
+                data: data.db3JahrData?.values || [],
+                color: '#0066CC'
+            },
+            {
+                label: 'Worst Case (-20%)',
+                data: data.db3JahrData?.values?.map(v => v * 0.8) || [],
+                color: '#DC0032'
+            }
+        ]
+    };
+    
+    const chart = ChartFactory.createTrendLine(canvasId, scenarioData);
+    dashboardState.charts[canvasId] = chart;
+}
+
+/**
+ * Initialize risk mitigation
+ */
+function initRiskMitigation(canvasId, data) {
+    console.log('📊 Init Risk Mitigation');
+    
+    const actions = data.riskActions || [];
+    const content = document.getElementById(`viz-content-risk-mitigation`);
+    
+    content.innerHTML = `
+        <div class="risk-actions-list">
+            ${actions.map(action => `
+                <div class="risk-action-item priority-${action.priority}">
+                    <div class="action-priority">
+                        ${action.priority === 'high' ? '🔴' : action.priority === 'medium' ? '🟡' : '🟢'}
+                    </div>
+                    <div class="action-content">
+                        <h4>${action.title}</h4>
+                        <p>${action.description}</p>
+                        <div class="action-meta">
+                            <span class="meta-tag">Impact: ${action.impact}</span>
+                            <span class="meta-tag">Effort: ${action.effort}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 // ==========================================
