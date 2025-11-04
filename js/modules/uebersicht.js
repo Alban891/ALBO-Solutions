@@ -14,6 +14,20 @@ import * as helpers from '../helpers.js';
 import { calculateProjektWirtschaftlichkeit } from './wirtschaftlichkeit/calculator.js';
 
 // ==========================================
+// HELPERS
+// ==========================================
+
+/**
+ * Format number with thousands separator
+ * @param {number} num - Number to format
+ * @returns {string} Formatted number (e.g., "500,000")
+ */
+function formatNumber(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    return Math.round(num).toLocaleString('de-DE');
+}
+
+// ==========================================
 // STATE
 // ==========================================
 
@@ -180,7 +194,7 @@ function createKPIScorecard(calc, artikel) {
                 <div class="kpi-icon">📦</div>
                 <div class="kpi-content">
                     <div class="kpi-label">MENGE</div>
-                    <div class="kpi-value">${helpers.formatNumber(totalMenge)}</div>
+                    <div class="kpi-value">${formatNumber(totalMenge)}</div>
                     <div class="kpi-meta">Units (5Y Total)</div>
                 </div>
             </div>
@@ -282,7 +296,7 @@ function createManagementSummary(projekt, artikel, calc) {
                 <div class="summary-section">
                     <h3>📝 PROJEKTBESCHREIBUNG</h3>
                     <p>
-                        ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikel.length} Artikel mit einem Produktionsvolumen von ${helpers.formatNumber(totalMenge)} Units über 5 Jahre. Gesamtumsatzpotenzial: €${totalRevenue.toFixed(1)}M.`}
+                        ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikel.length} Artikel mit einem Produktionsvolumen von ${formatNumber(totalMenge)} Units über 5 Jahre. Gesamtumsatzpotenzial: €${totalRevenue.toFixed(1)}M.`}
                     </p>
                 </div>
                 
@@ -508,7 +522,7 @@ function renderSimilarProjectCard(project) {
                 </div>
                 <div class="metric-row">
                     <span class="metric-label">Menge:</span>
-                    <span class="metric-value">${project.volume_units ? helpers.formatNumber(project.volume_units) : 'N/A'}</span>
+                    <span class="metric-value">${project.volume_units ? formatNumber(project.volume_units) : 'N/A'}</span>
                 </div>
             </div>
             ${project.lessons_learned ? `
@@ -765,7 +779,7 @@ function renderSzenarienChart(calc) {
                     </div>
                     <div class="szenario-metric">
                         <span class="sm-label">Menge</span>
-                        <span class="sm-value">${helpers.formatNumber(Math.round(s.menge))}</span>
+                        <span class="sm-value">${formatNumber(Math.round(s.menge))}</span>
                     </div>
                 </div>
                 <div class="szenario-assumptions">
