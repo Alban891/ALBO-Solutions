@@ -441,415 +441,208 @@ class PromptsEngine {
     /* PROMPT DETAIL VIEW */
     /* ========================================== */
 
-    renderPromptDetail(prompt) {
+  renderPromptDetail(prompt) {
     const container = document.getElementById('prompts-content');
     if (!container) return;
 
-    let fullPromptText = prompt.fullPromptText;
-    if (!fullPromptText && prompt.goal && prompt.questions) {
-        fullPromptText = `${prompt.goal}\n\n`;
-        prompt.questions.forEach((q, idx) => {
-            fullPromptText += `${idx + 1}. ${q.question}\n`;
-            if (q.example) fullPromptText += `   Beispiel: ${q.example}\n`;
-            fullPromptText += '\n';
-        });
-    }
-    
-    if (!fullPromptText) {
-        fullPromptText = prompt.goal || prompt.name || 'Kein Prompt-Text verfügbar';
-    }
-
     const extractedQuestions = this.extractQuestionsFromPrompt(prompt);
-    const summary = this.extractSummary(prompt);
+    let fullPromptText = prompt.fullPromptText || this.buildPromptText(prompt, extractedQuestions);
 
     container.innerHTML = `
-        <div class="prompt-detail-view">
-            <div class="breadcrumb-nav">
-                <button onclick="window.promptsEngine.goBackToPrompts()" class="breadcrumb-back">
-                    ← Zurück
-                </button>
-            </div>
+        <!-- Back Navigation -->
+        <div class="breadcrumb-nav">
+            <button onclick="window.promptsEngine.goBackToPrompts()" class="breadcrumb-back">
+                ← Zurück
+            </button>
+        </div>
 
-            <div class="prompt-detail-header">
-                <div class="prompt-icon-large">${prompt.icon || '📄'}</div>
+        <!-- Prompt Header -->
+        <div class="prompt-header-bar" style="background: white; padding: 20px 32px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+            <div class="prompt-header-info" style="display: flex; align-items: center; gap: 16px;">
+                <div class="prompt-icon" style="font-size: 32px;">${prompt.icon || '📄'}</div>
                 <div>
-                    <h2 class="prompt-detail-title">${prompt.name}</h2>
-                    <p class="prompt-detail-meta">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</p>
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 600;">${prompt.name}</h2>
+                    <div class="prompt-meta" style="font-size: 14px; color: #64748b;">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLEAN SPLITSCREEN -->
+        <div class="clean-split-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; height: calc(100vh - 200px); width: 100%; background: #e2e8f0; overflow: hidden;">
+            
+            <!-- LEFT: Questions Panel -->
+            <div class="questions-panel" style="background: #ffffff; padding: 32px; overflow-y: auto; height: 100%;">
+                <div class="panel-header" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0;">
+                    <div class="panel-title" style="font-size: 18px; font-weight: 600; color: #1e293b;">📝 Deine Eingaben</div>
+                    <div class="panel-subtitle" style="font-size: 13px; color: #64748b;">${extractedQuestions.length} Fragen für optimalen Output</div>
+                </div>
+
+                ${extractedQuestions.map((q, idx) => `
+                    <div class="question-item" style="margin-bottom: 28px; padding: 20px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <div class="question-label" style="font-size: 15px; font-weight: 500; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center;">
+                            <span class="question-number" style="display: inline-block; width: 28px; height: 28px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 600; font-size: 14px; margin-right: 12px;">${idx + 1}</span>
+                            ${this.escapeHtml(q.question)}
+                        </div>
+                        <input 
+                            type="text" 
+                            class="question-input"
+                            style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; background: white;"
+                            id="input-${prompt.id}-${idx}"
+                            placeholder="${q.example ? this.escapeHtml(q.example) : 'Deine Antwort...'}"
+                            oninput="window.promptsEngine.updateCleanPreview('${prompt.id}', ${idx}, this.value)"
+                        />
+                        ${q.example ? `<div class="question-example" style="font-size: 12px; color: #64748b; margin-top: 6px; padding-left: 40px; font-style: italic;">💡 Beispiel: ${this.escapeHtml(q.example)}</div>` : ''}
+                    </div>
+                `).join('')}
+
+                <!-- Additional Context -->
+                <div class="additional-context" style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e2e8f0;">
+                    <div class="question-label" style="font-size: 15px; font-weight: 500; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center;">
+                        <span class="question-number" style="display: inline-block; width: 28px; height: 28px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 600; font-size: 14px; margin-right: 12px;">+</span>
+                        Zusätzliche Hinweise (optional)
+                    </div>
+                    <textarea
+                        class="additional-textarea"
+                        style="width: 100%; min-height: 120px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
+                        id="additional-${prompt.id}"
+                        placeholder="Weitere Details, spezifische Anforderungen, Kontext..."
+                        oninput="window.promptsEngine.updateAdditionalClean('${prompt.id}', this.value)"
+                    ></textarea>
                 </div>
             </div>
 
-            <!-- 🆕 BUSINESS PARTNER SUMMARY -->
-            <div class="prompt-summary-sticky">
-                <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">💡 Kurz erklärt</div>
-                <div style="font-size: 14px; margin-bottom: 12px; line-height: 1.6;">${summary}</div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Revisionssicher</span>
-                    <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Professionell</span>
-                    <span style="padding: 4px 10px; background: rgba(255,255,255,0.2); border-radius: 6px; font-size: 12px;">✅ Business Partner Ready</span>
+            <!-- RIGHT: Code Panel -->
+            <div class="code-panel" style="background: #1e293b; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="panel-header" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #334155;">
+                    <div class="panel-title" style="font-size: 18px; font-weight: 600; color: #f1f5f9;">💻 Live Prompt Preview</div>
+                    <div class="panel-subtitle" style="font-size: 13px; color: #94a3b8;">Echtzeit-Vorschau deines fertigen Prompts</div>
+                </div>
+                <div class="code-preview" style="font-family: 'Fira Code', 'Monaco', monospace; font-size: 14px; line-height: 1.8; color: #e2e8f0; white-space: pre-wrap; word-wrap: break-word;" id="code-preview-${prompt.id}">
+                    ${this.renderCleanPreview(prompt, fullPromptText, extractedQuestions)}
                 </div>
             </div>
+        </div>
 
-            <div class="prompt-split-container">
-                
-                <!-- LEFT: Input Panel mit Business Context -->
-                <div class="prompt-input-panel">
-                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a202c;">🔍 Ihre Eingaben</h3>
-                    
-                    ${extractedQuestions.length > 0 ? 
-                        extractedQuestions.map((q, idx) => `
-                            <div style="margin-bottom: 28px;">
-                                
-                                <!-- 🆕 CONTEXT CARD: Warum fragen wir das? -->
-                                <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 14px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #0ea5e9; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: start; gap: 10px;">
-                                        <div style="font-size: 20px; line-height: 1;">💡</div>
-                                        <div style="flex: 1;">
-                                            <div style="font-size: 13px; font-weight: 600; color: #0c4a6e; margin-bottom: 6px;">
-                                                Warum fragen wir das?
-                                            </div>
-                                            <div style="font-size: 12px; color: #075985; line-height: 1.5;">
-                                                ${this.getQuestionContext(q.question, idx, prompt.category)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Frage Label -->
-                                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #2d3748;">
-                                    ${q.number}. ${this.escapeHtml(q.question)}
-                                </label>
-
-                                <!-- Input Field mit Smart Validation -->
-                                <input 
-                                    type="text" 
-                                    style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;"
-                                    id="input-${prompt.id}-${idx}"
-                                    placeholder="${this.getSmartPlaceholder(q.question, q.example)}"
-                                    oninput="window.promptsEngine.updateLivePreviewWithValidation('${prompt.id}', ${idx}, this.value, '${this.escapeHtml(q.question).replace(/'/g, "\\'")}')"
-                                    onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.1)'"
-                                    onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'"
-                                />
-
-                                <!-- 🆕 QUALITY FEEDBACK -->
-                                <div id="feedback-${prompt.id}-${idx}" style="margin-top: 8px; font-size: 12px; min-height: 18px;">
-                                    ${q.example ? `<span style="color: #64748b; font-style: italic;">💡 Beispiel: ${this.escapeHtml(q.example)}</span>` : ''}
-                                </div>
-                            </div>
-                        `).join('') 
-                        : '<p style="color: #64748b; font-size: 14px;">Keine Eingaben erforderlich.</p>'
-                    }
-
-                    <!-- Zusätzliche Hinweise -->
-                    ${extractedQuestions.length > 0 ? `
-                        <div style="margin-top: 28px; padding-top: 24px; border-top: 2px solid #f1f5f9;">
-                            
-                            <!-- Context Card für zusätzliche Hinweise -->
-                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 14px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #f59e0b;">
-                                <div style="display: flex; align-items: start; gap: 10px;">
-                                    <div style="font-size: 20px; line-height: 1;">💼</div>
-                                    <div style="flex: 1;">
-                                        <div style="font-size: 13px; font-weight: 600; color: #78350f; margin-bottom: 6px;">
-                                            Business Partner Tipp
-                                        </div>
-                                        <div style="font-size: 12px; color: #92400e; line-height: 1.5;">
-                                            Nutzen Sie dieses Feld für spezifische Kontextinformationen, die für Ihre Situation relevant sind. 
-                                            Z.B.: Branchenbesonderheiten, regulatorische Anforderungen, oder strategische Prioritäten.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #2d3748;">
-                                ➕ Zusätzliche Hinweise (optional)
-                            </label>
-                            <textarea
-                                style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; min-height: 100px; font-family: inherit; transition: all 0.3s ease;"
-                                id="additional-${prompt.id}"
-                                placeholder="z.B.: Bitte beachte unsere spezielle Branchensituation im Automotive-Sektor mit volatilen Rohstoffpreisen und EU-Regulierungen..."
-                                oninput="window.promptsEngine.updateAdditionalHints('${prompt.id}', this.value)"
-                                onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.1)'"
-                                onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'"
-                            ></textarea>
-                            <div style="font-size: 12px; color: #64748b; margin-top: 6px; font-style: italic;">
-                                💡 Je spezifischer Ihre Hinweise, desto besser der AI-Output!
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- 🆕 QUALITY SCORE -->
-                    <div id="quality-score-${prompt.id}" style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 10px; border-left: 4px solid #94a3b8;">
-                        <div style="font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;">
-                            📊 Prompt Quality Score
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                            <div style="flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                                <div id="quality-bar-${prompt.id}" style="height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%); transition: width 0.3s ease;"></div>
-                            </div>
-                            <div id="quality-percent-${prompt.id}" style="font-size: 18px; font-weight: 700; color: #475569; min-width: 50px;">0%</div>
-                        </div>
-                        <div id="quality-tips-${prompt.id}" style="font-size: 12px; color: #64748b;">
-                            Füllen Sie die Felder aus, um die Prompt-Qualität zu erhöhen
-                        </div>
-                    </div>
-
-                    <!-- Progress (hidden, shown in preview panel) -->
-                    <div style="display: none;">
-                        <div class="progress-indicator" id="progress-${prompt.id}">
-                            ⏺️ Bitte ausfüllen (0/${extractedQuestions.length})
-                        </div>
-                    </div>
+        <!-- Action Bar -->
+        <div class="action-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #e2e8f0; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; z-index: 100;">
+            <div class="action-info">
+                <div id="completion-status-${prompt.id}" class="completion-badge" style="padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; background: #fef3c7; color: #92400e;">
+                    0/${extractedQuestions.length} Fragen beantwortet
                 </div>
-
-                <!-- RIGHT: Sticky Preview Panel -->
-                <div class="prompt-preview-panel">
-                    <div class="preview-header">
-                        <div class="preview-title">📄 Prompt Live-Preview</div>
-                        <div class="preview-progress">
-                            <span id="progress-text-${prompt.id}">0/${extractedQuestions.length}</span>
-                            <div class="progress-bar-mini">
-                                <div class="progress-fill-mini" id="progress-fill-${prompt.id}" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="completion-status-${prompt.id}" class="completion-status incomplete">
-                        ⚠️ Bitte alle Fragen ausfüllen
-                    </div>
-                    
-                    <div class="preview-content" id="preview-content-${prompt.id}">
-                        ${this.renderPreviewWithPlaceholders(prompt, fullPromptText, extractedQuestions)}
-                    </div>
-                    
-                    <div class="preview-actions">
-                        <button class="btn-preview btn-preview-copy" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
-                            📋 Copy
-                        </button>
-                        <button class="btn-preview btn-preview-execute" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
-                            ⚡ Generate
-                        </button>
-                    </div>
-
-                    <!-- TRANSPARENCY BOX -->
-                    <div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px;">
-                        <div style="font-size: 12px; font-weight: 600; color: #1e40af; margin-bottom: 6px;">
-                            🔍 100% Transparenz
-                        </div>
-                        <div style="font-size: 11px; color: #1e3a8a; line-height: 1.5;">
-                            Sie sehen exakt, was an die AI gesendet wird. Ihre Eingaben werden live angezeigt.
-                        </div>
-                    </div>
-                </div>
-
+            </div>
+            <div class="action-buttons" style="display: flex; gap: 12px;">
+                <button class="btn-action btn-copy" style="padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e0;" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
+                    📋 Kopieren
+                </button>
+                <button class="btn-action btn-execute" style="padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                    ⚡ Ausführen
+                </button>
             </div>
         </div>
     `;
 
-    this.initializeQualityScore(prompt.id, extractedQuestions.length);
     this.updateProgress(prompt.id, extractedQuestions.length);
 }
 
-/* ========================================== */
-/* 🆕 NEUE BUSINESS PARTNER METHODEN */
-/* ========================================== */
-
-/**
- * 1. Context für jede Frage generieren
- */
-getQuestionContext(question, index, category) {
-    const questionLower = question.toLowerCase();
+// Clean Preview Rendering
+renderCleanPreview(prompt, fullPromptText, extractedQuestions) {
+    let preview = this.escapeHtml(fullPromptText);
     
-    // ========== SPEZIFISCHE PATTERN (Bilanzbuchhalter) ==========
-    if (category === 'Bilanzbuchhalter') {
+    extractedQuestions.forEach((q, idx) => {
+        const questionText = this.escapeHtml(q.question);
+        const placeholder = `<span style="color: #64748b; font-style: italic;" id="placeholder-${prompt.id}-${idx}">[Antwort ausstehend]</span>`;
         
-        // Bilanzposten / Sachverhalt
-        if (questionLower.includes('bilanzposten') || questionLower.includes('sachverhalt')) {
-            return 'Präzise Angaben zum Bilanzposten sind essentiell für eine korrekte bilanzielle Behandlung. Je konkreter Ihre Beschreibung, desto besser kann die rechtssichere Einordnung und Dokumentation erfolgen.';
-        }
+        const patterns = [
+            `${idx + 1}. ${questionText}`,
+            questionText
+        ];
         
-        // Entwicklung / GuV / Bilanz
-        if (questionLower.includes('entwicklung') || questionLower.includes('guv') || questionLower.includes('bilanz')) {
-            return 'Die Entwicklungen in GuV und Bilanz sind das Herzstück Ihrer Finanzberichterstattung. Investoren, Banken und Wirtschaftsprüfer analysieren diese Kennzahlen, um Ihre Unternehmensentwicklung zu bewerten. Geben Sie konkrete Zahlen und Prozente an (z.B. "Umsatz +15%").';
+        for (const pattern of patterns) {
+            if (preview.includes(pattern)) {
+                preview = preview.replace(
+                    pattern,
+                    `${pattern}\n→ ${placeholder}`
+                );
+                break;
+            }
         }
-        
-        // Standards / HGB / IFRS / US-GAAP
-        if (questionLower.includes('standard') || questionLower.includes('hgb') || questionLower.includes('ifrs') || questionLower.includes('gaap') || questionLower.includes('rechnungslegung')) {
-            return 'Die Wahl des Rechnungslegungsstandards bestimmt die Bilanzierungs- und Bewertungsmethoden. IFRS und HGB unterscheiden sich erheblich - eine klare Angabe ist für die rechtssichere Bearbeitung zwingend erforderlich.';
-        }
-        
-        // Einflüsse / Finanzierung / Investition
-        if (questionLower.includes('einflüsse') || questionLower.includes('einfluss') || questionLower.includes('finanzierung') || questionLower.includes('investition')) {
-            return 'Außergewöhnliche Einflüsse aus Finanzierung oder Investitionen müssen separat ausgewiesen werden (§ 277 Abs. 4 HGB). Dies erhöht die Vergleichbarkeit und Transparenz. Nennen Sie konkrete Beträge und Ursachen.';
-        }
-        
-        // Kennzahlen / EBIT / Cashflow / KPI
-        if (questionLower.includes('kennzahlen') || questionLower.includes('ebit') || questionLower.includes('cashflow') || questionLower.includes('quote') || questionLower.includes('kpi')) {
-            return 'Diese Kennzahlen sind entscheidend für die Beurteilung Ihrer Ertragskraft und Liquidität. Banken nutzen sie für Kreditentscheidungen, Investoren für Bewertungen. Wählen Sie die für Ihre Branche relevanten KPIs.';
-        }
-        
-        // Vorjahreswerte / Benchmark / Vergleich
-        if (questionLower.includes('vorjahres') || questionLower.includes('benchmark') || questionLower.includes('vergleich')) {
-            return 'Der Vergleich mit Vorjahren oder externen Benchmarks zeigt Trends und positioniert Ihr Unternehmen im Wettbewerb. Dies ist besonders wichtig für Stakeholder-Kommunikation und strategische Entscheidungen.';
-        }
-        
-        // Wirtschaftsgut / Vermögensgegenstand
-        if (questionLower.includes('wirtschaftsgut') || questionLower.includes('vermögen')) {
-            return 'Die korrekte Identifikation und Klassifizierung von Wirtschaftsgütern ist Basis für Abschreibung, Bewertung und steuerliche Behandlung. Beschreiben Sie Art, Zweck und geplante Nutzungsdauer.';
-        }
-        
-        // Nutzung / Nutzungsdauer
-        if (questionLower.includes('nutzung') || questionLower.includes('dauer')) {
-            return 'Die voraussichtliche Nutzungsdauer bestimmt Abschreibungsmethode und -dauer. Sie ist relevant für Anlage- vs. Umlaufvermögen und beeinflusst GuV und Bilanz über mehrere Jahre.';
-        }
-        
-        // Zeitraum / Zeitpunkt
-        if (questionLower.includes('zeitraum') || questionLower.includes('zeitpunkt') || questionLower.includes('wann') || questionLower.includes('bis wann')) {
-            return 'Zeitliche Angaben sind entscheidend für Periodisierung, Stichtagsbewertung und Vollständigkeit. Sie bestimmen in welchem Geschäftsjahr Aufwendungen und Erträge zu erfassen sind.';
-        }
-        
-        // Aufwendungen / Kosten / Ausgaben
-        if (questionLower.includes('aufwend') || questionLower.includes('kosten') || questionLower.includes('ausgab')) {
-            return 'Detaillierte Aufwendungsanalyse ermöglicht korrekte Zuordnung, Aktivierungsfähigkeit und steuerliche Behandlung. Unterscheiden Sie zwischen Anschaffungs-, Herstellungs- und laufenden Kosten.';
-        }
-        
-        // Abzinsung / Bewertung / Schätzung
-        if (questionLower.includes('abzins') || questionLower.includes('bewert') || questionLower.includes('schätz') || questionLower.includes('zinssatz')) {
-            return 'Bewertungsparameter wie Abzinsungssätze beeinflussen direkt den Bilanzausweis und haben GuV-Wirkung. Sie müssen sachgerecht begründet und dokumentiert werden (GoB, IAS 1).';
-        }
-        
-        // Steuerliche Aspekte
-        if (questionLower.includes('steuer') || questionLower.includes('finanzamt') || questionLower.includes('betriebsprüfung')) {
-            return 'Steuerliche Aspekte können von der Handelsbilanz abweichen. Eine klare Dokumentation hilft bei Betriebsprüfungen und sichert steuerliche Anerkennung von Sachverhalten ab.';
-        }
+    });
+    
+    if (extractedQuestions.length > 0) {
+        const additionalPlaceholder = `<span style="color: #64748b; font-style: italic;" id="additional-placeholder-${prompt.id}">[Keine zusätzlichen Hinweise]</span>`;
+        preview += `\n\n<strong>Zusätzliche Hinweise:</strong>\n${additionalPlaceholder}`;
     }
     
-    // ========== CONTROLLER ==========
-    if (category === 'Controller') {
-        
-        // Kosten / Aufwand
-        if (questionLower.includes('kosten') || questionLower.includes('aufwand')) {
-            return 'Eine detaillierte Kostenanalyse ist die Basis für fundierte Managemententscheidungen. Unterscheiden Sie zwischen fixen und variablen Kosten, um Hebel für Effizienzsteigerungen zu identifizieren.';
-        }
-        
-        // Budget / Planung / Forecast
-        if (questionLower.includes('budget') || questionLower.includes('planung') || questionLower.includes('forecast') || questionLower.includes('plan')) {
-            return 'Präzise Budgetierung und Forecasting sind Ihre Kernaufgaben als Business Partner. Managemententscheidungen basieren auf Ihren Zahlen - je besser die Datenqualität, desto besser die Entscheidungen.';
-        }
-        
-        // Abweichung / Analyse / Variance
-        if (questionLower.includes('abweichung') || questionLower.includes('analyse') || questionLower.includes('variance')) {
-            return 'Abweichungsanalysen decken Potenziale und Risiken auf. Als Business Partner erklären Sie nicht nur "was" abweicht, sondern vor allem "warum" und "was zu tun ist".';
-        }
-        
-        // KPI / Kennzahlen / Metrics
-        if (questionLower.includes('kpi') || questionLower.includes('kennzahl') || questionLower.includes('metric')) {
-            return 'KPIs sind Ihr Steuerungsinstrument. Wählen Sie Kennzahlen, die wirklich geschäftsrelevant sind und zum Handeln führen - nicht nur "nice to know".';
-        }
-    }
-    
-    // ========== TREASURY ==========
-    if (category === 'Treasury') {
-        
-        // Liquidität / Cash
-        if (questionLower.includes('liquidität') || questionLower.includes('cash') || questionLower.includes('zahlungsfähig')) {
-            return 'Liquiditätssicherung ist Ihre Kernaufgabe. Banken und Management verlassen sich darauf, dass Sie Cashflow-Risiken frühzeitig erkennen und absichern.';
-        }
-        
-        // Finanzierung / Kredit / Darlehen
-        if (questionLower.includes('finanzierung') || questionLower.includes('kredit') || questionLower.includes('darlehen')) {
-            return 'Die richtige Finanzierungsstruktur optimiert Ihre Kapitalkosten und sichert finanzielle Flexibilität. Berücksichtigen Sie sowohl Kosten als auch strategische Aspekte.';
-        }
-        
-        // Risiko / Hedging / Währung
-        if (questionLower.includes('risiko') || questionLower.includes('hedge') || questionLower.includes('währung') || questionLower.includes('zins')) {
-            return 'Aktives Risikomanagement schützt vor unerwarteten Verlusten. Dokumentieren Sie Absicherungsstrategien transparent für Wirtschaftsprüfer und Management.';
-        }
-    }
-    
-    // ========== CFO ==========
-    if (category === 'CFO') {
-        
-        // Strategie / Transformation
-        if (questionLower.includes('strategie') || questionLower.includes('transformation') || questionLower.includes('vision')) {
-            return 'Als CFO gestalten Sie die finanzielle Zukunft des Unternehmens. Ihre Antworten sollten strategische Überlegungen und langfristige Auswirkungen berücksichtigen.';
-        }
-        
-        // Kapital / Investition / Allocation
-        if (questionLower.includes('kapital') || questionLower.includes('investition') || questionLower.includes('allocation')) {
-            return 'Capital Allocation ist eine Ihrer wichtigsten strategischen Entscheidungen. Sie bestimmt, wie Ihr Unternehmen Wert schafft und wächst.';
-        }
-        
-        // M&A / Akquisition
-        if (questionLower.includes('m&a') || questionLower.includes('akquisition') || questionLower.includes('übernahme')) {
-            return 'M&A-Entscheidungen sind strategische Weichenstellungen. Eine gründliche finanzielle und strategische Bewertung ist entscheidend für den Transaktionserfolg.';
-        }
-    }
-    
-    // ========== M&A ==========
-    if (category === 'M&A') {
-        
-        // Due Diligence
-        if (questionLower.includes('due diligence') || questionLower.includes('prüfung') || questionLower.includes('dd')) {
-            return 'Eine gründliche Due Diligence schützt vor bösen Überraschungen und liefert die Basis für Kaufpreis und Vertragsgestaltung. Je detaillierter, desto besser.';
-        }
-        
-        // Bewertung / Valuation / Preis
-        if (questionLower.includes('bewertung') || questionLower.includes('valuation') || questionLower.includes('preis') || questionLower.includes('wert')) {
-            return 'Die Unternehmensbewertung ist oft Verhandlungsbasis und bestimmt den Deal-Erfolg. Nutzen Sie mehrere Methoden und Szenarien für Robustheit.';
-        }
-        
-        // Synergien / Integration
-        if (questionLower.includes('synergie') || questionLower.includes('integration') || questionLower.includes('pmi')) {
-            return 'Synergien sind der Werttreiber vieler Deals. Quantifizieren Sie diese realistisch und planen Sie die Integration sorgfältig - 70% der Deals scheitern in der PMI.';
-        }
-    }
-    
-    // ========== GENERISCHE PATTERN (Fallback nach Keyword) ==========
-    
-    // Projekt / Initiative
-    if (questionLower.includes('projekt') || questionLower.includes('initiative')) {
-        return 'Klare Projektbeschreibungen ermöglichen bessere Einschätzung von Ressourcenbedarf, Timeline und Risiken. Beschreiben Sie Ziel, Scope und erwartete Ergebnisse.';
-    }
-    
-    // Betrag / Summe / Höhe / Volumen
-    if (questionLower.includes('betrag') || questionLower.includes('summe') || questionLower.includes('höhe') || questionLower.includes('volumen') || questionLower.includes('wie hoch') || questionLower.includes('wie viel')) {
-        return 'Konkrete Beträge sind essentiell für finanzielle Bewertung und Entscheidungsfindung. Geben Sie Größenordnungen an (z.B. "ca. 250.000 €") für bessere Einordnung.';
-    }
-    
-    // Grund / Ursache / Warum
-    if (questionLower.includes('grund') || questionLower.includes('ursache') || questionLower.includes('warum') || questionLower.includes('weshalb')) {
-        return 'Die Ursachenanalyse ist entscheidend für die Beurteilung von Einmaligkeit vs. Dauerhaftigkeit. Dies beeinflusst Prognosen, Planung und strategische Maßnahmen.';
-    }
-    
-    // Wie lange / Dauer / Zeitraum
-    if (questionLower.includes('wie lange') || questionLower.includes('dauer') || questionLower.includes('zeitraum') || questionLower.includes('frist')) {
-        return 'Zeitliche Dimensionen sind wichtig für Planung, Periodisierung und Ressourcenallokation. Geben Sie realistische Zeitrahmen an.';
-    }
-    
-    // Ja/Nein Fragen
-    if (questionLower.includes('gibt es') || questionLower.includes('liegt vor') || questionLower.includes('existiert')) {
-        return 'Diese Information hilft bei der Vollständigkeitsprüfung und Risikoeinschätzung. Geben Sie auch bei "Nein" eine kurze Begründung an.';
-    }
-    
-    // ========== ULTIMATE FALLBACK ==========
-    // Wenn GAR NICHTS matched, dann basierend auf Position
-    
-    if (index === 0) {
-        return 'Diese erste Frage hilft uns, den Kontext und Scope Ihrer Anfrage zu verstehen. Je präziser Ihre Antwort, desto passgenauer wird der AI-Output auf Ihre Situation zugeschnitten.';
-    }
-    
-    if (index === 1) {
-        return 'Diese Angabe ergänzt den Kontext und ermöglicht eine differenziertere Bearbeitung. Fügen Sie Details hinzu, die für Ihre spezifische Situation relevant sind.';
-    }
-    
-    // Generischer Fallback für alle anderen
-    return `Diese Information ist wichtig für die Vollständigkeit und Qualität der Analyse. Je mehr relevante Details Sie angeben, desto präziser und wertvoller wird das Ergebnis für Ihre Business-Entscheidung. 
-    
-    💡 Tipp: Nutzen Sie konkrete Zahlen, Beispiele und Kontext aus Ihrer spezifischen Situation.`;
+    return preview;
 }
 
-/* ========================================== */
-/* ENDE DER VERBESSERTEN METHODE */
-/* ========================================== */
+// Update Clean Preview
+updateCleanPreview(promptId, fieldIndex, value) {
+    const placeholder = document.getElementById(`placeholder-${promptId}-${fieldIndex}`);
+    
+    if (placeholder) {
+        if (value && value.trim() !== '') {
+            placeholder.style.color = '#22d3ee';
+            placeholder.style.fontStyle = 'normal';
+            placeholder.style.fontWeight = '600';
+            placeholder.textContent = value;
+        } else {
+            placeholder.style.color = '#64748b';
+            placeholder.style.fontStyle = 'italic';
+            placeholder.style.fontWeight = 'normal';
+            placeholder.textContent = '[Antwort ausstehend]';
+        }
+    }
+
+    if (!this.userAnswers[promptId]) {
+        this.userAnswers[promptId] = {};
+    }
+    this.userAnswers[promptId][fieldIndex] = value;
+
+    const prompt = this.allPrompts.find(p => p.id === promptId);
+    if (prompt) {
+        const extractedQuestions = this.extractQuestionsFromPrompt(prompt);
+        this.updateProgress(promptId, extractedQuestions.length);
+    }
+}
+
+// Update Additional Clean
+updateAdditionalClean(promptId, value) {
+    const placeholder = document.getElementById(`additional-placeholder-${promptId}`);
+    
+    if (placeholder) {
+        if (value && value.trim() !== '') {
+            placeholder.style.color = '#22d3ee';
+            placeholder.style.fontStyle = 'normal';
+            placeholder.style.fontWeight = '600';
+            placeholder.textContent = value;
+        } else {
+            placeholder.style.color = '#64748b';
+            placeholder.style.fontStyle = 'italic';
+            placeholder.style.fontWeight = 'normal';
+            placeholder.textContent = '[Keine zusätzlichen Hinweise]';
+        }
+    }
+
+    if (!this.userAnswers[promptId]) {
+        this.userAnswers[promptId] = {};
+    }
+    this.userAnswers[promptId]['additional'] = value;
+}
+
+// Helper: Build Prompt Text
+buildPromptText(prompt, questions) {
+    let text = prompt.goal || prompt.name || '';
+    if (questions && questions.length > 0) {
+        text += '\n\n**🔍 Bitte frage den Nutzer vorab**\n\n';
+        questions.forEach((q, idx) => {
+            text += `${idx + 1}. ${q.question}\n`;
+            if (q.example) text += `   → z.B.: ${q.example}\n`;
+            text += '\n';
+        });
+    }
+    return text;
+}
 
 /**
  * 2. Smarte Placeholders generieren
