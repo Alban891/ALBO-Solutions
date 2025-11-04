@@ -1230,28 +1230,35 @@ function initializeVisualization(vizId) {
  * Initialize revenue waterfall chart
  */
 function initRevenueWaterfall(canvasId, data) {
+    console.log('📊 Init Revenue Waterfall with data:', data);
+    
+    // Use demo data format
     const waterfallData = {
         labels: data.jahre,
-        datasets: [{
-            label: 'Revenue',
-            data: data.jahre.map(jahr => data.jahreDaten[jahr]?.gesamtRevenue || 0),
-            backgroundColor: '#00A651'
-        }]
+        values: data.revenueData?.values || data.jahre.map(jahr => {
+            return (data.jahreDaten?.[jahr]?.gesamtRevenue || 0) / 1000000;
+        })
     };
+    
+    console.log('📊 Waterfall data:', waterfallData);
     
     const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
     dashboardState.charts[canvasId] = chart;
     
     // Add insights
     const insights = document.getElementById(`insights-revenue-waterfall`);
-    if (insights) {
+    if (insights && data.keyInsights) {
+        const revenueInsights = data.keyInsights.filter(i => 
+            i.title.includes('Wachstum') || i.title.includes('Revenue')
+        );
+        
         insights.innerHTML = `
             <div class="insight-box">
                 <h4>💡 Key Insights</h4>
                 <ul>
-                    <li>Stärkstes Wachstum in Jahr 2-3</li>
-                    <li>Hardware trägt 50% zum Gesamtumsatz bei</li>
-                    <li>Software-Anteil steigt kontinuierlich</li>
+                    ${revenueInsights.map(insight => `
+                        <li>${insight.text}</li>
+                    `).join('')}
                 </ul>
             </div>
         `;
@@ -1262,64 +1269,96 @@ function initRevenueWaterfall(canvasId, data) {
  * Initialize revenue breakdown
  */
 function initRevenueBreakdown(canvasId, data) {
-    // Group by artikel type
-    const breakdown = {};
-    data.artikelListe.forEach(artikel => {
-        const typ = artikel.typ || 'Sonstige';
-        if (!breakdown[typ]) breakdown[typ] = 0;
-        breakdown[typ] += artikel.gesamtRevenue5Y || 0;
-    });
+    console.log('📊 Init Revenue Breakdown with data:', data);
+    
+    // Use artikelBreakdown from demo data
+    const breakdown = data.artikelBreakdown || [];
     
     const breakdownData = {
-        labels: Object.keys(breakdown),
-        datasets: [{
-            data: Object.values(breakdown),
-            backgroundColor: ['#003366', '#0066CC', '#00A651', '#FF6600']
-        }]
+        labels: breakdown.map(a => a.name),
+        data: breakdown.map(a => a.value),
+        backgroundColor: breakdown.map(a => a.color)
     };
+    
+    console.log('📊 Breakdown data:', breakdownData);
     
     const chart = ChartFactory.createPieChart(canvasId, breakdownData);
     dashboardState.charts[canvasId] = chart;
+    
+    // Add insights
+    const insights = document.getElementById(`insights-revenue-breakdown`);
+    if (insights) {
+        insights.innerHTML = `
+            <div class="insight-box">
+                <h4>💡 Artikel-Analyse</h4>
+                <ul>
+                    ${breakdown.map(a => `
+                        <li><strong>${a.name}:</strong> ${a.value.toFixed(1)}M€ (${a.percent.toFixed(1)}%)</li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
 }
 
 /**
  * Initialize margin bridge
  */
 function initMarginBridge(canvasId, data) {
+    console.log('📊 Init Margin Bridge with data:', data);
+    
     const firstYear = data.jahre[0];
     const yearData = data.jahreDaten[firstYear];
     
-    if (!yearData) return;
+    if (!yearData) {
+        console.error('No year data for', firstYear);
+        return;
+    }
+    
+    const db1 = yearData.gesamtDB1 / 1000000;
+    const marketing = -(yearData.gesamtMarketing || 0) / 1000000;
+    const rnd = -(yearData.gesamtRnD || 0) / 1000000;
+    const overhead = -(yearData.gesamtOverhead || 0) / 1000000;
+    const db3 = yearData.gesamtDB3 / 1000000;
     
     const bridgeData = {
         labels: ['DB1', 'Marketing', 'R&D', 'Overhead', 'DB3'],
-        datasets: [{
-            data: [
-                yearData.gesamtDB1 || 0,
-                -(yearData.gesamtMarketing || 0),
-                -(yearData.gesamtRnD || 0),
-                -(yearData.gesamtOverhead || 0),
-                yearData.gesamtDB3 || 0
-            ],
-            backgroundColor: ['#00A651', '#FF6600', '#FF6600', '#FF6600', '#003366']
-        }]
+        values: [db1, marketing, rnd, overhead, db3]
     };
+    
+    console.log('📊 Bridge data:', bridgeData);
     
     const chart = ChartFactory.createMarginBridge(canvasId, bridgeData);
     dashboardState.charts[canvasId] = chart;
+    
+    // Add insights
+    const insights = document.getElementById(`insights-margin-bridge`);
+    if (insights) {
+        insights.innerHTML = `
+            <div class="insight-box">
+                <h4>💡 Margin-Analyse ${firstYear}</h4>
+                <ul>
+                    <li>DB1: ${db1.toFixed(2)}M€</li>
+                    <li>Marketing: ${Math.abs(marketing).toFixed(2)}M€</li>
+                    <li>R&D: ${Math.abs(rnd).toFixed(2)}M€</li>
+                    <li>DB3: ${db3.toFixed(2)}M€ (${((db3/db1)*100).toFixed(1)}% von DB1)</li>
+                </ul>
+            </div>
+        `;
+    }
 }
 
 /**
  * Initialize cost waterfall
  */
 function initCostWaterfall(canvasId, data) {
+    console.log('📊 Init Cost Waterfall with data:', data);
+    
     const costData = {
         labels: data.jahre,
-        datasets: [{
-            label: 'Projektkosten',
-            data: data.jahre.map(jahr => data.jahreDaten[jahr]?.gesamtProjektkosten || 0),
-            backgroundColor: '#DC0032'
-        }]
+        values: data.projektkostenData?.values || data.jahre.map(jahr => {
+            return (data.jahreDaten?.[jahr]?.gesamtProjektkosten || 0) / 1000000;
+        })
     };
     
     const chart = ChartFactory.createCostWaterfall(canvasId, costData);
@@ -1330,13 +1369,12 @@ function initCostWaterfall(canvasId, data) {
  * Initialize sensitivity tornado
  */
 function initSensitivityTornado(canvasId, data) {
-    const tornadoData = {
+    console.log('📊 Init Sensitivity Tornado with data:', data);
+    
+    const tornadoData = data.sensitivityData || {
         labels: ['Preis', 'Menge', 'Kosten', 'Marketing'],
-        datasets: [{
-            label: 'Impact auf NPV',
-            data: [5000000, 3500000, -2000000, -1500000],
-            backgroundColor: ['#00A651', '#00A651', '#DC0032', '#DC0032']
-        }]
+        negativeImpact: [8.4, 8.4, 1.8, 0.5],
+        positiveImpact: [8.4, 8.4, 1.8, 0.5]
     };
     
     const chart = ChartFactory.createTornadoChart(canvasId, tornadoData);
