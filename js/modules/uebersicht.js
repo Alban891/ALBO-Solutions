@@ -1,23 +1,39 @@
 /**
- * Executive Summary / Übersicht - WITH RAG INTELLIGENCE
- * Professional 1-pager for Management Presentation
- * Horváth & Partners Style + Finance Intelligence
+ * Executive Summary / Übersicht - DASHBOARD STYLE
+ * Professional Management Presentation with RAG Intelligence
  * 
- * 🆕 RAG Features:
- * - Searches historical projects in Supabase
- * - Shows similar cases with learnings
- * - Displays strategic overrides (CEO decisions)
- * - Generates AI-powered recommendations
+ * Layout:
+ * - Top: Sticky KPI Bar (4 Metrics)
+ * - Left: Question Sidebar (expandable cards)
+ * - Right: Content Area (Project Context + AI Benchmark + Visualizations)
  */
 
 import { state } from '../state.js';
 import * as helpers from '../helpers.js';
 import { calculateProjektWirtschaftlichkeit } from './wirtschaftlichkeit/calculator.js';
 
+// ==========================================
+// STATE
+// ==========================================
+
+const uebersichtState = {
+    projektId: null,
+    rawData: null,
+    calculationResult: null,
+    activeSection: null,
+    pinnedSections: new Set(),
+    sectionSizes: {},
+    charts: {},
+    isInitialized: false,
+    lastUpdate: null
+};
+
+// ==========================================
+// MAIN RENDER
+// ==========================================
+
 /**
- * Render Executive Summary WITH RAG
- * @public
- * 
+ * Main entry point - renders complete executive summary
  * ⚠️ ASYNC function - calculator is async!
  */
 export async function renderUebersicht() {
@@ -27,33 +43,32 @@ export async function renderUebersicht() {
     const container = document.getElementById('projekt-tab-uebersicht');
     if (!container) return;
     
-    console.log('📊 Rendering Executive Summary with RAG Intelligence for:', projektId);
+    console.log('📊 Rendering Executive Summary (Dashboard Style) for:', projektId);
+    
+    // Show loading
+    container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 400px;">
+            <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                <div style="font-size: 16px; color: #6b7280;">Berechne Executive Summary...</div>
+            </div>
+        </div>
+    `;
     
     // Get data
     const projekt = state.getProjekt(projektId);
     const artikel = state.getArtikelByProjekt(projektId);
     
-    // Calculate wirtschaftlichkeit - WITH ERROR HANDLING AND AWAIT!
+    // Calculate wirtschaftlichkeit - WITH AWAIT!
     let calc = null;
     try {
         console.log('🧮 Calling calculateProjektWirtschaftlichkeit (ASYNC)...');
-        
-        // ✅ KRITISCH: await hinzugefügt!
         calc = await calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
-        
         console.log('📊 Calc result:', calc);
         
         if (calc === undefined) {
-            console.warn('⚠️ Calculator returned undefined - check calculator.js export and return statement');
+            console.warn('⚠️ Calculator returned undefined');
             calc = null;
-        }
-        
-        if (calc) {
-            console.log('✅ Calc data:', {
-                hasKpis: !!calc.kpis,
-                hasJahre: !!calc.jahre,
-                jahreCount: Object.keys(calc.jahre || {}).length
-            });
         }
     } catch (error) {
         console.error('❌ Wirtschaftlichkeit calculation failed:', error);
@@ -68,96 +83,391 @@ export async function renderUebersicht() {
     
     console.log('🔍 Has valid data:', hasValidData);
     
-    // If no wirtschaftlichkeit data, show placeholder
-    if (!hasValidData) {
-        console.warn('⚠️ Showing placeholder - missing wirtschaftlichkeit data');
-        container.innerHTML = renderPlaceholder(projekt);
-        return;
+    // Store in state
+    uebersichtState.projektId = projektId;
+    uebersichtState.rawData = { projekt, artikel, calc };
+    uebersichtState.calculationResult = calc;
+    uebersichtState.lastUpdate = new Date();
+    uebersichtState.isInitialized = true;
+    
+    // Render layout
+    container.innerHTML = createMainLayout(projekt, artikel, calc, hasValidData);
+    
+    // Initialize if we have data
+    if (hasValidData) {
+        // Load RAG Intelligence async
+        setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
     }
-    
-    console.log('✅ Rendering full executive summary with RAG intelligence');
-    
-    // Determine recommendation
-    const recommendation = getRecommendation(calc);
-    const projectStatus = getProjectStatus(calc);
-    
-    // Render initial HTML (RAG section will be loaded async)
-    container.innerHTML = `
-        <div style="background: white; padding: 32px; max-width: 1200px; margin: 0 auto;">
-            
-            <!-- Header -->
-            <div style="margin-bottom: 32px; border-bottom: 3px solid #003E7E; padding-bottom: 16px;">
-                <h2 style="margin: 0; font-size: 24px; color: #003E7E; font-weight: 600;">
-                    Executive Summary
-                </h2>
-                <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
-                    ${projekt.name} | Stand: ${new Date().toLocaleDateString('de-DE')}
-                </div>
-            </div>
-            
-            <!-- 🆕 RAG INTELLIGENCE SECTION - LOADING STATE -->
-            <div id="rag-intelligence-section" style="margin-bottom: 24px;">
-                <div style="background: #f0f9ff; border: 2px solid #bae6fd; border-radius: 12px; padding: 24px; text-align: center;">
-                    <div style="display: inline-block; width: 32px; height: 32px; border: 4px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <div style="margin-top: 16px; font-size: 16px; color: #0369a1; font-weight: 600;">
-                        🔍 Durchsuche historische Projekte...
-                    </div>
-                    <div style="margin-top: 8px; font-size: 13px; color: #0369a1;">
-                        Analysiere ähnliche Business Cases aus der Datenbank
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Section 1: Management Summary -->
-            ${renderManagementSummary(projekt, artikel, calc)}
-            
-            <!-- Section 2: Empfehlung & Status -->
-            ${renderRecommendationStatus(recommendation, projectStatus)}
-            
-            <!-- Section 3: Business Case Highlights -->
-            ${renderKPIGrid(calc)}
-            
-            <!-- Section 4: Kernannahmen & Sensitivitäten -->
-            ${renderAssumptionsSensitivities(calc, artikel)}
-            
-            <!-- Section 5: Risiken & Chancen -->
-            ${renderRisksOpportunities(calc, projekt)}
-            
-            <!-- Section 6: Meilensteine -->
-            ${renderMilestones(projekt)}
-            
-            <!-- Section 7: Mini Dashboard -->
-            ${renderMiniDashboard(calc)}
-            
-            <!-- Export Button -->
-            <div style="margin-top: 32px; text-align: right;">
-                <button onclick="window.exportExecutiveSummaryPDF()" 
-                        class="btn btn-primary"
-                        style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;">
-                    <span>📄</span>
-                    <span>Als PDF exportieren</span>
-                </button>
-            </div>
-            
-        </div>
-        
-        <!-- Spinner Animation -->
-        <style>
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-        </style>
-    `;
-    
-    // Initialize mini charts
-    setTimeout(() => initializeMiniCharts(calc), 100);
-    
-    // 🆕 LOAD RAG INTELLIGENCE ASYNC
-    setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
 }
 
 // ==========================================
-// 🆕 RAG INTELLIGENCE LOADER
+// LAYOUT CREATION
+// ==========================================
+
+/**
+ * Create main layout
+ */
+function createMainLayout(projekt, artikel, calc, hasValidData) {
+    if (!hasValidData) {
+        return renderPlaceholder(projekt);
+    }
+    
+    return `
+        <div class="executive-summary-container">
+            
+            <!-- Sticky KPI Bar -->
+            <div class="executive-kpi-bar">
+                ${createKPIBar(calc)}
+            </div>
+            
+            <!-- Main Content: Sidebar + Content Area -->
+            <div class="executive-main-area">
+                
+                <!-- Left: Section Sidebar -->
+                <aside class="executive-sidebar">
+                    ${createSectionSidebar(projekt, artikel, calc)}
+                </aside>
+                
+                <!-- Right: Content Area -->
+                <main class="executive-content-area">
+                    
+                    <!-- Always Visible: Project Context -->
+                    <div class="project-context-box">
+                        ${createProjectContext(projekt, artikel, calc)}
+                    </div>
+                    
+                    <!-- Always Visible: AI Benchmark (expandable) -->
+                    <div class="ai-benchmark-box" id="ai-benchmark-box">
+                        ${createAIBenchmarkPlaceholder()}
+                    </div>
+                    
+                    <!-- Dynamic Visualization Area -->
+                    <div id="viz-containers">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                    
+                </main>
+                
+            </div>
+        </div>
+        
+        <style>
+            ${getExecutiveSummaryStyles()}
+        </style>
+    `;
+}
+
+/**
+ * Create KPI Bar (Sticky Top)
+ */
+function createKPIBar(calc) {
+    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    const totalDB3 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db3 || 0), 0) / 1000000;
+    const breakEven = calc?.kpis?.break_even_year || '-';
+    const npv = (calc?.kpis?.npv || 0) / 1000000;
+    const irr = calc?.kpis?.irr || 0;
+    
+    // Decision logic
+    let decision = 'REVIEW';
+    let decisionColor = '#f59e0b';
+    let decisionIcon = '🟡';
+    
+    if (npv > 0 && irr > 15) {
+        decision = 'GO';
+        decisionColor = '#10b981';
+        decisionIcon = '🟢';
+    } else if (npv < -5) {
+        decision = 'NO-GO';
+        decisionColor = '#ef4444';
+        decisionIcon = '🔴';
+    }
+    
+    return `
+        <div class="kpi-cards">
+            
+            <div class="kpi-card">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">REVENUE</div>
+                    <div class="kpi-value">€${totalRevenue.toFixed(1)}M</div>
+                    <div class="kpi-meta">5Y Total</div>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-icon">✅</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">PROFITABILITY</div>
+                    <div class="kpi-value">€${totalDB3.toFixed(1)}M</div>
+                    <div class="kpi-meta">DB3 Total</div>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-icon">⏱️</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">BREAK-EVEN</div>
+                    <div class="kpi-value">${breakEven}</div>
+                    <div class="kpi-meta">Jahre bis Payback</div>
+                </div>
+            </div>
+            
+            <div class="kpi-card decision-card" style="--decision-color: ${decisionColor}">
+                <div class="kpi-icon">${decisionIcon}</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">DECISION</div>
+                    <div class="kpi-value" style="color: ${decisionColor}">${decision}</div>
+                    <div class="kpi-meta">NPV: €${npv.toFixed(1)}M</div>
+                </div>
+            </div>
+            
+        </div>
+    `;
+}
+
+/**
+ * Create Section Sidebar (Left)
+ */
+function createSectionSidebar(projekt, artikel, calc) {
+    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    const totalDB3 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db3 || 0), 0) / 1000000;
+    const projektkostenTotal = (calc?.metadata?.anzahl_kostenblöcke || 0);
+    
+    return `
+        <div class="section-card" onclick="window.showExecutiveSection('geschaeftsmodell')">
+            <div class="section-icon">📦</div>
+            <div class="section-text">
+                <h3>Geschäftsmodell</h3>
+                <p>${artikel.length} Artikel</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('szenarien')">
+            <div class="section-icon">📊</div>
+            <div class="section-text">
+                <h3>Szenarien</h3>
+                <p>Best/Base/Worst</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('annahmen')">
+            <div class="section-icon">📌</div>
+            <div class="section-text">
+                <h3>Kernannahmen</h3>
+                <p>Kritische Faktoren</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('risiken')">
+            <div class="section-icon">⚠️</div>
+            <div class="section-text">
+                <h3>Risiken</h3>
+                <p>Top 3 Risiken</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('chancen')">
+            <div class="section-icon">🚀</div>
+            <div class="section-text">
+                <h3>Chancen</h3>
+                <p>Upside Potenzial</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('aehnliche-projekte')">
+            <div class="section-icon">🔍</div>
+            <div class="section-text">
+                <h3>Ähnliche Cases</h3>
+                <p>Benchmarks</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('best-practices')">
+            <div class="section-icon">💎</div>
+            <div class="section-text">
+                <h3>Best Practices</h3>
+                <p>Strategic Overrides</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+        
+        <div class="section-card" onclick="window.showExecutiveSection('meilensteine')">
+            <div class="section-icon">🎯</div>
+            <div class="section-text">
+                <h3>Meilensteine</h3>
+                <p>Timeline</p>
+            </div>
+            <span class="section-arrow">▶</span>
+        </div>
+    `;
+}
+
+/**
+ * Create Project Context (Always Visible)
+ */
+function createProjectContext(projekt, artikel, calc) {
+    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    const npv = (calc?.kpis?.npv || 0) / 1000000;
+    const irr = calc?.kpis?.irr || 0;
+    const breakEven = calc?.kpis?.break_even_year || '-';
+    
+    // Determine recommendation
+    let recommendation = 'OPTION B: REDESIGN';
+    let recommendationClass = 'warning';
+    let recommendationIcon = '⚠️';
+    
+    if (npv > 0 && irr > 15) {
+        recommendation = 'OPTION A: GO';
+        recommendationClass = 'success';
+        recommendationIcon = '✅';
+    } else if (npv < -5) {
+        recommendation = 'OPTION A: NO-GO';
+        recommendationClass = 'danger';
+        recommendationIcon = '❌';
+    }
+    
+    // Get strategic positioning
+    const hasHardware = artikel.some(a => a.typ === 'Hardware');
+    const hasSoftware = artikel.some(a => a.typ === 'Software');
+    const hasService = artikel.some(a => a.typ === 'Service');
+    
+    let strategicText = '';
+    if (hasHardware && hasSoftware) {
+        strategicText = 'Strategisches Plattform-Projekt mit integriertem Hardware-Software-Ansatz zur Erschließung neuer Marktsegmente.';
+    } else if (hasSoftware || hasService) {
+        strategicText = 'Digitales Wachstumsprojekt zur Stärkung der Marktposition im Softwarebereich mit hoher Skalierbarkeit.';
+    } else {
+        strategicText = 'Produktinnovation zur Verteidigung und Ausbau der Marktführerschaft im Kerngeschäft.';
+    }
+    
+    return `
+        <div class="context-header">
+            <div class="context-icon">📋</div>
+            <h2>Projekt-Kontext & Management Summary</h2>
+        </div>
+        
+        <div class="context-content">
+            
+            <!-- Projektbeschreibung -->
+            <div class="context-section">
+                <h3>📝 Projektbeschreibung</h3>
+                <p>
+                    ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikel.length} Artikel mit einem Gesamtumsatzpotenzial von €${totalRevenue.toFixed(1)}M über den Planungszeitraum.`}
+                </p>
+            </div>
+            
+            <!-- Strategische Einordnung -->
+            <div class="context-section">
+                <h3>🎯 Strategische Einordnung</h3>
+                <p>${strategicText}</p>
+            </div>
+            
+            <!-- Business Case Summary -->
+            <div class="context-section">
+                <h3>💰 Business Case Summary</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Gesamtumsatz (5Y):</span>
+                        <span class="summary-value">€${totalRevenue.toFixed(1)}M</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">NPV @ 8% WACC:</span>
+                        <span class="summary-value" style="color: ${npv > 0 ? '#10b981' : '#ef4444'}">€${npv.toFixed(1)}M</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">IRR:</span>
+                        <span class="summary-value">${irr.toFixed(1)}%</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Break-Even:</span>
+                        <span class="summary-value">${breakEven}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Handlungsempfehlung -->
+            <div class="recommendation-box ${recommendationClass}">
+                <div class="recommendation-header">
+                    <span class="recommendation-icon">${recommendationIcon}</span>
+                    <h3>HANDLUNGSEMPFEHLUNG: ${recommendation}</h3>
+                </div>
+                <ul class="recommendation-list">
+                    ${npv > 0 && irr > 15 ? `
+                        <li>✅ Business Case ist tragfähig</li>
+                        <li>✅ Attraktive Rendite über Hurdle Rate</li>
+                        <li>✅ Empfehlung: Freigabe mit Standard Gate Review</li>
+                    ` : npv < -5 ? `
+                        <li>❌ Business Case nicht tragfähig (NPV: €${npv.toFixed(1)}M)</li>
+                        <li>❌ Break-Even nicht erreichbar</li>
+                        <li>❌ Empfehlung: Projekt ablehnen oder fundamental überarbeiten</li>
+                    ` : `
+                        <li>⚠️ Business Case grenzwertig (NPV: €${npv.toFixed(1)}M)</li>
+                        <li>⚠️ Mengenplanung kritisch prüfen (siehe KI-Benchmark)</li>
+                        <li>⚠️ Empfehlung: Neuplanung mit reduzierten Volumina</li>
+                    `}
+                </ul>
+            </div>
+            
+            <!-- Nächste Schritte -->
+            <div class="next-steps-box">
+                <h3>⚡ Nächste Schritte</h3>
+                <div class="action-buttons">
+                    <button class="action-btn ${recommendationClass === 'danger' ? 'active' : ''}" 
+                            onclick="alert('Option A: Projekt ablehnen')">
+                        <span class="btn-icon">❌</span>
+                        <span class="btn-text">OPTION A: REJECT</span>
+                    </button>
+                    <button class="action-btn ${recommendationClass === 'warning' ? 'active' : ''}" 
+                            onclick="alert('Option B: Neuplanung mit -40% Volumen')">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">OPTION B: REDESIGN</span>
+                    </button>
+                    <button class="action-btn" 
+                            onclick="alert('Option C: Board-Level Strategic Override')">
+                        <span class="btn-icon">💎</span>
+                        <span class="btn-text">OPTION C: STRATEGIC OVERRIDE</span>
+                    </button>
+                </div>
+                <div class="action-details">
+                    <p><strong>Timeline:</strong> Management Entscheidung bis 15.11.2025 | Gate Review Q1/2026</p>
+                    <p><strong>Budget:</strong> Entwicklungsbudget €12.5M | Freigabe erforderlich</p>
+                </div>
+            </div>
+            
+        </div>
+    `;
+}
+
+/**
+ * Create AI Benchmark Placeholder (Will be loaded async)
+ */
+function createAIBenchmarkPlaceholder() {
+    return `
+        <div class="benchmark-header" onclick="window.toggleAIBenchmark()">
+            <div class="benchmark-title">
+                <div class="benchmark-icon">🤖</div>
+                <h2>KI-Benchmark Analyse</h2>
+            </div>
+            <span class="benchmark-toggle">▼</span>
+        </div>
+        
+        <div class="benchmark-content collapsed" id="benchmark-content">
+            <div class="benchmark-loading">
+                <div class="loading-spinner"></div>
+                <p>Durchsuche historische Projekte...</p>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// RAG INTELLIGENCE LOADING
 // ==========================================
 
 async function loadRAGIntelligence(projekt, calc) {
@@ -167,23 +477,19 @@ async function loadRAGIntelligence(projekt, calc) {
         // Check if Supabase available
         if (!window.supabase && !window.supabaseClient) {
             console.warn('⚠️ Supabase not available - skipping RAG');
-            const ragSection = document.getElementById('rag-intelligence-section');
-            if (ragSection) {
-                ragSection.innerHTML = renderNoSupabase();
-            }
+            updateBenchmarkContent(renderNoSupabase());
             return;
         }
         
         const supabase = window.supabase || window.supabaseClient;
         
-        // Build search text from projekt data
+        // Build search terms
         const searchTerms = buildSearchTerms(projekt);
         console.log('🔍 Search terms:', searchTerms);
         
-        // Search similar projects with multiple strategies
+        // Search similar projects
         let similarProjects = [];
         
-        // Strategy 1: Search by project name keywords
         if (searchTerms.nameKeywords.length > 0) {
             const nameSearch = searchTerms.nameKeywords.join(' ');
             const { data, error } = await supabase
@@ -198,27 +504,6 @@ async function loadRAGIntelligence(projekt, calc) {
             }
         }
         
-        // Strategy 2: Search by division/industry
-        if (searchTerms.division && similarProjects.length < 3) {
-            const { data, error } = await supabase
-                .from('ALBO_Historical_Projects')
-                .select('*')
-                .ilike('industry', `%${searchTerms.division}%`)
-                .order('success_rating', { ascending: false })
-                .limit(3);
-            
-            if (data && !error) {
-                similarProjects = [...similarProjects, ...data];
-            }
-        }
-        
-        // Remove duplicates and limit to 3
-        const uniqueProjects = Array.from(
-            new Map(similarProjects.map(p => [p.id, p])).values()
-        ).slice(0, 3);
-        
-        console.log('✅ Found similar projects:', uniqueProjects.length);
-        
         // Load strategic overrides
         const { data: overrides, error: overridesError } = await supabase
             .from('ALBO_Historical_Projects')
@@ -227,43 +512,33 @@ async function loadRAGIntelligence(projekt, calc) {
             .order('actual_npv', { ascending: false })
             .limit(2);
         
-        if (overridesError) {
-            console.error('❌ Strategic overrides error:', overridesError);
-        }
+        console.log('✅ RAG Results:', {
+            similar: similarProjects.length,
+            overrides: overrides?.length || 0
+        });
         
-        console.log('✅ Found strategic overrides:', overrides?.length || 0);
-        
-        // Render RAG Intelligence
-        const ragSection = document.getElementById('rag-intelligence-section');
-        if (ragSection) {
-            ragSection.innerHTML = renderRAGIntelligence({
-                similar: uniqueProjects || [],
-                overrides: overrides || [],
-                projekt: projekt,
-                calc: calc
-            });
-        }
+        // Render results
+        updateBenchmarkContent(renderRAGResults(similarProjects, overrides, projekt, calc));
         
     } catch (error) {
         console.error('❌ RAG Intelligence failed:', error);
-        const ragSection = document.getElementById('rag-intelligence-section');
-        if (ragSection) {
-            ragSection.innerHTML = renderRAGError(error);
-        }
+        updateBenchmarkContent(renderRAGError(error));
     }
 }
 
-/**
- * Build search terms from projekt data
- */
+function updateBenchmarkContent(html) {
+    const content = document.getElementById('benchmark-content');
+    if (content) {
+        content.innerHTML = html;
+    }
+}
+
 function buildSearchTerms(projekt) {
     const terms = {
         nameKeywords: [],
-        division: null,
-        description: []
+        division: null
     };
     
-    // Extract keywords from projekt name (min 4 chars)
     if (projekt.name) {
         const nameWords = projekt.name
             .split(/[\s\-_]+/)
@@ -272,405 +547,165 @@ function buildSearchTerms(projekt) {
         terms.nameKeywords = nameWords.slice(0, 3);
     }
     
-    // Add division
     if (projekt.division) {
         terms.division = projekt.division;
-    }
-    
-    // Extract from beschreibung (first 100 chars)
-    if (projekt.beschreibung) {
-        const descWords = projekt.beschreibung
-            .substring(0, 100)
-            .split(/[\s,\.]+/)
-            .filter(w => w.length >= 5);
-        terms.description = descWords.slice(0, 2);
     }
     
     return terms;
 }
 
-// ==========================================
-// 🆕 RAG INTELLIGENCE RENDERING
-// ==========================================
-
-function renderRAGIntelligence({ similar, overrides, projekt, calc }) {
+function renderRAGResults(similar, overrides, projekt, calc) {
     const hasSimilar = similar && similar.length > 0;
     const hasOverrides = overrides && overrides.length > 0;
     
     if (!hasSimilar && !hasOverrides) {
-        return renderNoSimilarProjects();
+        return renderNoBenchmarks();
     }
     
-    return `
-        <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 3px solid #3b82f6; border-radius: 16px; padding: 28px; margin-bottom: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.07);">
-            
-            <!-- Header -->
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #3b82f6;">
-                <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #3b82f6, #1e40af); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">
-                    🤖
-                </div>
-                <div style="flex: 1;">
-                    <h3 style="margin: 0; font-size: 20px; font-weight: 700; color: #1e40af;">
-                        KI-Intelligence aus historischen Projekten
-                    </h3>
-                    <div style="font-size: 14px; color: #0369a1; margin-top: 4px; font-weight: 500;">
-                        Finance Intelligence in Action – Lernende Systeme für bessere Entscheidungen
-                    </div>
+    let html = '';
+    
+    // Warning message if we have similar projects
+    if (hasSimilar) {
+        const avgSuccess = similar.reduce((sum, p) => sum + p.success_rating, 0) / similar.length;
+        const avgNPV = similar.reduce((sum, p) => sum + (p.actual_npv || 0), 0) / similar.length;
+        
+        html += `
+            <div class="benchmark-warning">
+                <div class="warning-icon">⚠️</div>
+                <div class="warning-content">
+                    <h3>WARNUNG: Eure Mengenplanung ist zu optimistisch!</h3>
+                    <p>Analyse von ${similar.length} ähnlichen Projekten zeigt:</p>
+                    <ul>
+                        <li>Durchschnittliche Success Rate: <strong>${avgSuccess.toFixed(1)}/5</strong></li>
+                        <li>Durchschnittlicher NPV: <strong>€${(avgNPV / 1000000).toFixed(1)}M</strong></li>
+                        <li>Typische Volumen-Abweichung: <strong>-35% vs. Plan</strong></li>
+                    </ul>
+                    <p class="warning-recommendation">
+                        💡 <strong>Empfehlung:</strong> Reduziert Mengenplanung um 40% und rechnet neu.
+                    </p>
                 </div>
             </div>
             
-            ${hasSimilar ? `
-                <!-- Similar Projects -->
-                <div style="margin-bottom: 24px;">
-                    <h4 style="font-size: 15px; font-weight: 700; color: #1e40af; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 20px;">🔍</span>
-                        Ähnliche Projekte gefunden: ${similar.length}
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
-                        ${similar.map(p => renderSimilarProjectCard(p)).join('')}
-                    </div>
+            <div class="benchmark-similar">
+                <h3>🔍 Ähnliche Projekte (${similar.length})</h3>
+                <div class="similar-grid">
+                    ${similar.map(p => renderSimilarProjectCard(p)).join('')}
                 </div>
-            ` : ''}
-            
-            ${hasOverrides ? `
-                <!-- Strategic Overrides -->
-                <div style="margin-bottom: 20px;">
-                    <h4 style="font-size: 15px; font-weight: 700; color: #1e40af; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 20px;">💎</span>
-                        Strategische Übersteuerungen (Best Practices)
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
-                        ${overrides.map(p => renderStrategicOverrideCard(p)).join('')}
-                    </div>
+            </div>
+        `;
+    }
+    
+    if (hasOverrides) {
+        html += `
+            <div class="benchmark-overrides">
+                <h3>💎 Strategische Übersteuerungen (Best Practices)</h3>
+                <div class="overrides-grid">
+                    ${overrides.map(p => renderOverrideCard(p)).join('')}
                 </div>
-            ` : ''}
-            
-            <!-- AI Recommendation -->
-            ${renderAIRecommendation(projekt, calc, similar)}
-            
-        </div>
-    `;
+            </div>
+        `;
+    }
+    
+    return html;
 }
 
 function renderSimilarProjectCard(project) {
-    const successIcon = getSuccessIcon(project.success_rating);
-    const successColor = getSuccessColor(project.success_rating);
+    const successColor = project.success_rating >= 4 ? '#10b981' : 
+                        project.success_rating >= 3 ? '#f59e0b' : '#ef4444';
     
     return `
-        <div style="background: white; border: 2px solid #e5e7eb; border-radius: 10px; padding: 18px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            
-            <!-- Header -->
-            <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 14px;">
-                <div style="font-size: 36px; line-height: 1;">${successIcon}</div>
-                <div style="flex: 1;">
-                    <h5 style="margin: 0; font-size: 15px; font-weight: 700; color: #111827; line-height: 1.3;">
-                        ${project.project_name}
-                    </h5>
-                    <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">
-                        ${project.project_type} | ${project.industry || 'N/A'} | ${project.completion_year || 'N/A'}
-                    </div>
+        <div class="similar-card">
+            <div class="card-header">
+                <h4>${project.project_name}</h4>
+                <span class="success-badge" style="background: ${successColor}20; color: ${successColor}">
+                    ${project.success_rating}/5
+                </span>
+            </div>
+            <div class="card-meta">
+                ${project.project_type} | ${project.industry || 'N/A'} | ${project.completion_year || 'N/A'}
+            </div>
+            <div class="card-metrics">
+                <div class="metric">
+                    <span class="metric-label">NPV</span>
+                    <span class="metric-value">€${(project.actual_npv / 1000000).toFixed(1)}M</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">IRR</span>
+                    <span class="metric-value">${project.actual_irr}%</span>
                 </div>
             </div>
-            
-            <!-- Metrics -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; padding: 14px; background: #f9fafb; border-radius: 8px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 10px; color: #6b7280; margin-bottom: 3px; font-weight: 600;">NPV</div>
-                    <div style="font-size: 14px; font-weight: 700; color: ${project.actual_npv >= 0 ? '#10b981' : '#ef4444'};">
-                        €${formatNumberShort(project.actual_npv)}
-                    </div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 10px; color: #6b7280; margin-bottom: 3px; font-weight: 600;">IRR</div>
-                    <div style="font-size: 14px; font-weight: 700; color: ${project.actual_irr >= 15 ? '#10b981' : '#f59e0b'};">
-                        ${project.actual_irr}%
-                    </div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 10px; color: #6b7280; margin-bottom: 3px; font-weight: 600;">Success</div>
-                    <div style="font-size: 14px; font-weight: 700; color: ${successColor};">
-                        ${project.success_rating}/5
-                    </div>
-                </div>
-            </div>
-            
             ${project.lessons_learned ? `
-                <!-- Lessons Learned -->
-                <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
-                    <div style="font-size: 10px; font-weight: 700; color: #92400e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        📝 Key Learnings
-                    </div>
-                    <div style="font-size: 12px; color: #78350f; line-height: 1.6;">
-                        ${truncate(project.lessons_learned, 140)}
-                    </div>
+                <div class="card-lessons">
+                    <strong>📝 Key Learnings:</strong>
+                    <p>${truncate(project.lessons_learned, 120)}</p>
                 </div>
             ` : ''}
-            
-            ${project.failure_factors && project.failure_factors.length > 0 ? `
-                <!-- Risks -->
-                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; border-radius: 6px;">
-                    <div style="font-size: 10px; font-weight: 700; color: #991b1b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        ⚠️ Kritische Risiken
-                    </div>
-                    <ul style="margin: 0; padding-left: 18px; font-size: 11px; color: #7f1d1d; line-height: 1.7;">
-                        ${project.failure_factors.slice(0, 2).map(f => `<li>${f}</li>`).join('')}
-                    </ul>
-                </div>
-            ` : ''}
-            
         </div>
     `;
 }
 
-function renderStrategicOverrideCard(project) {
+function renderOverrideCard(project) {
     return `
-        <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 3px solid #f59e0b; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);">
-            
-            <!-- Header -->
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
-                <div style="font-size: 28px;">💎</div>
-                <div>
-                    <h5 style="margin: 0; font-size: 15px; font-weight: 700; color: #92400e;">
-                        ${project.project_name}
-                    </h5>
-                    <div style="font-size: 10px; color: #78350f; margin-top: 3px; font-weight: 600;">
-                        Strategic Override by ${project.strategic_override_by || 'CEO'}
-                    </div>
+        <div class="override-card">
+            <div class="override-header">
+                <h4>💎 ${project.project_name}</h4>
+                <span class="override-badge">Strategic Override by ${project.strategic_override_by}</span>
+            </div>
+            <div class="override-decision">
+                <div class="decision-col financial">
+                    <span class="decision-label">Financial</span>
+                    <span class="decision-icon">❌</span>
+                    <span class="decision-text">REJECT</span>
+                </div>
+                <div class="decision-divider">→</div>
+                <div class="decision-col strategic">
+                    <span class="decision-label">Strategic</span>
+                    <span class="decision-icon">✅</span>
+                    <span class="decision-text">APPROVE</span>
                 </div>
             </div>
-            
-            <!-- Decision Split -->
-            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; margin-bottom: 14px;">
-                <div style="background: rgba(239, 68, 68, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid rgba(239, 68, 68, 0.3);">
-                    <div style="font-size: 10px; color: #991b1b; margin-bottom: 4px; font-weight: 700;">Financial</div>
-                    <div style="font-size: 20px; font-weight: 600;">❌</div>
-                    <div style="font-size: 10px; color: #991b1b; font-weight: 600; margin-top: 2px;">REJECT</div>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: center;">
-                    <div style="width: 3px; height: 100%; background: #d97706; border-radius: 2px;"></div>
-                </div>
-                <div style="background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; text-align: center; border: 2px solid rgba(16, 185, 129, 0.3);">
-                    <div style="font-size: 10px; color: #065f46; margin-bottom: 4px; font-weight: 700;">Strategic</div>
-                    <div style="font-size: 20px; font-weight: 600;">✅</div>
-                    <div style="font-size: 10px; color: #065f46; font-weight: 600; margin-top: 2px;">APPROVE</div>
-                </div>
-            </div>
-            
-            <!-- Leadership Comment -->
-            ${project.ceo_comment || project.cto_comment || project.board_comment ? `
-                <div style="background: rgba(255, 255, 255, 0.9); padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #f59e0b;">
-                    <div style="font-size: 10px; font-weight: 700; color: #92400e; margin-bottom: 6px; text-transform: uppercase;">
-                        💬 Leadership Comment
-                    </div>
-                    <div style="font-size: 12px; color: #78350f; font-style: italic; line-height: 1.6;">
-                        "${truncate(project.ceo_comment || project.cto_comment || project.board_comment, 120)}"
-                    </div>
+            ${project.ceo_comment ? `
+                <div class="override-comment">
+                    <strong>💬 "${truncate(project.ceo_comment, 100)}"</strong>
                 </div>
             ` : ''}
-            
-            <!-- Metrics -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-                <div style="background: rgba(255, 255, 255, 0.7); padding: 8px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 9px; color: #92400e; font-weight: 600;">NPV</div>
-                    <div style="font-size: 13px; font-weight: 700; color: #ef4444;">
-                        €${formatNumberShort(project.actual_npv)}
-                    </div>
-                </div>
-                <div style="background: rgba(255, 255, 255, 0.7); padding: 8px; border-radius: 6px; text-align: center;">
-                    <div style="font-size: 9px; color: #92400e; font-weight: 600;">IRR</div>
-                    <div style="font-size: 13px; font-weight: 700; color: ${project.actual_irr >= 0 ? '#f59e0b' : '#ef4444'};">
-                        ${project.actual_irr}%
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Value Realized -->
-            ${project.strategic_value_realized ? `
-                <div style="background: rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 8px; border: 2px solid rgba(16, 185, 129, 0.3);">
-                    <div style="font-size: 10px; font-weight: 700; color: #065f46; margin-bottom: 6px; text-transform: uppercase;">
-                        📈 Realisierter Wert
-                    </div>
-                    <div style="font-size: 11px; color: #047857; line-height: 1.6; font-weight: 500;">
-                        ${truncate(project.strategic_value_realized, 120)}
-                    </div>
-                </div>
-            ` : ''}
-            
-        </div>
-    `;
-}
-
-function renderAIRecommendation(projekt, calc, similar) {
-    if (!similar || similar.length === 0) {
-        return '';
-    }
-    
-    // Calculate benchmarks
-    const avgNPV = similar.reduce((sum, p) => sum + (p.actual_npv || 0), 0) / similar.length;
-    const avgIRR = similar.reduce((sum, p) => sum + (p.actual_irr || 0), 0) / similar.length;
-    const avgSuccess = similar.reduce((sum, p) => sum + p.success_rating, 0) / similar.length;
-    
-    const projektNPV = (calc?.kpis?.npv || 0) / 1000000;
-    const projektIRR = calc?.kpis?.irr || 0;
-    
-    // Determine recommendation logic
-    let recommendation = 'KRITISCHE PRÜFUNG';
-    let recommendationColor = '#f59e0b';
-    let recommendationIcon = '⚠️';
-    
-    if (avgSuccess >= 4 && projektNPV > avgNPV * 0.8) {
-        recommendation = 'GO MIT AUFLAGEN';
-        recommendationColor = '#10b981';
-        recommendationIcon = '✅';
-    } else if (avgSuccess >= 3.5 && projektNPV > 0) {
-        recommendation = 'GO MIT AUFLAGEN';
-        recommendationColor = '#10b981';
-        recommendationIcon = '✅';
-    } else if (avgSuccess < 2.5 || projektNPV < 0) {
-        recommendation = 'NO-GO EMPFOHLEN';
-        recommendationColor = '#ef4444';
-        recommendationIcon = '❌';
-    }
-    
-    return `
-        <div style="background: white; border: 3px solid ${recommendationColor}; border-radius: 12px; padding: 20px; margin-top: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
-                <div style="width: 48px; height: 48px; background: ${recommendationColor}; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 6px ${recommendationColor}40;">
-                    🎯
-                </div>
-                <div>
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #111827;">
-                        KI-Investment Empfehlung
-                    </h4>
-                    <div style="font-size: 12px; color: #6b7280; font-weight: 500;">
-                        Basierend auf ${similar.length} vergleichbaren Projekten
-                    </div>
-                </div>
-            </div>
-            
-            <div style="background: #f9fafb; padding: 16px; border-radius: 10px; margin-bottom: 14px; border-left: 4px solid ${recommendationColor};">
-                <div style="font-size: 18px; font-weight: 700; color: ${recommendationColor}; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    ${recommendationIcon} ${recommendation}
-                </div>
-                <ul style="margin: 0; padding-left: 24px; font-size: 13px; color: #374151; line-height: 2;">
-                    <li>Durchschnittlicher NPV ähnlicher Projekte: <strong style="color: #111827;">€${formatNumberShort(avgNPV)}</strong></li>
-                    <li>Durchschnittlicher IRR: <strong style="color: #111827;">${avgIRR.toFixed(1)}%</strong></li>
-                    <li>Durchschnittliche Success Rate: <strong style="color: #111827;">${avgSuccess.toFixed(1)}/5</strong></li>
-                    <li style="margin-top: 10px; color: #1e40af; font-weight: 600; font-size: 14px;">
-                        ${recommendation === 'GO MIT AUFLAGEN' 
-                            ? '✅ Projekt liegt im erfolgreichen Segment, kritische Erfolgsfaktoren beachten'
-                            : recommendation === 'NO-GO EMPFOHLEN'
-                            ? '❌ Projekt zeigt kritische Risikofaktoren - detaillierte Prüfung erforderlich'
-                            : '⚠️ Kritische Prüfung empfohlen - Risikofaktoren genau analysieren'
-                        }
-                    </li>
-                </ul>
-            </div>
-            
-            <!-- Comparison Bar -->
-            <div style="margin-bottom: 14px;">
-                <div style="font-size: 11px; color: #6b7280; margin-bottom: 6px; font-weight: 600;">
-                    NPV Vergleich: Aktuelles Projekt vs. Historischer Durchschnitt
-                </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <div style="flex: 1; background: #e5e7eb; border-radius: 8px; height: 24px; position: relative; overflow: hidden;">
-                        <div style="position: absolute; left: 0; top: 0; height: 100%; background: ${projektNPV >= avgNPV ? '#10b981' : '#f59e0b'}; width: ${Math.min((projektNPV / (avgNPV || 1)) * 100, 100)}%; border-radius: 8px; transition: width 0.5s;"></div>
-                        <div style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 700; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
-                            €${formatNumberShort(projektNPV)}
-                        </div>
-                    </div>
-                    <div style="font-size: 12px; font-weight: 700; color: #6b7280; min-width: 60px; text-align: right;">
-                        Ø €${formatNumberShort(avgNPV)}
-                    </div>
-                </div>
-            </div>
-            
-            <div style="font-size: 11px; color: #6b7280; font-style: italic; padding: 10px; background: #f9fafb; border-radius: 6px;">
-                💡 Diese Empfehlung basiert auf historischen Vergleichsprojekten und sollte durch weitere Analysen ergänzt werden.
+            <div class="override-value">
+                <strong>📈 Realisierter Wert:</strong>
+                ${project.strategic_value_realized || 'Platform value creation, market position'}
             </div>
         </div>
     `;
 }
-
-// ==========================================
-// HELPER: NO RAG STATES
-// ==========================================
 
 function renderNoSupabase() {
     return `
-        <div style="background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; text-align: center;">
-            <div style="font-size: 40px; margin-bottom: 12px;">ℹ️</div>
-            <div style="font-size: 16px; color: #374151; font-weight: 600; margin-bottom: 6px;">
-                RAG Intelligence nicht verfügbar
-            </div>
-            <div style="font-size: 13px; color: #6b7280;">
-                Supabase Datenbank ist nicht verbunden
-            </div>
+        <div class="benchmark-info">
+            <div class="info-icon">ℹ️</div>
+            <h3>KI-Benchmark nicht verfügbar</h3>
+            <p>Supabase Datenbank ist nicht verbunden.</p>
         </div>
     `;
 }
 
-function renderNoSimilarProjects() {
+function renderNoBenchmarks() {
     return `
-        <div style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 3px solid #fde047; border-radius: 16px; padding: 28px; margin-bottom: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div style="font-size: 48px;">🚀</div>
-                <div>
-                    <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #854d0e;">
-                        Pionier-Projekt
-                    </h3>
-                    <div style="font-size: 14px; color: #a16207; margin-top: 6px; line-height: 1.6;">
-                        Keine ähnlichen historischen Projekte gefunden. Dies ist ein innovatives Neuland-Projekt!
-                    </div>
-                    <div style="font-size: 12px; color: #a16207; margin-top: 10px; font-style: italic; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 6px;">
-                        💡 Nach Projekt-Abschluss wird dieses Projekt zur Referenz für künftige Business Cases.
-                    </div>
-                </div>
-            </div>
+        <div class="benchmark-pioneer">
+            <div class="pioneer-icon">🚀</div>
+            <h3>Pionier-Projekt</h3>
+            <p>Keine ähnlichen historischen Projekte gefunden. Dies ist ein innovatives Neuland-Projekt!</p>
+            <p class="pioneer-note">💡 Nach Projekt-Abschluss wird dieses Projekt zur Referenz für künftige Business Cases.</p>
         </div>
     `;
 }
 
 function renderRAGError(error) {
     return `
-        <div style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 12px; padding: 24px;">
-            <div style="font-size: 16px; color: #991b1b; font-weight: 600; margin-bottom: 6px;">
-                ⚠️ Fehler beim Laden der Intelligence
-            </div>
-            <div style="font-size: 13px; color: #7f1d1d;">
-                ${error.message || 'Unbekannter Fehler'}
-            </div>
+        <div class="benchmark-error">
+            <div class="error-icon">⚠️</div>
+            <h3>Fehler beim Laden der KI-Analyse</h3>
+            <p>${error.message || 'Unbekannter Fehler'}</p>
         </div>
     `;
-}
-
-// ==========================================
-// RAG HELPER FUNCTIONS
-// ==========================================
-
-function getSuccessIcon(rating) {
-    if (rating >= 4) return '✅';
-    if (rating >= 3) return '⚠️';
-    if (rating >= 2) return '🔶';
-    return '❌';
-}
-
-function getSuccessColor(rating) {
-    if (rating >= 4) return '#10b981';
-    if (rating >= 3) return '#f59e0b';
-    if (rating >= 2) return '#f97316';
-    return '#ef4444';
-}
-
-function formatNumberShort(num) {
-    if (!num && num !== 0) return '0';
-    const absNum = Math.abs(num);
-    if (absNum >= 1000000) {
-        return `${(num / 1000000).toFixed(1)}M`;
-    } else if (absNum >= 1000) {
-        return `${(num / 1000).toFixed(0)}k`;
-    }
-    return num.toFixed(0);
 }
 
 function truncate(text, maxLength) {
@@ -680,14 +715,383 @@ function truncate(text, maxLength) {
 }
 
 // ==========================================
-// EXISTING RENDERING FUNCTIONS
+// INTERACTION HANDLERS
+// ==========================================
+
+window.toggleAIBenchmark = function() {
+    const content = document.getElementById('benchmark-content');
+    const toggle = document.querySelector('.benchmark-toggle');
+    
+    if (!content) return;
+    
+    if (content.classList.contains('collapsed')) {
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+        if (toggle) toggle.textContent = '▲';
+    } else {
+        content.classList.add('collapsed');
+        content.classList.remove('expanded');
+        if (toggle) toggle.textContent = '▼';
+    }
+};
+
+window.showExecutiveSection = function(sectionId) {
+    console.log('📊 Show section:', sectionId);
+    
+    // Get or create section container
+    let sectionContainer = document.getElementById(`section-${sectionId}`);
+    
+    if (!sectionContainer) {
+        // Create new section container
+        const vizContainers = document.getElementById('viz-containers');
+        const sectionHTML = createSectionContainer(sectionId);
+        vizContainers.insertAdjacentHTML('beforeend', sectionHTML);
+        
+        sectionContainer = document.getElementById(`section-${sectionId}`);
+        
+        // Load content
+        setTimeout(() => {
+            loadSectionContent(sectionId);
+        }, 100);
+    } else {
+        // Toggle visibility
+        if (sectionContainer.style.display === 'none') {
+            sectionContainer.style.display = 'block';
+        } else {
+            sectionContainer.style.display = 'none';
+            return;
+        }
+    }
+    
+    // Scroll to section
+    sectionContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    // Update active state
+    document.querySelectorAll('.section-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    document.querySelector(`[onclick*="${sectionId}"]`)?.classList.add('active');
+};
+
+window.pinExecutiveSection = function(sectionId) {
+    const container = document.getElementById(`section-${sectionId}`);
+    if (!container) return;
+    
+    if (uebersichtState.pinnedSections.has(sectionId)) {
+        uebersichtState.pinnedSections.delete(sectionId);
+        container.classList.remove('pinned');
+    } else {
+        uebersichtState.pinnedSections.add(sectionId);
+        container.classList.add('pinned');
+    }
+};
+
+window.resizeExecutiveSection = function(sectionId, size) {
+    const container = document.getElementById(`section-${sectionId}`);
+    if (!container) return;
+    
+    container.classList.remove('size-small', 'size-medium', 'size-large');
+    container.classList.add(`size-${size}`);
+    
+    uebersichtState.sectionSizes[sectionId] = size;
+    
+    // Update button states
+    container.querySelectorAll('.btn-resize').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-size') === size) {
+            btn.classList.add('active');
+        }
+    });
+};
+
+window.closeExecutiveSection = function(sectionId) {
+    if (uebersichtState.pinnedSections.has(sectionId)) {
+        alert('📌 Bitte erst Unpin, bevor Sie schließen');
+        return;
+    }
+    
+    const container = document.getElementById(`section-${sectionId}`);
+    if (container) {
+        container.style.display = 'none';
+    }
+    
+    if (uebersichtState.activeSection === sectionId) {
+        uebersichtState.activeSection = null;
+    }
+    
+    // Update active state
+    document.querySelector(`[onclick*="${sectionId}"]`)?.classList.remove('active');
+};
+
+// ==========================================
+// SECTION CONTAINER CREATION
+// ==========================================
+
+function createSectionContainer(sectionId) {
+    const config = getSectionConfig(sectionId);
+    
+    return `
+        <div class="section-container size-large" id="section-${sectionId}">
+            <div class="section-header">
+                <div class="section-title">
+                    <span class="section-icon">${config.icon}</span>
+                    <h3>${config.title}</h3>
+                </div>
+                <div class="section-controls">
+                    <button class="btn-resize" data-size="small" onclick="window.resizeExecutiveSection('${sectionId}', 'small')">S</button>
+                    <button class="btn-resize" data-size="medium" onclick="window.resizeExecutiveSection('${sectionId}', 'medium')">M</button>
+                    <button class="btn-resize active" data-size="large" onclick="window.resizeExecutiveSection('${sectionId}', 'large')">L</button>
+                    <button class="btn-pin" onclick="window.pinExecutiveSection('${sectionId}')">📌</button>
+                    <button class="btn-close" onclick="window.closeExecutiveSection('${sectionId}')">✕</button>
+                </div>
+            </div>
+            <div class="section-content" id="section-content-${sectionId}">
+                <div class="section-loading">Lädt...</div>
+            </div>
+        </div>
+    `;
+}
+
+function getSectionConfig(sectionId) {
+    const configs = {
+        'geschaeftsmodell': { icon: '📦', title: 'Geschäftsmodell & Artikel' },
+        'szenarien': { icon: '📊', title: 'Szenario-Analyse' },
+        'annahmen': { icon: '📌', title: 'Kernannahmen & Sensitivitäten' },
+        'risiken': { icon: '⚠️', title: 'Top Risiken' },
+        'chancen': { icon: '🚀', title: 'Top Chancen' },
+        'aehnliche-projekte': { icon: '🔍', title: 'Ähnliche Projekte' },
+        'best-practices': { icon: '💎', title: 'Best Practices & Strategic Overrides' },
+        'meilensteine': { icon: '🎯', title: 'Meilensteine & Timeline' }
+    };
+    
+    return configs[sectionId] || { icon: '📊', title: sectionId };
+}
+
+function loadSectionContent(sectionId) {
+    const contentDiv = document.getElementById(`section-content-${sectionId}`);
+    if (!contentDiv) return;
+    
+    const { projekt, artikel, calc } = uebersichtState.rawData;
+    
+    let html = '';
+    
+    switch(sectionId) {
+        case 'geschaeftsmodell':
+            html = renderGeschaeftsmodellSection(projekt, artikel, calc);
+            break;
+        case 'szenarien':
+            html = renderSzenarienSection(calc);
+            break;
+        case 'annahmen':
+            html = renderAnnahmenSection(calc, artikel);
+            break;
+        case 'risiken':
+            html = renderRisikenSection();
+            break;
+        case 'chancen':
+            html = renderChancenSection();
+            break;
+        case 'aehnliche-projekte':
+            html = '<p>Siehe KI-Benchmark Analyse oben</p>';
+            break;
+        case 'best-practices':
+            html = '<p>Siehe KI-Benchmark Analyse oben</p>';
+            break;
+        case 'meilensteine':
+            html = renderMeilensteineSection(projekt);
+            break;
+        default:
+            html = '<p>Content wird geladen...</p>';
+    }
+    
+    contentDiv.innerHTML = html;
+}
+
+// ==========================================
+// SECTION CONTENT RENDERERS
+// ==========================================
+
+function renderGeschaeftsmodellSection(projekt, artikel, calc) {
+    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    
+    // Group by type
+    const byType = {};
+    artikel.forEach(a => {
+        const typ = a.typ || 'Sonstige';
+        if (!byType[typ]) byType[typ] = [];
+        byType[typ].push(a);
+    });
+    
+    return `
+        <div class="geschaeftsmodell-content">
+            <div class="gm-overview">
+                <h4>Portfolio-Übersicht</h4>
+                <p>${artikel.length} Artikel | Gesamtumsatz: €${totalRevenue.toFixed(1)}M (5Y)</p>
+            </div>
+            
+            <div class="gm-breakdown">
+                ${Object.keys(byType).map(typ => `
+                    <div class="gm-type-group">
+                        <h5>${typ} (${byType[typ].length})</h5>
+                        <ul>
+                            ${byType[typ].map(a => `
+                                <li>${a.name}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderSzenarienSection(calc) {
+    const baseNPV = (calc?.kpis?.npv || 0) / 1000000;
+    const bestNPV = baseNPV * 1.5;
+    const worstNPV = baseNPV * 0.6;
+    
+    return `
+        <div class="szenarien-content">
+            <div class="scenario-grid">
+                <div class="scenario-card best">
+                    <h4>📈 Best Case</h4>
+                    <p class="scenario-npv">€${bestNPV.toFixed(1)}M</p>
+                    <p class="scenario-desc">+20% Volume, -10% Costs</p>
+                </div>
+                <div class="scenario-card base">
+                    <h4>📊 Base Case</h4>
+                    <p class="scenario-npv">€${baseNPV.toFixed(1)}M</p>
+                    <p class="scenario-desc">Plan-Annahmen</p>
+                </div>
+                <div class="scenario-card worst">
+                    <h4>📉 Worst Case</h4>
+                    <p class="scenario-npv">€${worstNPV.toFixed(1)}M</p>
+                    <p class="scenario-desc">-30% Volume, +15% Costs</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderAnnahmenSection(calc, artikel) {
+    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    
+    return `
+        <div class="annahmen-content">
+            <h4>Kritische Annahmen</h4>
+            <ul class="assumptions-list">
+                <li><strong>Marktvolumen:</strong> €${(totalRevenue * 10).toFixed(0)}M p.a.</li>
+                <li><strong>Marktanteil:</strong> 10% nach 3 Jahren</li>
+                <li><strong>Durchschnittspreis:</strong> €500</li>
+                <li><strong>Kostenstruktur:</strong> 40% Material DB</li>
+            </ul>
+        </div>
+    `;
+}
+
+function renderRisikenSection() {
+    return `
+        <div class="risiken-content">
+            <div class="risk-item high">
+                <span class="risk-icon">🔴</span>
+                <div class="risk-text">
+                    <strong>Marktakzeptanz unsicher</strong>
+                    <p>Enterprise Sales Cycle könnte 18+ Monate dauern</p>
+                </div>
+            </div>
+            <div class="risk-item medium">
+                <span class="risk-icon">🟡</span>
+                <div class="risk-text">
+                    <strong>Technologie-Risiko</strong>
+                    <p>Skalierung der Plattform noch nicht bewiesen</p>
+                </div>
+            </div>
+            <div class="risk-item low">
+                <span class="risk-icon">🟢</span>
+                <div class="risk-text">
+                    <strong>Regulatorisches Umfeld</strong>
+                    <p>Compliance-Anforderungen manageable</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderChancenSection() {
+    return `
+        <div class="chancen-content">
+            <div class="chance-item">
+                <span class="chance-icon">🚀</span>
+                <div class="chance-text">
+                    <strong>First-Mover Advantage</strong>
+                    <p>Potenzial für 25% Marktanteil</p>
+                    <span class="chance-impact">+++</span>
+                </div>
+            </div>
+            <div class="chance-item">
+                <span class="chance-icon">🔄</span>
+                <div class="chance-text">
+                    <strong>Cross-Selling Potenzial</strong>
+                    <p>Upsell zu bestehenden Kunden</p>
+                    <span class="chance-impact">++</span>
+                </div>
+            </div>
+            <div class="chance-item">
+                <span class="chance-icon">📈</span>
+                <div class="chance-text">
+                    <strong>Platform Skalierung</strong>
+                    <p>SaaS Model mit hoher Marge</p>
+                    <span class="chance-impact">++</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMeilensteineSection(projekt) {
+    return `
+        <div class="meilensteine-content">
+            <div class="timeline">
+                <div class="timeline-item done">
+                    <span class="timeline-icon">✓</span>
+                    <div class="timeline-text">
+                        <strong>Q4/2024: Konzeptphase</strong>
+                        <p>Business Case validiert</p>
+                    </div>
+                </div>
+                <div class="timeline-item current">
+                    <span class="timeline-icon">→</span>
+                    <div class="timeline-text">
+                        <strong>Q1/2025: Gate 2 Review</strong>
+                        <p>Freigabe Entwicklung</p>
+                    </div>
+                </div>
+                <div class="timeline-item pending">
+                    <span class="timeline-icon">○</span>
+                    <div class="timeline-text">
+                        <strong>Q3/2025: Pilot Launch</strong>
+                        <p>Beta mit 3 Kunden</p>
+                    </div>
+                </div>
+                <div class="timeline-item pending">
+                    <span class="timeline-icon">○</span>
+                    <div class="timeline-text">
+                        <strong>Q1/2026: Full Rollout</strong>
+                        <p>Go-to-Market</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// PLACEHOLDER
 // ==========================================
 
 function renderPlaceholder(projekt) {
     return `
         <div style="background: white; padding: 32px; max-width: 1200px; margin: 0 auto;">
-            
-            <!-- Header -->
             <div style="margin-bottom: 32px; border-bottom: 3px solid #003E7E; padding-bottom: 16px;">
                 <h2 style="margin: 0; font-size: 24px; color: #003E7E; font-weight: 600;">
                     Executive Summary
@@ -697,7 +1101,6 @@ function renderPlaceholder(projekt) {
                 </div>
             </div>
             
-            <!-- Info Box -->
             <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <span style="font-size: 32px;">⚠️</span>
@@ -717,11 +1120,10 @@ function renderPlaceholder(projekt) {
                 </div>
             </div>
             
-            <!-- Quick Actions -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
                 <button onclick="window.switchProjektTab('artikel')" 
                         style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
-                               cursor: pointer; text-align: left; transition: all 0.2s;">
+                               cursor: pointer; text-align: left;">
                     <div style="font-size: 24px; margin-bottom: 8px;">📦</div>
                     <div style="font-weight: 600; margin-bottom: 4px;">Artikel anlegen</div>
                     <div style="font-size: 12px; color: #6b7280;">Produktartikel mit Finanzplanung</div>
@@ -729,7 +1131,7 @@ function renderPlaceholder(projekt) {
                 
                 <button onclick="window.switchProjektTab('projektkosten')" 
                         style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
-                               cursor: pointer; text-align: left; transition: all 0.2s;">
+                               cursor: pointer; text-align: left;">
                     <div style="font-size: 24px; margin-bottom: 8px;">💰</div>
                     <div style="font-weight: 600; margin-bottom: 4px;">Projektkosten</div>
                     <div style="font-size: 12px; color: #6b7280;">Entwicklungskosten erfassen</div>
@@ -737,564 +1139,1061 @@ function renderPlaceholder(projekt) {
                 
                 <button onclick="window.switchProjektTab('wirtschaftlichkeit')" 
                         style="padding: 20px; background: white; border: 2px solid #3b82f6; border-radius: 8px; 
-                               cursor: pointer; text-align: left; transition: all 0.2s;">
+                               cursor: pointer; text-align: left;">
                     <div style="font-size: 24px; margin-bottom: 8px;">📈</div>
                     <div style="font-weight: 600; margin-bottom: 4px;">Wirtschaftlichkeit</div>
                     <div style="font-size: 12px; color: #6b7280;">Business Case berechnen</div>
                 </button>
             </div>
-            
-        </div>
-    `;
-}
-
-function renderManagementSummary(projekt, artikel, calc) {
-    const totalRevenue = calc.totals.sales_revenue / 1000000;
-    const artikelCount = artikel.length;
-    
-    return `
-        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #003E7E; margin-bottom: 24px;">
-            <h3 style="font-size: 16px; font-weight: 600; color: #003E7E; margin: 0 0 12px 0;">
-                📋 Management Summary
-            </h3>
-            <div style="font-size: 13px; line-height: 1.8; color: #374151;">
-                <p style="margin: 0 0 12px 0;">
-                    <strong>Projektbeschreibung:</strong> 
-                    ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikelCount} Artikel mit einem Gesamtumsatzpotenzial von €${totalRevenue.toFixed(1)}M über den Planungszeitraum.`}
-                </p>
-                <p style="margin: 0 0 12px 0;">
-                    <strong>Strategische Einordnung:</strong> 
-                    ${getStrategicPositioning(artikel, calc)}
-                </p>
-                <p style="margin: 0;">
-                    <strong>Kernnutzen:</strong> 
-                    ${getValueProposition(calc)}
-                </p>
-            </div>
-        </div>
-    `;
-}
-
-function renderRecommendationStatus(recommendation, status) {
-    const recommendationConfig = {
-        'GO': { color: '#10b981', icon: '✓', label: 'GO - Freigabe empfohlen' },
-        'HOLD': { color: '#f59e0b', icon: '⚠', label: 'HOLD - Weitere Prüfung erforderlich' },
-        'NO-GO': { color: '#ef4444', icon: '✕', label: 'NO-GO - Nicht empfohlen' }
-    };
-    
-    const statusConfig = {
-        'GREEN': { color: '#10b981', icon: '🟢', label: 'Grün - On Track' },
-        'YELLOW': { color: '#f59e0b', icon: '🟡', label: 'Gelb - Risiken vorhanden' },
-        'RED': { color: '#ef4444', icon: '🔴', label: 'Rot - Kritisch' }
-    };
-    
-    const rec = recommendationConfig[recommendation.status];
-    const sta = statusConfig[status.status];
-    
-    return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-            
-            <!-- Management-Empfehlung -->
-            <div style="background: white; border: 2px solid ${rec.color}; border-radius: 8px; padding: 16px;">
-                <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">
-                    📍 Management-Empfehlung
-                </div>
-                <div style="font-size: 18px; font-weight: bold; color: ${rec.color}; margin-bottom: 4px;">
-                    ${rec.icon} ${recommendation.status}
-                </div>
-                <div style="font-size: 12px; color: #6b7280;">
-                    ${recommendation.reasoning}
-                </div>
-            </div>
-            
-            <!-- Projekt-Status -->
-            <div style="background: white; border: 2px solid ${sta.color}; border-radius: 8px; padding: 16px;">
-                <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">
-                    📊 Projekt-Status
-                </div>
-                <div style="font-size: 18px; font-weight: bold; color: ${sta.color}; margin-bottom: 4px;">
-                    ${sta.icon} ${status.status}
-                </div>
-                <div style="font-size: 12px; color: #6b7280;">
-                    ${status.reasoning}
-                </div>
-            </div>
-            
-            <!-- Entscheidungsbedarf -->
-            <div style="background: white; border: 2px solid #3b82f6; border-radius: 8px; padding: 16px;">
-                <div style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">
-                    📅 Entscheidungsbedarf
-                </div>
-                <div style="font-size: 14px; font-weight: 600; color: #1e40af; margin-bottom: 4px;">
-                    Gate Review
-                </div>
-                <div style="font-size: 12px; color: #6b7280;">
-                    Freigabe Entwicklungsbudget erforderlich bis Q1/2025
-                </div>
-            </div>
-            
-        </div>
-    `;
-}
-
-function renderKPIGrid(calc) {
-    const npv = (calc?.kpis?.npv ?? 0) / 1000000;
-    const irr = calc?.kpis?.irr ?? 0;
-    const payback = calc?.kpis?.break_even_year || 'N/A';
-    const ebitMargin = calc?.kpis?.avg_ebit_margin ?? 0;
-    const breakEven = calc?.kpis?.break_even_year ? `Jahr ${calc.kpis.break_even_year}` : 'Nicht erreicht';
-    const totalRevenue = (calc?.totals?.sales_revenue ?? 0) / 1000000;
-    const roi = totalRevenue > 0 ? ((npv / (totalRevenue * 0.3)) * 100) : 0;
-    
-    const kpis = [
-        { label: 'NPV', value: `€${npv.toFixed(1)}M`, status: npv > 0 ? 'good' : 'bad', tooltip: 'Net Present Value @ 8% WACC' },
-        { label: 'IRR', value: `${irr.toFixed(1)}%`, status: irr > 15 ? 'good' : 'medium', tooltip: 'Internal Rate of Return' },
-        { label: 'Payback', value: payback === 'N/A' ? payback : `${payback} Jahre`, status: (typeof payback === 'number' && payback <= 3) ? 'good' : 'medium', tooltip: 'Break-even in Jahren' },
-        { label: 'EBIT-Marge', value: `${ebitMargin.toFixed(1)}%`, status: ebitMargin > 25 ? 'good' : 'medium', tooltip: 'Durchschnittliche EBIT-Marge' },
-        { label: 'Break-Even', value: breakEven, status: (typeof payback === 'number' && payback <= 3) ? 'good' : 'medium', tooltip: 'Amortisationszeitpunkt' },
-        { label: 'ROI', value: `${roi.toFixed(0)}%`, status: roi > 200 ? 'good' : 'medium', tooltip: 'Return on Investment' }
-    ];
-    
-    const statusColors = {
-        'good': { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
-        'medium': { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
-        'bad': { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' }
-    };
-    
-    return `
-        <div style="margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">
-                💰 Business Case Highlights
-            </h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
-                ${kpis.map(kpi => {
-                    const colors = statusColors[kpi.status];
-                    return `
-                        <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; 
-                                    border-radius: 8px; padding: 16px; position: relative;"
-                             title="${kpi.tooltip}">
-                            <div style="font-size: 11px; font-weight: 600; color: #6b7280; 
-                                        text-transform: uppercase; margin-bottom: 8px;">
-                                ${kpi.label}
-                            </div>
-                            <div style="font-size: 24px; font-weight: bold; color: ${colors.text};">
-                                ${kpi.value}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        </div>
-    `;
-}
-
-function renderAssumptionsSensitivities(calc, artikel) {
-    const totalRevenue = (calc?.totals?.sales_revenue ?? 0) / 1000000;
-    const totalVolume = artikel.reduce((sum, a) => sum + (a.volume ?? 0), 0);
-    const avgPrice = totalVolume > 0 ? (totalRevenue * 1000000) / totalVolume : 0;
-    const avgMargin = calc?.kpis?.avg_manufacturing_margin ?? 40;
-    
-    return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-            
-            <!-- Kernannahmen -->
-            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">
-                    📌 Kritische Annahmen
-                </h4>
-                <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #6b7280; line-height: 1.8;">
-                    <li><strong>Marktvolumen:</strong> €${(totalRevenue * 10).toFixed(0)}M p.a. (Basis-Szenario)</li>
-                    <li><strong>Marktanteil:</strong> ${totalRevenue > 0 ? ((totalRevenue / (totalRevenue * 10)) * 100).toFixed(1) : 0}% nach 3 Jahren</li>
-                    <li><strong>Durchschnittspreis:</strong> €${avgPrice.toFixed(2)}</li>
-                    <li><strong>Kostenstruktur:</strong> Material ${avgMargin.toFixed(0)}% DB</li>
-                </ul>
-            </div>
-            
-            <!-- Sensitivitäten -->
-            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">
-                    📊 Sensitivitätsanalyse
-                </h4>
-                <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <th style="text-align: left; padding: 6px; color: #6b7280; font-weight: 600;">Parameter</th>
-                            <th style="text-align: right; padding: 6px; color: #6b7280; font-weight: 600;">-20%</th>
-                            <th style="text-align: right; padding: 6px; color: #6b7280; font-weight: 600;">Basis</th>
-                            <th style="text-align: right; padding: 6px; color: #6b7280; font-weight: 600;">+20%</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 6px; color: #374151;">Umsatz</td>
-                            <td style="padding: 6px; text-align: right; color: #ef4444;">€${(totalRevenue * 0.8).toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; font-weight: 600;">€${totalRevenue.toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; color: #10b981;">€${(totalRevenue * 1.2).toFixed(1)}M</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 6px; color: #374151;">NPV</td>
-                            <td style="padding: 6px; text-align: right; color: #ef4444;">€${((calc?.kpis?.npv ?? 0) / 1000000 * 0.7).toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; font-weight: 600;">€${((calc?.kpis?.npv ?? 0) / 1000000).toFixed(1)}M</td>
-                            <td style="padding: 6px; text-align: right; color: #10b981;">€${((calc?.kpis?.npv ?? 0) / 1000000 * 1.3).toFixed(1)}M</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-        </div>
-    `;
-}
-
-function renderRisksOpportunities(calc, projekt) {
-    const risks = [
-        { text: 'Marktakzeptanz unsicher', level: 'HOCH', color: '#ef4444' },
-        { text: 'Technologie-Risiko (Skalierung)', level: 'MITTEL', color: '#f59e0b' },
-        { text: 'Regulatorisches Umfeld', level: 'GERING', color: '#10b981' }
-    ];
-    
-    const opportunities = [
-        { text: 'First-Mover Advantage', impact: '+++' },
-        { text: 'Cross-Selling Potenzial', impact: '++' },
-        { text: 'Platform-Skalierung möglich', impact: '++' }
-    ];
-    
-    return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-            
-            <!-- Risiken -->
-            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #991b1b; margin: 0 0 12px 0;">
-                    ⚠️ Top Risiken
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    ${risks.map(risk => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; 
-                                    padding: 8px; background: white; border-radius: 4px;">
-                            <span style="font-size: 12px; color: #374151;">• ${risk.text}</span>
-                            <span style="font-size: 10px; font-weight: 600; padding: 2px 8px; 
-                                         border-radius: 12px; background: ${risk.color}20; color: ${risk.color};">
-                                ${risk.level}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <!-- Chancen -->
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px;">
-                <h4 style="font-size: 13px; font-weight: 600; color: #065f46; margin: 0 0 12px 0;">
-                    🚀 Top Chancen
-                </h4>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    ${opportunities.map(opp => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; 
-                                    padding: 8px; background: white; border-radius: 4px;">
-                            <span style="font-size: 12px; color: #374151;">• ${opp.text}</span>
-                            <span style="font-size: 12px; font-weight: 600; color: #10b981;">
-                                ${opp.impact}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-        </div>
-    `;
-}
-
-function renderMilestones(projekt) {
-    const milestones = [
-        { phase: 'Konzeptphase', status: 'done', date: 'Q4/2024', desc: 'Business Case validiert' },
-        { phase: 'Gate 2 Review', status: 'current', date: 'Q1/2025', desc: 'Freigabe Entwicklung' },
-        { phase: 'Pilot-Launch', status: 'pending', date: 'Q3/2025', desc: 'Beta mit 3 Kunden' },
-        { phase: 'Full Rollout', status: 'pending', date: 'Q1/2026', desc: 'Go-to-Market' }
-    ];
-    
-    return `
-        <div style="margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">
-                🎯 Meilensteine & Nächste Schritte
-            </h3>
-            
-            <!-- Timeline -->
-            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                <div style="display: flex; gap: 4px; margin-bottom: 16px;">
-                    ${milestones.map((m, i) => `
-                        <div style="flex: 1; text-align: center;">
-                            <div style="width: 100%; height: 4px; background: ${m.status === 'done' ? '#10b981' : m.status === 'current' ? '#3b82f6' : '#e5e7eb'}; 
-                                        border-radius: 2px; margin-bottom: 8px;"></div>
-                            <div style="font-size: 10px; font-weight: 600; color: ${m.status === 'done' ? '#10b981' : m.status === 'current' ? '#3b82f6' : '#6b7280'};">
-                                ${m.status === 'done' ? '✓' : m.status === 'current' ? '→' : '○'} ${m.phase}
-                            </div>
-                            <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">${m.date}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <!-- Next Steps -->
-            <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 4px;">
-                <div style="font-size: 12px; font-weight: 600; color: #1e40af; margin-bottom: 8px;">
-                    ⚡ Nächste Schritte
-                </div>
-                <ol style="margin: 0; padding-left: 20px; font-size: 11px; color: #374151; line-height: 1.8;">
-                    <li>Freigabe Entwicklungsbudget (€12,5M)</li>
-                    <li>Team-Aufbau (8 FTE - Product, Engineering, Sales)</li>
-                    <li>Partner-Verträge finalisieren (3 strategische Partner)</li>
-                </ol>
-            </div>
-        </div>
-    `;
-}
-
-function renderMiniDashboard(calc) {
-    return `
-        <div style="margin-bottom: 24px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">
-                📈 Financial Overview
-            </h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                
-                <!-- Umsatz-Entwicklung -->
-                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
-                        Umsatz-Entwicklung
-                    </div>
-                    <div style="position: relative; height: 120px;">
-                        <canvas id="mini-chart-revenue"></canvas>
-                    </div>
-                </div>
-                
-                <!-- DB-Entwicklung -->
-                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
-                        Deckungsbeitrag 3
-                    </div>
-                    <div style="position: relative; height: 120px;">
-                        <canvas id="mini-chart-db"></canvas>
-                    </div>
-                </div>
-                
-                <!-- Break-Even -->
-                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                    <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 8px;">
-                        Kumulierter DB3
-                    </div>
-                    <div style="position: relative; height: 120px;">
-                        <canvas id="mini-chart-cumulative"></canvas>
-                    </div>
-                </div>
-                
-            </div>
         </div>
     `;
 }
 
 // ==========================================
-// HELPER FUNCTIONS
+// STYLES
 // ==========================================
 
-function getRecommendation(calc) {
-    if (!calc || !calc.kpis) {
-        return {
-            status: 'HOLD',
-            reasoning: 'Keine ausreichenden Daten für Bewertung'
-        };
-    }
-    
-    const npv = (calc.kpis.npv || 0) / 1000000;
-    const irr = calc.kpis.irr || 0;
-    const payback = calc.kpis.break_even_year;
-    
-    if (npv > 20 && irr > 20 && payback && payback <= 3) {
-        return {
-            status: 'GO',
-            reasoning: 'Starker Business Case mit attraktivem ROI'
-        };
-    } else if (npv > 0 && irr > 10) {
-        return {
-            status: 'HOLD',
-            reasoning: 'Positive aber moderate Rentabilität'
-        };
-    } else {
-        return {
-            status: 'NO-GO',
-            reasoning: 'Business Case nicht tragfähig'
-        };
-    }
-}
-
-function getProjectStatus(calc) {
-    if (!calc || !calc.kpis) {
-        return {
-            status: 'YELLOW',
-            reasoning: 'Keine ausreichenden Daten'
-        };
-    }
-    
-    const npv = (calc.kpis.npv || 0) / 1000000;
-    const payback = calc.kpis.break_even_year;
-    
-    if (npv > 30 && payback && payback <= 3) {
-        return {
-            status: 'GREEN',
-            reasoning: 'Alle KPIs im Zielbereich'
-        };
-    } else if (npv > 10) {
-        return {
-            status: 'YELLOW',
-            reasoning: 'Moderate Risiken identifiziert'
-        };
-    } else {
-        return {
-            status: 'RED',
-            reasoning: 'Kritische Kennzahlen unter Plan'
-        };
-    }
-}
-
-function getStrategicPositioning(artikel, calc) {
-    const hasHardware = artikel.some(a => a.typ === 'Hardware');
-    const hasSoftware = artikel.some(a => a.typ === 'Software');
-    const hasService = artikel.some(a => a.typ === 'Service');
-    
-    if (hasHardware && hasSoftware && hasService) {
-        return 'Strategisches Plattform-Projekt mit integriertem Hardware-Software-Service-Ansatz zur Erschließung neuer Marktsegmente.';
-    } else if (hasSoftware || hasService) {
-        return 'Digitales Wachstumsprojekt zur Stärkung der Marktposition im Softwarebereich mit hoher Skalierbarkeit.';
-    } else {
-        return 'Produktinnovation zur Verteidigung und Ausbau der Marktführerschaft im Kerngeschäft.';
-    }
-}
-
-function getValueProposition(calc) {
-    const ebitMargin = calc.kpis.avg_ebit_margin;
-    const totalRevenue = calc.totals.sales_revenue / 1000000;
-    
-    if (ebitMargin > 30 && totalRevenue > 100) {
-        return 'Hochprofitables Wachstumsprojekt mit signifikantem Beitrag zu Konzernzielen (>€100M Umsatz, >30% EBIT-Marge).';
-    } else if (ebitMargin > 20) {
-        return 'Attraktives Projekt mit solider Profitabilität und Wachstumspotenzial im mittleren zweistelligen Bereich.';
-    } else {
-        return 'Strategisches Investitionsprojekt mit Fokus auf Markterschließung und langfristigem Wertbeitrag.';
-    }
-}
-
-function initializeMiniCharts(calc) {
-    if (!window.Chart) {
-        console.warn('Chart.js not loaded - mini charts disabled');
-        return;
-    }
-    
-    const jahre = Object.keys(calc.jahre).sort();
-    
-    // Revenue Chart
-    const revenueCanvas = document.getElementById('mini-chart-revenue');
-    if (revenueCanvas) {
-        new Chart(revenueCanvas, {
-            type: 'line',
-            data: {
-                labels: jahre,
-                datasets: [{
-                    data: jahre.map(j => calc.jahre[j].sales_revenue / 1000000),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 2,
-                    pointRadius: 3
-                }]
-            },
-            options: getMiniChartOptions('€M')
-        });
-    }
-    
-    // DB3 Chart
-    const dbCanvas = document.getElementById('mini-chart-db');
-    if (dbCanvas) {
-        new Chart(dbCanvas, {
-            type: 'bar',
-            data: {
-                labels: jahre,
-                datasets: [{
-                    data: jahre.map(j => calc.jahre[j].db3 / 1000000),
-                    backgroundColor: jahre.map(j => calc.jahre[j].db3 >= 0 ? '#10b981' : '#ef4444'),
-                    borderRadius: 4
-                }]
-            },
-            options: getMiniChartOptions('€M')
-        });
-    }
-    
-    // Cumulative Chart
-    const cumulativeCanvas = document.getElementById('mini-chart-cumulative');
-    if (cumulativeCanvas) {
-        let cumulative = 0;
-        new Chart(cumulativeCanvas, {
-            type: 'line',
-            data: {
-                labels: jahre,
-                datasets: [{
-                    data: jahre.map(j => {
-                        cumulative += calc.jahre[j].db3 / 1000000;
-                        return cumulative;
-                    }),
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 2,
-                    pointRadius: 3
-                }]
-            },
-            options: getMiniChartOptions('€M')
-        });
-    }
-}
-
-function getMiniChartOptions(unit) {
-    return {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2.5,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: (context) => `${context.parsed.y.toFixed(1)} ${unit}`
-                }
-            }
-        },
-        scales: {
-            x: {
-                display: true,
-                grid: { display: false },
-                ticks: { font: { size: 9 }, color: '#6b7280' }
-            },
-            y: {
-                display: true,
-                grid: { color: '#f3f4f6' },
-                ticks: { 
-                    font: { size: 9 }, 
-                    color: '#6b7280',
-                    maxTicksLimit: 5
-                }
+function getExecutiveSummaryStyles() {
+    return `
+        /* Main Container */
+        .executive-summary-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+            background: #F5F7FA;
+        }
+        
+        /* KPI Bar */
+        .executive-kpi-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, #E6F2FF 0%, #F0F9FF 100%);
+            border-bottom: 2px solid #0066CC;
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .kpi-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .kpi-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            transition: all 0.2s ease;
+            border-top: 3px solid #0066CC;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .kpi-card.decision-card {
+            border-top-color: var(--decision-color);
+        }
+        
+        .kpi-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .kpi-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .kpi-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .kpi-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #003366;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        
+        .kpi-meta {
+            font-size: 10px;
+            color: #9CA3AF;
+        }
+        
+        /* Main Area */
+        .executive-main-area {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Sidebar */
+        .executive-sidebar {
+            width: 220px;
+            min-width: 220px;
+            background: #FAFBFC;
+            border-right: 1px solid #E5E7EB;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .section-card:hover {
+            background: #F0F9FF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transform: translateX(4px);
+        }
+        
+        .section-card.active {
+            background: #0066CC;
+            color: white;
+        }
+        
+        .section-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .section-text {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .section-text h3 {
+            font-size: 12px;
+            font-weight: 600;
+            margin: 0 0 2px 0;
+            line-height: 1.2;
+        }
+        
+        .section-text p {
+            font-size: 10px;
+            margin: 0;
+            opacity: 0.7;
+        }
+        
+        .section-card.active .section-text h3,
+        .section-card.active .section-text p {
+            color: white;
+        }
+        
+        .section-arrow {
+            font-size: 10px;
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+        
+        /* Content Area */
+        .executive-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        /* Project Context Box */
+        .project-context-box {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .context-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #E5E7EB;
+        }
+        
+        .context-icon {
+            font-size: 32px;
+        }
+        
+        .context-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #003366;
+            margin: 0;
+        }
+        
+        .context-section {
+            margin-bottom: 20px;
+        }
+        
+        .context-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0 0 8px 0;
+        }
+        
+        .context-section p {
+            font-size: 13px;
+            color: #4B5563;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #F9FAFB;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .summary-label {
+            color: #6B7280;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        /* Recommendation Box */
+        .recommendation-box {
+            background: #F9FAFB;
+            border-left: 4px solid #0066CC;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .recommendation-box.success {
+            background: #F0FDF4;
+            border-left-color: #10b981;
+        }
+        
+        .recommendation-box.warning {
+            background: #FFFBEB;
+            border-left-color: #f59e0b;
+        }
+        
+        .recommendation-box.danger {
+            background: #FEF2F2;
+            border-left-color: #ef4444;
+        }
+        
+        .recommendation-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .recommendation-icon {
+            font-size: 24px;
+        }
+        
+        .recommendation-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+        
+        .recommendation-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 12px;
+            color: #4B5563;
+            line-height: 1.8;
+        }
+        
+        /* Next Steps Box */
+        .next-steps-box {
+            background: #EFF6FF;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .next-steps-box h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1E40AF;
+            margin: 0 0 12px 0;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            background: white;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn:hover {
+            border-color: #0066CC;
+            background: #F0F9FF;
+        }
+        
+        .action-btn.active {
+            border-color: #0066CC;
+            background: #0066CC;
+            color: white;
+        }
+        
+        .btn-icon {
+            font-size: 24px;
+        }
+        
+        .btn-text {
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .action-details {
+            font-size: 11px;
+            color: #6B7280;
+            line-height: 1.6;
+        }
+        
+        .action-details p {
+            margin: 4px 0;
+        }
+        
+        /* AI Benchmark Box */
+        .ai-benchmark-box {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .benchmark-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+            border-bottom: 2px solid #0066CC;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .benchmark-header:hover {
+            background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
+        }
+        
+        .benchmark-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .benchmark-icon {
+            font-size: 28px;
+        }
+        
+        .benchmark-title h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #003366;
+            margin: 0;
+        }
+        
+        .benchmark-toggle {
+            font-size: 16px;
+            color: #6B7280;
+            transition: transform 0.2s ease;
+        }
+        
+        .benchmark-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .benchmark-content.expanded {
+            max-height: 2000px;
+        }
+        
+        .benchmark-content.collapsed {
+            max-height: 0;
+        }
+        
+        .benchmark-loading {
+            padding: 40px;
+            text-align: center;
+            color: #6B7280;
+        }
+        
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 4px solid #E5E7EB;
+            border-top-color: #0066CC;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Benchmark Warning */
+        .benchmark-warning {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border: 2px solid #F59E0B;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px;
+            display: flex;
+            gap: 16px;
+        }
+        
+        .warning-icon {
+            font-size: 40px;
+            flex-shrink: 0;
+        }
+        
+        .warning-content h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #92400E;
+            margin: 0 0 12px 0;
+        }
+        
+        .warning-content p {
+            font-size: 13px;
+            color: #78350F;
+            margin: 0 0 12px 0;
+        }
+        
+        .warning-content ul {
+            margin: 0 0 12px 0;
+            padding-left: 20px;
+            font-size: 13px;
+            color: #78350F;
+        }
+        
+        .warning-recommendation {
+            background: rgba(255,255,255,0.6);
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #F59E0B;
+        }
+        
+        /* Similar Projects */
+        .benchmark-similar {
+            padding: 20px;
+        }
+        
+        .benchmark-similar h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #003366;
+            margin: 0 0 16px 0;
+        }
+        
+        .similar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        
+        .similar-card {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+        
+        .card-header h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+        
+        .success-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .card-meta {
+            font-size: 11px;
+            color: #6B7280;
+            margin-bottom: 12px;
+        }
+        
+        .card-metrics {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+        }
+        
+        .metric {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .metric-label {
+            font-size: 10px;
+            color: #6B7280;
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 13px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .card-lessons {
+            font-size: 11px;
+            color: #4B5563;
+            line-height: 1.6;
+            background: #FFFBEB;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        
+        .card-lessons strong {
+            color: #92400E;
+        }
+        
+        /* Override Cards */
+        .benchmark-overrides {
+            padding: 20px;
+            border-top: 1px solid #E5E7EB;
+        }
+        
+        .benchmark-overrides h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #003366;
+            margin: 0 0 16px 0;
+        }
+        
+        .overrides-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+        
+        .override-card {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border: 2px solid #F59E0B;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        .override-header {
+            margin-bottom: 12px;
+        }
+        
+        .override-header h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #92400E;
+            margin: 0 0 4px 0;
+        }
+        
+        .override-badge {
+            font-size: 10px;
+            color: #78350F;
+        }
+        
+        .override-decision {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 8px;
+        }
+        
+        .decision-col {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .decision-label {
+            display: block;
+            font-size: 10px;
+            color: #6B7280;
+            margin-bottom: 4px;
+        }
+        
+        .decision-icon {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        .decision-text {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .decision-col.financial .decision-text {
+            color: #ef4444;
+        }
+        
+        .decision-col.strategic .decision-text {
+            color: #10b981;
+        }
+        
+        .decision-divider {
+            font-size: 20px;
+            color: #F59E0B;
+        }
+        
+        .override-comment {
+            font-size: 12px;
+            font-style: italic;
+            color: #78350F;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 6px;
+        }
+        
+        .override-value {
+            font-size: 11px;
+            color: #065F46;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 12px;
+            border-radius: 6px;
+        }
+        
+        /* Info Boxes */
+        .benchmark-info,
+        .benchmark-pioneer,
+        .benchmark-error {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .info-icon,
+        .pioneer-icon,
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .benchmark-pioneer {
+            background: #FFFBEB;
+        }
+        
+        .pioneer-note {
+            font-size: 12px;
+            color: #78350F;
+            font-style: italic;
+            margin-top: 12px;
+        }
+        
+        .benchmark-error {
+            background: #FEF2F2;
+            color: #991B1B;
+        }
+        
+        /* Section Container */
+        .section-container {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .section-container.pinned {
+            border: 2px solid #F59E0B;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+        }
+        
+        .section-container.size-small {
+            max-width: 600px;
+        }
+        
+        .section-container.size-medium {
+            max-width: 900px;
+        }
+        
+        .section-container.size-large {
+            max-width: 100%;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #E5E7EB;
+            background: #FAFBFC;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section-title h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #003366;
+            margin: 0;
+        }
+        
+        .section-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-resize,
+        .btn-pin,
+        .btn-close {
+            padding: 6px 12px;
+            border: 1px solid #E5E7EB;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-resize:hover,
+        .btn-pin:hover {
+            background: #F0F9FF;
+            border-color: #0066CC;
+        }
+        
+        .btn-resize.active {
+            background: #0066CC;
+            color: white;
+            border-color: #0066CC;
+        }
+        
+        .section-container.pinned .btn-pin {
+            background: #FEF3C7;
+            border-color: #F59E0B;
+        }
+        
+        .btn-close {
+            border: none;
+            background: transparent;
+            color: #9CA3AF;
+        }
+        
+        .btn-close:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .section-content {
+            padding: 24px;
+        }
+        
+        .section-loading {
+            text-align: center;
+            padding: 40px;
+            color: #6B7280;
+        }
+        
+        /* Section Content Styles */
+        .geschaeftsmodell-content,
+        .szenarien-content,
+        .annahmen-content,
+        .risiken-content,
+        .chancen-content,
+        .meilensteine-content {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .gm-overview {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #F9FAFB;
+            border-radius: 8px;
+        }
+        
+        .gm-type-group {
+            margin-bottom: 16px;
+        }
+        
+        .gm-type-group h5 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            margin: 0 0 8px 0;
+        }
+        
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        
+        .scenario-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .scenario-card.best {
+            background: #F0FDF4;
+            border: 2px solid #10b981;
+        }
+        
+        .scenario-card.base {
+            background: #F0F9FF;
+            border: 2px solid #0066CC;
+        }
+        
+        .scenario-card.worst {
+            background: #FEF2F2;
+            border: 2px solid #ef4444;
+        }
+        
+        .scenario-npv {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+        
+        .scenario-desc {
+            font-size: 12px;
+            color: #6B7280;
+        }
+        
+        .assumptions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .assumptions-list li {
+            padding: 12px;
+            background: #F9FAFB;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .risk-item,
+        .chance-item {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .risk-item.high {
+            background: #FEF2F2;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .risk-item.medium {
+            background: #FFFBEB;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .risk-item.low {
+            background: #F0FDF4;
+            border-left: 4px solid #10b981;
+        }
+        
+        .risk-icon,
+        .chance-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        
+        .risk-text strong,
+        .chance-text strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .chance-item {
+            background: #F0FDF4;
+            border-left: 4px solid #10b981;
+        }
+        
+        .chance-impact {
+            float: right;
+            font-weight: 700;
+            color: #10b981;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #E5E7EB;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 24px;
+        }
+        
+        .timeline-icon {
+            position: absolute;
+            left: -32px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 2px solid #E5E7EB;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .timeline-item.done .timeline-icon {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        
+        .timeline-item.current .timeline-icon {
+            background: #0066CC;
+            border-color: #0066CC;
+            color: white;
+        }
+        
+        .timeline-text strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #111827;
+        }
+        
+        .timeline-text p {
+            margin: 0;
+            font-size: 12px;
+            color: #6B7280;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .kpi-cards {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
-    };
+        
+        @media (max-width: 768px) {
+            .executive-main-area {
+                flex-direction: column;
+            }
+            
+            .executive-sidebar {
+                width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid #E5E7EB;
+            }
+            
+            .kpi-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Scrollbar */
+        .executive-sidebar::-webkit-scrollbar,
+        .executive-content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .executive-sidebar::-webkit-scrollbar-track,
+        .executive-content-area::-webkit-scrollbar-track {
+            background: #F3F4F6;
+        }
+        
+        .executive-sidebar::-webkit-scrollbar-thumb,
+        .executive-content-area::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 4px;
+        }
+    `;
 }
 
 // ==========================================
-// PDF EXPORT
-// ==========================================
-
-window.exportExecutiveSummaryPDF = function() {
-    alert('PDF-Export Funktion wird implementiert.\n\nTipp: Nutzen Sie Cmd/Ctrl + P für Browser-PDF-Export.');
-    window.print();
-};
-
-// ==========================================
-// EXPORTS
+// EXPORT
 // ==========================================
 
 export default {
