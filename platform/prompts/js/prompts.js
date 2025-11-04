@@ -1153,109 +1153,84 @@ renderPreview(prompt, fullPromptText) {
     }
 
     // 2. Extract Questions from Prompt Text
-    extractQuestionsFromPrompt(prompt) {
+        extractQuestionsFromPrompt(prompt) {
         const fullText = prompt.fullPromptText || '';
         
-        const frageMatch = fullText.match(/\*\*🔍 Bitte frage den Nutzer vorab\*\*([^]*?)(?=\n\n\*\*|$)/);
+        // Suche nach dem Abschnitt mit den Fragen
+        const frageMatch = fullText.match(/(?:🔍\s*Bitte beantworte vorab|💬\s*Bitte beantworte vorab)(?:\s*\(inkl\.\s*Beispielantworten\))?:?\s*\n([\s\S]*?)(?=\n\n(?:✅|📝|💡)|$)/);
         
         if (!frageMatch) {
-            return prompt.questions || [];
+            // Fallback: Versuche andere Pattern zu finden
+            const lines = fullText.split('\n');
+            const extractedQuestions = [];
+            let inQuestionSection = false;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Erkenne Fragesektion
+                if (line.includes('Bitte beantworte') || line.includes('Welche')) {
+                    inQuestionSection = true;
+                }
+                
+                // Extrahiere nummerierte Fragen
+                const questionMatch = line.match(/^(\d+)\.\s+(.+?)$/);
+                if (inQuestionSection && questionMatch) {
+                    const question = {
+                        number: parseInt(questionMatch[1]),
+                        question: questionMatch[2],
+                        example: ''
+                    };
+                    
+                    // Suche nach Beispiel in der nächsten Zeile
+                    if (i + 1 < lines.length) {
+                        const nextLine = lines[i + 1].trim();
+                        if (nextLine.startsWith('→') || nextLine.includes('z.B.') || nextLine.includes('Beispiel:')) {
+                            question.example = nextLine.replace(/^→\s*z\.\s*B\.\s*[„"]?|^→\s*|Beispiel:\s*/i, '').replace(/[""]$/, '');
+                        }
+                    }
+                    
+                    extractedQuestions.push(question);
+                }
+                
+                // Beende bei Pflichtinhalten oder anderen Sektionen
+                if (line.includes('Pflichtinhalte') || line.includes('✅') || (inQuestionSection && line.startsWith('**') && !line.includes('Bitte'))) {
+                    break;
+                }
+            }
+            
+            return extractedQuestions;
         }
         
+        // Parse die gefundenen Fragen
         const frageSection = frageMatch[1];
         const lines = frageSection.split('\n');
         const extractedQuestions = [];
         
-        let currentQuestion = null;
-        
-        for (const line of lines) {
-            const trimmed = line.trim();
-            const questionMatch = trimmed.match(/^(\d+)\.\s+(.+?)(\?|:)?\s*$/);
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            const questionMatch = line.match(/^(\d+)\.\s+(.+?)$/);
             
             if (questionMatch) {
-                if (currentQuestion) {
-                    extractedQuestions.push(currentQuestion);
-                }
-                
-                currentQuestion = {
+                const question = {
                     number: parseInt(questionMatch[1]),
-                    question: questionMatch[2] + (questionMatch[3] || ''),
+                    question: questionMatch[2],
                     example: ''
                 };
-            } else if (trimmed.startsWith('→ z. B.:') || trimmed.startsWith('→ z.B.:')) {
-                if (currentQuestion) {
-                    const exampleText = trimmed.replace(/^→ z\. ?B\.:\s*[„"]?/, '').replace(/[""]$/, '');
-                    currentQuestion.example = exampleText;
+                
+                // Suche nach Beispiel
+                if (i + 1 < lines.length) {
+                    const nextLine = lines[i + 1].trim();
+                    if (nextLine.startsWith('→') || nextLine.includes('z.B.')) {
+                        question.example = nextLine.replace(/^→\s*z\.\s*B\.\s*[„"]?|^→\s*/i, '').replace(/[""]$/, '');
+                    }
                 }
+                
+                extractedQuestions.push(question);
             }
-        }
-        
-        if (currentQuestion) {
-            extractedQuestions.push(currentQuestion);
         }
         
         return extractedQuestions;
-    }
-
-    getQuestionContext(question, index, category) {
-        const questionLower = question.toLowerCase();
-        
-        // Bilanzbuchhalter
-        if (category === 'Bilanzbuchhalter') {
-            if (questionLower.includes('bilanzposten') || questionLower.includes('sachverhalt')) {
-                return 'Präzise Angaben zum Bilanzposten sind essentiell für eine korrekte bilanzielle Behandlung. Je konkreter Ihre Beschreibung, desto besser kann die rechtssichere Einordnung und Dokumentation erfolgen.';
-            }
-            if (questionLower.includes('vorratsgüter') || questionLower.includes('vg')) {
-                return 'Die Bewertung von Vorratsgütern erfolgt nach § 253 HGB zu Anschaffungs-/Herstellungskosten oder niedrigerem beizulegenden Wert. Die korrekte Methodik (LIFO/FIFO/Durchschnitt) ist entscheidend für Bilanz und GuV.';
-            }
-            if (questionLower.includes('bewertung') || questionLower.includes('verfahren')) {
-                return 'Das gewählte Bewertungsverfahren muss den GoB entsprechen und stetig angewendet werden. Methodenwechsel sind dokumentations- und begründungspflichtig.';
-            }
-            if (questionLower.includes('preis') || questionLower.includes('schwankung')) {
-                return 'Preisschwankungen sind bei der Bewertung zu berücksichtigen (Niederstwertprinzip). Dies hat direkte Auswirkungen auf die GuV und ist prüfungsrelevant.';
-            }
-            if (questionLower.includes('standard') || questionLower.includes('hgb') || questionLower.includes('ifrs')) {
-                return 'Die Wahl des Rechnungslegungsstandards bestimmt die Bilanzierungs- und Bewertungsmethoden. IFRS und HGB unterscheiden sich erheblich - eine klare Angabe ist zwingend erforderlich.';
-            }
-            if (questionLower.includes('entwicklung') || questionLower.includes('guv') || questionLower.includes('bilanz')) {
-                return 'Die Entwicklungen in GuV und Bilanz sind das Herzstück Ihrer Finanzberichterstattung. Investoren, Banken und Wirtschaftsprüfer analysieren diese Kennzahlen.';
-            }
-            if (questionLower.includes('wirtschaftsgut') || questionLower.includes('vermögen')) {
-                return 'Die korrekte Identifikation und Klassifizierung von Wirtschaftsgütern ist Basis für Abschreibung, Bewertung und steuerliche Behandlung.';
-            }
-            if (questionLower.includes('zeitraum') || questionLower.includes('zeitpunkt')) {
-                return 'Zeitliche Angaben sind entscheidend für Periodisierung, Stichtagsbewertung und Vollständigkeit.';
-            }
-        }
-        
-        // Controller
-        if (category === 'Controller') {
-            if (questionLower.includes('kosten')) {
-                return 'Eine detaillierte Kostenanalyse ist die Basis für fundierte Managemententscheidungen.';
-            }
-            if (questionLower.includes('budget') || questionLower.includes('planung')) {
-                return 'Präzise Budgetierung ist Ihre Kernaufgabe als Business Partner.';
-            }
-        }
-        
-        // Generische Fallbacks
-        if (questionLower.includes('betrag') || questionLower.includes('höhe')) {
-            return 'Konkrete Beträge sind essentiell für finanzielle Bewertung. Geben Sie Größenordnungen an.';
-        }
-        if (questionLower.includes('gibt es') || questionLower.includes('liegt vor')) {
-            return 'Diese Information hilft bei der Vollständigkeitsprüfung.';
-        }
-        
-        // Position-basiert
-        if (index === 0) {
-            return 'Diese erste Frage hilft uns, den Kontext Ihrer Anfrage zu verstehen. Je präziser Ihre Antwort, desto passgenauer wird der AI-Output.';
-        }
-        if (index === 1) {
-            return 'Diese Angabe ergänzt den Kontext und ermöglicht eine differenziertere Bearbeitung.';
-        }
-        
-        // Ultimate Fallback
-        return 'Diese Information ist wichtig für die Vollständigkeit und Qualität der Analyse. Je mehr relevante Details Sie angeben, desto präziser wird das Ergebnis.\n\n💡 Tipp: Nutzen Sie konkrete Zahlen und Beispiele.';
     }
 
     // 3. Render Preview with Placeholders
