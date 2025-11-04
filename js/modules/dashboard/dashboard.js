@@ -75,14 +75,28 @@ export async function renderProjektDashboard() {
             
             // Load demo data
             if (useDemoData) {
-                console.log('📊 Loading DEMO DATA');
+                console.log('📊 ========================================');
+                console.log('📊 LOADING DEMO DATA');
+                console.log('📊 ========================================');
+                
                 const demoData = generateDemoData();
+                
+                console.log('📊 Demo Data Generated:', demoData);
+                console.log('📊 Revenue:', demoData.gesamtRevenue5Y);
+                console.log('📊 DB3:', demoData.gesamtDB3_5Y);
+                console.log('📊 NPV:', demoData.npv);
+                console.log('📊 Jahre:', demoData.jahre);
+                console.log('📊 Revenue Values:', demoData.revenueData?.values);
+                console.log('📊 Artikel Breakdown:', demoData.artikelBreakdown);
                 
                 dashboardState.projektId = projektId;
                 dashboardState.rawData = demoData;
                 dashboardState.calculationResult = demoData;
                 dashboardState.isDemoMode = true;
                 dashboardState.selectedYear = demoData.jahre[0];
+                
+                console.log('✅ Demo Data loaded into dashboardState');
+                console.log('📊 dashboardState.calculationResult:', dashboardState.calculationResult);
             } else {
                 // Transform real data
                 const result = transformProcessedData(processedData);
@@ -176,10 +190,20 @@ function createDashboardLayout() {
 function createExecutiveSummary() {
     const data = dashboardState.calculationResult;
     
+    console.log('🎨 Creating Executive Summary');
+    console.log('📊 Data available:', !!data);
+    console.log('📊 Data keys:', data ? Object.keys(data) : 'NONE');
+    
     const totalRevenue = data.gesamtRevenue5Y || 0;
     const totalDB3 = data.gesamtDB3_5Y || 0;
     const breakEven = data.breakEvenJahr || '2025';
     const npv = data.npv || 0;
+    
+    console.log('📊 Executive Summary Values:');
+    console.log('  - Revenue:', totalRevenue);
+    console.log('  - DB3:', totalDB3);
+    console.log('  - Break-Even:', breakEven);
+    console.log('  - NPV:', npv);
     
     const decision = npv > 0 ? 'go' : 'review';
     const decisionText = npv > 0 ? 'GO' : 'NO-GO';
@@ -221,6 +245,11 @@ function createExecutiveSummary() {
                     <div class="card-meta">NPV: ${helpers.formatCurrency(npv / 1000000)}M</div>
                 </div>
             </div>
+        </div>
+        
+        <!-- DEBUG CHART STATUS MATRIX -->
+        <div style="background: #FFF3CD; padding: 8px; margin-top: 8px; font-size: 11px; border-radius: 4px;">
+            <strong>🔍 DEBUG MODE:</strong> Check Console für Chart Status
         </div>
     `;
 }
@@ -560,7 +589,13 @@ function initializeVisualization(vizId) {
 // ==========================================
 
 function initRevenueWaterfall(canvasId, data) {
-    console.log('📊 Init Revenue Waterfall');
+    console.log('📊 ========================================');
+    console.log('📊 INIT: Revenue Waterfall');
+    console.log('📊 Canvas ID:', canvasId);
+    console.log('📊 Data:', data);
+    console.log('📊 Data.jahre:', data.jahre);
+    console.log('📊 Data.revenueData:', data.revenueData);
+    console.log('📊 ========================================');
     
     const waterfallData = {
         labels: data.jahre,
@@ -569,8 +604,17 @@ function initRevenueWaterfall(canvasId, data) {
         )
     };
     
-    const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
-    dashboardState.charts[canvasId] = chart;
+    console.log('📊 Waterfall Data prepared:', waterfallData);
+    console.log('📊 Calling ChartFactory.createRevenueWaterfall...');
+    
+    try {
+        const chart = ChartFactory.createRevenueWaterfall(canvasId, waterfallData);
+        dashboardState.charts[canvasId] = chart;
+        console.log('✅ Revenue Waterfall Chart CREATED');
+    } catch (error) {
+        console.error('❌ Revenue Waterfall FAILED:', error);
+        console.error('❌ Stack:', error.stack);
+    }
 }
 
 function initRevenueBreakdown(canvasId, data) {
