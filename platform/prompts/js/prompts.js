@@ -866,19 +866,194 @@ renderPreview(prompt, fullPromptText) {
         }
     }
 
-    executePrompt(promptId) {
-        const prompt = this.allPrompts.find(p => p.id === promptId);
-        if (!prompt) return;
+  async executePrompt(promptId) {
+    const previewContent = document.getElementById(`code-preview-${promptId}`);
+    if (!previewContent) return;
+    
+    const promptText = previewContent.textContent;
+    
+    // Create execution modal
+    const modal = document.createElement('div');
+    modal.className = 'execution-modal';
+    modal.innerHTML = `
+        <div class="execution-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚡ Prompt ausführen</h2>
+                <p class="modal-subtitle">Wähle deine Ausführungsmethode</p>
+            </div>
+            
+            <div class="execution-options">
+                <div class="execution-option" onclick="window.promptsEngine.executeWithAI('${promptId}', 'claude')">
+                    <div class="option-icon">🤖</div>
+                    <div class="option-content">
+                        <div class="option-title">Claude AI (Opus)</div>
+                        <div class="option-description">
+                            Beste Qualität für komplexe Finance-Analysen
+                        </div>
+                        <span class="option-badge">~0.15€</span>
+                    </div>
+                </div>
+                
+                <div class="execution-option" onclick="window.promptsEngine.executeWithAI('${promptId}', 'gpt4')">
+                    <div class="option-icon">💚</div>
+                    <div class="option-content">
+                        <div class="option-title">GPT-4 Turbo</div>
+                        <div class="option-description">
+                            Schnell und kosteneffizient
+                        </div>
+                        <span class="option-badge">~0.08€</span>
+                    </div>
+                </div>
+                
+                <div class="execution-option" onclick="window.promptsEngine.copyAndClose('${promptId}')">
+                    <div class="option-icon">📋</div>
+                    <div class="option-content">
+                        <div class="option-title">Kopieren & selbst ausführen</div>
+                        <div class="option-description">
+                            In ChatGPT/Claude.ai einfügen (kostenlos)
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" onclick="this.closest('.execution-modal').remove()">
+                    Abbrechen
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
 
-        // Get user answers
-        const answers = this.userAnswers[promptId] || {};
+// AI Execution Method
+async executeWithAI(promptId, provider) {
+    const previewContent = document.getElementById(`code-preview-${promptId}`);
+    const promptText = previewContent.textContent;
+    const promptData = this.allPrompts.find(p => p.id === promptId);
+    
+    // Close modal
+    const modal = document.querySelector('.execution-modal');
+    if (modal) modal.remove();
+    
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'ai-loading-overlay';
+    loadingOverlay.innerHTML = `
+        <div class="ai-loading-content">
+            <div class="loading-spinner"></div>
+            <h3>🤖 AI generiert Ihre Analyse...</h3>
+            <p>Dies dauert etwa 15-30 Sekunden</p>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+    
+    try {
+        let response;
         
-        console.log('🚀 Executing prompt:', prompt.name);
-        console.log('📝 User answers:', answers);
+        if (provider === 'claude') {
+            response = await fetch('/api/claude', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'claude-3-opus-20240229',
+                    max_tokens: 4000,
+                    messages: [{
+                        role: 'user',
+                        content: promptText
+                    }]
+                })
+            });
+        } else if (provider === 'gpt4') {
+            response = await fetch('/api/openai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4-turbo-preview',
+                    messages: [{
+                        role: 'user',
+                        content: promptText
+                    }],
+                    max_tokens: 4000
+                })
+            });
+        }
         
-        // TODO: Integrate with AI execution
-        alert(`✅ Prompt "${prompt.name}" wird ausgeführt!\n\n(AI-Integration folgt)`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error?.message || 'API Error');
+        }
+        
+        // Extract the response text
+        let resultText;
+        if (provider === 'claude') {
+            resultText = data.content[0].text;
+        } else {
+            resultText = data.choices[0].message.content;
+        }
+        
+        // Remove loading
+        loadingOverlay.remove();
+        
+        // Show result
+        this.showAIResult(resultText, promptData, provider);
+        
+    } catch (error) {
+        console.error('AI Execution Error:', error);
+        loadingOverlay.remove();
+        
+        alert(`❌ Fehler bei der AI-Ausführung:\n${error.message}\n\nBitte prüfen Sie Ihre API-Konfiguration in Vercel.`);
     }
+}
+
+// Show AI Result Method
+showAIResult(result, promptData, provider) {
+    const resultModal = document.createElement('div');
+    resultModal.className = 'ai-result-modal';
+    resultModal.innerHTML = `
+        <div class="ai-result-container">
+            <div class="result-header">
+                <div class="result-title">
+                    <h2>✨ AI-Analyse abgeschlossen</h2>
+                    <span class="provider-badge">${provider === 'claude' ? '🤖 Claude' : '💚 GPT-4'}</span>
+                </div>
+                <button class="close-btn" onclick="this.closest('.ai-result-modal').remove()">✕</button>
+            </div>
+            
+            <div class="result-meta">
+                <div class="meta-item">📄 ${promptData.name}</div>
+                <div class="meta-item">⏱️ ${new Date().toLocaleString('de-DE')}</div>
+            </div>
+            
+            <div class="result-content">
+                <pre>${result}</pre>
+            </div>
+            
+            <div class="result-actions">
+                <button onclick="navigator.clipboard.writeText(this.closest('.ai-result-modal').querySelector('pre').textContent).then(() => alert('✅ Kopiert!'))">
+                    📋 Kopieren
+                </button>
+                <button class="btn-primary" onclick="this.closest('.ai-result-modal').remove()">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(resultModal);
+}
 
     addToQueue(promptId) {
         const prompt = this.allPrompts.find(p => p.id === promptId);
@@ -1142,6 +1317,92 @@ renderPreview(prompt, fullPromptText) {
                 background: #f0fdf4;
                 border-color: #10b981;
                 color: #065f46;
+            }
+            
+            /* AI Loading Overlay */
+            .ai-loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            }
+            .ai-loading-content {
+                background: white;
+                padding: 40px;
+                border-radius: 16px;
+                text-align: center;
+            }
+            .loading-spinner {
+                width: 60px;
+                height: 60px;
+                margin: 0 auto 20px;
+                border: 4px solid #f3f4f6;
+                border-top-color: #3b82f6;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            /* AI Result Modal */
+            .ai-result-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                padding: 20px;
+            }
+            .ai-result-container {
+                background: white;
+                border-radius: 16px;
+                width: 90%;
+                max-width: 1200px;
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .result-header {
+                padding: 24px;
+                border-bottom: 2px solid #e5e7eb;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .result-content {
+                flex: 1;
+                padding: 24px;
+                overflow-y: auto;
+                background: #f9fafb;
+            }
+            .result-content pre {
+                white-space: pre-wrap;
+                font-family: 'Inter', sans-serif;
+                line-height: 1.6;
+                color: #1f2937;
+            }
+            .result-actions {
+                padding: 20px;
+                border-top: 2px solid #e5e7eb;
+                display: flex;
+                gap: 12px;
+                justify-content: flex-end;
+            }
+            @media (max-width: 1200px) {
+                .prompt-split-container {
+                    grid-template-columns: 1fr;
+                }
             }
             @media (max-width: 1200px) {
                 .prompt-split-container {
