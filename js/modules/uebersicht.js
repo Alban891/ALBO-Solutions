@@ -396,21 +396,6 @@ export async function renderUebersicht() {
     
     // Render HTML content
     container.innerHTML = createCompactLayout(projekt, artikel, calc);
-
-    // ADD THIS: Check if we need to show critical warning
-    const warningHTML = renderCriticalWarningAlert(projekt, calc);
-    if (warningHTML) {
-        // Add warning to body
-        document.body.insertAdjacentHTML('beforeend', warningHTML);
-        
-        // Auto-show after 2 seconds for demo effect
-        setTimeout(() => {
-            const overlay = document.getElementById('critical-warning-overlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-            }
-        }, 2000);
-    }
     
     // Load RAG Intelligence async
     setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
@@ -547,14 +532,14 @@ function createKPIScorecard(calc, artikel) {
                 </div>
             </div>
             
-            <div class="kpi-card decision-card" style="--decision-color: ${decisionColor}; cursor: pointer;"
-                onclick="if(${npv} < 0) { const overlay = document.getElementById('critical-warning-overlay'); if(overlay) overlay.style.display='flex'; }">
-                <div class="kpi-content">
-                    <div class="kpi-label">DECISION</div>
-                    <div class="kpi-value" style="color: ${decisionColor}">${decision}</div>
-                    <div class="kpi-meta">NPV: €${npv.toFixed(1)}M</div>
-                </div>
+          <div class="kpi-card decision-card" style="--decision-color: ${decisionColor}">
+            <div class="kpi-icon">${decisionIcon}</div>
+            <div class="kpi-content">
+                <div class="kpi-label">DECISION</div>
+                <div class="kpi-value" style="color: ${decisionColor}">${decision}</div>
+                <div class="kpi-meta">NPV: €${npv.toFixed(1)}M</div>
             </div>
+        </div>
         </div>
     `;
 }
@@ -829,7 +814,7 @@ function renderKIBenchmark(similar, projekt, calc) {
     const currentNPV = (calc?.kpis?.npv || 0);
     
     return `
-        <!-- Critical Analysis Box - Ersetzt die gelbe Warnung -->
+        <!-- Critical Analysis Box - Professionellere Farben -->
         <div class="ki-critical-analysis">
             <div class="critical-header">
                 <div class="critical-badge">⚠️ KRITISCHE KI-ANALYSE</div>
@@ -959,14 +944,6 @@ function renderKIBenchmark(similar, projekt, calc) {
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Similar Projects Cards wie bisher -->
-        <div class="ki-similar-projects">
-            <h3>📚 ÄHNLICHE PROJEKTE</h3>
-            <div class="similar-grid">
-                ${similar.map(p => renderSimilarProjectCard(p)).join('')}
             </div>
         </div>
     `;
@@ -2409,16 +2386,15 @@ function getCompactStyles() {
         
         /* KI Critical Analysis - Ersetzt die gelbe Warnung */
         .executive-compact-container .ki-critical-analysis {
-            background: linear-gradient(135deg, #FFF5F5 0%, #FFF 100%);
-            border: 2px solid #DC2626;
+            background: linear-gradient(135deg, #FFF8F5 0%, #FFF 100%);
+            border: 2px solid #EA580C; /* Orange statt Rot */
             border-radius: 8px;
             margin-bottom: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+            box-shadow: 0 4px 6px rgba(234, 88, 12, 0.1);
         }
-
         .executive-compact-container .critical-header {
-            background: linear-gradient(90deg, #DC2626 0%, #EF4444 100%);
+            background: linear-gradient(90deg, #EA580C 0%, #FB923C 100%); /* Orange Gradient */
             color: white;
             padding: 12px 16px;
             display: flex;
