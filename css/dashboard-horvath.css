@@ -624,3 +624,208 @@
 .sub-item {
     animation: fadeIn 0.2s ease;
 }
+
+/* ==========================================
+   SAVINGS, DRIVERS & RISK ACTIONS
+   ========================================== */
+
+.savings-list, .drivers-list, .risk-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-md);
+}
+
+.savings-item, .driver-item, .risk-action-item {
+    background: #F9FAFB;
+    border-left: 4px solid var(--horvath-blue);
+    border-radius: 6px;
+    padding: var(--space-md);
+    transition: all 0.2s ease;
+}
+
+.savings-item:hover, .driver-item:hover, .risk-action-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+}
+
+.savings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.savings-header h4 {
+    margin: 0;
+    font-size: var(--font-md);
+    color: var(--horvath-navy);
+}
+
+.savings-amount {
+    font-size: var(--font-lg);
+    font-weight: 700;
+    color: var(--color-success);
+}
+
+.savings-current {
+    font-size: var(--font-sm);
+    color: #6B7280;
+    margin-bottom: var(--space-xs);
+}
+
+.savings-recommendation {
+    font-size: var(--font-sm);
+    color: var(--horvath-blue);
+    font-weight: 500;
+}
+
+.driver-item {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+}
+
+.driver-item.positive {
+    border-left-color: var(--color-success);
+}
+
+.driver-item.negative {
+    border-left-color: var(--color-danger);
+}
+
+.driver-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.driver-content {
+    flex: 1;
+}
+
+.driver-content h4 {
+    margin: 0 0 var(--space-xs) 0;
+    font-size: var(--font-md);
+    color: var(--horvath-navy);
+}
+
+.driver-content p {
+    margin: 0 0 var(--space-sm) 0;
+    font-size: var(--font-sm);
+    color: #4B5563;
+}
+
+.driver-impact {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: var(--font-xs);
+    font-weight: 600;
+}
+
+.driver-item.positive .driver-impact {
+    background: rgba(0, 166, 81, 0.1);
+    color: var(--color-success);
+}
+
+.driver-item.negative .driver-impact {
+    background: rgba(220, 0, 50, 0.1);
+    color: var(--color-danger);
+}
+
+.risk-action-item {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+}
+
+.risk-action-item.priority-high {
+    border-left-color: var(--color-danger);
+}
+
+.risk-action-item.priority-medium {
+    border-left-color: var(--color-warning);
+}
+
+.risk-action-item.priority-low {
+    border-left-color: var(--color-success);
+}
+
+.action-priority {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.action-content {
+    flex: 1;
+}
+
+.action-content h4 {
+    margin: 0 0 var(--space-xs) 0;
+    font-size: var(--font-md);
+    color: var(--horvath-navy);
+}
+
+.action-content p {
+    margin: 0 0 var(--space-sm) 0;
+    font-size: var(--font-sm);
+    color: #4B5563;
+}
+
+.action-meta {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.meta-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: var(--font-xs);
+    font-weight: 600;
+    background: rgba(0, 102, 204, 0.1);
+    color: var(--horvath-blue);
+}
+
+.error-text, .coming-soon {
+    text-align: center;
+    padding: var(--space-xl);
+    color: #9CA3AF;
+    font-size: var(--font-sm);
+}
+/* Year Selector for Margin Bridge */
+.year-selector {
+    display: flex;
+    gap: 4px;
+    margin-right: 12px;
+}
+
+.year-btn {
+    padding: 4px 12px;
+    border: 1px solid #CBD5E0;
+    background: white;
+    color: #4A5568;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.year-btn:hover {
+    background: #F7FAFC;
+    border-color: #0066CC;
+}
+
+.year-btn.active {
+    background: #0066CC;
+    color: white;
+    border-color: #0066CC;
+}
+
+/* Viz Controls Layout */
+.viz-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
