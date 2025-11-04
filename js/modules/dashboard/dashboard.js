@@ -13,6 +13,7 @@ import * as helpers from '../../helpers.js';
 import { processDataForDashboard, validateDashboardData } from './data-processor.js';
 import * as ChartFactory from './chart-factory-horvath.js';
 import * as Widgets from './widgets-horvath.js';
+import { generateDemoData } from './demo-data-horvath.js';
 
 // ==========================================
 // DASHBOARD STATE
@@ -567,62 +568,52 @@ export async function renderProjektDashboard() {
     setTimeout(async () => {
         try {
             console.log('🔍 DEBUG: Starting dashboard calculation for projekt:', projektId);
-            console.log('🔍 DEBUG: Current state:', window.state);
             
-            // Get raw projekt data
-            const projekt = state.getProjekt(projektId);
-            console.log('🔍 DEBUG: Raw projekt:', projekt);
+            let processedData = null;
+            let useDemoData = false;
             
-            // Get artikel
-            const artikelListe = state.getArtikelByProjekt(projektId);
-            console.log('🔍 DEBUG: Artikel list:', artikelListe);
-            console.log('🔍 DEBUG: Artikel count:', artikelListe?.length || 0);
+            // Try to get real data first
+            try {
+                processedData = await processDataForDashboard(projektId);
+                
+                // Check if data is empty
+                const hasData = processedData?.umsatzData?.values?.some(v => v > 0);
+                
+                if (!hasData) {
+                    console.warn('⚠️ Real data is empty, using DEMO data');
+                    useDemoData = true;
+                }
+            } catch (error) {
+                console.warn('⚠️ Failed to load real data, using DEMO data:', error.message);
+                useDemoData = true;
+            }
             
-            // Try data processor FIRST
-            console.log('📊 Calling processDataForDashboard...');
-            let processedData = await processDataForDashboard(projektId);
-            console.log('📊 Processed data received:', processedData);
-            console.log('📊 Processed data keys:', Object.keys(processedData || {}));
-            
-            // Check if data is empty (all zeros)
-            let hasData = false;
-            if (processedData?.umsatzData?.datasets?.[0]?.data) {
-                const data = processedData.umsatzData.datasets[0].data;
-                hasData = data.some(val => {
-                    const parsed = parseFloat(String(val).replace(/[^\d.-]/g, ''));
-                    return parsed > 0;
+            // Use demo data if needed
+            if (useDemoData) {
+                console.log('📊 Using DEMO DATA for dashboard');
+                const demoData = generateDemoData();
+                
+                // Store in state
+                dashboardState.projektId = projektId;
+                dashboardState.rawData = demoData;
+                dashboardState.calculationResult = demoData;
+                dashboardState.lastUpdate = new Date();
+                dashboardState.isInitialized = true;
+                dashboardState.isDemoMode = true;
+                
+                // Render layout
+                container.innerHTML = createDashboardLayout();
+                
+                // Initialize charts
+                requestAnimationFrame(() => {
+                    initializeExecutiveSummaryCharts();
                 });
+                
+                return;
             }
             
-            console.log('📊 Has data from processor:', hasData);
-            
-            // FALLBACK: Build directly from state if processor returns empty data
-            if (!hasData && artikelListe && artikelListe.length > 0) {
-                console.warn('⚠️ Data processor returned empty data, building directly from state...');
-                processedData = buildDataDirectlyFromState(projektId, projekt, artikelListe);
-                console.log('✅ Built data from state:', processedData);
-            }
-            
-            // Log chart data details
-            if (processedData) {
-                console.log('📊 umsatzData:', processedData.umsatzData);
-                console.log('📊 db2Data:', processedData.db2Data);
-                console.log('📊 db3JahrData:', processedData.db3JahrData);
-                console.log('📊 projektkostenData:', processedData.projektkostenData);
-                console.log('📊 db3KumuliertData:', processedData.db3KumuliertData);
-            }
-            
-            // Validate
-            const validation = validateDashboardData(processedData);
-            console.log('✅ Validation result:', validation);
-            if (validation.hasWarnings) {
-                console.warn('⚠️ Dashboard warnings:', validation.warnings);
-            }
-            
-            // Transform to our format
-            console.log('🔄 Starting transformation...');
+            // Transform real data
             const result = transformProcessedData(processedData);
-            console.log('✅ Transformation complete:', result);
             
             // Store in state
             dashboardState.projektId = projektId;
@@ -630,23 +621,18 @@ export async function renderProjektDashboard() {
             dashboardState.calculationResult = result;
             dashboardState.lastUpdate = new Date();
             dashboardState.isInitialized = true;
-            
-            console.log('💾 Stored in dashboardState');
+            dashboardState.isDemoMode = false;
             
             // Render layout
             container.innerHTML = createDashboardLayout();
-            console.log('🎨 Layout rendered');
             
-            // Initialize charts in executive summary
+            // Initialize charts
             requestAnimationFrame(() => {
-                console.log('🎨 Initializing charts...');
                 initializeExecutiveSummaryCharts();
-                console.log('✅ Charts initialized');
             });
             
         } catch (error) {
             console.error('❌ Dashboard calculation failed:', error);
-            console.error('❌ Error message:', error.message);
             console.error('❌ Error stack:', error.stack);
             
             container.innerHTML = Widgets.renderErrorWidget(error);
@@ -662,22 +648,20 @@ export async function renderProjektDashboard() {
  * Create complete dashboard layout
  */
 function createDashboardLayout() {
-    const isMockData = !dashboardState.calculationResult.artikelListe || 
-                       dashboardState.calculationResult.artikelListe.length === 0 ||
-                       dashboardState.calculationResult.artikelListe[0]?.id?.startsWith('mock');
+    const isDemoMode = dashboardState.isDemoMode;
     
     return `
         <div class="story-dashboard-container">
             
-            ${isMockData ? `
-                <div class="mock-data-banner">
-                    <span class="banner-icon">ℹ️</span>
+            ${isDemoMode ? `
+                <div class="demo-mode-banner">
+                    <span class="banner-icon">🎯</span>
                     <div class="banner-content">
-                        <strong>Demo-Modus:</strong> Es werden Beispiel-Daten angezeigt. 
-                        Bitte legen Sie Artikel und Projektkosten an, um echte Daten zu sehen.
+                        <strong>Demo-Modus:</strong> Dashboard zeigt realistische Beispiel-Daten. 
+                        Vervollständigen Sie Artikel und Projektkosten für echte Berechnungen.
                     </div>
-                    <button class="banner-btn" onclick="window.switchProjektTab('artikel')">
-                        📦 Artikel anlegen
+                    <button class="banner-btn" onclick="window.location.href='#artikel'">
+                        📦 Artikel prüfen
                     </button>
                 </div>
             ` : ''}
