@@ -670,6 +670,160 @@ export function createComboChart(canvasId, data) {
 }
 
 // ==========================================
+// PIE CHART (Artikel Breakdown)
+// ==========================================
+
+export function createPieChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`pie-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`pie-${canvasId}`] = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.data || data.values,
+                backgroundColor: data.backgroundColor || [
+                    HORVATH_COLORS.navy,
+                    HORVATH_COLORS.blue,
+                    HORVATH_COLORS.success,
+                    HORVATH_COLORS.neutral
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 10 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M (' + percent + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    return chartInstances[`pie-${canvasId}`];
+}
+
+// ==========================================
+// TORNADO CHART (Sensitivity Analysis)
+// ==========================================
+
+export function createTornadoChart(canvasId, data) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`tornado-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`tornado-${canvasId}`] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Negative Impact',
+                    data: data.negativeImpact ? data.negativeImpact.map(v => -Math.abs(v)) : data.datasets[0].data.map(v => -Math.abs(v)),
+                    backgroundColor: HORVATH_COLORS.danger,
+                    borderWidth: 0,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Positive Impact',
+                    data: data.positiveImpact || data.datasets[1]?.data || data.negativeImpact,
+                    backgroundColor: HORVATH_COLORS.success,
+                    borderWidth: 0,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 10, weight: 500 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = Math.abs(context.parsed.x);
+                            const prefix = context.parsed.x >= 0 ? '+' : '-';
+                            return context.dataset.label + ': ' + prefix + new Intl.NumberFormat('de-DE', {
+                                style: 'currency',
+                                currency: 'EUR',
+                                minimumFractionDigits: 1
+                            }).format(value) + 'M';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { 
+                        color: HORVATH_COLORS.gridLight,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        font: { size: 10 },
+                        callback: function(value) {
+                            return Math.abs(value).toFixed(1) + 'M';
+                        }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { size: 10, weight: 500 }
+                    }
+                }
+            }
+        }
+    });
+    
+    return chartInstances[`tornado-${canvasId}`];
+}
+
+// ==========================================
 // DOUGHNUT CHART (Breakdown)
 // ==========================================
 
