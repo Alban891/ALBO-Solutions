@@ -63,14 +63,23 @@ function transformProcessedData(processed) {
         return 0;
     };
     
+    // Helper to get data array from either .values or .datasets[0].data
+    const getData = (chartData) => {
+        if (!chartData) return [];
+        if (chartData.values) return chartData.values;
+        if (chartData.absolute) return chartData.absolute; // db2Data uses .absolute
+        if (chartData.datasets?.[0]?.data) return chartData.datasets[0].data;
+        return [];
+    };
+    
     // Build jahreDaten from chart data
     const jahreDaten = {};
     jahre.forEach((jahr, index) => {
-        // Data is ALREADY in millions from data-processor!
-        const revenueInMio = parseValue(processed.umsatzData?.datasets?.[0]?.data?.[index] || 0);
-        const db2InMio = parseValue(processed.db2Data?.datasets?.[0]?.data?.[index] || 0);
-        const db3JahrInMio = parseValue(processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0);
-        const projektkostenInMio = parseValue(processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0);
+        // Get data using helper (supports both formats!)
+        const revenueInMio = parseValue(getData(processed.umsatzData)[index] || 0);
+        const db2InMio = parseValue(getData(processed.db2Data)[index] || 0);
+        const db3JahrInMio = parseValue(getData(processed.db3JahrData)[index] || 0);
+        const projektkostenInMio = parseValue(getData(processed.projektkostenData)[index] || 0);
         
         console.log(`📅 Jahr ${jahr}:`, {
             revenue: revenueInMio + 'M',
@@ -109,8 +118,8 @@ function transformProcessedData(processed) {
     
     // Find break-even from kumuliert data
     let breakEvenJahr = '-';
-    if (processed.db3KumuliertData?.datasets?.[0]?.data) {
-        const kumuliertData = processed.db3KumuliertData.datasets[0].data;
+    const kumuliertData = getData(processed.db3KumuliertData);
+    if (kumuliertData.length > 0) {
         for (let i = 0; i < kumuliertData.length; i++) {
             const val = parseValue(kumuliertData[i]);
             if (val > 0) {
@@ -475,56 +484,51 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
         });
     });
     
-    // Return in data-processor format
+    // Return in data-processor format (with .values not .datasets!)
     return {
         projektName: projekt.name,
         umsatzData: {
             labels: jahre,
-            datasets: [{
-                label: 'Umsatz',
-                data: umsatzArray,
-                backgroundColor: '#3B82F6'
-            }]
+            values: umsatzArray,  // Changed from datasets!
+            unit: 'Mio. €',
+            color: '#3B82F6'
         },
         absatzData: {
             labels: jahre,
-            datasets: [{
-                label: 'Absatz',
-                data: jahre.map(() => 0), // TODO: Calculate
-                backgroundColor: '#10B981'
-            }]
+            values: jahre.map(() => 0), // TODO: Calculate
+            unit: 'Tausend Stück',
+            color: '#10B981'
         },
         db2Data: {
             labels: jahre,
-            datasets: [{
-                label: 'DB2',
-                data: db2Array,
-                backgroundColor: '#F59E0B'
-            }]
+            absolute: db2Array,  // Note: db2Data uses .absolute!
+            percent: jahre.map(() => 0),
+            unit: 'Mio. €',
+            colors: {
+                bars: '#F59E0B',
+                line: '#374151'
+            }
         },
         projektkostenData: {
             labels: jahre,
-            datasets: [{
-                label: 'Projektkosten',
-                data: projektkostenArray,
-                backgroundColor: '#EF4444'
-            }]
+            values: projektkostenArray,
+            unit: 'Mio. €',
+            color: '#EF4444'
         },
         db3JahrData: {
             labels: jahre,
-            datasets: [{
-                label: 'DB3',
-                data: db3JahrArray,
-                backgroundColor: '#8B5CF6'
-            }]
+            values: db3JahrArray,
+            unit: 'Mio. €',
+            colorFunction: (value) => value < 0 ? '#ef4444' : '#9ca3af'
         },
         db3KumuliertData: {
             labels: jahre,
-            datasets: [{
-                label: 'DB3 kumuliert',
-                data: db3KumuliertArray,
-                backgroundColor: '#06B6D4'
-            }]
+            values: db3KumuliertArray,
+            unit: 'Mio. €',
+            colors: {
+                line: '#374151',
+                fill: 'rgba(55, 65, 81, 0.1)'
+            }
         }
     };
 }
