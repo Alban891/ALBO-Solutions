@@ -441,7 +441,7 @@ class PromptsEngine {
     /* PROMPT DETAIL VIEW */
     /* ========================================== */
 
-  renderPromptDetail(prompt) {
+renderPromptDetail(prompt) {
     const container = document.getElementById('prompts-content');
     if (!container) return;
 
@@ -457,53 +457,53 @@ class PromptsEngine {
         </div>
 
         <!-- Prompt Header -->
-        <div class="prompt-header-bar" style="background: white; padding: 20px 32px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-            <div class="prompt-header-info" style="display: flex; align-items: center; gap: 16px;">
-                <div class="prompt-icon" style="font-size: 32px;">${prompt.icon || '📄'}</div>
+        <div class="prompt-header-bar" style="background: white; padding: 16px 24px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+            <div class="prompt-header-info" style="display: flex; align-items: center; gap: 12px;">
+                <div class="prompt-icon" style="font-size: 24px;">${prompt.icon || '📄'}</div>
                 <div>
-                    <h2 style="margin: 0; font-size: 24px; font-weight: 600;">${prompt.name}</h2>
-                    <div class="prompt-meta" style="font-size: 14px; color: #64748b;">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</div>
+                    <h2 style="margin: 0; font-size: 20px; font-weight: 600;">${prompt.name}</h2>
+                    <div class="prompt-meta" style="font-size: 12px; color: #64748b;">${prompt.category} • ⏱️ ${prompt.duration || 30} Min</div>
                 </div>
             </div>
         </div>
 
-        <!-- CLEAN SPLITSCREEN -->
-        <div class="clean-split-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; height: calc(100vh - 200px); width: 100%; background: #e2e8f0; overflow: hidden;">
+        <!-- CLEAN SPLITSCREEN - Kompakter -->
+        <div class="clean-split-container" style="display: grid; grid-template-columns: 45% 55%; gap: 2px; height: calc(100vh - 240px); width: 100%; max-width: 100%; margin: 0 auto; background: #e2e8f0; overflow: hidden;">
             
-            <!-- LEFT: Questions Panel -->
-            <div class="questions-panel" style="background: #ffffff; padding: 32px; overflow-y: auto; height: 100%;">
-                <div class="panel-header" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e2e8f0;">
-                    <div class="panel-title" style="font-size: 18px; font-weight: 600; color: #1e293b;">📝 Deine Eingaben</div>
-                    <div class="panel-subtitle" style="font-size: 13px; color: #64748b;">${extractedQuestions.length} Fragen für optimalen Output</div>
+            <!-- LEFT: Questions Panel - Schmaler & kompakter -->
+            <div class="questions-panel" style="background: #ffffff; padding: 20px; overflow-y: auto; height: 100%;">
+                <div class="panel-header" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0;">
+                    <div class="panel-title" style="font-size: 15px; font-weight: 600; color: #1e293b;">📝 Deine Eingaben</div>
+                    <div class="panel-subtitle" style="font-size: 11px; color: #64748b;">${extractedQuestions.length} Fragen für optimalen Output</div>
                 </div>
 
                 ${extractedQuestions.map((q, idx) => `
-                    <div class="question-item" style="margin-bottom: 28px; padding: 20px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                        <div class="question-label" style="font-size: 15px; font-weight: 500; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center;">
-                            <span class="question-number" style="display: inline-block; width: 28px; height: 28px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 600; font-size: 14px; margin-right: 12px;">${idx + 1}</span>
+                    <div class="question-item" style="margin-bottom: 20px; padding: 14px; background: #f8fafc; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                        <div class="question-label" style="font-size: 13px; font-weight: 500; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center;">
+                            <span class="question-number" style="display: inline-block; width: 22px; height: 22px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-weight: 600; font-size: 11px; margin-right: 10px;">${idx + 1}</span>
                             ${this.escapeHtml(q.question)}
                         </div>
                         <input 
                             type="text" 
                             class="question-input"
-                            style="width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 14px; background: white;"
+                            style="width: 100%; padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 4px; font-size: 12px; background: white;"
                             id="input-${prompt.id}-${idx}"
                             placeholder="${q.example ? this.escapeHtml(q.example) : 'Deine Antwort...'}"
                             oninput="window.promptsEngine.updateCleanPreview('${prompt.id}', ${idx}, this.value)"
                         />
-                        ${q.example ? `<div class="question-example" style="font-size: 12px; color: #64748b; margin-top: 6px; padding-left: 40px; font-style: italic;">💡 Beispiel: ${this.escapeHtml(q.example)}</div>` : ''}
+                        ${q.example ? `<div class="question-example" style="font-size: 10px; color: #64748b; margin-top: 4px; padding-left: 32px; font-style: italic;">💡 Beispiel: ${this.escapeHtml(q.example)}</div>` : ''}
                     </div>
                 `).join('')}
 
-                <!-- Additional Context -->
-                <div class="additional-context" style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e2e8f0;">
-                    <div class="question-label" style="font-size: 15px; font-weight: 500; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center;">
-                        <span class="question-number" style="display: inline-block; width: 28px; height: 28px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 28px; font-weight: 600; font-size: 14px; margin-right: 12px;">+</span>
+                <!-- Additional Context - Kompakter -->
+                <div class="additional-context" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                    <div class="question-label" style="font-size: 13px; font-weight: 500; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center;">
+                        <span class="question-number" style="display: inline-block; width: 22px; height: 22px; background: #3b82f6; color: white; border-radius: 50%; text-align: center; line-height: 22px; font-weight: 600; font-size: 11px; margin-right: 10px;">+</span>
                         Zusätzliche Hinweise (optional)
                     </div>
                     <textarea
                         class="additional-textarea"
-                        style="width: 100%; min-height: 120px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"
+                        style="width: 100%; min-height: 80px; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 4px; font-size: 12px; font-family: inherit; resize: vertical;"
                         id="additional-${prompt.id}"
                         placeholder="Weitere Details, spezifische Anforderungen, Kontext..."
                         oninput="window.promptsEngine.updateAdditionalClean('${prompt.id}', this.value)"
@@ -511,30 +511,30 @@ class PromptsEngine {
                 </div>
             </div>
 
-            <!-- RIGHT: Code Panel -->
-            <div class="code-panel" style="background: #1e293b; padding: 24px; overflow-y: auto; height: 100%;">
-                <div class="panel-header" style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #334155;">
-                    <div class="panel-title" style="font-size: 18px; font-weight: 600; color: #f1f5f9;">💻 Live Prompt Preview</div>
-                    <div class="panel-subtitle" style="font-size: 13px; color: #94a3b8;">Echtzeit-Vorschau deines fertigen Prompts</div>
+            <!-- RIGHT: Code Panel - Kompakter -->
+            <div class="code-panel" style="background: #1e293b; padding: 20px; overflow-y: auto; height: 100%;">
+                <div class="panel-header" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #334155;">
+                    <div class="panel-title" style="font-size: 15px; font-weight: 600; color: #f1f5f9;">💻 Live Prompt Preview</div>
+                    <div class="panel-subtitle" style="font-size: 11px; color: #94a3b8;">Echtzeit-Vorschau deines fertigen Prompts</div>
                 </div>
-                <div class="code-preview" style="font-family: 'Fira Code', 'Monaco', monospace; font-size: 14px; line-height: 1.8; color: #e2e8f0; white-space: pre-wrap; word-wrap: break-word;" id="code-preview-${prompt.id}">
+                <div class="code-preview" style="font-family: 'Fira Code', 'Monaco', monospace; font-size: 12px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; word-wrap: break-word;" id="code-preview-${prompt.id}">
                     ${this.renderCleanPreview(prompt, fullPromptText, extractedQuestions)}
                 </div>
             </div>
         </div>
 
-        <!-- Action Bar -->
-        <div class="action-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #e2e8f0; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; z-index: 100;">
+        <!-- Action Bar - Kompakter -->
+        <div class="action-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 2px solid #e2e8f0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 100;">
             <div class="action-info">
-                <div id="completion-status-${prompt.id}" class="completion-badge" style="padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; background: #fef3c7; color: #92400e;">
+                <div id="completion-status-${prompt.id}" class="completion-badge" style="padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 500; background: #fef3c7; color: #92400e;">
                     0/${extractedQuestions.length} Fragen beantwortet
                 </div>
             </div>
-            <div class="action-buttons" style="display: flex; gap: 12px;">
-                <button class="btn-action btn-copy" style="padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e0;" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
+            <div class="action-buttons" style="display: flex; gap: 8px;">
+                <button class="btn-action btn-copy" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e0;" onclick="window.promptsEngine.copyPrompt('${prompt.id}')">
                     📋 Kopieren
                 </button>
-                <button class="btn-action btn-execute" style="padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
+                <button class="btn-action btn-execute" style="padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 500; cursor: pointer; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; opacity: 0.5;" id="execute-btn-${prompt.id}" disabled onclick="window.promptsEngine.executePrompt('${prompt.id}')">
                     ⚡ Ausführen
                 </button>
             </div>
