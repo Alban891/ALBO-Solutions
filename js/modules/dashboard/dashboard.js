@@ -52,14 +52,25 @@ function transformProcessedData(processed) {
     // Extract years from labels
     const jahre = processed.umsatzData?.labels || [];
     
+    // Helper function to parse value (handles both numbers and strings like "10M")
+    const parseValue = (val) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+            // Remove 'M' and parse
+            const cleaned = val.replace(/[^\d.-]/g, '');
+            return parseFloat(cleaned) || 0;
+        }
+        return 0;
+    };
+    
     // Build jahreDaten from chart data
     const jahreDaten = {};
     jahre.forEach((jahr, index) => {
         // Data is ALREADY in millions from data-processor!
-        const revenueInMio = processed.umsatzData?.datasets?.[0]?.data?.[index] || 0;
-        const db2InMio = processed.db2Data?.datasets?.[0]?.data?.[index] || 0;
-        const db3JahrInMio = processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0;
-        const projektkostenInMio = processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0;
+        const revenueInMio = parseValue(processed.umsatzData?.datasets?.[0]?.data?.[index] || 0);
+        const db2InMio = parseValue(processed.db2Data?.datasets?.[0]?.data?.[index] || 0);
+        const db3JahrInMio = parseValue(processed.db3JahrData?.datasets?.[0]?.data?.[index] || 0);
+        const projektkostenInMio = parseValue(processed.projektkostenData?.datasets?.[0]?.data?.[index] || 0);
         
         console.log(`📅 Jahr ${jahr}:`, {
             revenue: revenueInMio + 'M',
@@ -101,7 +112,8 @@ function transformProcessedData(processed) {
     if (processed.db3KumuliertData?.datasets?.[0]?.data) {
         const kumuliertData = processed.db3KumuliertData.datasets[0].data;
         for (let i = 0; i < kumuliertData.length; i++) {
-            if (kumuliertData[i] > 0) {
+            const val = parseValue(kumuliertData[i]);
+            if (val > 0) {
                 breakEvenJahr = jahre[i];
                 console.log('🎯 Break-Even found in:', breakEvenJahr);
                 break;
@@ -301,6 +313,145 @@ function buildDataFromState(projektId, projekt, artikelListe) {
     };
 }
 
+/**
+ * Build data directly from state in data-processor format
+ * Used as fallback when processDataForDashboard returns empty data
+ */
+function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
+    console.log('🔨 Building data DIRECTLY from state in data-processor format...');
+    
+    // Extract all years
+    const alleJahre = new Set();
+    artikelListe.forEach(artikel => {
+        if (artikel.revenueModel?.jahre) {
+            Object.keys(artikel.revenueModel.jahre).forEach(jahr => alleJahre.add(jahr));
+        }
+    });
+    
+    const jahre = Array.from(alleJahre).sort();
+    console.log('📅 Found years:', jahre);
+    
+    if (jahre.length === 0) {
+        console.warn('⚠️ No years found in revenue model');
+        return null;
+    }
+    
+    // Initialize arrays for chart data
+    const umsatzArray = [];
+    const db2Array = [];
+    const db3JahrArray = [];
+    const db3KumuliertArray = [];
+    const projektkostenArray = [];
+    
+    let db3Kumuliert = 0;
+    
+    // Calculate for each year
+    jahre.forEach(jahr => {
+        let jahresUmsatz = 0;
+        let jahresDB1 = 0;
+        let jahresDB2 = 0;
+        
+        // Sum across all artikel
+        artikelListe.forEach(artikel => {
+            const jahresDaten = artikel.revenueModel?.jahre?.[jahr];
+            if (jahresDaten) {
+                const menge = jahresDaten.menge || 0;
+                const preis = jahresDaten.preis || 0;
+                const hk = jahresDaten.hk || 0;
+                
+                // Umsatz in T€
+                const umsatz = (menge * preis) / 1000;
+                const db1 = (menge * (preis - hk)) / 1000;
+                
+                jahresUmsatz += umsatz;
+                jahresDB1 += db1;
+            }
+        });
+        
+        // DB2 = DB1 (simplified, without overhead)
+        jahresDB2 = jahresDB1;
+        
+        // Get Projektkosten from kostenWerte
+        const kostenWerte = projekt.kostenWerte || {};
+        let jahresProjektkosten = 0;
+        Object.values(kostenWerte).forEach(block => {
+            const kosten = block.jahre?.[jahr] || 0;
+            jahresProjektkosten += kosten / 1000; // Convert to T€
+        });
+        
+        // DB3 = DB2 - Projektkosten
+        const jahresDB3 = jahresDB2 - jahresProjektkosten;
+        db3Kumuliert += jahresDB3;
+        
+        // Store in arrays (in M€ for charts)
+        umsatzArray.push(jahresUmsatz / 1000);
+        db2Array.push(jahresDB2 / 1000);
+        db3JahrArray.push(jahresDB3 / 1000);
+        db3KumuliertArray.push(db3Kumuliert / 1000);
+        projektkostenArray.push(jahresProjektkosten / 1000);
+        
+        console.log(`📅 Jahr ${jahr}:`, {
+            umsatz: (jahresUmsatz / 1000).toFixed(2) + 'M',
+            db2: (jahresDB2 / 1000).toFixed(2) + 'M',
+            db3: (jahresDB3 / 1000).toFixed(2) + 'M',
+            kosten: (jahresProjektkosten / 1000).toFixed(2) + 'M'
+        });
+    });
+    
+    // Return in data-processor format
+    return {
+        projektName: projekt.name,
+        umsatzData: {
+            labels: jahre,
+            datasets: [{
+                label: 'Umsatz',
+                data: umsatzArray,
+                backgroundColor: '#3B82F6'
+            }]
+        },
+        absatzData: {
+            labels: jahre,
+            datasets: [{
+                label: 'Absatz',
+                data: jahre.map(() => 0), // TODO: Calculate
+                backgroundColor: '#10B981'
+            }]
+        },
+        db2Data: {
+            labels: jahre,
+            datasets: [{
+                label: 'DB2',
+                data: db2Array,
+                backgroundColor: '#F59E0B'
+            }]
+        },
+        projektkostenData: {
+            labels: jahre,
+            datasets: [{
+                label: 'Projektkosten',
+                data: projektkostenArray,
+                backgroundColor: '#EF4444'
+            }]
+        },
+        db3JahrData: {
+            labels: jahre,
+            datasets: [{
+                label: 'DB3',
+                data: db3JahrArray,
+                backgroundColor: '#8B5CF6'
+            }]
+        },
+        db3KumuliertData: {
+            labels: jahre,
+            datasets: [{
+                label: 'DB3 kumuliert',
+                data: db3KumuliertArray,
+                backgroundColor: '#06B6D4'
+            }]
+        }
+    };
+}
+
 // ==========================================
 // MAIN RENDER
 // ==========================================
@@ -342,11 +493,30 @@ export async function renderProjektDashboard() {
             console.log('🔍 DEBUG: Artikel list:', artikelListe);
             console.log('🔍 DEBUG: Artikel count:', artikelListe?.length || 0);
             
-            // Try data processor
+            // Try data processor FIRST
             console.log('📊 Calling processDataForDashboard...');
-            const processedData = await processDataForDashboard(projektId);
+            let processedData = await processDataForDashboard(projektId);
             console.log('📊 Processed data received:', processedData);
             console.log('📊 Processed data keys:', Object.keys(processedData || {}));
+            
+            // Check if data is empty (all zeros)
+            let hasData = false;
+            if (processedData?.umsatzData?.datasets?.[0]?.data) {
+                const data = processedData.umsatzData.datasets[0].data;
+                hasData = data.some(val => {
+                    const parsed = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+                    return parsed > 0;
+                });
+            }
+            
+            console.log('📊 Has data from processor:', hasData);
+            
+            // FALLBACK: Build directly from state if processor returns empty data
+            if (!hasData && artikelListe && artikelListe.length > 0) {
+                console.warn('⚠️ Data processor returned empty data, building directly from state...');
+                processedData = buildDataDirectlyFromState(projektId, projekt, artikelListe);
+                console.log('✅ Built data from state:', processedData);
+            }
             
             // Log chart data details
             if (processedData) {
@@ -704,10 +874,13 @@ window.showVisualization = function(vizId) {
     document.querySelectorAll('.sub-item').forEach(item => {
         item.classList.remove('active');
     });
-    document.querySelector(`[onclick*="${vizId}"]`)?.classList.add('active');
+    const activeItem = document.querySelector(`[onclick*="${vizId}"]`);
+    if (activeItem) activeItem.classList.add('active');
     
-    // Scroll to viz
-    vizContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Scroll to viz if it exists
+    if (vizContainer && typeof vizContainer.scrollIntoView === 'function') {
+        vizContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 };
 
 /**
