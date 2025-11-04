@@ -1,11 +1,12 @@
 /**
- * Executive Summary / Übersicht - DASHBOARD STYLE
+ * Executive Summary / Übersicht - ONE PAGE COMPACT
  * Professional Management Presentation with RAG Intelligence
  * 
  * Layout:
- * - Top: Sticky KPI Bar (4 Metrics)
- * - Left: Question Sidebar (expandable cards)
- * - Right: Content Area (Project Context + AI Benchmark + Visualizations)
+ * - KPI Scorecard (5 Metrics: Menge, Revenue, DB2, Payback, Decision)
+ * - Management Summary (2 Columns: Beschreibung | Business Case)
+ * - KI-Benchmark (Warning + 3 Similar Projects)
+ * - Visualizations (3 Charts side-by-side: Revenue/DB2, Kosten, Szenarien)
  */
 
 import { state } from '../state.js';
@@ -20,22 +21,14 @@ const uebersichtState = {
     projektId: null,
     rawData: null,
     calculationResult: null,
-    activeSection: null,
-    pinnedSections: new Set(),
-    sectionSizes: {},
-    charts: {},
-    isInitialized: false,
-    lastUpdate: null
+    lastUpdate: null,
+    ragResults: null
 };
 
 // ==========================================
 // MAIN RENDER
 // ==========================================
 
-/**
- * Main entry point - renders complete executive summary
- * ⚠️ ASYNC function - calculator is async!
- */
 export async function renderUebersicht() {
     const projektId = window.cfoDashboard.currentProjekt;
     if (!projektId) return;
@@ -43,7 +36,7 @@ export async function renderUebersicht() {
     const container = document.getElementById('projekt-tab-uebersicht');
     if (!container) return;
     
-    console.log('📊 Rendering Executive Summary (Dashboard Style) for:', projektId);
+    console.log('📊 Rendering Executive Summary (Compact One-Page) for:', projektId);
     
     // Show loading
     container.innerHTML = `
@@ -59,10 +52,10 @@ export async function renderUebersicht() {
     const projekt = state.getProjekt(projektId);
     const artikel = state.getArtikelByProjekt(projektId);
     
-    // Calculate wirtschaftlichkeit - WITH AWAIT!
+    // Calculate wirtschaftlichkeit
     let calc = null;
     try {
-        console.log('🧮 Calling calculateProjektWirtschaftlichkeit (ASYNC)...');
+        console.log('🧮 Calling calculateProjektWirtschaftlichkeit...');
         calc = await calculateProjektWirtschaftlichkeit(projektId, { wacc: 0.08 });
         console.log('📊 Calc result:', calc);
         
@@ -88,81 +81,80 @@ export async function renderUebersicht() {
     uebersichtState.rawData = { projekt, artikel, calc };
     uebersichtState.calculationResult = calc;
     uebersichtState.lastUpdate = new Date();
-    uebersichtState.isInitialized = true;
     
     // Render layout
-    container.innerHTML = createMainLayout(projekt, artikel, calc, hasValidData);
-    
-    // Initialize if we have data
-    if (hasValidData) {
-        // Load RAG Intelligence async
-        setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
+    if (!hasValidData) {
+        container.innerHTML = renderPlaceholder(projekt);
+        return;
     }
+    
+    container.innerHTML = createCompactLayout(projekt, artikel, calc);
+    
+    // Load RAG Intelligence async
+    setTimeout(() => loadRAGIntelligence(projekt, calc), 500);
+    
+    // Render charts after DOM is ready
+    setTimeout(() => {
+        renderRevenueDB2Chart(calc);
+        renderKostenChart(calc);
+        renderSzenarienChart(calc);
+    }, 100);
 }
 
 // ==========================================
-// LAYOUT CREATION
+// MAIN LAYOUT
 // ==========================================
 
-/**
- * Create main layout
- */
-function createMainLayout(projekt, artikel, calc, hasValidData) {
-    if (!hasValidData) {
-        return renderPlaceholder(projekt);
-    }
-    
+function createCompactLayout(projekt, artikel, calc) {
     return `
-        <div class="executive-summary-container">
+        <div class="executive-compact-container">
             
-            <!-- Sticky KPI Bar -->
-            <div class="executive-kpi-bar">
-                ${createKPIBar(calc)}
+            <!-- Header -->
+            <div class="executive-header">
+                <div class="header-left">
+                    <h1>🎯 Executive Summary</h1>
+                    <div class="header-meta">${projekt.name} | Stand: ${new Date().toLocaleDateString('de-DE')}</div>
+                </div>
             </div>
             
-            <!-- Main Content: Sidebar + Content Area -->
-            <div class="executive-main-area">
-                
-                <!-- Left: Section Sidebar -->
-                <aside class="executive-sidebar">
-                    ${createSectionSidebar(projekt, artikel, calc)}
-                </aside>
-                
-                <!-- Right: Content Area -->
-                <main class="executive-content-area">
-                    
-                    <!-- Always Visible: Project Context -->
-                    <div class="project-context-box">
-                        ${createProjectContext(projekt, artikel, calc)}
-                    </div>
-                    
-                    <!-- Always Visible: AI Benchmark (expandable) -->
-                    <div class="ai-benchmark-box" id="ai-benchmark-box">
-                        ${createAIBenchmarkPlaceholder()}
-                    </div>
-                    
-                    <!-- Dynamic Visualization Area -->
-                    <div id="viz-containers">
-                        <!-- Will be populated dynamically -->
-                    </div>
-                    
-                </main>
-                
+            <!-- KPI Scorecard -->
+            ${createKPIScorecard(calc, artikel)}
+            
+            <!-- Management Summary -->
+            ${createManagementSummary(projekt, artikel, calc)}
+            
+            <!-- KI Benchmark -->
+            <div class="ki-benchmark-section" id="ki-benchmark-section">
+                ${createKIBenchmarkPlaceholder()}
             </div>
+            
+            <!-- Visualizations -->
+            ${createVisualizationsSection(calc)}
+            
         </div>
         
         <style>
-            ${getExecutiveSummaryStyles()}
+            ${getCompactStyles()}
         </style>
     `;
 }
 
-/**
- * Create KPI Bar (Sticky Top)
- */
-function createKPIBar(calc) {
+// ==========================================
+// KPI SCORECARD
+// ==========================================
+
+function createKPIScorecard(calc, artikel) {
+    // Calculate total quantity
+    const totalMenge = artikel.reduce((sum, art) => {
+        const artMenge = Object.values(calc?.jahre || {}).reduce((s, j) => {
+            const artData = j.artikel?.find(a => a.artikel_id === art.id);
+            return s + (artData?.menge || 0);
+        }, 0);
+        return sum + artMenge;
+    }, 0);
+    
     const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
-    const totalDB3 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db3 || 0), 0) / 1000000;
+    const totalDB2 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db2 || 0), 0) / 1000000;
     const breakEven = calc?.kpis?.break_even_year || '-';
     const npv = (calc?.kpis?.npv || 0) / 1000000;
     const irr = calc?.kpis?.irr || 0;
@@ -183,7 +175,15 @@ function createKPIBar(calc) {
     }
     
     return `
-        <div class="kpi-cards">
+        <div class="kpi-scorecard">
+            <div class="kpi-card">
+                <div class="kpi-icon">📦</div>
+                <div class="kpi-content">
+                    <div class="kpi-label">MENGE</div>
+                    <div class="kpi-value">${helpers.formatNumber(totalMenge)}</div>
+                    <div class="kpi-meta">Units (5Y Total)</div>
+                </div>
+            </div>
             
             <div class="kpi-card">
                 <div class="kpi-icon">💰</div>
@@ -197,18 +197,18 @@ function createKPIBar(calc) {
             <div class="kpi-card">
                 <div class="kpi-icon">✅</div>
                 <div class="kpi-content">
-                    <div class="kpi-label">PROFITABILITY</div>
-                    <div class="kpi-value">€${totalDB3.toFixed(1)}M</div>
-                    <div class="kpi-meta">DB3 Total</div>
+                    <div class="kpi-label">DB2</div>
+                    <div class="kpi-value">€${totalDB2.toFixed(1)}M</div>
+                    <div class="kpi-meta">5Y Total</div>
                 </div>
             </div>
             
             <div class="kpi-card">
                 <div class="kpi-icon">⏱️</div>
                 <div class="kpi-content">
-                    <div class="kpi-label">BREAK-EVEN</div>
+                    <div class="kpi-label">PAYBACK</div>
                     <div class="kpi-value">${breakEven}</div>
-                    <div class="kpi-meta">Jahre bis Payback</div>
+                    <div class="kpi-meta">Break-Even</div>
                 </div>
             </div>
             
@@ -220,98 +220,15 @@ function createKPIBar(calc) {
                     <div class="kpi-meta">NPV: €${npv.toFixed(1)}M</div>
                 </div>
             </div>
-            
         </div>
     `;
 }
 
-/**
- * Create Section Sidebar (Left)
- */
-function createSectionSidebar(projekt, artikel, calc) {
-    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
-    const totalDB3 = Object.values(calc?.jahre || {}).reduce((sum, j) => sum + (j.db3 || 0), 0) / 1000000;
-    const projektkostenTotal = (calc?.metadata?.anzahl_kostenblöcke || 0);
-    
-    return `
-        <div class="section-card" onclick="window.showExecutiveSection('geschaeftsmodell')">
-            <div class="section-icon">📦</div>
-            <div class="section-text">
-                <h3>Geschäftsmodell</h3>
-                <p>${artikel.length} Artikel</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('szenarien')">
-            <div class="section-icon">📊</div>
-            <div class="section-text">
-                <h3>Szenarien</h3>
-                <p>Best/Base/Worst</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('annahmen')">
-            <div class="section-icon">📌</div>
-            <div class="section-text">
-                <h3>Kernannahmen</h3>
-                <p>Kritische Faktoren</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('risiken')">
-            <div class="section-icon">⚠️</div>
-            <div class="section-text">
-                <h3>Risiken</h3>
-                <p>Top 3 Risiken</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('chancen')">
-            <div class="section-icon">🚀</div>
-            <div class="section-text">
-                <h3>Chancen</h3>
-                <p>Upside Potenzial</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('aehnliche-projekte')">
-            <div class="section-icon">🔍</div>
-            <div class="section-text">
-                <h3>Ähnliche Cases</h3>
-                <p>Benchmarks</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('best-practices')">
-            <div class="section-icon">💎</div>
-            <div class="section-text">
-                <h3>Best Practices</h3>
-                <p>Strategic Overrides</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-        
-        <div class="section-card" onclick="window.showExecutiveSection('meilensteine')">
-            <div class="section-icon">🎯</div>
-            <div class="section-text">
-                <h3>Meilensteine</h3>
-                <p>Timeline</p>
-            </div>
-            <span class="section-arrow">▶</span>
-        </div>
-    `;
-}
+// ==========================================
+// MANAGEMENT SUMMARY
+// ==========================================
 
-/**
- * Create Project Context (Always Visible)
- */
-function createProjectContext(projekt, artikel, calc) {
+function createManagementSummary(projekt, artikel, calc) {
     const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
     const npv = (calc?.kpis?.npv || 0) / 1000000;
     const irr = calc?.kpis?.irr || 0;
@@ -321,18 +238,21 @@ function createProjectContext(projekt, artikel, calc) {
     let recommendation = 'OPTION B: REDESIGN';
     let recommendationClass = 'warning';
     let recommendationIcon = '⚠️';
+    let recommendationText = 'Business Case grenzwertig - Neuplanung empfohlen';
     
     if (npv > 0 && irr > 15) {
-        recommendation = 'OPTION A: GO';
+        recommendation = 'OPTION C: APPROVE';
         recommendationClass = 'success';
         recommendationIcon = '✅';
+        recommendationText = 'Business Case tragfähig mit attraktiver Rendite über Hurdle Rate';
     } else if (npv < -5) {
-        recommendation = 'OPTION A: NO-GO';
+        recommendation = 'OPTION A: REJECT';
         recommendationClass = 'danger';
         recommendationIcon = '❌';
+        recommendationText = 'Business Case nicht tragfähig - Projekt ablehnen';
     }
     
-    // Get strategic positioning
+    // Strategic positioning
     const hasHardware = artikel.some(a => a.typ === 'Hardware');
     const hasSoftware = artikel.some(a => a.typ === 'Software');
     const hasService = artikel.some(a => a.typ === 'Service');
@@ -346,97 +266,82 @@ function createProjectContext(projekt, artikel, calc) {
         strategicText = 'Produktinnovation zur Verteidigung und Ausbau der Marktführerschaft im Kerngeschäft.';
     }
     
+    const totalMenge = artikel.reduce((sum, art) => {
+        const artMenge = Object.values(calc?.jahre || {}).reduce((s, j) => {
+            const artData = j.artikel?.find(a => a.artikel_id === art.id);
+            return s + (artData?.menge || 0);
+        }, 0);
+        return sum + artMenge;
+    }, 0);
+    
     return `
-        <div class="context-header">
-            <div class="context-icon">📋</div>
-            <h2>Projekt-Kontext & Management Summary</h2>
-        </div>
-        
-        <div class="context-content">
+        <div class="management-summary">
             
-            <!-- Projektbeschreibung -->
-            <div class="context-section">
-                <h3>📝 Projektbeschreibung</h3>
-                <p>
-                    ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikel.length} Artikel mit einem Gesamtumsatzpotenzial von €${totalRevenue.toFixed(1)}M über den Planungszeitraum.`}
-                </p>
-            </div>
-            
-            <!-- Strategische Einordnung -->
-            <div class="context-section">
-                <h3>🎯 Strategische Einordnung</h3>
-                <p>${strategicText}</p>
-            </div>
-            
-            <!-- Business Case Summary -->
-            <div class="context-section">
-                <h3>💰 Business Case Summary</h3>
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span class="summary-label">Gesamtumsatz (5Y):</span>
-                        <span class="summary-value">€${totalRevenue.toFixed(1)}M</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">NPV @ 8% WACC:</span>
-                        <span class="summary-value" style="color: ${npv > 0 ? '#10b981' : '#ef4444'}">€${npv.toFixed(1)}M</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">IRR:</span>
-                        <span class="summary-value">${irr.toFixed(1)}%</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Break-Even:</span>
-                        <span class="summary-value">${breakEven}</span>
-                    </div>
+            <!-- Left Column: Beschreibung -->
+            <div class="summary-col left">
+                <div class="summary-section">
+                    <h3>📝 PROJEKTBESCHREIBUNG</h3>
+                    <p>
+                        ${projekt.beschreibung || `Das Projekt "${projekt.name}" umfasst ${artikel.length} Artikel mit einem Produktionsvolumen von ${helpers.formatNumber(totalMenge)} Units über 5 Jahre. Gesamtumsatzpotenzial: €${totalRevenue.toFixed(1)}M.`}
+                    </p>
+                </div>
+                
+                <div class="summary-section">
+                    <h3>🎯 STRATEGISCHE EINORDNUNG</h3>
+                    <p>${strategicText}</p>
                 </div>
             </div>
             
-            <!-- Handlungsempfehlung -->
-            <div class="recommendation-box ${recommendationClass}">
-                <div class="recommendation-header">
-                    <span class="recommendation-icon">${recommendationIcon}</span>
-                    <h3>HANDLUNGSEMPFEHLUNG: ${recommendation}</h3>
+            <!-- Right Column: Business Case -->
+            <div class="summary-col right">
+                <div class="summary-section">
+                    <h3>💰 BUSINESS CASE</h3>
+                    <div class="bc-metrics">
+                        <div class="bc-row">
+                            <span class="bc-label">Gesamtumsatz (5Y):</span>
+                            <span class="bc-value">€${totalRevenue.toFixed(1)}M</span>
+                        </div>
+                        <div class="bc-row">
+                            <span class="bc-label">NPV @ 8% WACC:</span>
+                            <span class="bc-value" style="color: ${npv > 0 ? '#10b981' : '#ef4444'}">€${npv.toFixed(1)}M</span>
+                        </div>
+                        <div class="bc-row">
+                            <span class="bc-label">IRR:</span>
+                            <span class="bc-value">${irr.toFixed(1)}%</span>
+                        </div>
+                        <div class="bc-row">
+                            <span class="bc-label">Break-Even:</span>
+                            <span class="bc-value">${breakEven}</span>
+                        </div>
+                    </div>
                 </div>
-                <ul class="recommendation-list">
-                    ${npv > 0 && irr > 15 ? `
-                        <li>✅ Business Case ist tragfähig</li>
-                        <li>✅ Attraktive Rendite über Hurdle Rate</li>
-                        <li>✅ Empfehlung: Freigabe mit Standard Gate Review</li>
-                    ` : npv < -5 ? `
-                        <li>❌ Business Case nicht tragfähig (NPV: €${npv.toFixed(1)}M)</li>
-                        <li>❌ Break-Even nicht erreichbar</li>
-                        <li>❌ Empfehlung: Projekt ablehnen oder fundamental überarbeiten</li>
-                    ` : `
-                        <li>⚠️ Business Case grenzwertig (NPV: €${npv.toFixed(1)}M)</li>
-                        <li>⚠️ Mengenplanung kritisch prüfen (siehe KI-Benchmark)</li>
-                        <li>⚠️ Empfehlung: Neuplanung mit reduzierten Volumina</li>
-                    `}
-                </ul>
-            </div>
-            
-            <!-- Nächste Schritte -->
-            <div class="next-steps-box">
-                <h3>⚡ Nächste Schritte</h3>
-                <div class="action-buttons">
-                    <button class="action-btn ${recommendationClass === 'danger' ? 'active' : ''}" 
-                            onclick="alert('Option A: Projekt ablehnen')">
-                        <span class="btn-icon">❌</span>
-                        <span class="btn-text">OPTION A: REJECT</span>
-                    </button>
-                    <button class="action-btn ${recommendationClass === 'warning' ? 'active' : ''}" 
-                            onclick="alert('Option B: Neuplanung mit -40% Volumen')">
-                        <span class="btn-icon">🔄</span>
-                        <span class="btn-text">OPTION B: REDESIGN</span>
-                    </button>
-                    <button class="action-btn" 
-                            onclick="alert('Option C: Board-Level Strategic Override')">
-                        <span class="btn-icon">💎</span>
-                        <span class="btn-text">OPTION C: STRATEGIC OVERRIDE</span>
-                    </button>
+                
+                <div class="summary-section recommendation-section">
+                    <div class="recommendation-box ${recommendationClass}">
+                        <div class="rec-header">
+                            <span class="rec-icon">${recommendationIcon}</span>
+                            <span class="rec-title">EMPFEHLUNG: ${recommendation}</span>
+                        </div>
+                        <p class="rec-text">${recommendationText}</p>
+                    </div>
                 </div>
-                <div class="action-details">
-                    <p><strong>Timeline:</strong> Management Entscheidung bis 15.11.2025 | Gate Review Q1/2026</p>
-                    <p><strong>Budget:</strong> Entwicklungsbudget €12.5M | Freigabe erforderlich</p>
+                
+                <div class="summary-section">
+                    <h3>⚡ NÄCHSTE SCHRITTE</h3>
+                    <div class="action-buttons-compact">
+                        <button class="action-btn-compact ${recommendationClass === 'danger' ? 'active' : ''}" 
+                                onclick="alert('Option A: Projekt ablehnen')">
+                            ❌ A: REJECT
+                        </button>
+                        <button class="action-btn-compact ${recommendationClass === 'warning' ? 'active' : ''}" 
+                                onclick="alert('Option B: Neuplanung mit -40% Volumen')">
+                            🔄 B: REDESIGN
+                        </button>
+                        <button class="action-btn-compact ${recommendationClass === 'success' ? 'active' : ''}" 
+                                onclick="alert('Option C: Projekt freigeben')">
+                            ✅ C: APPROVE
+                        </button>
+                    </div>
                 </div>
             </div>
             
@@ -444,31 +349,18 @@ function createProjectContext(projekt, artikel, calc) {
     `;
 }
 
-/**
- * Create AI Benchmark Placeholder (Will be loaded async)
- */
-function createAIBenchmarkPlaceholder() {
+// ==========================================
+// KI BENCHMARK
+// ==========================================
+
+function createKIBenchmarkPlaceholder() {
     return `
-        <div class="benchmark-header" onclick="window.toggleAIBenchmark()">
-            <div class="benchmark-title">
-                <div class="benchmark-icon">🤖</div>
-                <h2>KI-Benchmark Analyse</h2>
-            </div>
-            <span class="benchmark-toggle">▼</span>
-        </div>
-        
-        <div class="benchmark-content collapsed" id="benchmark-content">
-            <div class="benchmark-loading">
-                <div class="loading-spinner"></div>
-                <p>Durchsuche historische Projekte...</p>
-            </div>
+        <div class="ki-loading">
+            <div class="loading-spinner"></div>
+            <p>Durchsuche historische Projekte...</p>
         </div>
     `;
 }
-
-// ==========================================
-// RAG INTELLIGENCE LOADING
-// ==========================================
 
 async function loadRAGIntelligence(projekt, calc) {
     try {
@@ -477,7 +369,7 @@ async function loadRAGIntelligence(projekt, calc) {
         // Check if Supabase available
         if (!window.supabase && !window.supabaseClient) {
             console.warn('⚠️ Supabase not available - skipping RAG');
-            updateBenchmarkContent(renderNoSupabase());
+            updateKIBenchmark(renderNoSupabase());
             return;
         }
         
@@ -500,36 +392,30 @@ async function loadRAGIntelligence(projekt, calc) {
                 .limit(3);
             
             if (data && !error) {
-                similarProjects = [...similarProjects, ...data];
+                similarProjects = data;
             }
         }
         
-        // Load strategic overrides
-        const { data: overrides, error: overridesError } = await supabase
-            .from('ALBO_Historical_Projects')
-            .select('*')
-            .eq('strategic_override', true)
-            .order('actual_npv', { ascending: false })
-            .limit(2);
-        
         console.log('✅ RAG Results:', {
-            similar: similarProjects.length,
-            overrides: overrides?.length || 0
+            similar: similarProjects.length
         });
         
+        // Store in state
+        uebersichtState.ragResults = { similarProjects };
+        
         // Render results
-        updateBenchmarkContent(renderRAGResults(similarProjects, overrides, projekt, calc));
+        updateKIBenchmark(renderKIBenchmark(similarProjects, projekt, calc));
         
     } catch (error) {
         console.error('❌ RAG Intelligence failed:', error);
-        updateBenchmarkContent(renderRAGError(error));
+        updateKIBenchmark(renderRAGError(error));
     }
 }
 
-function updateBenchmarkContent(html) {
-    const content = document.getElementById('benchmark-content');
-    if (content) {
-        content.innerHTML = html;
+function updateKIBenchmark(html) {
+    const section = document.getElementById('ki-benchmark-section');
+    if (section) {
+        section.innerHTML = html;
     }
 }
 
@@ -554,59 +440,43 @@ function buildSearchTerms(projekt) {
     return terms;
 }
 
-function renderRAGResults(similar, overrides, projekt, calc) {
+function renderKIBenchmark(similar, projekt, calc) {
     const hasSimilar = similar && similar.length > 0;
-    const hasOverrides = overrides && overrides.length > 0;
     
-    if (!hasSimilar && !hasOverrides) {
+    if (!hasSimilar) {
         return renderNoBenchmarks();
     }
     
-    let html = '';
+    const avgSuccess = similar.reduce((sum, p) => sum + p.success_rating, 0) / similar.length;
+    const avgNPV = similar.reduce((sum, p) => sum + (p.actual_npv || 0), 0) / similar.length;
+    const currentNPV = (calc?.kpis?.npv || 0);
     
-    // Warning message if we have similar projects
-    if (hasSimilar) {
-        const avgSuccess = similar.reduce((sum, p) => sum + p.success_rating, 0) / similar.length;
-        const avgNPV = similar.reduce((sum, p) => sum + (p.actual_npv || 0), 0) / similar.length;
+    return `
+        <!-- Warning Box -->
+        <div class="ki-warning">
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-content">
+                <h3>WARNUNG: Eure Mengenplanung ist zu optimistisch!</h3>
+                <p>Analyse von ${similar.length} ähnlichen Projekten zeigt:</p>
+                <ul>
+                    <li>Durchschnittliche Success Rate: <strong>${avgSuccess.toFixed(1)}/5</strong></li>
+                    <li>Durchschnittlicher NPV: <strong>€${(avgNPV / 1000000).toFixed(1)}M</strong> (vs. euer Plan: <strong>€${(currentNPV / 1000000).toFixed(1)}M</strong>)</li>
+                    <li>Typische Volumen-Abweichung: <strong>-35%</strong> vs. ursprüngliche Planung</li>
+                </ul>
+                <p class="warning-recommendation">
+                    💡 <strong>Empfehlung:</strong> Reduziert Mengenplanung um 40% und rechnet Business Case neu durch.
+                </p>
+            </div>
+        </div>
         
-        html += `
-            <div class="benchmark-warning">
-                <div class="warning-icon">⚠️</div>
-                <div class="warning-content">
-                    <h3>WARNUNG: Eure Mengenplanung ist zu optimistisch!</h3>
-                    <p>Analyse von ${similar.length} ähnlichen Projekten zeigt:</p>
-                    <ul>
-                        <li>Durchschnittliche Success Rate: <strong>${avgSuccess.toFixed(1)}/5</strong></li>
-                        <li>Durchschnittlicher NPV: <strong>€${(avgNPV / 1000000).toFixed(1)}M</strong></li>
-                        <li>Typische Volumen-Abweichung: <strong>-35% vs. Plan</strong></li>
-                    </ul>
-                    <p class="warning-recommendation">
-                        💡 <strong>Empfehlung:</strong> Reduziert Mengenplanung um 40% und rechnet neu.
-                    </p>
-                </div>
+        <!-- Similar Projects -->
+        <div class="ki-similar-projects">
+            <h3>📚 ÄHNLICHE PROJEKTE</h3>
+            <div class="similar-grid">
+                ${similar.map(p => renderSimilarProjectCard(p)).join('')}
             </div>
-            
-            <div class="benchmark-similar">
-                <h3>🔍 Ähnliche Projekte (${similar.length})</h3>
-                <div class="similar-grid">
-                    ${similar.map(p => renderSimilarProjectCard(p)).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    if (hasOverrides) {
-        html += `
-            <div class="benchmark-overrides">
-                <h3>💎 Strategische Übersteuerungen (Best Practices)</h3>
-                <div class="overrides-grid">
-                    ${overrides.map(p => renderOverrideCard(p)).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    return html;
+        </div>
+    `;
 }
 
 function renderSimilarProjectCard(project) {
@@ -616,7 +486,10 @@ function renderSimilarProjectCard(project) {
     return `
         <div class="similar-card">
             <div class="card-header">
-                <h4>${project.project_name}</h4>
+                <div class="card-title">
+                    <span class="card-icon">📦</span>
+                    <h4>${project.project_name}</h4>
+                </div>
                 <span class="success-badge" style="background: ${successColor}20; color: ${successColor}">
                     ${project.success_rating}/5
                 </span>
@@ -625,61 +498,32 @@ function renderSimilarProjectCard(project) {
                 ${project.project_type} | ${project.industry || 'N/A'} | ${project.completion_year || 'N/A'}
             </div>
             <div class="card-metrics">
-                <div class="metric">
-                    <span class="metric-label">NPV</span>
+                <div class="metric-row">
+                    <span class="metric-label">NPV:</span>
                     <span class="metric-value">€${(project.actual_npv / 1000000).toFixed(1)}M</span>
                 </div>
-                <div class="metric">
-                    <span class="metric-label">IRR</span>
+                <div class="metric-row">
+                    <span class="metric-label">IRR:</span>
                     <span class="metric-value">${project.actual_irr}%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Menge:</span>
+                    <span class="metric-value">${project.volume_units ? helpers.formatNumber(project.volume_units) : 'N/A'}</span>
                 </div>
             </div>
             ${project.lessons_learned ? `
                 <div class="card-lessons">
-                    <strong>📝 Key Learnings:</strong>
-                    <p>${truncate(project.lessons_learned, 120)}</p>
+                    <strong>📝 Key Learning:</strong>
+                    <p>${truncate(project.lessons_learned, 100)}</p>
                 </div>
             ` : ''}
-        </div>
-    `;
-}
-
-function renderOverrideCard(project) {
-    return `
-        <div class="override-card">
-            <div class="override-header">
-                <h4>💎 ${project.project_name}</h4>
-                <span class="override-badge">Strategic Override by ${project.strategic_override_by}</span>
-            </div>
-            <div class="override-decision">
-                <div class="decision-col financial">
-                    <span class="decision-label">Financial</span>
-                    <span class="decision-icon">❌</span>
-                    <span class="decision-text">REJECT</span>
-                </div>
-                <div class="decision-divider">→</div>
-                <div class="decision-col strategic">
-                    <span class="decision-label">Strategic</span>
-                    <span class="decision-icon">✅</span>
-                    <span class="decision-text">APPROVE</span>
-                </div>
-            </div>
-            ${project.ceo_comment ? `
-                <div class="override-comment">
-                    <strong>💬 "${truncate(project.ceo_comment, 100)}"</strong>
-                </div>
-            ` : ''}
-            <div class="override-value">
-                <strong>📈 Realisierter Wert:</strong>
-                ${project.strategic_value_realized || 'Platform value creation, market position'}
-            </div>
         </div>
     `;
 }
 
 function renderNoSupabase() {
     return `
-        <div class="benchmark-info">
+        <div class="ki-info">
             <div class="info-icon">ℹ️</div>
             <h3>KI-Benchmark nicht verfügbar</h3>
             <p>Supabase Datenbank ist nicht verbunden.</p>
@@ -689,7 +533,7 @@ function renderNoSupabase() {
 
 function renderNoBenchmarks() {
     return `
-        <div class="benchmark-pioneer">
+        <div class="ki-pioneer">
             <div class="pioneer-icon">🚀</div>
             <h3>Pionier-Projekt</h3>
             <p>Keine ähnlichen historischen Projekte gefunden. Dies ist ein innovatives Neuland-Projekt!</p>
@@ -700,7 +544,7 @@ function renderNoBenchmarks() {
 
 function renderRAGError(error) {
     return `
-        <div class="benchmark-error">
+        <div class="ki-error">
             <div class="error-icon">⚠️</div>
             <h3>Fehler beim Laden der KI-Analyse</h3>
             <p>${error.message || 'Unbekannter Fehler'}</p>
@@ -715,374 +559,225 @@ function truncate(text, maxLength) {
 }
 
 // ==========================================
-// INTERACTION HANDLERS
+// VISUALIZATIONS SECTION
 // ==========================================
 
-window.toggleAIBenchmark = function() {
-    const content = document.getElementById('benchmark-content');
-    const toggle = document.querySelector('.benchmark-toggle');
-    
-    if (!content) return;
-    
-    if (content.classList.contains('collapsed')) {
-        content.classList.remove('collapsed');
-        content.classList.add('expanded');
-        if (toggle) toggle.textContent = '▲';
-    } else {
-        content.classList.add('collapsed');
-        content.classList.remove('expanded');
-        if (toggle) toggle.textContent = '▼';
-    }
-};
-
-window.showExecutiveSection = function(sectionId) {
-    console.log('📊 Show section:', sectionId);
-    
-    // Get or create section container
-    let sectionContainer = document.getElementById(`section-${sectionId}`);
-    
-    if (!sectionContainer) {
-        // Create new section container
-        const vizContainers = document.getElementById('viz-containers');
-        const sectionHTML = createSectionContainer(sectionId);
-        vizContainers.insertAdjacentHTML('beforeend', sectionHTML);
-        
-        sectionContainer = document.getElementById(`section-${sectionId}`);
-        
-        // Load content
-        setTimeout(() => {
-            loadSectionContent(sectionId);
-        }, 100);
-    } else {
-        // Toggle visibility
-        if (sectionContainer.style.display === 'none') {
-            sectionContainer.style.display = 'block';
-        } else {
-            sectionContainer.style.display = 'none';
-            return;
-        }
-    }
-    
-    // Scroll to section
-    sectionContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    
-    // Update active state
-    document.querySelectorAll('.section-card').forEach(card => {
-        card.classList.remove('active');
-    });
-    document.querySelector(`[onclick*="${sectionId}"]`)?.classList.add('active');
-};
-
-window.pinExecutiveSection = function(sectionId) {
-    const container = document.getElementById(`section-${sectionId}`);
-    if (!container) return;
-    
-    if (uebersichtState.pinnedSections.has(sectionId)) {
-        uebersichtState.pinnedSections.delete(sectionId);
-        container.classList.remove('pinned');
-    } else {
-        uebersichtState.pinnedSections.add(sectionId);
-        container.classList.add('pinned');
-    }
-};
-
-window.resizeExecutiveSection = function(sectionId, size) {
-    const container = document.getElementById(`section-${sectionId}`);
-    if (!container) return;
-    
-    container.classList.remove('size-small', 'size-medium', 'size-large');
-    container.classList.add(`size-${size}`);
-    
-    uebersichtState.sectionSizes[sectionId] = size;
-    
-    // Update button states
-    container.querySelectorAll('.btn-resize').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-size') === size) {
-            btn.classList.add('active');
-        }
-    });
-};
-
-window.closeExecutiveSection = function(sectionId) {
-    if (uebersichtState.pinnedSections.has(sectionId)) {
-        alert('📌 Bitte erst Unpin, bevor Sie schließen');
-        return;
-    }
-    
-    const container = document.getElementById(`section-${sectionId}`);
-    if (container) {
-        container.style.display = 'none';
-    }
-    
-    if (uebersichtState.activeSection === sectionId) {
-        uebersichtState.activeSection = null;
-    }
-    
-    // Update active state
-    document.querySelector(`[onclick*="${sectionId}"]`)?.classList.remove('active');
-};
-
-// ==========================================
-// SECTION CONTAINER CREATION
-// ==========================================
-
-function createSectionContainer(sectionId) {
-    const config = getSectionConfig(sectionId);
-    
+function createVisualizationsSection(calc) {
     return `
-        <div class="section-container size-large" id="section-${sectionId}">
-            <div class="section-header">
-                <div class="section-title">
-                    <span class="section-icon">${config.icon}</span>
-                    <h3>${config.title}</h3>
-                </div>
-                <div class="section-controls">
-                    <button class="btn-resize" data-size="small" onclick="window.resizeExecutiveSection('${sectionId}', 'small')">S</button>
-                    <button class="btn-resize" data-size="medium" onclick="window.resizeExecutiveSection('${sectionId}', 'medium')">M</button>
-                    <button class="btn-resize active" data-size="large" onclick="window.resizeExecutiveSection('${sectionId}', 'large')">L</button>
-                    <button class="btn-pin" onclick="window.pinExecutiveSection('${sectionId}')">📌</button>
-                    <button class="btn-close" onclick="window.closeExecutiveSection('${sectionId}')">✕</button>
-                </div>
-            </div>
-            <div class="section-content" id="section-content-${sectionId}">
-                <div class="section-loading">Lädt...</div>
-            </div>
-        </div>
-    `;
-}
-
-function getSectionConfig(sectionId) {
-    const configs = {
-        'geschaeftsmodell': { icon: '📦', title: 'Geschäftsmodell & Artikel' },
-        'szenarien': { icon: '📊', title: 'Szenario-Analyse' },
-        'annahmen': { icon: '📌', title: 'Kernannahmen & Sensitivitäten' },
-        'risiken': { icon: '⚠️', title: 'Top Risiken' },
-        'chancen': { icon: '🚀', title: 'Top Chancen' },
-        'aehnliche-projekte': { icon: '🔍', title: 'Ähnliche Projekte' },
-        'best-practices': { icon: '💎', title: 'Best Practices & Strategic Overrides' },
-        'meilensteine': { icon: '🎯', title: 'Meilensteine & Timeline' }
-    };
-    
-    return configs[sectionId] || { icon: '📊', title: sectionId };
-}
-
-function loadSectionContent(sectionId) {
-    const contentDiv = document.getElementById(`section-content-${sectionId}`);
-    if (!contentDiv) return;
-    
-    const { projekt, artikel, calc } = uebersichtState.rawData;
-    
-    let html = '';
-    
-    switch(sectionId) {
-        case 'geschaeftsmodell':
-            html = renderGeschaeftsmodellSection(projekt, artikel, calc);
-            break;
-        case 'szenarien':
-            html = renderSzenarienSection(calc);
-            break;
-        case 'annahmen':
-            html = renderAnnahmenSection(calc, artikel);
-            break;
-        case 'risiken':
-            html = renderRisikenSection();
-            break;
-        case 'chancen':
-            html = renderChancenSection();
-            break;
-        case 'aehnliche-projekte':
-            html = '<p>Siehe KI-Benchmark Analyse oben</p>';
-            break;
-        case 'best-practices':
-            html = '<p>Siehe KI-Benchmark Analyse oben</p>';
-            break;
-        case 'meilensteine':
-            html = renderMeilensteineSection(projekt);
-            break;
-        default:
-            html = '<p>Content wird geladen...</p>';
-    }
-    
-    contentDiv.innerHTML = html;
-}
-
-// ==========================================
-// SECTION CONTENT RENDERERS
-// ==========================================
-
-function renderGeschaeftsmodellSection(projekt, artikel, calc) {
-    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
-    
-    // Group by type
-    const byType = {};
-    artikel.forEach(a => {
-        const typ = a.typ || 'Sonstige';
-        if (!byType[typ]) byType[typ] = [];
-        byType[typ].push(a);
-    });
-    
-    return `
-        <div class="geschaeftsmodell-content">
-            <div class="gm-overview">
-                <h4>Portfolio-Übersicht</h4>
-                <p>${artikel.length} Artikel | Gesamtumsatz: €${totalRevenue.toFixed(1)}M (5Y)</p>
-            </div>
+        <div class="visualizations-section">
+            <h2>📊 VISUALISIERUNGEN</h2>
             
-            <div class="gm-breakdown">
-                ${Object.keys(byType).map(typ => `
-                    <div class="gm-type-group">
-                        <h5>${typ} (${byType[typ].length})</h5>
-                        <ul>
-                            ${byType[typ].map(a => `
-                                <li>${a.name}</li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                `).join('')}
+            <div class="viz-grid">
+                
+                <!-- Chart 1: Revenue & DB2 -->
+                <div class="viz-card">
+                    <h3>📈 Umsatz & DB2 Entwicklung</h3>
+                    <div id="chart-revenue-db2" class="chart-container"></div>
+                    <div id="chart-revenue-data" class="chart-data-table"></div>
+                </div>
+                
+                <!-- Chart 2: Projektkosten -->
+                <div class="viz-card">
+                    <h3>💰 Projektkosten</h3>
+                    <div id="chart-kosten" class="chart-container"></div>
+                </div>
+                
+                <!-- Chart 3: Szenarien -->
+                <div class="viz-card">
+                    <h3>📊 Szenarien-Analyse</h3>
+                    <div id="chart-szenarien" class="chart-container"></div>
+                </div>
+                
             </div>
         </div>
     `;
 }
 
-function renderSzenarienSection(calc) {
+// ==========================================
+// CHART RENDERING
+// ==========================================
+
+function renderRevenueDB2Chart(calc) {
+    const container = document.getElementById('chart-revenue-db2');
+    const dataTable = document.getElementById('chart-revenue-data');
+    if (!container || !calc) return;
+    
+    const jahre = Object.keys(calc.jahre || {}).sort();
+    const revenues = jahre.map(j => (calc.jahre[j].sales_revenue || 0) / 1000000);
+    const db2s = jahre.map(j => (calc.jahre[j].db2 || 0) / 1000000);
+    
+    const maxValue = Math.max(...revenues, ...db2s);
+    const scale = 150 / maxValue; // 150px max height
+    
+    let html = '<div class="line-chart">';
+    
+    // Grid lines
+    html += '<div class="chart-grid">';
+    for (let i = 0; i <= 4; i++) {
+        const value = (maxValue / 4) * (4 - i);
+        html += `<div class="grid-line" style="bottom: ${i * 25}%">
+            <span class="grid-label">€${value.toFixed(1)}M</span>
+        </div>`;
+    }
+    html += '</div>';
+    
+    // Lines and points
+    html += '<svg class="chart-svg" viewBox="0 0 400 150" preserveAspectRatio="none">';
+    
+    // Revenue line
+    const revenuePoints = revenues.map((v, i) => `${(i / (jahre.length - 1)) * 400},${150 - v * scale}`).join(' ');
+    html += `<polyline points="${revenuePoints}" class="line-revenue" />`;
+    
+    // DB2 line
+    const db2Points = db2s.map((v, i) => `${(i / (jahre.length - 1)) * 400},${150 - v * scale}`).join(' ');
+    html += `<polyline points="${db2Points}" class="line-db2" />`;
+    
+    html += '</svg>';
+    
+    // X-axis labels
+    html += '<div class="chart-x-axis">';
+    jahre.forEach((j, i) => {
+        html += `<span class="x-label">${j}</span>`;
+    });
+    html += '</div>';
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
+    
+    // Data table
+    let tableHTML = '<table class="data-table">';
+    tableHTML += '<tr><th></th>';
+    jahre.forEach(j => tableHTML += `<th>${j}</th>`);
+    tableHTML += '</tr>';
+    
+    tableHTML += '<tr><td>Revenue</td>';
+    revenues.forEach(v => tableHTML += `<td>€${v.toFixed(1)}M</td>`);
+    tableHTML += '</tr>';
+    
+    tableHTML += '<tr><td>DB2</td>';
+    db2s.forEach(v => tableHTML += `<td>€${v.toFixed(1)}M</td>`);
+    tableHTML += '</tr>';
+    
+    tableHTML += '</table>';
+    dataTable.innerHTML = tableHTML;
+}
+
+function renderKostenChart(calc) {
+    const container = document.getElementById('chart-kosten');
+    if (!container || !calc) return;
+    
+    // Get Projektkosten
+    const kostenblöcke = calc.metadata?.projektkostenblöcke || [];
+    
+    let totalKosten = 0;
+    const breakdown = [];
+    
+    kostenblöcke.forEach(kb => {
+        const kosten = Object.values(kb.jahre || {}).reduce((sum, val) => sum + (val || 0), 0);
+        totalKosten += kosten;
+        breakdown.push({
+            name: kb.name || 'Unbenannt',
+            value: kosten
+        });
+    });
+    
+    // Sort by value
+    breakdown.sort((a, b) => b.value - a.value);
+    
+    let html = '<div class="kosten-breakdown">';
+    
+    breakdown.forEach(item => {
+        const pct = totalKosten > 0 ? (item.value / totalKosten) * 100 : 0;
+        html += `
+            <div class="kosten-item">
+                <div class="kosten-label">${item.name}</div>
+                <div class="kosten-bar-container">
+                    <div class="kosten-bar" style="width: ${pct}%"></div>
+                </div>
+                <div class="kosten-value">€${(item.value / 1000000).toFixed(1)}M</div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    html += `
+        <div class="kosten-total">
+            <strong>TOTAL PROJEKTKOSTEN:</strong>
+            <span>€${(totalKosten / 1000000).toFixed(1)}M</span>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function renderSzenarienChart(calc) {
+    const container = document.getElementById('chart-szenarien');
+    if (!container || !calc) return;
+    
     const baseNPV = (calc?.kpis?.npv || 0) / 1000000;
-    const bestNPV = baseNPV * 1.5;
-    const worstNPV = baseNPV * 0.6;
+    const baseIRR = calc?.kpis?.irr || 0;
+    const baseMenge = calc?.totals?.total_quantity || 0;
     
-    return `
-        <div class="szenarien-content">
-            <div class="scenario-grid">
-                <div class="scenario-card best">
-                    <h4>📈 Best Case</h4>
-                    <p class="scenario-npv">€${bestNPV.toFixed(1)}M</p>
-                    <p class="scenario-desc">+20% Volume, -10% Costs</p>
-                </div>
-                <div class="scenario-card base">
-                    <h4>📊 Base Case</h4>
-                    <p class="scenario-npv">€${baseNPV.toFixed(1)}M</p>
-                    <p class="scenario-desc">Plan-Annahmen</p>
-                </div>
-                <div class="scenario-card worst">
-                    <h4>📉 Worst Case</h4>
-                    <p class="scenario-npv">€${worstNPV.toFixed(1)}M</p>
-                    <p class="scenario-desc">-30% Volume, +15% Costs</p>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderAnnahmenSection(calc, artikel) {
-    const totalRevenue = (calc?.totals?.sales_revenue || 0) / 1000000;
+    // Calculate scenarios
+    const scenarios = [
+        {
+            name: 'Best Case',
+            color: '#10b981',
+            npv: baseNPV * 1.5,
+            irr: baseIRR * 1.3,
+            menge: baseMenge * 1.2,
+            assumptions: '+20% Vol, -10% Cost'
+        },
+        {
+            name: 'Base Case',
+            color: '#0066CC',
+            npv: baseNPV,
+            irr: baseIRR,
+            menge: baseMenge,
+            assumptions: 'Plan-Annahmen'
+        },
+        {
+            name: 'Worst Case',
+            color: '#ef4444',
+            npv: baseNPV * 0.6,
+            irr: baseIRR * 0.7,
+            menge: baseMenge * 0.7,
+            assumptions: '-30% Vol, +15% Cost'
+        }
+    ];
     
-    return `
-        <div class="annahmen-content">
-            <h4>Kritische Annahmen</h4>
-            <ul class="assumptions-list">
-                <li><strong>Marktvolumen:</strong> €${(totalRevenue * 10).toFixed(0)}M p.a.</li>
-                <li><strong>Marktanteil:</strong> 10% nach 3 Jahren</li>
-                <li><strong>Durchschnittspreis:</strong> €500</li>
-                <li><strong>Kostenstruktur:</strong> 40% Material DB</li>
-            </ul>
-        </div>
-    `;
-}
-
-function renderRisikenSection() {
-    return `
-        <div class="risiken-content">
-            <div class="risk-item high">
-                <span class="risk-icon">🔴</span>
-                <div class="risk-text">
-                    <strong>Marktakzeptanz unsicher</strong>
-                    <p>Enterprise Sales Cycle könnte 18+ Monate dauern</p>
-                </div>
-            </div>
-            <div class="risk-item medium">
-                <span class="risk-icon">🟡</span>
-                <div class="risk-text">
-                    <strong>Technologie-Risiko</strong>
-                    <p>Skalierung der Plattform noch nicht bewiesen</p>
-                </div>
-            </div>
-            <div class="risk-item low">
-                <span class="risk-icon">🟢</span>
-                <div class="risk-text">
-                    <strong>Regulatorisches Umfeld</strong>
-                    <p>Compliance-Anforderungen manageable</p>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderChancenSection() {
-    return `
-        <div class="chancen-content">
-            <div class="chance-item">
-                <span class="chance-icon">🚀</span>
-                <div class="chance-text">
-                    <strong>First-Mover Advantage</strong>
-                    <p>Potenzial für 25% Marktanteil</p>
-                    <span class="chance-impact">+++</span>
-                </div>
-            </div>
-            <div class="chance-item">
-                <span class="chance-icon">🔄</span>
-                <div class="chance-text">
-                    <strong>Cross-Selling Potenzial</strong>
-                    <p>Upsell zu bestehenden Kunden</p>
-                    <span class="chance-impact">++</span>
-                </div>
-            </div>
-            <div class="chance-item">
-                <span class="chance-icon">📈</span>
-                <div class="chance-text">
-                    <strong>Platform Skalierung</strong>
-                    <p>SaaS Model mit hoher Marge</p>
-                    <span class="chance-impact">++</span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderMeilensteineSection(projekt) {
-    return `
-        <div class="meilensteine-content">
-            <div class="timeline">
-                <div class="timeline-item done">
-                    <span class="timeline-icon">✓</span>
-                    <div class="timeline-text">
-                        <strong>Q4/2024: Konzeptphase</strong>
-                        <p>Business Case validiert</p>
+    let html = '<div class="szenarien-grid">';
+    
+    scenarios.forEach(s => {
+        html += `
+            <div class="szenario-card" style="border-color: ${s.color}">
+                <h4 style="color: ${s.color}">${s.name}</h4>
+                <div class="szenario-metrics">
+                    <div class="szenario-metric">
+                        <span class="sm-label">NPV</span>
+                        <span class="sm-value">€${s.npv.toFixed(1)}M</span>
+                    </div>
+                    <div class="szenario-metric">
+                        <span class="sm-label">IRR</span>
+                        <span class="sm-value">${s.irr.toFixed(1)}%</span>
+                    </div>
+                    <div class="szenario-metric">
+                        <span class="sm-label">Menge</span>
+                        <span class="sm-value">${helpers.formatNumber(Math.round(s.menge))}</span>
                     </div>
                 </div>
-                <div class="timeline-item current">
-                    <span class="timeline-icon">→</span>
-                    <div class="timeline-text">
-                        <strong>Q1/2025: Gate 2 Review</strong>
-                        <p>Freigabe Entwicklung</p>
-                    </div>
-                </div>
-                <div class="timeline-item pending">
-                    <span class="timeline-icon">○</span>
-                    <div class="timeline-text">
-                        <strong>Q3/2025: Pilot Launch</strong>
-                        <p>Beta mit 3 Kunden</p>
-                    </div>
-                </div>
-                <div class="timeline-item pending">
-                    <span class="timeline-icon">○</span>
-                    <div class="timeline-text">
-                        <strong>Q1/2026: Full Rollout</strong>
-                        <p>Go-to-Market</p>
-                    </div>
+                <div class="szenario-assumptions">
+                    ${s.assumptions}
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    });
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
 
 // ==========================================
@@ -1153,51 +848,61 @@ function renderPlaceholder(projekt) {
 // STYLES
 // ==========================================
 
-function getExecutiveSummaryStyles() {
+function getCompactStyles() {
     return `
         /* Main Container */
-        .executive-summary-container {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 60px);
-            overflow: hidden;
+        .executive-compact-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px;
             background: #F5F7FA;
         }
         
-        /* KPI Bar */
-        .executive-kpi-bar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: linear-gradient(135deg, #E6F2FF 0%, #F0F9FF 100%);
+        /* Header */
+        .executive-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
             border-bottom: 2px solid #0066CC;
-            padding: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        .kpi-cards {
+        .header-left h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #003366;
+            margin: 0 0 4px 0;
+        }
+        
+        .header-meta {
+            font-size: 11px;
+            color: #6B7280;
+        }
+        
+        /* KPI Scorecard */
+        .kpi-scorecard {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            max-width: 1400px;
-            margin: 0 auto;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
         }
         
         .kpi-card {
             background: white;
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 6px;
+            padding: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             display: flex;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
-            transition: all 0.2s ease;
             border-top: 3px solid #0066CC;
+            transition: all 0.2s ease;
         }
         
         .kpi-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
         .kpi-card.decision-card {
@@ -1205,7 +910,7 @@ function getExecutiveSummaryStyles() {
         }
         
         .kpi-icon {
-            font-size: 24px;
+            font-size: 20px;
             flex-shrink: 0;
         }
         
@@ -1215,188 +920,96 @@ function getExecutiveSummaryStyles() {
         }
         
         .kpi-label {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             color: #6B7280;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
         }
         
         .kpi-value {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: 700;
             color: #003366;
             line-height: 1;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
         
         .kpi-meta {
-            font-size: 10px;
+            font-size: 9px;
             color: #9CA3AF;
         }
         
-        /* Main Area */
-        .executive-main-area {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
+        /* Management Summary */
+        .management-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
         }
         
-        /* Sidebar */
-        .executive-sidebar {
-            width: 220px;
-            min-width: 220px;
-            background: #FAFBFC;
-            border-right: 1px solid #E5E7EB;
-            overflow-y: auto;
-            padding: 12px;
-        }
-        
-        .section-card {
+        .summary-col {
             background: white;
             border-radius: 8px;
-            margin-bottom: 8px;
-            padding: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: all 0.2s ease;
-        }
-        
-        .section-card:hover {
-            background: #F0F9FF;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            transform: translateX(4px);
-        }
-        
-        .section-card.active {
-            background: #0066CC;
-            color: white;
-        }
-        
-        .section-icon {
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        
-        .section-text {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .section-text h3 {
-            font-size: 12px;
-            font-weight: 600;
-            margin: 0 0 2px 0;
-            line-height: 1.2;
-        }
-        
-        .section-text p {
-            font-size: 10px;
-            margin: 0;
-            opacity: 0.7;
-        }
-        
-        .section-card.active .section-text h3,
-        .section-card.active .section-text p {
-            color: white;
-        }
-        
-        .section-arrow {
-            font-size: 10px;
-            opacity: 0.5;
-            flex-shrink: 0;
-        }
-        
-        /* Content Area */
-        .executive-content-area {
-            flex: 1;
-            overflow-y: auto;
             padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        /* Project Context Box */
-        .project-context-box {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        .summary-section {
+            margin-bottom: 12px;
         }
         
-        .context-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid #E5E7EB;
+        .summary-section:last-child {
+            margin-bottom: 0;
         }
         
-        .context-icon {
-            font-size: 32px;
-        }
-        
-        .context-header h2 {
-            font-size: 20px;
+        .summary-section h3 {
+            font-size: 11px;
             font-weight: 700;
             color: #003366;
-            margin: 0;
+            margin: 0 0 6px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         
-        .context-section {
-            margin-bottom: 20px;
-        }
-        
-        .context-section h3 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            margin: 0 0 8px 0;
-        }
-        
-        .context-section p {
-            font-size: 13px;
+        .summary-section p {
+            font-size: 11px;
             color: #4B5563;
-            line-height: 1.6;
+            line-height: 1.5;
             margin: 0;
         }
         
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 12px;
-        }
-        
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 12px;
+        .bc-metrics {
             background: #F9FAFB;
             border-radius: 6px;
-            font-size: 12px;
+            padding: 10px;
         }
         
-        .summary-label {
+        .bc-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 11px;
+        }
+        
+        .bc-label {
             color: #6B7280;
         }
         
-        .summary-value {
+        .bc-value {
             font-weight: 600;
             color: #111827;
         }
         
-        /* Recommendation Box */
+        .recommendation-section {
+            margin: 12px 0;
+        }
+        
         .recommendation-box {
-            background: #F9FAFB;
-            border-left: 4px solid #0066CC;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 20px;
+            border-radius: 6px;
+            padding: 10px;
+            border-left: 3px solid #0066CC;
         }
         
         .recommendation-box.success {
@@ -1414,778 +1027,569 @@ function getExecutiveSummaryStyles() {
             border-left-color: #ef4444;
         }
         
-        .recommendation-header {
+        .rec-header {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 4px;
         }
         
-        .recommendation-icon {
-            font-size: 24px;
+        .rec-icon {
+            font-size: 16px;
         }
         
-        .recommendation-header h3 {
-            font-size: 14px;
+        .rec-title {
+            font-size: 10px;
             font-weight: 700;
             color: #111827;
-            margin: 0;
+            text-transform: uppercase;
         }
         
-        .recommendation-list {
-            margin: 0;
-            padding-left: 20px;
-            font-size: 12px;
+        .rec-text {
+            font-size: 10px;
             color: #4B5563;
-            line-height: 1.8;
+            margin: 0;
+            line-height: 1.4;
         }
         
-        /* Next Steps Box */
-        .next-steps-box {
-            background: #EFF6FF;
-            border-radius: 8px;
-            padding: 16px;
-        }
-        
-        .next-steps-box h3 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1E40AF;
-            margin: 0 0 12px 0;
-        }
-        
-        .action-buttons {
+        .action-buttons-compact {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 6px;
         }
         
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding: 12px;
+        .action-btn-compact {
+            padding: 8px;
             background: white;
             border: 2px solid #E5E7EB;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            text-align: center;
             transition: all 0.2s ease;
         }
         
-        .action-btn:hover {
+        .action-btn-compact:hover {
             border-color: #0066CC;
             background: #F0F9FF;
         }
         
-        .action-btn.active {
-            border-color: #0066CC;
+        .action-btn-compact.active {
             background: #0066CC;
             color: white;
+            border-color: #0066CC;
         }
         
-        .btn-icon {
-            font-size: 24px;
+        /* KI Benchmark Section */
+        .ki-benchmark-section {
+            margin-bottom: 12px;
         }
         
-        .btn-text {
-            font-size: 11px;
-            font-weight: 600;
-            text-align: center;
-        }
-        
-        .action-details {
-            font-size: 11px;
-            color: #6B7280;
-            line-height: 1.6;
-        }
-        
-        .action-details p {
-            margin: 4px 0;
-        }
-        
-        /* AI Benchmark Box */
-        .ai-benchmark-box {
+        .ki-loading {
             background: white;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .benchmark-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 24px;
-            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
-            border-bottom: 2px solid #0066CC;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-        
-        .benchmark-header:hover {
-            background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%);
-        }
-        
-        .benchmark-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .benchmark-icon {
-            font-size: 28px;
-        }
-        
-        .benchmark-title h2 {
-            font-size: 18px;
-            font-weight: 700;
-            color: #003366;
-            margin: 0;
-        }
-        
-        .benchmark-toggle {
-            font-size: 16px;
-            color: #6B7280;
-            transition: transform 0.2s ease;
-        }
-        
-        .benchmark-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .benchmark-content.expanded {
-            max-height: 2000px;
-        }
-        
-        .benchmark-content.collapsed {
-            max-height: 0;
-        }
-        
-        .benchmark-loading {
-            padding: 40px;
+            border-radius: 8px;
+            padding: 30px;
             text-align: center;
-            color: #6B7280;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .loading-spinner {
-            width: 32px;
-            height: 32px;
-            border: 4px solid #E5E7EB;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #E5E7EB;
             border-top-color: #0066CC;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
+            margin: 0 auto 12px;
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
         
-        /* Benchmark Warning */
-        .benchmark-warning {
+        .ki-loading p {
+            font-size: 12px;
+            color: #6B7280;
+            margin: 0;
+        }
+        
+        .ki-warning {
             background: linear-gradient(135deg, #FEF3C7, #FDE68A);
             border: 2px solid #F59E0B;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
             display: flex;
-            gap: 16px;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .warning-icon {
-            font-size: 40px;
+            font-size: 28px;
             flex-shrink: 0;
         }
         
         .warning-content h3 {
-            font-size: 16px;
+            font-size: 13px;
             font-weight: 700;
             color: #92400E;
-            margin: 0 0 12px 0;
+            margin: 0 0 8px 0;
         }
         
         .warning-content p {
-            font-size: 13px;
+            font-size: 11px;
             color: #78350F;
-            margin: 0 0 12px 0;
+            margin: 0 0 6px 0;
+            line-height: 1.4;
         }
         
         .warning-content ul {
-            margin: 0 0 12px 0;
-            padding-left: 20px;
-            font-size: 13px;
+            margin: 0 0 8px 0;
+            padding-left: 18px;
+            font-size: 11px;
             color: #78350F;
+            line-height: 1.5;
         }
         
         .warning-recommendation {
-            background: rgba(255,255,255,0.6);
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 4px solid #F59E0B;
+            background: rgba(255,255,255,0.7);
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #F59E0B;
+            font-size: 11px;
         }
         
-        /* Similar Projects */
-        .benchmark-similar {
-            padding: 20px;
+        .ki-similar-projects {
+            background: white;
+            border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .benchmark-similar h3 {
-            font-size: 16px;
-            font-weight: 600;
+        .ki-similar-projects h3 {
+            font-size: 12px;
+            font-weight: 700;
             color: #003366;
-            margin: 0 0 16px 0;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         
         .similar-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
         }
         
         .similar-card {
             background: #F9FAFB;
             border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            padding: 16px;
+            border-radius: 6px;
+            padding: 10px;
         }
         
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .card-icon {
+            font-size: 14px;
         }
         
         .card-header h4 {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             color: #111827;
             margin: 0;
         }
         
         .success-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 700;
         }
         
         .card-meta {
-            font-size: 11px;
+            font-size: 9px;
             color: #6B7280;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         
         .card-metrics {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-            padding: 12px;
             background: white;
-            border-radius: 6px;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
         }
         
-        .metric {
+        .metric-row {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 10px;
+        }
+        
+        .metric-row:last-child {
+            margin-bottom: 0;
         }
         
         .metric-label {
-            font-size: 10px;
             color: #6B7280;
-            font-weight: 600;
         }
         
         .metric-value {
-            font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
             color: #111827;
         }
         
         .card-lessons {
-            font-size: 11px;
+            font-size: 9px;
             color: #4B5563;
-            line-height: 1.6;
+            line-height: 1.4;
             background: #FFFBEB;
-            padding: 12px;
-            border-radius: 6px;
+            padding: 8px;
+            border-radius: 4px;
         }
         
         .card-lessons strong {
             color: #92400E;
+            display: block;
+            margin-bottom: 4px;
         }
         
-        /* Override Cards */
-        .benchmark-overrides {
-            padding: 20px;
-            border-top: 1px solid #E5E7EB;
-        }
-        
-        .benchmark-overrides h3 {
-            font-size: 16px;
-            font-weight: 600;
-            color: #003366;
-            margin: 0 0 16px 0;
-        }
-        
-        .overrides-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 16px;
-        }
-        
-        .override-card {
-            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-            border: 2px solid #F59E0B;
-            border-radius: 12px;
-            padding: 16px;
-        }
-        
-        .override-header {
-            margin-bottom: 12px;
-        }
-        
-        .override-header h4 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #92400E;
-            margin: 0 0 4px 0;
-        }
-        
-        .override-badge {
-            font-size: 10px;
-            color: #78350F;
-        }
-        
-        .override-decision {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            padding: 12px;
-            background: rgba(255,255,255,0.6);
+        .ki-info,
+        .ki-pioneer,
+        .ki-error {
+            background: white;
             border-radius: 8px;
-        }
-        
-        .decision-col {
-            flex: 1;
+            padding: 30px;
             text-align: center;
-        }
-        
-        .decision-label {
-            display: block;
-            font-size: 10px;
-            color: #6B7280;
-            margin-bottom: 4px;
-        }
-        
-        .decision-icon {
-            display: block;
-            font-size: 24px;
-            margin-bottom: 4px;
-        }
-        
-        .decision-text {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-        }
-        
-        .decision-col.financial .decision-text {
-            color: #ef4444;
-        }
-        
-        .decision-col.strategic .decision-text {
-            color: #10b981;
-        }
-        
-        .decision-divider {
-            font-size: 20px;
-            color: #F59E0B;
-        }
-        
-        .override-comment {
-            font-size: 12px;
-            font-style: italic;
-            color: #78350F;
-            margin-bottom: 12px;
-            padding: 12px;
-            background: rgba(255,255,255,0.6);
-            border-radius: 6px;
-        }
-        
-        .override-value {
-            font-size: 11px;
-            color: #065F46;
-            background: rgba(16, 185, 129, 0.1);
-            padding: 12px;
-            border-radius: 6px;
-        }
-        
-        /* Info Boxes */
-        .benchmark-info,
-        .benchmark-pioneer,
-        .benchmark-error {
-            padding: 40px;
-            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .info-icon,
         .pioneer-icon,
         .error-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
+            font-size: 36px;
+            margin-bottom: 12px;
         }
         
-        .benchmark-pioneer {
+        .ki-pioneer {
             background: #FFFBEB;
         }
         
         .pioneer-note {
-            font-size: 12px;
+            font-size: 10px;
             color: #78350F;
             font-style: italic;
-            margin-top: 12px;
+            margin-top: 8px;
         }
         
-        .benchmark-error {
+        .ki-error {
             background: #FEF2F2;
             color: #991B1B;
         }
         
-        /* Section Container */
-        .section-container {
+        /* Visualizations Section */
+        .visualizations-section {
             background: white;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .section-container.pinned {
-            border: 2px solid #F59E0B;
-            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
-        }
-        
-        .section-container.size-small {
-            max-width: 600px;
-        }
-        
-        .section-container.size-medium {
-            max-width: 900px;
-        }
-        
-        .section-container.size-large {
-            max-width: 100%;
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 24px;
-            border-bottom: 1px solid #E5E7EB;
-            background: #FAFBFC;
-            border-radius: 12px 12px 0 0;
-        }
-        
-        .section-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .section-title h3 {
-            font-size: 16px;
-            font-weight: 600;
-            color: #003366;
-            margin: 0;
-        }
-        
-        .section-controls {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .btn-resize,
-        .btn-pin,
-        .btn-close {
-            padding: 6px 12px;
-            border: 1px solid #E5E7EB;
-            background: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-resize:hover,
-        .btn-pin:hover {
-            background: #F0F9FF;
-            border-color: #0066CC;
-        }
-        
-        .btn-resize.active {
-            background: #0066CC;
-            color: white;
-            border-color: #0066CC;
-        }
-        
-        .section-container.pinned .btn-pin {
-            background: #FEF3C7;
-            border-color: #F59E0B;
-        }
-        
-        .btn-close {
-            border: none;
-            background: transparent;
-            color: #9CA3AF;
-        }
-        
-        .btn-close:hover {
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-        }
-        
-        .section-content {
-            padding: 24px;
-        }
-        
-        .section-loading {
-            text-align: center;
-            padding: 40px;
-            color: #6B7280;
-        }
-        
-        /* Section Content Styles */
-        .geschaeftsmodell-content,
-        .szenarien-content,
-        .annahmen-content,
-        .risiken-content,
-        .chancen-content,
-        .meilensteine-content {
-            font-size: 13px;
-            line-height: 1.6;
-        }
-        
-        .gm-overview {
-            margin-bottom: 20px;
-            padding: 16px;
-            background: #F9FAFB;
             border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .gm-type-group {
-            margin-bottom: 16px;
+        .visualizations-section h2 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #003366;
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         
-        .gm-type-group h5 {
-            font-size: 14px;
-            font-weight: 600;
-            color: #111827;
-            margin: 0 0 8px 0;
-        }
-        
-        .scenario-grid {
+        .viz-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-        }
-        
-        .scenario-card {
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .scenario-card.best {
-            background: #F0FDF4;
-            border: 2px solid #10b981;
-        }
-        
-        .scenario-card.base {
-            background: #F0F9FF;
-            border: 2px solid #0066CC;
-        }
-        
-        .scenario-card.worst {
-            background: #FEF2F2;
-            border: 2px solid #ef4444;
-        }
-        
-        .scenario-npv {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 12px 0;
-        }
-        
-        .scenario-desc {
-            font-size: 12px;
-            color: #6B7280;
-        }
-        
-        .assumptions-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .assumptions-list li {
-            padding: 12px;
-            background: #F9FAFB;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-        
-        .risk-item,
-        .chance-item {
-            display: flex;
             gap: 12px;
-            padding: 16px;
-            border-radius: 8px;
+        }
+        
+        .viz-card {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        .viz-card h3 {
+            font-size: 11px;
+            font-weight: 600;
+            color: #003366;
+            margin: 0 0 10px 0;
+        }
+        
+        .chart-container {
+            min-height: 180px;
+            position: relative;
+        }
+        
+        /* Line Chart */
+        .line-chart {
+            position: relative;
+            height: 150px;
             margin-bottom: 12px;
         }
         
-        .risk-item.high {
-            background: #FEF2F2;
-            border-left: 4px solid #ef4444;
-        }
-        
-        .risk-item.medium {
-            background: #FFFBEB;
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .risk-item.low {
-            background: #F0FDF4;
-            border-left: 4px solid #10b981;
-        }
-        
-        .risk-icon,
-        .chance-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-        
-        .risk-text strong,
-        .chance-text strong {
-            display: block;
-            margin-bottom: 4px;
-        }
-        
-        .chance-item {
-            background: #F0FDF4;
-            border-left: 4px solid #10b981;
-        }
-        
-        .chance-impact {
-            float: right;
-            font-weight: 700;
-            color: #10b981;
-        }
-        
-        .timeline {
-            position: relative;
-            padding-left: 40px;
-        }
-        
-        .timeline::before {
-            content: '';
+        .chart-grid {
             position: absolute;
-            left: 15px;
             top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #E5E7EB;
+            left: 0;
+            right: 0;
+            bottom: 20px;
         }
         
-        .timeline-item {
-            position: relative;
-            margin-bottom: 24px;
-        }
-        
-        .timeline-icon {
+        .grid-line {
             position: absolute;
-            left: -32px;
-            width: 24px;
-            height: 24px;
-            background: white;
-            border: 2px solid #E5E7EB;
-            border-radius: 50%;
+            left: 0;
+            right: 0;
+            border-top: 1px solid #E5E7EB;
+        }
+        
+        .grid-label {
+            position: absolute;
+            left: 0;
+            top: -8px;
+            font-size: 8px;
+            color: #9CA3AF;
+        }
+        
+        .chart-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 20px;
+            width: 100%;
+            height: calc(100% - 20px);
+        }
+        
+        .line-revenue {
+            fill: none;
+            stroke: #0066CC;
+            stroke-width: 2;
+        }
+        
+        .line-db2 {
+            fill: none;
+            stroke: #10b981;
+            stroke-width: 2;
+            stroke-dasharray: 4 2;
+        }
+        
+        .chart-x-axis {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
+            justify-content: space-between;
+            padding: 0 5px;
         }
         
-        .timeline-item.done .timeline-icon {
-            background: #10b981;
-            border-color: #10b981;
-            color: white;
+        .x-label {
+            font-size: 9px;
+            color: #6B7280;
         }
         
-        .timeline-item.current .timeline-icon {
-            background: #0066CC;
-            border-color: #0066CC;
-            color: white;
+        .chart-data-table {
+            margin-top: 8px;
         }
         
-        .timeline-text strong {
-            display: block;
-            margin-bottom: 4px;
+        .data-table {
+            width: 100%;
+            font-size: 9px;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 3px 4px;
+            text-align: right;
+            border: 1px solid #E5E7EB;
+        }
+        
+        .data-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .data-table td:first-child,
+        .data-table th:first-child {
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        /* Kosten Chart */
+        .kosten-breakdown {
+            margin-bottom: 12px;
+        }
+        
+        .kosten-item {
+            margin-bottom: 8px;
+        }
+        
+        .kosten-label {
+            font-size: 9px;
+            color: #4B5563;
+            margin-bottom: 3px;
+        }
+        
+        .kosten-bar-container {
+            background: #E5E7EB;
+            height: 16px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+        
+        .kosten-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0066CC, #0099FF);
+            transition: width 0.3s ease;
+        }
+        
+        .kosten-value {
+            font-size: 10px;
+            font-weight: 600;
             color: #111827;
         }
         
-        .timeline-text p {
-            margin: 0;
-            font-size: 12px;
+        .kosten-total {
+            padding: 10px;
+            background: #F0F9FF;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+        }
+        
+        .kosten-total strong {
+            color: #003366;
+        }
+        
+        .kosten-total span {
+            font-weight: 700;
+            color: #0066CC;
+            font-size: 13px;
+        }
+        
+        /* Szenarien Chart */
+        .szenarien-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        
+        .szenario-card {
+            background: white;
+            border: 2px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        .szenario-card h4 {
+            font-size: 11px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            text-align: center;
+        }
+        
+        .szenario-metrics {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 8px;
+        }
+        
+        .szenario-metric {
+            text-align: center;
+        }
+        
+        .sm-label {
+            display: block;
+            font-size: 8px;
             color: #6B7280;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+        
+        .sm-value {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .szenario-assumptions {
+            font-size: 9px;
+            color: #6B7280;
+            text-align: center;
+            background: #F9FAFB;
+            padding: 6px;
+            border-radius: 4px;
         }
         
         /* Responsive */
         @media (max-width: 1200px) {
-            .kpi-cards {
-                grid-template-columns: repeat(2, 1fr);
+            .kpi-scorecard {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .kpi-scorecard .kpi-card:nth-child(4),
+            .kpi-scorecard .kpi-card:nth-child(5) {
+                grid-column: span 1;
+            }
+            
+            .viz-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .similar-grid {
+                grid-template-columns: 1fr;
             }
         }
         
         @media (max-width: 768px) {
-            .executive-main-area {
-                flex-direction: column;
+            .management-summary {
+                grid-template-columns: 1fr;
             }
             
-            .executive-sidebar {
-                width: 100%;
-                max-height: 200px;
-                border-right: none;
-                border-bottom: 1px solid #E5E7EB;
-            }
-            
-            .kpi-cards {
+            .kpi-scorecard {
                 grid-template-columns: 1fr;
             }
         }
         
         /* Scrollbar */
-        .executive-sidebar::-webkit-scrollbar,
-        .executive-content-area::-webkit-scrollbar {
+        .executive-compact-container::-webkit-scrollbar {
             width: 8px;
         }
         
-        .executive-sidebar::-webkit-scrollbar-track,
-        .executive-content-area::-webkit-scrollbar-track {
+        .executive-compact-container::-webkit-scrollbar-track {
             background: #F3F4F6;
         }
         
-        .executive-sidebar::-webkit-scrollbar-thumb,
-        .executive-content-area::-webkit-scrollbar-thumb {
+        .executive-compact-container::-webkit-scrollbar-thumb {
             background: #D1D5DB;
             border-radius: 4px;
         }
