@@ -331,20 +331,43 @@ export async function renderProjektDashboard() {
     setTimeout(async () => {
         try {
             console.log('🔍 DEBUG: Starting dashboard calculation for projekt:', projektId);
+            console.log('🔍 DEBUG: Current state:', window.state);
             
-            // Use the SAME data processor as old dashboard!
+            // Get raw projekt data
+            const projekt = state.getProjekt(projektId);
+            console.log('🔍 DEBUG: Raw projekt:', projekt);
+            
+            // Get artikel
+            const artikelListe = state.getArtikelByProjekt(projektId);
+            console.log('🔍 DEBUG: Artikel list:', artikelListe);
+            console.log('🔍 DEBUG: Artikel count:', artikelListe?.length || 0);
+            
+            // Try data processor
+            console.log('📊 Calling processDataForDashboard...');
             const processedData = await processDataForDashboard(projektId);
-            console.log('✅ DEBUG: Processed data:', processedData);
+            console.log('📊 Processed data received:', processedData);
+            console.log('📊 Processed data keys:', Object.keys(processedData || {}));
+            
+            // Log chart data details
+            if (processedData) {
+                console.log('📊 umsatzData:', processedData.umsatzData);
+                console.log('📊 db2Data:', processedData.db2Data);
+                console.log('📊 db3JahrData:', processedData.db3JahrData);
+                console.log('📊 projektkostenData:', processedData.projektkostenData);
+                console.log('📊 db3KumuliertData:', processedData.db3KumuliertData);
+            }
             
             // Validate
             const validation = validateDashboardData(processedData);
+            console.log('✅ Validation result:', validation);
             if (validation.hasWarnings) {
                 console.warn('⚠️ Dashboard warnings:', validation.warnings);
             }
             
             // Transform to our format
+            console.log('🔄 Starting transformation...');
             const result = transformProcessedData(processedData);
-            console.log('✅ DEBUG: Transformed result:', result);
+            console.log('✅ Transformation complete:', result);
             
             // Store in state
             dashboardState.projektId = projektId;
@@ -353,16 +376,22 @@ export async function renderProjektDashboard() {
             dashboardState.lastUpdate = new Date();
             dashboardState.isInitialized = true;
             
+            console.log('💾 Stored in dashboardState');
+            
             // Render layout
             container.innerHTML = createDashboardLayout();
+            console.log('🎨 Layout rendered');
             
             // Initialize charts in executive summary
             requestAnimationFrame(() => {
+                console.log('🎨 Initializing charts...');
                 initializeExecutiveSummaryCharts();
+                console.log('✅ Charts initialized');
             });
             
         } catch (error) {
             console.error('❌ Dashboard calculation failed:', error);
+            console.error('❌ Error message:', error.message);
             console.error('❌ Error stack:', error.stack);
             
             container.innerHTML = Widgets.renderErrorWidget(error);
