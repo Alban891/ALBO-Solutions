@@ -922,25 +922,34 @@ renderPreview(prompt, fullPromptText) {
         }
     }
 
-  async executePrompt(promptId) {
+ async executePrompt(promptId) {
     console.log('executePrompt called with ID:', promptId);
     const previewContent = document.getElementById('code-preview-' + promptId) || document.getElementById('preview-content-' + promptId);
-    if (!previewContent) return;
+    
+    if (!previewContent) {
+        console.error('No preview content found!');
+        return;
+    }
     
     const promptText = previewContent.textContent;
+    console.log('Found preview content, creating modal...');
     
     // Create execution modal
     const modal = document.createElement('div');
     modal.className = 'execution-modal';
+    
+    // Füge inline styles hinzu für den Fall, dass CSS nicht geladen ist
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 99999;';
+    
     modal.innerHTML = `
-        <div class="execution-modal-content">
+        <div class="execution-modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%;">
             <div class="modal-header">
                 <h2 class="modal-title">⚡ Prompt ausführen</h2>
                 <p class="modal-subtitle">Wähle deine Ausführungsmethode</p>
             </div>
             
             <div class="execution-options">
-                <div class="execution-option" onclick="window.promptsEngine.executeWithAI('${promptId}', 'claude')">
+                <div class="execution-option" style="padding: 15px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; cursor: pointer;" onclick="window.promptsEngine.executeWithAI('${promptId}', 'claude')">
                     <div class="option-icon">🤖</div>
                     <div class="option-content">
                         <div class="option-title">Claude AI (Opus)</div>
@@ -951,7 +960,7 @@ renderPreview(prompt, fullPromptText) {
                     </div>
                 </div>
                 
-                <div class="execution-option" onclick="window.promptsEngine.executeWithAI('${promptId}', 'gpt4')">
+                <div class="execution-option" style="padding: 15px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; cursor: pointer;" onclick="window.promptsEngine.executeWithAI('${promptId}', 'gpt4')">
                     <div class="option-icon">💚</div>
                     <div class="option-content">
                         <div class="option-title">GPT-4 Turbo</div>
@@ -962,7 +971,7 @@ renderPreview(prompt, fullPromptText) {
                     </div>
                 </div>
                 
-                <div class="execution-option" onclick="window.promptsEngine.copyAndClose('${promptId}')">
+                <div class="execution-option" style="padding: 15px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; cursor: pointer;" onclick="window.promptsEngine.copyAndClose('${promptId}')">
                     <div class="option-icon">📋</div>
                     <div class="option-content">
                         <div class="option-title">Kopieren & selbst ausführen</div>
@@ -974,7 +983,7 @@ renderPreview(prompt, fullPromptText) {
             </div>
             
             <div class="modal-actions">
-                <button class="btn-modal btn-modal-cancel" onclick="this.closest('.execution-modal').remove()">
+                <button class="btn-modal btn-modal-cancel" style="padding: 10px 20px; margin-top: 20px; cursor: pointer;" onclick="this.closest('.execution-modal').remove()">
                     Abbrechen
                 </button>
             </div>
@@ -982,6 +991,9 @@ renderPreview(prompt, fullPromptText) {
     `;
     
     document.body.appendChild(modal);
+    console.log('Modal appended to body!');
+    console.log('Modal element:', modal);
+    console.log('Modal is in DOM:', document.body.contains(modal));
     
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
