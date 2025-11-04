@@ -333,12 +333,21 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
     const alleJahre = new Set();
     
     artikelListe.forEach(artikel => {
-        // Try struktur 1: artikel.revenueModel.jahre
+        // FIXED: Check the ACTUAL structure first!
+        // Structure 1: artikel.volumes, artikel.prices (primary!)
+        if (artikel.volumes) {
+            Object.keys(artikel.volumes).forEach(jahr => alleJahre.add(String(jahr)));
+        }
+        if (artikel.prices) {
+            Object.keys(artikel.prices).forEach(jahr => alleJahre.add(String(jahr)));
+        }
+        
+        // Structure 2: artikel.revenueModel.jahre
         if (artikel.revenueModel?.jahre) {
             Object.keys(artikel.revenueModel.jahre).forEach(jahr => alleJahre.add(jahr));
         }
         
-        // Try struktur 2: artikel.jahr_1, artikel.jahr_2, etc.
+        // Structure 3: artikel.jahr_1, artikel.jahr_2, etc.
         Object.keys(artikel).forEach(key => {
             if (key.startsWith('jahr_')) {
                 const jahrNum = parseInt(key.split('_')[1]);
@@ -347,14 +356,9 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
             }
         });
         
-        // Try struktur 3: artikel.mengen
+        // Structure 4: artikel.mengen
         if (artikel.mengen) {
             Object.keys(artikel.mengen).forEach(jahr => alleJahre.add(String(jahr)));
-        }
-        
-        // Try struktur 4: artikel.volumes
-        if (artikel.volumes) {
-            Object.keys(artikel.volumes).forEach(jahr => alleJahre.add(String(jahr)));
         }
     });
     
@@ -376,6 +380,8 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
     const jahre = Array.from(alleJahre).sort();
     console.log('📅 Found years:', jahre);
     console.log('📅 Years from sources:', {
+        volumes: artikelListe.some(a => a.volumes),
+        prices: artikelListe.some(a => a.prices),
         revenueModel: artikelListe.some(a => a.revenueModel?.jahre),
         jahrKeys: artikelListe.some(a => Object.keys(a).some(k => k.startsWith('jahr_'))),
         mengen: artikelListe.some(a => a.mengen),
@@ -403,16 +409,20 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
             let preis = 0;
             let hk = 0;
             
-            // Try different data structures to find the values
-            
-            // Structure 1: artikel.revenueModel.jahre[jahr]
-            if (artikel.revenueModel?.jahre?.[jahr]) {
+            // FIXED: Use the ACTUAL structure: volumes, prices, hk
+            if (artikel.volumes || artikel.prices || artikel.hk) {
+                // Structure: artikel.volumes, artikel.prices, artikel.hk (objects with year keys)
+                menge = artikel.volumes?.[jahr] || artikel.volumes?.[parseInt(jahr)] || 0;
+                preis = artikel.prices?.[jahr] || artikel.prices?.[parseInt(jahr)] || 0;
+                hk = artikel.hk?.[jahr] || artikel.hk?.[parseInt(jahr)] || 0;
+            }
+            // Fallback structures (if above doesn't work)
+            else if (artikel.revenueModel?.jahre?.[jahr]) {
                 const jahresDaten = artikel.revenueModel.jahre[jahr];
                 menge = jahresDaten.menge || 0;
                 preis = jahresDaten.preis || 0;
                 hk = jahresDaten.hk || 0;
             }
-            // Structure 2: artikel.jahr_X
             else if (Object.keys(artikel).some(k => k.startsWith('jahr_'))) {
                 const jahrIndex = parseInt(jahr) - 2024;
                 const jahrKey = `jahr_${jahrIndex}`;
@@ -421,12 +431,6 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
                     preis = artikel[jahrKey].preis || 0;
                     hk = artikel[jahrKey].hk || artikel[jahrKey].herstellkosten || 0;
                 }
-            }
-            // Structure 3: artikel.mengen[jahr] + artikel.preise[jahr]
-            else if (artikel.mengen || artikel.volumes) {
-                menge = artikel.mengen?.[jahr] || artikel.volumes?.[parseInt(jahr)] || 0;
-                preis = artikel.preise?.[jahr] || artikel.preis || 0;
-                hk = artikel.herstellkosten?.[jahr] || artikel.hk || 0;
             }
             
             // Calculate if we found data
@@ -437,7 +441,7 @@ function buildDataDirectlyFromState(projektId, projekt, artikelListe) {
                 jahresUmsatz += umsatz;
                 jahresDB1 += db1;
                 
-                console.log(`  📦 ${artikel.name || 'Artikel'}: ${menge} × ${preis}€ = ${umsatz.toFixed(0)}T€`);
+                console.log(`  📦 ${artikel.name || 'Artikel'}: ${menge} × ${preis}€ - ${hk}€ HK = ${umsatz.toFixed(0)}T€ Umsatz, ${db1.toFixed(0)}T€ DB1`);
             }
         });
         
