@@ -1,13 +1,14 @@
 /**
- * ALBO Solutions - Chart Factory (Horváth Edition)
+ * ALBO Solutions - Chart Factory (Horváth Edition) - COMPLETE VERSION
  * Professional Chart.js implementations with Horváth design system
  * 
  * Chart Types:
- * - Waterfall Charts (Revenue, Costs)
- * - Margin Bridge (DB1 → DB2 → DB3)
- * - Sensitivity Tornado
- * - Sparklines (Executive Summary)
- * - Stacked Bars (Artikel Breakdown)
+ * - TRUE Waterfall Charts (floating bars)
+ * - Margin Bridge (DB1 → DB3)
+ * - Sensitivity Tornado (horizontal)
+ * - Doughnut Charts
+ * - Line Charts
+ * - Combo Charts
  */
 
 const Chart = window.Chart;
@@ -81,52 +82,16 @@ export function initializeChartDefaults() {
 }
 
 // ==========================================
-// STANDARD OPTIONS
+// HELPER FUNCTIONS
 // ==========================================
 
-function getStandardOptions(customOptions = {}) {
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { 
-            padding: { top: 10, bottom: 10, left: 10, right: 10 }
-        },
-        plugins: {
-            legend: {
-                display: customOptions.showLegend !== false,
-                position: 'bottom',
-                labels: {
-                    usePointStyle: true,
-                    padding: 15,
-                    font: { size: 10, weight: 500 }
-                }
-            },
-            tooltip: {
-                enabled: true,
-                callbacks: {
-                    label: function(context) {
-                        let label = context.dataset.label || '';
-                        if (label) label += ': ';
-                        
-                        const value = context.parsed.y || context.parsed;
-                        label += new Intl.NumberFormat('de-DE', {
-                            style: 'currency',
-                            currency: 'EUR',
-                            minimumFractionDigits: 1,
-                            maximumFractionDigits: 1
-                        }).format(value) + 'M';
-                        
-                        return label;
-                    }
-                }
-            }
-        },
-        scales: customOptions.scales || {
-            x: getStandardXScale(),
-            y: getStandardYScale()
-        },
-        ...customOptions
-    };
+function formatCurrency(value) {
+    return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+    }).format(value) + 'M';
 }
 
 function getStandardXScale() {
@@ -159,38 +124,58 @@ function getStandardYScale() {
 }
 
 // ==========================================
-// SPARKLINES (Executive Summary)
+// WATERFALL CHART (TRUE FLOATING BARS)
 // ==========================================
 
-export function createSparkline(elementId, data) {
-    const element = document.getElementById(elementId);
-    if (!element) {
-        console.warn(`Sparkline element ${elementId} not found`);
+export function createRevenueWaterfall(canvasId, data) {
+    console.log('📊 Creating TRUE Revenue Waterfall');
+    console.log('📊 Input data:', data);
+    
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
-    // Create mini canvas
-    element.innerHTML = '<canvas style="width: 100%; height: 30px;"></canvas>';
-    const canvas = element.querySelector('canvas');
+    destroyChart('revenueWaterfall');
+    
+    const labels = data.labels || [];
+    const values = data.values || [];
+    
+    // Calculate waterfall structure
+    const waterfallData = [];
+    const colors = [];
+    let cumulative = 0;
+    
+    values.forEach((value, index) => {
+        if (index === 0) {
+            // First bar starts at 0
+            waterfallData.push([0, value]);
+            colors.push(HORVATH_COLORS.navy);
+            cumulative = value;
+        } else {
+            // Growth bars start at previous cumulative
+            const delta = value - values[index - 1];
+            waterfallData.push([cumulative, value]);
+            colors.push(delta >= 0 ? HORVATH_COLORS.success : HORVATH_COLORS.danger);
+            cumulative = value;
+        }
+    });
+    
+    console.log('📊 Waterfall structure:', waterfallData);
+    
     const ctx = canvas.getContext('2d');
-    
-    // Destroy existing
-    const chartId = `sparkline-${elementId}`;
-    destroyChart(chartId);
-    
-    // Create sparkline
-    chartInstances[chartId] = new Chart(ctx, {
-        type: 'line',
+    chartInstances.revenueWaterfall = new Chart(ctx, {
+        type: 'bar',
         data: {
-            labels: data.labels,
+            labels: labels,
             datasets: [{
-                data: data.values,
-                borderColor: HORVATH_COLORS.blue,
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                pointRadius: 0,
-                pointHoverRadius: 3,
-                tension: 0.4
+                label: 'Revenue',
+                data: waterfallData,
+                backgroundColor: colors,
+                borderWidth: 0,
+                borderRadius: 4,
+                barPercentage: 0.7
             }]
         },
         options: {
@@ -198,74 +183,23 @@ export function createSparkline(elementId, data) {
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            scales: {
-                x: { display: false },
-                y: { display: false }
-            }
-        }
-    });
-    
-    return chartInstances[chartId];
-}
-
-// ==========================================
-// WATERFALL CHART (Revenue)
-// ==========================================
-
-export function createRevenueWaterfall(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
-        return null;
-    }
-    
-    destroyChart('revenueWaterfall');
-    
-    // Prepare waterfall data
-    const waterfallData = prepareWaterfallData(data);
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances.revenueWaterfall = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: waterfallData.labels,
-            datasets: [{
-                label: 'Revenue',
-                data: waterfallData.values,
-                backgroundColor: waterfallData.colors,
-                borderWidth: 0,
-                borderRadius: 4
-            }]
-        },
-        options: getStandardOptions({
-            showLegend: false,
-            plugins: {
-                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const value = context.parsed.y;
-                            return 'Revenue: ' + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M';
-                        },
-                        afterLabel: function(context) {
-                            // Show delta for growth years
-                            if (context.dataIndex > 0) {
-                                const delta = waterfallData.deltas[context.dataIndex];
-                                if (delta) {
-                                    return 'Wachstum: +' + new Intl.NumberFormat('de-DE', {
-                                        style: 'currency',
-                                        currency: 'EUR',
-                                        minimumFractionDigits: 1
-                                    }).format(delta) + 'M';
-                                }
+                            const data = context.parsed.y;
+                            const index = context.dataIndex;
+                            
+                            if (index === 0) {
+                                return 'Start: ' + formatCurrency(data);
+                            } else {
+                                const prevValue = values[index - 1];
+                                const delta = values[index] - prevValue;
+                                const sign = delta >= 0 ? '+' : '';
+                                return [
+                                    'Revenue: ' + formatCurrency(values[index]),
+                                    'Wachstum: ' + sign + formatCurrency(delta)
+                                ];
                             }
-                            return '';
                         }
                     }
                 }
@@ -274,93 +208,91 @@ export function createRevenueWaterfall(canvasId, data) {
                 x: getStandardXScale(),
                 y: getStandardYScale()
             }
-        })
-    });
-    
-    return chartInstances.revenueWaterfall;
-}
-
-/**
- * Prepare waterfall data structure
- */
-function prepareWaterfallData(data) {
-    const labels = [];
-    const values = [];
-    const colors = [];
-    const deltas = [];
-    
-    data.labels.forEach((label, idx) => {
-        labels.push(label);
-        values.push(data.values[idx]);
-        
-        // First year: Navy, others: Green (growth)
-        colors.push(idx === 0 ? HORVATH_COLORS.navy : HORVATH_COLORS.success);
-        
-        // Calculate delta
-        if (idx > 0) {
-            deltas.push(data.values[idx] - data.values[idx - 1]);
-        } else {
-            deltas.push(null);
         }
     });
     
-    return { labels, values, colors, deltas };
+    console.log('✅ TRUE Waterfall Chart created');
+    return chartInstances.revenueWaterfall;
 }
 
 // ==========================================
-// MARGIN BRIDGE (DB1 → DB2 → DB3)
+// MARGIN BRIDGE (DB1 → DB3 WATERFALL)
 // ==========================================
 
 export function createMarginBridge(canvasId, data) {
+    console.log('📊 Creating Margin Bridge');
+    
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
     destroyChart('marginBridge');
     
+    const labels = data.labels || [];
+    const values = data.values || [];
+    
+    // Build waterfall from DB1 to DB3
+    const waterfallData = [];
+    const colors = [];
+    let cumulative = 0;
+    
+    values.forEach((value, index) => {
+        if (index === 0) {
+            // DB1 starts at 0
+            waterfallData.push([0, value]);
+            colors.push(HORVATH_COLORS.success);
+            cumulative = value;
+        } else if (index === values.length - 1) {
+            // DB3 is final
+            waterfallData.push([0, value]);
+            colors.push(HORVATH_COLORS.navy);
+        } else {
+            // Costs reduce margin
+            const newCumulative = cumulative + value;
+            waterfallData.push([cumulative, newCumulative]);
+            colors.push(value < 0 ? HORVATH_COLORS.danger : HORVATH_COLORS.success);
+            cumulative = newCumulative;
+        }
+    });
+    
     const ctx = canvas.getContext('2d');
     chartInstances.marginBridge = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.labels,
+            labels: labels,
             datasets: [{
                 label: 'Margin Bridge',
-                data: data.values,
-                backgroundColor: data.values.map(v => v >= 0 ? HORVATH_COLORS.success : HORVATH_COLORS.danger),
+                data: waterfallData,
+                backgroundColor: colors,
                 borderWidth: 0,
                 borderRadius: 4
             }]
         },
-        options: getStandardOptions({
-            showLegend: false,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const value = Math.abs(context.parsed.y);
-                            const prefix = context.parsed.y >= 0 ? '+' : '-';
-                            return context.label + ': ' + prefix + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M';
+                            const value = Math.abs(values[context.dataIndex]);
+                            const label = context.label;
+                            return label + ': ' + formatCurrency(value);
                         }
                     }
                 }
             },
             scales: {
                 x: getStandardXScale(),
-                y: {
-                    ...getStandardYScale(),
-                    beginAtZero: false
-                }
+                y: getStandardYScale()
             }
-        })
+        }
     });
     
+    console.log('✅ Margin Bridge created');
     return chartInstances.marginBridge;
 }
 
@@ -369,9 +301,11 @@ export function createMarginBridge(canvasId, data) {
 // ==========================================
 
 export function createCostWaterfall(canvasId, data) {
+    console.log('📊 Creating Cost Waterfall');
+    
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
@@ -385,24 +319,20 @@ export function createCostWaterfall(canvasId, data) {
             datasets: [{
                 label: 'Projektkosten',
                 data: data.values,
-                backgroundColor: HORVATH_COLORS.neutral,
+                backgroundColor: HORVATH_COLORS.danger,
                 borderWidth: 0,
                 borderRadius: 4
             }]
         },
-        options: getStandardOptions({
-            showLegend: false,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const value = context.parsed.y;
-                            return 'Kosten: ' + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M';
+                            return 'Kosten: ' + formatCurrency(context.parsed.y);
                         }
                     }
                 }
@@ -411,272 +341,23 @@ export function createCostWaterfall(canvasId, data) {
                 x: getStandardXScale(),
                 y: getStandardYScale()
             }
-        })
+        }
     });
     
+    console.log('✅ Cost Waterfall created');
     return chartInstances.costWaterfall;
 }
 
 // ==========================================
-// SENSITIVITY TORNADO
-// ==========================================
-
-export function createSensitivityTornado(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
-        return null;
-    }
-    
-    destroyChart('sensitivityTornado');
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances.sensitivityTornado = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    label: 'Negative Impact',
-                    data: data.negativeImpact.map(v => -v),
-                    backgroundColor: HORVATH_COLORS.danger,
-                    borderWidth: 0,
-                    borderRadius: 4
-                },
-                {
-                    label: 'Positive Impact',
-                    data: data.positiveImpact,
-                    backgroundColor: HORVATH_COLORS.success,
-                    borderWidth: 0,
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: getStandardOptions({
-            indexAxis: 'y',  // Horizontal bars!
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const value = Math.abs(context.parsed.x);
-                            return context.dataset.label + ': ±' + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { 
-                        color: HORVATH_COLORS.gridLight,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        font: { size: 10 },
-                        callback: function(value) {
-                            return Math.abs(value).toFixed(1) + 'M';
-                        }
-                    }
-                },
-                y: {
-                    grid: { display: false },
-                    ticks: {
-                        font: { size: 10, weight: 500 }
-                    }
-                }
-            }
-        })
-    });
-    
-    return chartInstances.sensitivityTornado;
-}
-
-// ==========================================
-// STACKED BAR (Artikel Breakdown)
-// ==========================================
-
-export function createStackedBar(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
-        return null;
-    }
-    
-    destroyChart(`stacked-${canvasId}`);
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances[`stacked-${canvasId}`] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: data.datasets.map((ds, idx) => ({
-                label: ds.label,
-                data: ds.data,
-                backgroundColor: ds.color || HORVATH_COLORS.blue,
-                borderWidth: 0,
-                borderRadius: 4
-            }))
-        },
-        options: getStandardOptions({
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                x: getStandardXScale(),
-                y: {
-                    ...getStandardYScale(),
-                    stacked: true
-                },
-                x: {
-                    ...getStandardXScale(),
-                    stacked: true
-                }
-            }
-        })
-    });
-    
-    return chartInstances[`stacked-${canvasId}`];
-}
-
-// ==========================================
-// LINE CHART (Trend)
-// ==========================================
-
-export function createTrendLine(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
-        return null;
-    }
-    
-    destroyChart(`trend-${canvasId}`);
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances[`trend-${canvasId}`] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: data.datasets.map(ds => ({
-                label: ds.label,
-                data: ds.data,
-                borderColor: ds.color || HORVATH_COLORS.blue,
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                pointRadius: 4,
-                pointBackgroundColor: ds.color || HORVATH_COLORS.blue,
-                tension: 0.3
-            }))
-        },
-        options: getStandardOptions({
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                x: getStandardXScale(),
-                y: getStandardYScale()
-            }
-        })
-    });
-    
-    return chartInstances[`trend-${canvasId}`];
-}
-
-// ==========================================
-// COMBO CHART (Bar + Line)
-// ==========================================
-
-export function createComboChart(canvasId, data) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
-        return null;
-    }
-    
-    destroyChart(`combo-${canvasId}`);
-    
-    const ctx = canvas.getContext('2d');
-    chartInstances[`combo-${canvasId}`] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [
-                {
-                    type: 'bar',
-                    label: data.barLabel || 'Absolute',
-                    data: data.barData,
-                    backgroundColor: HORVATH_COLORS.navy,
-                    borderWidth: 0,
-                    borderRadius: 4,
-                    yAxisID: 'y'
-                },
-                {
-                    type: 'line',
-                    label: data.lineLabel || 'Percent',
-                    data: data.lineData,
-                    borderColor: HORVATH_COLORS.warning,
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    pointBackgroundColor: HORVATH_COLORS.warning,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: getStandardOptions({
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                x: getStandardXScale(),
-                y: {
-                    ...getStandardYScale(),
-                    type: 'linear',
-                    position: 'left'
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    grid: { drawOnChartArea: false },
-                    ticks: {
-                        font: { size: 10 },
-                        callback: function(value) {
-                            return value.toFixed(0) + '%';
-                        }
-                    },
-                    min: 0,
-                    max: 100
-                }
-            }
-        })
-    });
-    
-    return chartInstances[`combo-${canvasId}`];
-}
-
-// ==========================================
-// PIE CHART (Artikel Breakdown)
+// PIE CHART
 // ==========================================
 
 export function createPieChart(canvasId, data) {
+    console.log('📊 Creating Pie Chart');
+    
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
@@ -719,11 +400,7 @@ export function createPieChart(canvasId, data) {
                             const value = context.parsed;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percent = ((value / total) * 100).toFixed(1);
-                            return label + ': ' + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M (' + percent + '%)';
+                            return label + ': ' + formatCurrency(value) + ' (' + percent + '%)';
                         }
                     }
                 }
@@ -731,17 +408,85 @@ export function createPieChart(canvasId, data) {
         }
     });
     
+    console.log('✅ Pie Chart created');
     return chartInstances[`pie-${canvasId}`];
 }
 
 // ==========================================
-// TORNADO CHART (Sensitivity Analysis)
+// DOUGHNUT CHART
+// ==========================================
+
+export function createDoughnut(canvasId, data) {
+    console.log('📊 Creating Doughnut Chart');
+    
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`❌ Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`doughnut-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`doughnut-${canvasId}`] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.data || data.values,
+                backgroundColor: data.backgroundColor || data.colors || [
+                    HORVATH_COLORS.navy,
+                    HORVATH_COLORS.blue,
+                    HORVATH_COLORS.success,
+                    HORVATH_COLORS.neutral
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: { size: 10 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percent = ((value / total) * 100).toFixed(1);
+                            return label + ': ' + formatCurrency(value) + ' (' + percent + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    console.log('✅ Doughnut Chart created');
+    return chartInstances[`doughnut-${canvasId}`];
+}
+
+// ==========================================
+// TORNADO CHART (SENSITIVITY)
 // ==========================================
 
 export function createTornadoChart(canvasId, data) {
+    console.log('📊 Creating Tornado Chart');
+    console.log('📊 Tornado data:', data);
+    
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
@@ -755,14 +500,14 @@ export function createTornadoChart(canvasId, data) {
             datasets: [
                 {
                     label: 'Negative Impact',
-                    data: data.negativeImpact ? data.negativeImpact.map(v => -Math.abs(v)) : data.datasets[0].data.map(v => -Math.abs(v)),
+                    data: data.negativeImpact ? data.negativeImpact.map(v => -Math.abs(v)) : [],
                     backgroundColor: HORVATH_COLORS.danger,
                     borderWidth: 0,
                     borderRadius: 4
                 },
                 {
                     label: 'Positive Impact',
-                    data: data.positiveImpact || data.datasets[1]?.data || data.negativeImpact,
+                    data: data.positiveImpact || [],
                     backgroundColor: HORVATH_COLORS.success,
                     borderWidth: 0,
                     borderRadius: 4
@@ -770,7 +515,7 @@ export function createTornadoChart(canvasId, data) {
             ]
         },
         options: {
-            indexAxis: 'y',
+            indexAxis: 'y', // HORIZONTAL!
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -787,12 +532,7 @@ export function createTornadoChart(canvasId, data) {
                     callbacks: {
                         label: function(context) {
                             const value = Math.abs(context.parsed.x);
-                            const prefix = context.parsed.x >= 0 ? '+' : '-';
-                            return context.dataset.label + ': ' + prefix + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M';
+                            return context.dataset.label + ': ±' + formatCurrency(value);
                         }
                     }
                 }
@@ -820,37 +560,146 @@ export function createTornadoChart(canvasId, data) {
         }
     });
     
+    console.log('✅ Tornado Chart created');
     return chartInstances[`tornado-${canvasId}`];
 }
 
 // ==========================================
-// DOUGHNUT CHART (Breakdown)
+// LINE CHART (TREND)
 // ==========================================
 
-export function createDoughnut(canvasId, data) {
+export function createTrendLine(canvasId, data) {
+    console.log('📊 Creating Trend Line');
+    
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
-        console.error(`Canvas ${canvasId} not found`);
+        console.error(`❌ Canvas ${canvasId} not found`);
         return null;
     }
     
-    destroyChart(`doughnut-${canvasId}`);
+    destroyChart(`trend-${canvasId}`);
+    
+    const datasets = (data.datasets || []).map(ds => ({
+        label: ds.label,
+        data: ds.data,
+        borderColor: ds.color || HORVATH_COLORS.blue,
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: ds.color || HORVATH_COLORS.blue,
+        tension: 0.3
+    }));
     
     const ctx = canvas.getContext('2d');
-    chartInstances[`doughnut-${canvasId}`] = new Chart(ctx, {
-        type: 'doughnut',
+    chartInstances[`trend-${canvasId}`] = new Chart(ctx, {
+        type: 'line',
         data: {
             labels: data.labels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: datasets.length > 1,
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                x: getStandardXScale(),
+                y: getStandardYScale()
+            }
+        }
+    });
+    
+    console.log('✅ Trend Line created');
+    return chartInstances[`trend-${canvasId}`];
+}
+
+// ==========================================
+// SPARKLINES (MINI)
+// ==========================================
+
+export function createSparkline(elementId, data) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn(`Sparkline element ${elementId} not found`);
+        return null;
+    }
+    
+    // Create mini canvas
+    element.innerHTML = '<canvas style="width: 100%; height: 30px;"></canvas>';
+    const canvas = element.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing
+    const chartId = `sparkline-${elementId}`;
+    destroyChart(chartId);
+    
+    // Support both array and object with labels/values
+    const values = Array.isArray(data) ? data : (data.values || data.data || []);
+    const labels = Array.isArray(data) ? values.map((v, i) => String(i)) : (data.labels || []);
+    
+    // Create sparkline
+    chartInstances[chartId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
             datasets: [{
-                data: data.values,
-                backgroundColor: data.colors || [
-                    HORVATH_COLORS.navy,
-                    HORVATH_COLORS.blue,
-                    HORVATH_COLORS.success,
-                    HORVATH_COLORS.neutral
-                ],
-                borderWidth: 0
+                data: values,
+                borderColor: HORVATH_COLORS.blue,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                tension: 0.4
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false },
+                y: { display: false }
+            }
+        }
+    });
+    
+    return chartInstances[chartId];
+}
+
+// ==========================================
+// STACKED BAR
+// ==========================================
+
+export function createStackedBar(canvasId, data) {
+    console.log('📊 Creating Stacked Bar');
+    
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
+        console.error(`❌ Canvas ${canvasId} not found`);
+        return null;
+    }
+    
+    destroyChart(`stacked-${canvasId}`);
+    
+    const ctx = canvas.getContext('2d');
+    chartInstances[`stacked-${canvasId}`] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: data.datasets.map(ds => ({
+                label: ds.label,
+                data: ds.data,
+                backgroundColor: ds.color || HORVATH_COLORS.blue,
+                borderWidth: 0,
+                borderRadius: 4
+            }))
         },
         options: {
             responsive: true,
@@ -858,37 +707,28 @@ export function createDoughnut(canvasId, data) {
             plugins: {
                 legend: {
                     display: true,
-                    position: 'right',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 15,
-                        font: { size: 10 }
-                    }
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                x: {
+                    ...getStandardXScale(),
+                    stacked: true
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percent = ((value / total) * 100).toFixed(1);
-                            return label + ': ' + new Intl.NumberFormat('de-DE', {
-                                style: 'currency',
-                                currency: 'EUR',
-                                minimumFractionDigits: 1
-                            }).format(value) + 'M (' + percent + '%)';
-                        }
-                    }
+                y: {
+                    ...getStandardYScale(),
+                    stacked: true
                 }
             }
         }
     });
     
-    return chartInstances[`doughnut-${canvasId}`];
+    console.log('✅ Stacked Bar created');
+    return chartInstances[`stacked-${canvasId}`];
 }
 
 // ==========================================
-// CHART UPDATES
+// CHART MANAGEMENT
 // ==========================================
 
 export function updateChart(chartName, newData) {
@@ -898,12 +738,10 @@ export function updateChart(chartName, newData) {
         return false;
     }
     
-    // Update labels
     if (newData.labels) {
         chart.data.labels = newData.labels;
     }
     
-    // Update datasets
     if (newData.values) {
         chart.data.datasets[0].data = newData.values;
     }
@@ -916,14 +754,9 @@ export function updateChart(chartName, newData) {
         });
     }
     
-    // Update without animation
     chart.update('none');
     return true;
 }
-
-// ==========================================
-// CHART CLEANUP
-// ==========================================
 
 export function destroyChart(chartName) {
     if (chartInstances[chartName]) {
@@ -940,16 +773,12 @@ export function destroyAllCharts() {
     });
     
     Object.keys(chartInstances).forEach(key => delete chartInstances[key]);
-    console.log('🧹 All Horváth charts destroyed');
+    console.log('🧹 All charts destroyed');
 }
 
 export function getChart(chartName) {
     return chartInstances[chartName] || null;
 }
-
-// ==========================================
-// CHART UTILITIES
-// ==========================================
 
 export function resizeAllCharts() {
     Object.values(chartInstances).forEach(chart => {
@@ -959,56 +788,25 @@ export function resizeAllCharts() {
     });
 }
 
-export function downloadChartAsImage(chartName, filename = 'chart.png') {
-    const chart = chartInstances[chartName];
-    if (!chart) {
-        console.error(`Chart ${chartName} not found`);
-        return false;
-    }
-    
-    const url = chart.toBase64Image();
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = url;
-    link.click();
-    
-    return true;
-}
-
-export function areChartsInitialized() {
-    return Object.keys(chartInstances).length > 0;
-}
-
 // ==========================================
-// EXPORT ALL
+// EXPORT
 // ==========================================
 
 export default {
-    // Initialization
     initializeChartDefaults,
-    
-    // Chart Creators
-    createSparkline,
     createRevenueWaterfall,
     createMarginBridge,
     createCostWaterfall,
-    createSensitivityTornado,
-    createStackedBar,
-    createTrendLine,
-    createComboChart,
+    createPieChart,
     createDoughnut,
-    
-    // Chart Management
+    createTornadoChart,
+    createTrendLine,
+    createSparkline,
+    createStackedBar,
     updateChart,
     destroyChart,
     destroyAllCharts,
     getChart,
-    areChartsInitialized,
-    
-    // Utilities
     resizeAllCharts,
-    downloadChartAsImage,
-    
-    // Colors
     HORVATH_COLORS
 };
