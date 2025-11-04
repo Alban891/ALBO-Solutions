@@ -51,38 +51,38 @@
     background: #F5F7FA;
 }
 
-/* Mock Data Banner */
-.mock-data-banner {
-    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-    border-bottom: 2px solid #F59E0B;
+/* Demo Mode Banner */
+.demo-mode-banner {
+    background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+    border-bottom: 2px solid #3B82F6;
     padding: var(--space-md) var(--space-lg);
     display: flex;
     align-items: center;
     gap: var(--space-md);
 }
 
-.mock-data-banner .banner-icon {
+.demo-mode-banner .banner-icon {
     font-size: 24px;
     flex-shrink: 0;
 }
 
-.mock-data-banner .banner-content {
+.demo-mode-banner .banner-content {
     flex: 1;
     font-size: var(--font-sm);
-    color: #78350F;
+    color: #1E40AF;
 }
 
-.mock-data-banner .banner-content strong {
+.demo-mode-banner .banner-content strong {
     font-weight: 700;
-    color: #92400E;
+    color: #1E3A8A;
 }
 
-.mock-data-banner .banner-btn {
+.demo-mode-banner .banner-btn {
     padding: var(--space-sm) var(--space-lg);
     background: white;
-    border: 1px solid #F59E0B;
+    border: 1px solid #3B82F6;
     border-radius: 6px;
-    color: #92400E;
+    color: #1E40AF;
     font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
@@ -90,8 +90,8 @@
     white-space: nowrap;
 }
 
-.mock-data-banner .banner-btn:hover {
-    background: #92400E;
+.demo-mode-banner .banner-btn:hover {
+    background: #1E40AF;
     color: white;
 }
 
