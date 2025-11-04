@@ -167,7 +167,34 @@ function injectDemoData(projekt, artikel, calc) {
 // MAIN RENDER
 // ==========================================
 
+/**
+ * Cleanup old styles to prevent bleeding into other tabs
+ */
+function cleanupExecutiveSummaryStyles() {
+    // Remove our style tag if it exists
+    const oldStyle = document.getElementById('executive-summary-styles');
+    if (oldStyle) {
+        oldStyle.remove();
+    }
+    
+    // Remove any orphaned inline styles in the container
+    const container = document.getElementById('projekt-tab-uebersicht');
+    if (container) {
+        const inlineStyles = container.querySelectorAll('style');
+        inlineStyles.forEach(style => {
+            if (style.textContent.includes('executive-compact-container') ||
+                style.textContent.includes('kpi-scorecard') ||
+                style.textContent.includes('management-summary')) {
+                style.remove();
+            }
+        });
+    }
+}
+
 export async function renderUebersicht() {
+    // CRITICAL: Cleanup old styles first!
+    cleanupExecutiveSummaryStyles();
+    
     const projektId = window.cfoDashboard.currentProjekt;
     if (!projektId) return;
     
@@ -232,6 +259,10 @@ export async function renderUebersicht() {
         return;
     }
     
+    // Inject styles into <head> (not inline)
+    injectStyles();
+    
+    // Render HTML content
     container.innerHTML = createCompactLayout(projekt, artikel, calc);
     
     // Load RAG Intelligence async
@@ -276,11 +307,24 @@ function createCompactLayout(projekt, artikel, calc) {
             ${createVisualizationsSection(calc)}
             
         </div>
-        
-        <style>
-            ${getCompactStyles()}
-        </style>
     `;
+}
+
+/**
+ * Inject styles into page (or update existing)
+ */
+function injectStyles() {
+    // Remove old style tag if exists
+    const oldStyle = document.getElementById('executive-summary-styles');
+    if (oldStyle) {
+        oldStyle.remove();
+    }
+    
+    // Create new style tag
+    const styleTag = document.createElement('style');
+    styleTag.id = 'executive-summary-styles';
+    styleTag.textContent = getCompactStyles();
+    document.head.appendChild(styleTag);
 }
 
 // ==========================================
@@ -1036,16 +1080,29 @@ function renderPlaceholder(projekt) {
 
 function getCompactStyles() {
     return `
-        /* Main Container */
+        /* ===== EXECUTIVE SUMMARY STYLES - NAMESPACE SCOPED =====
+         * All styles are prefixed with .executive-compact-container
+         * to prevent bleeding into other pages
+         */
+        
+        /* Container */
         .executive-compact-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 10px;
             background: #F5F7FA;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        /* Reset box-sizing within container */
+        .executive-compact-container *,
+        .executive-compact-container *::before,
+        .executive-compact-container *::after {
+            box-sizing: border-box;
         }
         
         /* Header */
-        .executive-header {
+        .executive-compact-container .executive-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -1054,7 +1111,16 @@ function getCompactStyles() {
             border-bottom: 2px solid #0066CC;
         }
         
-        .header-left h1 {
+        .executive-compact-container .header-left h1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #0066CC;
+        }
+        
+        .executive-compact-container .header-left h1 {
             font-size: 16px;
             font-weight: 700;
             color: #003366;
@@ -1783,9 +1849,22 @@ function getCompactStyles() {
 }
 
 // ==========================================
-// EXPORT
+// EXPORT & LIFECYCLE
 // ==========================================
 
+/**
+ * Cleanup function to call when leaving this tab
+ */
+function cleanup() {
+    cleanupExecutiveSummaryStyles();
+}
+
+// Register cleanup on tab switch
+if (typeof window !== 'undefined') {
+    window.addEventListener('projekt-tab-switch', cleanup);
+}
+
 export default {
-    renderUebersicht
+    renderUebersicht,
+    cleanup
 };
