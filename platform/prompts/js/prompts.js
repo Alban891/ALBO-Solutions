@@ -543,15 +543,20 @@ renderPromptDetail(prompt) {
 
     this.updateProgress(prompt.id, extractedQuestions.length);
 
-    // Add click event listener to execute button
-    setTimeout(() => {
-        const executeBtn = document.getElementById('execute-btn-' + prompt.id);
-        if (executeBtn) {
-            executeBtn.addEventListener('click', () => {
-                window.promptsEngine.executePrompt(prompt.id);
-            });
-        }
-    }, 100);
+    // Add click event listener to execute button AFTER DOM is ready
+setTimeout(() => {
+    const executeBtn = document.getElementById('execute-btn-' + prompt.id);
+    if (executeBtn) {
+        // Remove any existing listeners first
+        executeBtn.replaceWith(executeBtn.cloneNode(true));
+        const newBtn = document.getElementById('execute-btn-' + prompt.id);
+        
+        newBtn.addEventListener('click', function() {
+            console.log('Execute button clicked for prompt:', prompt.id);
+            window.promptsEngine.executePrompt(prompt.id);
+        });
+    }
+}, 100);
 }
 
 // Clean Preview Rendering
@@ -918,7 +923,8 @@ renderPreview(prompt, fullPromptText) {
     }
 
   async executePrompt(promptId) {
-    const previewContent = document.getElementById(`code-preview-${promptId}`) || document.getElementById(`preview-content-${promptId}`);
+    console.log('executePrompt called with ID:', promptId);
+    const previewContent = document.getElementById('code-preview-' + promptId) || document.getElementById('preview-content-' + promptId);
     if (!previewContent) return;
     
     const promptText = previewContent.textContent;
@@ -1459,6 +1465,81 @@ showAIResult(result, promptData, provider) {
                 .prompt-split-container {
                     grid-template-columns: 1fr;
                 }
+            }
+            
+            /* Execution Modal */
+            .execution-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.7);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            }
+            .execution-modal-content {
+                background: white;
+                border-radius: 16px;
+                padding: 32px;
+                width: 90%;
+                max-width: 600px;
+            }
+            .modal-header {
+                margin-bottom: 24px;
+            }
+            .modal-title {
+                font-size: 24px;
+                font-weight: 600;
+                margin-bottom: 8px;
+            }
+            .modal-subtitle {
+                color: #6b7280;
+                font-size: 14px;
+            }
+            .execution-options {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                margin-bottom: 24px;
+            }
+            .execution-option {
+                display: flex;
+                align-items: center;
+                padding: 16px;
+                border: 2px solid #e5e7eb;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .execution-option:hover {
+                border-color: #3b82f6;
+                background: #f0f9ff;
+            }
+            .option-icon {
+                font-size: 32px;
+                margin-right: 16px;
+            }
+            .option-content {
+                flex: 1;
+            }
+            .option-title {
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .option-description {
+                font-size: 14px;
+                color: #6b7280;
+            }
+            .option-badge {
+                background: #fef3c7;
+                color: #92400e;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 500;
             }
         `;
         document.head.appendChild(style);
