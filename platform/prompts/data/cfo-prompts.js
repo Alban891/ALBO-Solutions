@@ -7818,6 +7818,3 @@ const CFO_PROMPTS = [
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CFO_PROMPTS;
 }
-
-// Export für ES6 Module
-export default CFO_PROMPTS;
