@@ -547,8 +547,8 @@ function createKPIScorecard(calc, artikel) {
                 </div>
             </div>
             
-            <div class="kpi-card decision-card" style="--decision-color: ${decisionColor}">
-                <div class="kpi-icon">${decisionIcon}</div>
+            <div class="kpi-card decision-card" style="--decision-color: ${decisionColor}; cursor: pointer;"
+                onclick="if(${npv} < 0) { const overlay = document.getElementById('critical-warning-overlay'); if(overlay) overlay.style.display='flex'; }">
                 <div class="kpi-content">
                     <div class="kpi-label">DECISION</div>
                     <div class="kpi-value" style="color: ${decisionColor}">${decision}</div>
