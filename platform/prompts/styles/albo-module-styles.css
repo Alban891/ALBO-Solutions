@@ -1,0 +1,1035 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ALBO MODULE STYLES - PHASE 3: COMPLETE CSS
+   Software-like Interface für Business Intelligence Module
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+    --albo-primary: #667eea;
+    --albo-primary-dark: #5568d3;
+    --albo-secondary: #764ba2;
+    --albo-success: #10b981;
+    --albo-warning: #f59e0b;
+    --albo-danger: #ef4444;
+    --albo-bg-primary: #ffffff;
+    --albo-bg-secondary: #f8fafc;
+    --albo-bg-tertiary: #f1f5f9;
+    --albo-text-primary: #0f172a;
+    --albo-text-secondary: #475569;
+    --albo-text-tertiary: #64748b;
+    --albo-border: #e2e8f0;
+    --albo-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --albo-shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+    --albo-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+
+/* ========================================== */
+/* APP HEADER */
+/* ========================================== */
+.albo-app-header {
+    background: linear-gradient(135deg, var(--albo-primary) 0%, var(--albo-secondary) 100%);
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--albo-shadow-lg);
+}
+
+.albo-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.albo-logo {
+    font-size: 28px;
+}
+
+.albo-title h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.albo-subtitle {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.albo-header-right {
+    display: flex;
+    gap: 8px;
+}
+
+.albo-btn-header {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.albo-btn-secondary {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.albo-btn-secondary:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.albo-btn-primary {
+    background: white;
+    color: var(--albo-primary);
+}
+
+.albo-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ========================================== */
+/* MODULE TABS */
+/* ========================================== */
+.albo-module-tabs {
+    background: var(--albo-bg-primary);
+    border-bottom: 2px solid var(--albo-border);
+    display: flex;
+    gap: 2px;
+    padding: 0 16px;
+}
+
+.albo-module-tab {
+    padding: 0 20px;
+    min-width: 160px;
+    height: 48px;
+    border: none;
+    background: transparent;
+    color: var(--albo-text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+}
+
+.albo-module-tab:hover {
+    color: var(--albo-text-primary);
+    background: var(--albo-bg-tertiary);
+}
+
+.albo-module-tab.active {
+    color: var(--albo-primary);
+    border-bottom-color: var(--albo-primary);
+    background: var(--albo-bg-secondary);
+}
+
+.albo-tab-icon {
+    font-size: 18px;
+}
+
+/* ========================================== */
+/* MODULE TOOLBAR */
+/* ========================================== */
+.albo-module-toolbar {
+    background: var(--albo-bg-primary);
+    border-bottom: 1px solid var(--albo-border);
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.albo-toolbar-left,
+.albo-toolbar-right {
+    display: flex;
+    gap: 8px;
+}
+
+.albo-btn-toolbar {
+    padding: 8px 14px;
+    background: var(--albo-bg-tertiary);
+    border: 1px solid var(--albo-border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.albo-btn-toolbar:hover {
+    background: var(--albo-bg-secondary);
+    border-color: var(--albo-primary);
+    color: var(--albo-primary);
+}
+
+.albo-btn-toolbar-primary {
+    background: var(--albo-primary);
+    color: white;
+    border-color: var(--albo-primary);
+}
+
+.albo-btn-toolbar-primary:hover {
+    background: var(--albo-primary-dark);
+}
+
+/* ========================================== */
+/* MODULE CONTENT */
+/* ========================================== */
+.albo-module-content {
+    padding: 24px;
+    background: var(--albo-bg-secondary);
+    min-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.albo-module-view {
+    display: none;
+}
+
+.albo-module-view.active {
+    display: block;
+    animation: alboFadeIn 0.3s ease;
+}
+
+@keyframes alboFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================== */
+/* DATAGRID MODULE */
+/* ========================================== */
+.albo-datagrid-container {
+    background: var(--albo-bg-primary);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--albo-shadow-md);
+}
+
+.albo-datagrid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--albo-border);
+}
+
+.albo-datagrid-title {
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.albo-overall-score {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-left: 4px solid var(--albo-success);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.albo-overall-score-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #065f46;
+    margin-bottom: 10px;
+}
+
+.albo-progress-bar-wrapper {
+    background: rgba(255,255,255,0.5);
+    height: 32px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.albo-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--albo-success) 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 16px;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.albo-overall-score-text {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #065f46;
+}
+
+.albo-excel-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.albo-excel-table thead {
+    background: var(--albo-bg-tertiary);
+}
+
+.albo-excel-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--albo-text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--albo-border);
+}
+
+.albo-excel-table tbody tr {
+    background: white;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.albo-excel-table tbody tr:hover {
+    background: var(--albo-bg-secondary);
+    transform: translateX(2px);
+}
+
+.albo-excel-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--albo-border);
+}
+
+.albo-stage-number {
+    font-weight: 700;
+    color: var(--albo-primary);
+    font-size: 16px;
+}
+
+.albo-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.albo-status-validated {
+    background: #dcfce7;
+    color: #065f46;
+}
+
+.albo-status-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.albo-status-critical {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.albo-risk-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.albo-risk-low {
+    background: #dcfce7;
+    color: #065f46;
+}
+
+.albo-risk-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.albo-risk-high {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.albo-row-actions {
+    display: flex;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.albo-excel-table tbody tr:hover .albo-row-actions {
+    opacity: 1;
+}
+
+.albo-btn-row-action {
+    padding: 4px 8px;
+    background: var(--albo-bg-tertiary);
+    border: 1px solid var(--albo-border);
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.albo-btn-row-action:hover {
+    background: var(--albo-primary);
+    color: white;
+    border-color: var(--albo-primary);
+}
+
+/* Learning Panel */
+.albo-learning-panel {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-left: 4px solid #3b82f6;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 24px;
+}
+
+.albo-learning-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.albo-learning-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.albo-btn-learning {
+    padding: 12px 16px;
+    background: white;
+    border: 2px solid #bfdbfe;
+    border-radius: 8px;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #1e40af;
+}
+
+.albo-btn-learning:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: var(--albo-shadow-md);
+}
+
+/* ========================================== */
+/* SCORECARD MODULE */
+/* ========================================== */
+.albo-scorecard-container {
+    display: grid;
+    gap: 20px;
+}
+
+.albo-status-hero {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-left: 6px solid var(--albo-success);
+    padding: 32px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.albo-status-hero.albo-status-yellow {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left-color: var(--albo-warning);
+}
+
+.albo-status-hero.albo-status-red {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-left-color: var(--albo-danger);
+}
+
+.albo-status-indicator-large {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.albo-status-text-large {
+    font-size: 24px;
+    font-weight: 700;
+    color: #065f46;
+    margin-bottom: 8px;
+}
+
+.albo-status-subtext {
+    font-size: 14px;
+    color: #065f46;
+}
+
+.albo-scorecard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.albo-scorecard-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--albo-shadow-md);
+    transition: all 0.2s;
+}
+
+.albo-scorecard-card:hover {
+    box-shadow: var(--albo-shadow-lg);
+}
+
+.albo-scorecard-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--albo-border);
+}
+
+.albo-card-icon {
+    font-size: 28px;
+}
+
+.albo-card-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.albo-recommendation-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--albo-text-primary);
+}
+
+.albo-next-milestones,
+.albo-concern-list,
+.albo-finding-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.albo-milestone-item {
+    padding: 12px;
+    background: var(--albo-bg-secondary);
+    border-left: 3px solid var(--albo-primary);
+    border-radius: 6px;
+}
+
+.albo-milestone-title {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.albo-milestone-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--albo-text-secondary);
+    margin-top: 4px;
+}
+
+.albo-milestone-due {
+    color: var(--albo-warning);
+    font-weight: 600;
+}
+
+.albo-concern-item {
+    padding: 8px 12px;
+    background: #fef3c7;
+    border-left: 3px solid var(--albo-warning);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.albo-finding-item {
+    padding: 8px 12px;
+    background: #f0fdf4;
+    border-left: 3px solid var(--albo-success);
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* ========================================== */
+/* CAPITAL OPTIMIZER MODULE */
+/* ========================================== */
+.albo-capital-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: var(--albo-shadow-md);
+}
+
+.albo-capital-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.albo-capital-stages-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.albo-capital-stage-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid var(--albo-border);
+    transition: all 0.2s;
+}
+
+.albo-capital-stage-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--albo-shadow-lg);
+}
+
+.albo-stage-spent {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-color: var(--albo-success);
+}
+
+.albo-stage-allocated {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: var(--albo-warning);
+}
+
+.albo-stage-pending {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-color: #3b82f6;
+}
+
+.albo-stage-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--albo-text-secondary);
+    margin-bottom: 8px;
+}
+
+.albo-stage-amount {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.albo-stage-status-text {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.albo-stage-roi {
+    font-size: 11px;
+    color: var(--albo-text-secondary);
+    margin-top: 4px;
+}
+
+.albo-capital-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.albo-summary-item {
+    text-align: center;
+    padding: 16px;
+    background: var(--albo-bg-secondary);
+    border-radius: 8px;
+}
+
+.albo-summary-label {
+    font-size: 12px;
+    color: var(--albo-text-secondary);
+    margin-bottom: 6px;
+}
+
+.albo-summary-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.albo-summary-value.albo-primary {
+    color: var(--albo-primary);
+}
+
+.albo-calculator-section {
+    background: var(--albo-bg-secondary);
+    padding: 28px;
+    border-radius: 12px;
+    margin-top: 24px;
+}
+
+.albo-calculator-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.albo-slider-group {
+    margin-bottom: 24px;
+}
+
+.albo-slider-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.albo-slider-value {
+    font-size: 18px;
+    color: var(--albo-primary);
+}
+
+.albo-slider {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--albo-border);
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.albo-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--albo-primary);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.albo-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--albo-primary);
+    cursor: pointer;
+    border: none;
+}
+
+.albo-calculation-results {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+}
+
+.albo-result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--albo-border);
+}
+
+.albo-result-row:last-child {
+    border-bottom: none;
+}
+
+.albo-result-label {
+    font-size: 14px;
+    color: var(--albo-text-secondary);
+}
+
+.albo-result-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.albo-result-highlight {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid var(--albo-success);
+    margin-top: 8px;
+}
+
+.albo-result-highlight .albo-result-label {
+    color: #065f46;
+}
+
+.albo-result-highlight .albo-result-value {
+    color: #065f46;
+    font-size: 24px;
+}
+
+.albo-calculator-note {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f0f9ff;
+    border-left: 4px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1e40af;
+}
+
+/* ========================================== */
+/* TIMELINE MODULE */
+/* ========================================== */
+.albo-timeline-container {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: var(--albo-shadow-md);
+}
+
+.albo-timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.albo-timeline-title {
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.albo-timeline-item {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--albo-border);
+}
+
+.albo-timeline-item:last-child {
+    border-bottom: none;
+}
+
+.albo-timeline-milestone-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.albo-timeline-dates,
+.albo-timeline-owner {
+    font-size: 12px;
+    color: var(--albo-text-secondary);
+    margin-bottom: 4px;
+}
+
+.albo-timeline-bar-container {
+    position: relative;
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.albo-timeline-bar {
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+}
+
+.albo-timeline-completed {
+    background: linear-gradient(90deg, var(--albo-success) 0%, #059669 100%);
+}
+
+.albo-timeline-in-progress {
+    background: linear-gradient(90deg, var(--albo-warning) 0%, #d97706 100%);
+}
+
+.albo-timeline-planned {
+    background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+}
+
+.albo-timeline-warning {
+    margin-top: 24px;
+    padding: 16px;
+    background: #fef3c7;
+    border-left: 4px solid var(--albo-warning);
+    border-radius: 8px;
+}
+
+.albo-warning-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 8px;
+}
+
+.albo-warning-text {
+    font-size: 13px;
+    color: #78350f;
+}
+
+/* ========================================== */
+/* DOCUMENT MODULE */
+/* ========================================== */
+.albo-template-container {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: var(--albo-shadow-md);
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.albo-document-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 3px solid var(--albo-primary);
+}
+
+.albo-document-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.albo-document-meta {
+    font-size: 13px;
+    color: var(--albo-text-secondary);
+}
+
+.albo-document-section {
+    margin-bottom: 32px;
+}
+
+.albo-document-section-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--albo-primary);
+}
+
+.albo-document-content {
+    font-size: 14px;
+    line-height: 1.8;
+    margin-bottom: 12px;
+}
+
+.albo-document-list {
+    list-style: none;
+    padding: 0;
+}
+
+.albo-document-list li {
+    padding: 10px 16px;
+    background: var(--albo-bg-secondary);
+    border-left: 3px solid var(--albo-primary);
+    margin-bottom: 8px;
+    border-radius: 4px;
+}
+
+.albo-signature-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    margin-top: 48px;
+}
+
+.albo-signature-block {
+    padding: 24px;
+    border: 2px dashed var(--albo-border);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.albo-signature-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--albo-text-secondary);
+    margin-bottom: 40px;
+}
+
+.albo-signature-line {
+    border-top: 2px solid var(--albo-text-primary);
+    padding-top: 8px;
+    font-size: 12px;
+    color: var(--albo-text-secondary);
+}
+
+/* ========================================== */
+/* STATUS BAR */
+/* ========================================== */
+.albo-status-bar {
+    background: var(--albo-bg-primary);
+    border-top: 1px solid var(--albo-border);
+    padding: 8px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--albo-text-secondary);
+}
+
+.albo-status-left {
+    display: flex;
+    gap: 20px;
+}
+
+.albo-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.albo-status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--albo-success);
+}
+
+/* ========================================== */
+/* RESPONSIVE */
+/* ========================================== */
+@media (max-width: 1200px) {
+    .albo-capital-stages-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .albo-capital-stages-grid,
+    .albo-scorecard-grid {
+        grid-template-columns: 1fr;
+    }
+}
