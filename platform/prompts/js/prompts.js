@@ -1110,23 +1110,22 @@ copyToClipboardAndClose(promptId) {
 async executeWithAI(promptId, provider) {
     const previewContent = document.getElementById(`code-preview-${promptId}`);
     const promptText = previewContent.textContent;
-    const promptData = this.allPrompts.find(p => p.id === promptId);
     
-    // Close modal
+    // ✅ Close modal immediately!
     const modal = document.querySelector('.execution-modal');
     if (modal) modal.remove();
     
-    // Show loading overlay
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.className = 'ai-loading-overlay';
-    loadingOverlay.innerHTML = `
-        <div class="ai-loading-content">
-            <div class="loading-spinner"></div>
-            <h3>🤖 AI generiert Ihre Analyse...</h3>
-            <p>Dies dauert etwa 15-30 Sekunden</p>
+    // ✅ Replace right panel with loading state
+    const codePanel = document.querySelector('.code-panel');
+    if (!codePanel) return;
+    
+    codePanel.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white;">
+            <div class="loading-spinner" style="width: 60px; height: 60px; border: 4px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+            <h3 style="color: #f1f5f9; margin: 0 0 8px 0;">🤖 ${provider === 'claude' ? 'Claude' : 'GPT-4'} arbeitet...</h3>
+            <p style="color: #94a3b8; margin: 0; font-size: 14px;">Dies dauert etwa 15-30 Sekunden</p>
         </div>
     `;
-    document.body.appendChild(loadingOverlay);
     
     try {
         let response;
@@ -1177,75 +1176,115 @@ async executeWithAI(promptId, provider) {
             resultText = data.choices[0].message.content;
         }
         
-        // Remove loading
-        loadingOverlay.remove();
-        
-        // Show result
-        this.showAIResult(resultText, promptData, provider);
+        // ✅ Show result in right panel (split-screen!)
+        this.showAIResultInPanel(resultText, provider, promptId);
         
     } catch (error) {
         console.error('AI Execution Error:', error);
-        loadingOverlay.remove();
         
-        alert(`❌ Fehler bei der AI-Ausführung:\n${error.message}\n\nBitte prüfen Sie Ihre API-Konfiguration in Vercel.`);
+        // ✅ Show error in right panel
+        codePanel.innerHTML = `
+            <div style="padding: 24px; color: #ef4444;">
+                <h3 style="color: #f87171; margin-bottom: 16px;">❌ Fehler bei der Ausführung</h3>
+                <p style="color: #fca5a5; margin-bottom: 16px; line-height: 1.6;">${error.message}</p>
+                <button onclick="window.promptsEngine.goBackToPrompts()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                    ← Zurück zu Prompts
+                </button>
+            </div>
+        `;
     }
 }
 
-// Show AI Result Method
-showAIResult(result, promptData, provider) {
-    const resultModal = document.createElement('div');
-    resultModal.className = 'ai-result-modal';
-    resultModal.innerHTML = `
-        <div class="ai-result-container">
-            <div class="result-header">
-                <div class="result-title">
-                    <h2>✨ AI-Analyse abgeschlossen</h2>
-                    <span class="provider-badge">${provider === 'claude' ? '🤖 Claude' : '💚 GPT-4'}</span>
+// 2️⃣ NEUE FUNKTION: showAIResultInPanel
+showAIResultInPanel(result, provider, promptId) {
+    const codePanel = document.querySelector('.code-panel');
+    if (!codePanel) return;
+    
+    // Format result with markdown-style rendering
+    const formattedResult = this.formatMarkdown(result);
+    
+    codePanel.style.background = '#ffffff';
+    codePanel.innerHTML = `
+        <div style="height: 100%; display: flex; flex-direction: column;">
+            <!-- Header -->
+            <div style="padding: 16px 20px; border-bottom: 2px solid #e2e8f0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 24px;">${provider === 'claude' ? '🤖' : '💚'}</span>
+                        <div>
+                            <h3 style="margin: 0; color: white; font-size: 16px; font-weight: 600;">${provider === 'claude' ? 'Claude AI' : 'GPT-4'} Analyse</h3>
+                            <p style="margin: 0; color: #e0e7ff; font-size: 12px;">${new Date().toLocaleString('de-DE')}</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="window.promptsEngine.copyAIResult()" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            📋 Kopieren
+                        </button>
+                        <button onclick="window.promptsEngine.goBackToPrompts()" style="padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            ← Zurück
+                        </button>
+                    </div>
                 </div>
-                <button class="close-btn" onclick="this.closest('.ai-result-modal').remove()">✕</button>
             </div>
             
-            <div class="result-meta">
-                <div class="meta-item">📄 ${promptData.name}</div>
-                <div class="meta-item">⏱️ ${new Date().toLocaleString('de-DE')}</div>
-            </div>
-            
-            <div class="result-content">
-                <pre>${result}</pre>
-            </div>
-            
-            <div class="result-actions">
-                <button onclick="navigator.clipboard.writeText(this.closest('.ai-result-modal').querySelector('pre').textContent).then(() => alert('✅ Kopiert!'))">
-                    📋 Kopieren
-                </button>
-                <button class="btn-primary" onclick="this.closest('.ai-result-modal').remove()">
-                    Schließen
-                </button>
+            <!-- AI Result Content -->
+            <div id="ai-result-content" style="flex: 1; overflow-y: auto; padding: 24px; background: #f8fafc;">
+                <div style="max-width: 100%; line-height: 1.8; color: #1e293b; font-size: 14px;">
+                    ${formattedResult}
+                </div>
             </div>
         </div>
     `;
     
-    document.body.appendChild(resultModal);
+    // Store result for copy function
+    this.lastAIResult = result;
 }
 
-    addToQueue(promptId) {
-        const prompt = this.allPrompts.find(p => p.id === promptId);
-        if (!prompt) return;
+// 3️⃣ NEUE FUNKTION: formatMarkdown - Simple Markdown Rendering
+formatMarkdown(text) {
+    // Replace **bold** with <strong>
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Replace *italic* with <em>
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    
+    // Replace ### Headers
+    text = text.replace(/### (.+?)(\n|$)/g, '<h3 style="margin: 24px 0 12px 0; font-size: 18px; font-weight: 600; color: #1e293b;">$1</h3>');
+    
+    // Replace ## Headers
+    text = text.replace(/## (.+?)(\n|$)/g, '<h2 style="margin: 24px 0 12px 0; font-size: 20px; font-weight: 600; color: #1e293b;">$1</h2>');
+    
+    // Replace # Headers
+    text = text.replace(/# (.+?)(\n|$)/g, '<h1 style="margin: 24px 0 12px 0; font-size: 24px; font-weight: 700; color: #1e293b;">$1</h1>');
+    
+    // Replace bullet points
+    text = text.replace(/^- (.+?)$/gm, '<li style="margin-left: 20px; margin-bottom: 8px;">$1</li>');
+    text = text.replace(/^• (.+?)$/gm, '<li style="margin-left: 20px; margin-bottom: 8px;">$1</li>');
+    
+    // Wrap lists
+    text = text.replace(/(<li[^>]*>.*<\/li>)/gs, '<ul style="margin: 12px 0; padding-left: 0; list-style-position: inside;">$1</ul>');
+    
+    // Replace line breaks
+    text = text.replace(/\n\n/g, '</p><p style="margin: 16px 0;">');
+    text = '<p style="margin: 16px 0;">' + text + '</p>';
+    
+    return text;
+}
 
-        const task = {
-            id: Date.now(),
-            title: prompt.name,
-            agent: prompt.role || prompt.category,
-            agentId: prompt.id,
-            matchScore: 100,
-            source: 'manual',
-            timestamp: new Date().toISOString()
-        };
-
-        this.taskQueue.push(task);
-        console.log('✅ Added to queue:', task);
-        alert(`✅ "${prompt.name}" zur Task Queue hinzugefügt!`);
+// 4️⃣ NEUE FUNKTION: copyAIResult
+copyAIResult() {
+    if (!this.lastAIResult) {
+        alert('⚠️ Kein Ergebnis zum Kopieren vorhanden');
+        return;
     }
+    
+    navigator.clipboard.writeText(this.lastAIResult).then(() => {
+        alert('✅ AI-Ergebnis wurde kopiert!');
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        alert('❌ Kopieren fehlgeschlagen');
+    });
+}
 
     /* ========================================== */
     /* FREE-FORM MODE */
@@ -1656,6 +1695,9 @@ showAIResult(result, promptData, provider) {
                 border-radius: 4px;
                 font-size: 12px;
                 font-weight: 500;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
             }
         `;
         document.head.appendChild(style);
