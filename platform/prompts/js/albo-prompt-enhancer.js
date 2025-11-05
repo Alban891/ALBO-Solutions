@@ -1,113 +1,215 @@
-// ═══════════════════════════════════════════════════════════════════
-// ALBO MODULE ENGINE - PHASE 1: PROMPT ENHANCEMENT
-// Wandelt normale Prompts in strukturierte JSON Module um
-// ═══════════════════════════════════════════════════════════════════
-
 /**
- * Phase 1: Enhance Prompt für strukturierte Module-Outputs
- * 
- * Fügt dem User-Prompt automatisch JSON-Struktur-Anforderungen hinzu
- * basierend auf den Output-Formaten die im Prompt definiert sind
+ * ALBO Prompt Enhancer
+ * Fügt JSON-Strukturanweisungen zu Prompts hinzu für strukturierte AI-Outputs
  */
 
 class ALBOPromptEnhancer {
-    
     constructor() {
-        this.moduleDefinitions = this.getModuleDefinitions();
-        console.log('✅ ALBO Prompt Enhancer initialized');
+        // Modul-Definitionen (welche Module gibt es?)
+        this.moduleDefinitions = {
+            validation_table: {
+                id: 'validation_table',
+                title: 'Validierungsstatus-Tabelle',
+                icon: '📊',
+                description: 'Excel-like table mit 4 Validierungsstufen',
+                requiredFields: ['stufe', 'stage_name', 'zielfrage', 'validiert', 'status_percent', 'cfo_risiko']
+            },
+            scorecard: {
+                id: 'scorecard',
+                title: 'CFO-Bewertung & Entscheidung',
+                icon: '💰',
+                description: 'Executive Summary mit Empfehlung',
+                requiredFields: ['overall_status', 'validated_stages', 'cfo_recommendation', 'key_findings']
+            },
+            capital_structure: {
+                id: 'capital_structure',
+                title: 'Kapitalstruktur & Stufenbudget',
+                icon: '📈',
+                description: 'Finanzierungsplan mit WACC-Optimierung',
+                requiredFields: ['stages', 'total_committed', 'funding_recommendation']
+            },
+            timeline: {
+                id: 'timeline',
+                title: 'Validierungs-Timeline',
+                icon: '⏱️',
+                description: 'Zeitplan mit Meilensteinen',
+                requiredFields: ['milestones', 'critical_path']
+            },
+            documentation: {
+                id: 'documentation',
+                title: 'Dokumentation & Quellen',
+                icon: '📄',
+                description: 'Strukturierte Referenzen',
+                requiredFields: ['sources', 'assumptions']
+            }
+        };
+
+        // Prompt-zu-Module Mapping (welcher Prompt braucht welche Module?)
+        this.promptModuleMapping = {
+            'business_case_4_validierung': ['validation_table', 'scorecard', 'capital_structure', 'timeline', 'documentation'],
+            'cfo_7': ['validation_table', 'scorecard', 'capital_structure'],
+            'default': ['scorecard', 'documentation']
+        };
+
+        console.log('✅ ALBOPromptEnhancer initialized');
     }
 
     /**
-     * Hauptmethode: Enhanced einen Prompt für Module-Output
+     * Hauptmethode: Enhanced Prompt mit JSON-Struktur
      */
-    enhancePromptForModules(originalPrompt, promptId) {
-        console.log('🔧 Enhancing prompt for module output...');
+    enhancePromptForModules(originalPrompt, promptId = 'default') {
+        // 1. Bestimme welche Module dieser Prompt braucht
+        const requiredModules = this.getRequiredModules(promptId);
         
-        // 1. Erkenne welche Module der Prompt generieren soll
-        const detectedModules = this.detectRequiredModules(originalPrompt);
-        console.log('📊 Detected modules:', detectedModules);
+        // 2. Generiere JSON-Struktur
+        const jsonStructure = this.buildJsonStructure(requiredModules);
         
-        // 2. Baue JSON-Struktur
-        const jsonStructure = this.buildJSONStructure(detectedModules);
+        // 3. Baue Enhanced Prompt
+        const enhancedPrompt = this.buildEnhancedPrompt(originalPrompt, jsonStructure, requiredModules);
         
-        // 3. Füge System-Instruction hinzu
-        const enhancedPrompt = this.buildEnhancedPrompt(originalPrompt, jsonStructure, detectedModules);
+        console.log('✨ Prompt enhanced with modules:', requiredModules);
         
         return enhancedPrompt;
     }
 
     /**
-     * Erkenne welche Module basierend auf Output-Format Keywords
+     * Bestimme welche Module ein Prompt braucht
      */
-    detectRequiredModules(promptText) {
-        const modules = [];
-        const text = promptText.toLowerCase();
-        
-        // Validierungstabelle
-        if (text.includes('validierungsstatus') || 
-            text.includes('4 stufen') || 
-            text.includes('stage') ||
-            text.includes('validierung')) {
-            modules.push('validation_table');
+    getRequiredModules(promptId) {
+        // Suche nach Prompt-spezifischem Mapping
+        for (const [key, modules] of Object.entries(this.promptModuleMapping)) {
+            if (promptId.includes(key) || key.includes(promptId)) {
+                return modules;
+            }
         }
         
-        // Scorecard
-        if (text.includes('scorecard') || 
-            text.includes('cfo-bewertung') || 
-            text.includes('empfehlung')) {
-            modules.push('scorecard');
-        }
-        
-        // Kapitalstruktur
-        if (text.includes('kapitalstruktur') || 
-            text.includes('kapitalbedarf') || 
-            text.includes('finanzierung') ||
-            text.includes('budget')) {
-            modules.push('capital_structure');
-        }
-        
-        // Timeline
-        if (text.includes('timeline') || 
-            text.includes('zeitlinie') || 
-            text.includes('meilenstein')) {
-            modules.push('timeline');
-        }
-        
-        // Template/Dokument
-        if (text.includes('template') || 
-            text.includes('vorlage') || 
-            text.includes('freigabe')) {
-            modules.push('approval_template');
-        }
-        
-        // Fallback: Wenn keine Module erkannt, nimm mindestens validation + scorecard
-        if (modules.length === 0) {
-            modules.push('validation_table', 'scorecard');
-        }
-        
-        return modules;
+        // Fallback: Standard-Module
+        return this.promptModuleMapping.default;
     }
 
     /**
-     * Baue JSON-Struktur basierend auf erkannten Modulen
+     * Baue JSON-Struktur Template
      */
-    buildJSONStructure(modules) {
+    buildJsonStructure(modules) {
         const structure = {
             modules: {}
         };
-        
+
         modules.forEach(moduleId => {
-            const definition = this.moduleDefinitions[moduleId];
-            if (definition) {
-                structure.modules[moduleId] = definition.structure;
+            const moduleDef = this.moduleDefinitions[moduleId];
+            if (!moduleDef) return;
+
+            if (moduleId === 'validation_table') {
+                structure.modules.validation_table = {
+                    type: 'datagrid',
+                    title: 'Validierungsstatus-Tabelle (4 Stufen)',
+                    overall_score: 0,
+                    overall_status: 'green | yellow | red',
+                    recommendation: 'CFO-Empfehlung hier',
+                    data: [
+                        {
+                            stufe: 1,
+                            stage_name: 'Problem Validation',
+                            zielfrage: 'Frage hier',
+                            hypothese_test: 'Wie wurde validiert',
+                            validiert: 'validated | warning | critical',
+                            status_percent: 95,
+                            cfo_risiko: 'NIEDRIG | MITTEL | HOCH',
+                            kapitalbedarf: '15000',
+                            details: 'Details hier',
+                            next_steps: ['Schritt 1', 'Schritt 2']
+                        }
+                    ]
+                };
+            }
+
+            if (moduleId === 'scorecard') {
+                structure.modules.scorecard = {
+                    type: 'scorecard',
+                    title: 'CFO-Bewertung & Entscheidung',
+                    overall_status: 'green | yellow | red',
+                    validated_stages: 3,
+                    cfo_recommendation: 'Empfehlung hier',
+                    recommendation_amount: 350000,
+                    risk_assessment: 'Risikobewertung',
+                    key_concerns: ['Concern 1', 'Concern 2'],
+                    key_findings: ['Finding 1', 'Finding 2'],
+                    next_milestones: [
+                        {
+                            title: 'Meilenstein',
+                            due: '2 Wochen',
+                            owner: 'Verantwortlicher'
+                        }
+                    ]
+                };
+            }
+
+            if (moduleId === 'capital_structure') {
+                structure.modules.capital_structure = {
+                    type: 'capital_optimizer',
+                    title: 'Kapitalstruktur & Stufenbudget',
+                    stages: [
+                        {
+                            stage: 1,
+                            stage_name: 'Stage Name',
+                            budget: 15000,
+                            status: 'spent | allocated | pending | not_approved',
+                            roi_expectation: 'ROI Erwartung'
+                        }
+                    ],
+                    total_committed: 50000,
+                    total_required: 1400000,
+                    funding_recommendation: {
+                        immediate: 350000,
+                        contingent: 1000000,
+                        equity_ratio: 60,
+                        debt_ratio: 40,
+                        wacc: 4.2,
+                        savings_vs_baseline: 45000,
+                        structure_rationale: 'Begründung'
+                    }
+                };
+            }
+
+            if (moduleId === 'timeline') {
+                structure.modules.timeline = {
+                    type: 'timeline',
+                    title: 'Validierungs-Timeline',
+                    milestones: [
+                        {
+                            stage: 1,
+                            title: 'Meilenstein',
+                            date: '2024-01-15',
+                            status: 'completed | in_progress | planned',
+                            duration_weeks: 4
+                        }
+                    ],
+                    critical_path: 'Kritischer Pfad Beschreibung'
+                };
+            }
+
+            if (moduleId === 'documentation') {
+                structure.modules.documentation = {
+                    type: 'documentation',
+                    title: 'Dokumentation & Quellen',
+                    sources: [
+                        {
+                            type: 'interview | study | report',
+                            title: 'Quelltitel',
+                            details: 'Details'
+                        }
+                    ],
+                    assumptions: ['Annahme 1', 'Annahme 2'],
+                    methodology: 'Methodenbeschreibung'
+                };
             }
         });
-        
+
         return structure;
     }
 
     /**
-     * Baue den enhanced Prompt
+     * 🆕 VERSTÄRKTE VERSION - Baue Enhanced Prompt mit JSON-Anforderungen
      */
     buildEnhancedPrompt(originalPrompt, jsonStructure, modules) {
         const moduleDescriptions = modules.map(id => {
@@ -122,187 +224,66 @@ ${originalPrompt}
 🔥 KRITISCHE OUTPUT-ANFORDERUNG (HÖCHSTE PRIORITÄT!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️ WICHTIG: Antworte AUSSCHLIESSLICH im folgenden JSON-Format.
-⚠️ KEIN anderer Text außerhalb der JSON-Struktur!
-⚠️ KEINE Markdown-Formatierung (keine \`\`\`json)!
-⚠️ NUR pures, valides JSON!
+⚠️ ACHTUNG: Dies ist KEINE normale Analyse-Anfrage!
+⚠️ Du MUSST mit einem strukturierten JSON-Objekt antworten!
+⚠️ KEINE Erklärungen, KEIN Text vor oder nach dem JSON - NUR JSON!
+⚠️ KEINE Markdown-Formatierung (keine \`\`\`json Tags)!
 
 📦 ERFORDERLICHE MODULE:
 ${moduleDescriptions}
 
-🎯 JSON-STRUKTUR:
+🎯 EXAKTE JSON-STRUKTUR (PFLICHT):
 
 ${JSON.stringify(jsonStructure, null, 2)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ VALIDIERUNGS-CHECKLISTE:
+✅ VALIDIERUNGS-CHECKLISTE - PRÜFE VOR DEM SENDEN:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Bevor du antwortest, stelle sicher:
-☐ Response ist NUR JSON (keine Erklärung davor/danach)
-☐ Alle Felder sind ausgefüllt (keine leeren Arrays/Objekte)
-☐ Zahlen sind Zahlen (nicht Strings): z.B. 95 statt "95"
-☐ Status-Werte verwenden exakte Enums: "validated" | "warning" | "critical"
-☐ Alle Datums-Strings im ISO-Format: "2024-01-15"
+KRITISCH - Deine Antwort MUSS:
+☐ NUR aus JSON bestehen (keine Erklärung davor/danach)
+☐ Mit "{" starten und mit "}" enden
+☐ KEINE \`\`\`json Markdown-Tags enthalten
+☐ Alle Felder ausfüllen (keine leeren Arrays/Objekte)
+☐ Zahlen als Zahlen schreiben: 95 (NICHT "95")
+☐ Status-Werte verwenden: "validated" | "warning" | "critical"
+☐ Alle Datums-Strings im Format: "2024-01-15"
+☐ Boolean-Werte: true/false (NICHT "true"/"false")
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 JETZT ANTWORTE NUR MIT DEM JSON (START MIT "{")
+🚀 STARTE JETZT MIT DER JSON-AUSGABE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Beginne deine Antwort SOFORT mit dem JSON-Objekt (erste Zeile muss "{" sein):
+
+{
+  "modules": {
+    "validation_table": {
+      ...
 `;
     }
 
     /**
-     * Modul-Definitionen mit JSON-Strukturen
+     * Validate ob Response als Module gerendert werden kann
      */
-    getModuleDefinitions() {
-        return {
-            validation_table: {
-                id: 'validation_table',
-                icon: '📊',
-                title: 'Validierungsstatus-Tabelle',
-                type: 'datagrid',
-                structure: {
-                    type: 'datagrid',
-                    title: 'Validierungsstatus-Tabelle (4 Stufen)',
-                    overall_score: 0,
-                    overall_status: 'green',
-                    recommendation: '',
-                    data: [
-                        {
-                            stufe: 1,
-                            stage_name: 'Problem Validation',
-                            zielfrage: 'Gibt es ein echtes Kundenproblem?',
-                            hypothese_test: 'Interviews, Umfragen, Marktanalyse',
-                            validiert: 'validated',
-                            status_percent: 95,
-                            cfo_risiko: 'NIEDRIG',
-                            kapitalbedarf: '15000',
-                            details: 'Detaillierte Beschreibung der Validierung',
-                            next_steps: ['Action 1', 'Action 2']
-                        }
-                    ]
-                }
-            },
+    canRenderAsModules(responseText) {
+        try {
+            // Clean potential markdown
+            let jsonText = responseText.trim();
+            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
             
-            scorecard: {
-                id: 'scorecard',
-                icon: '💰',
-                title: 'Scorecard & CFO-Bewertung',
-                type: 'scorecard',
-                structure: {
-                    type: 'scorecard',
-                    title: 'CFO-Bewertung & Entscheidung',
-                    overall_status: 'green',
-                    validated_stages: 3,
-                    cfo_recommendation: 'Pilotfreigabe empfohlen',
-                    recommendation_amount: 350000,
-                    risk_assessment: 'MITTEL - Stage 2 benötigt Nachvalidierung',
-                    key_concerns: [
-                        'Concern 1',
-                        'Concern 2'
-                    ],
-                    key_findings: [
-                        'Finding 1',
-                        'Finding 2'
-                    ],
-                    next_milestones: [
-                        {
-                            title: 'Milestone 1',
-                            due: '2 Wochen',
-                            owner: 'PM'
-                        }
-                    ]
-                }
-            },
+            const data = JSON.parse(jsonText);
             
-            capital_structure: {
-                id: 'capital_structure',
-                icon: '📈',
-                title: 'Kapitalstruktur & Stufenbudget',
-                type: 'capital_optimizer',
-                structure: {
-                    type: 'capital_optimizer',
-                    title: 'Kapitalstruktur & Stufenbudget',
-                    stages: [
-                        {
-                            stage: 1,
-                            stage_name: 'Problem Validation',
-                            budget: 15000,
-                            status: 'spent',
-                            roi_expectation: 'Information gain'
-                        }
-                    ],
-                    total_committed: 50000,
-                    total_required: 1400000,
-                    funding_recommendation: {
-                        immediate: 350000,
-                        contingent: 1000000,
-                        equity_ratio: 60,
-                        debt_ratio: 40,
-                        wacc: 4.2,
-                        savings_vs_baseline: 45000,
-                        structure_rationale: 'Optimale Balance zwischen Kosteneffizienz und Flexibilität'
-                    }
-                }
-            },
-            
-            timeline: {
-                id: 'timeline',
-                icon: '⏱️',
-                title: 'Validierungsprozess-Timeline',
-                type: 'gantt',
-                structure: {
-                    type: 'gantt',
-                    title: 'Validierungsprozess-Timeline',
-                    milestones: [
-                        {
-                            id: 1,
-                            title: 'Problem Validation',
-                            start: '2024-01-01',
-                            end: '2024-02-15',
-                            status: 'completed',
-                            owner: 'Research Team',
-                            progress: 100
-                        }
-                    ],
-                    critical_path: [2, 3],
-                    delays: [],
-                    risks: []
-                }
-            },
-            
-            approval_template: {
-                id: 'approval_template',
-                icon: '📄',
-                title: 'CFO-Freigabe Template',
-                type: 'document',
-                structure: {
-                    type: 'document',
-                    title: 'CFO-Freigabe Vorlage',
-                    format: 'structured_text',
-                    content: {
-                        executive_summary: 'Zusammenfassung des Business Case...',
-                        recommendation: 'Freigabe von X€ unter folgenden Auflagen...',
-                        conditions: [
-                            'Bedingung 1',
-                            'Bedingung 2'
-                        ],
-                        capital_structure: 'Empfohlene Kapitalstruktur...',
-                        risk_assessment: 'Gesamtrisiko und Bewertung...',
-                        approval_required_from: ['CFO', 'Steering Committee'],
-                        next_steps: []
-                    }
-                }
-            }
-        };
+            // Check if modules exist
+            return data.modules && Object.keys(data.modules).length > 0;
+        } catch (e) {
+            return false;
+        }
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════════════════
-
+// Make available globally
 if (typeof window !== 'undefined') {
     window.ALBOPromptEnhancer = ALBOPromptEnhancer;
-    console.log('✅ ALBOPromptEnhancer loaded');
+    console.log('✅ ALBOPromptEnhancer class loaded globally');
 }
