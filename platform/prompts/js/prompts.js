@@ -23,6 +23,12 @@ class PromptsEngine {
 
         // 🆕 Inject Split-Screen CSS
         this.injectSplitScreenCSS();
+
+         // 🆕 Initialize ALBO Module System
+        this.promptEnhancer = new ALBOPromptEnhancer();
+        this.moduleRenderer = window.alboRenderer; // Already initialized globally
+        
+        console.log('✅ ALBO Module System ready');
     }
 
     getThemeMapping() {
@@ -1171,7 +1177,6 @@ copyToClipboardAndClose(promptId) {
 }
 
 // AI Execution Method
-// 1️⃣ EXECUTEWITHAI - FIXED: Modal schließt automatisch
 async executeWithAI(promptId, provider) {
     console.log('🚀 executeWithAI called:', promptId, provider);
     
@@ -1181,24 +1186,24 @@ async executeWithAI(promptId, provider) {
         return;
     }
     
-    const promptText = previewContent.textContent;
-    console.log('📝 Prompt text length:', promptText.length);
+    let promptText = previewContent.textContent;
+    console.log('📝 Original prompt length:', promptText.length);
     
-    // ✅ Replace right panel with loading state
+    // 🆕 ENHANCE PROMPT for structured output
+    promptText = this.promptEnhancer.enhancePromptForModules(promptText, promptId);
+    console.log('✨ Enhanced prompt with JSON structure');
+    
+    // Show loading
     const codePanel = document.querySelector('.code-panel');
-    if (!codePanel) {
-        console.error('❌ Code panel not found!');
-        return;
+    if (codePanel) {
+        codePanel.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; background: #1e293b;">
+                <div style="width: 60px; height: 60px; border: 4px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+                <h3 style="color: #f1f5f9; margin: 0 0 8px 0; font-size: 20px;">🤖 ${provider === 'claude' ? 'Claude' : 'GPT-4'} arbeitet...</h3>
+                <p style="color: #94a3b8; margin: 0; font-size: 14px;">Strukturierte Analyse wird erstellt...</p>
+            </div>
+        `;
     }
-    
-    console.log('🔄 Showing loading state...');
-    codePanel.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: white; background: #1e293b;">
-            <div style="width: 60px; height: 60px; border: 4px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
-            <h3 style="color: #f1f5f9; margin: 0 0 8px 0; font-size: 20px;">🤖 ${provider === 'claude' ? 'Claude' : 'GPT-4'} arbeitet...</h3>
-            <p style="color: #94a3b8; margin: 0; font-size: 14px;">Dies dauert etwa 15-30 Sekunden</p>
-        </div>
-    `;
     
     try {
         console.log('📤 Sending request to API...');
@@ -1210,9 +1215,10 @@ async executeWithAI(promptId, provider) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
+               body: JSON.stringify({
                     model: 'claude-sonnet-4-20250514',
                     max_tokens: 4000,
+                    system: "Du bist ein strukturierter Daten-Generator. ANTWORTE IMMER NUR MIT VALIDEM JSON, NIEMALS MIT TEXT!", // ← NEU!
                     messages: [{
                         role: 'user',
                         content: promptText
@@ -1243,7 +1249,7 @@ async executeWithAI(promptId, provider) {
             throw new Error(data.error?.message || 'API Error');
         }
         
-        // Extract the response text
+        // Extract response text
         let resultText;
         if (provider === 'claude') {
             resultText = data.content[0].text;
@@ -1253,168 +1259,53 @@ async executeWithAI(promptId, provider) {
         
         console.log('✅ Got result, length:', resultText.length);
         
-        // ✅ Show result in right panel (split-screen!)
-        this.showAIResultInPanel(resultText, provider, promptId);
+        // 🆕 TRY TO PARSE AS JSON for module rendering
+        try {
+            // Clean potential markdown
+            let jsonText = resultText.trim();
+            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            
+            const jsonData = JSON.parse(jsonText);
+            
+            if (jsonData.modules) {
+                console.log('🎨 Rendering as structured modules...');
+                
+                // Replace right panel with module interface
+                if (codePanel) {
+                    codePanel.style.background = '#f8fafc';
+                    codePanel.style.padding = '0';
+                    codePanel.innerHTML = '<div id="albo-module-container"></div>';
+                    
+                    // Render modules
+                    this.moduleRenderer.renderModules(jsonData, 'albo-module-container');
+                }
+            } else {
+                throw new Error('No modules in JSON');
+            }
+        } catch (parseError) {
+            console.warn('⚠️ Not valid JSON, showing as formatted text:', parseError);
+            
+            // Fallback: Show as formatted text
+            this.showAIResultInPanel(resultText, provider, promptId);
+        }
         
     } catch (error) {
         console.error('❌ AI Execution Error:', error);
         
-        // ✅ Show error in right panel
-        codePanel.innerHTML = `
-            <div style="padding: 40px; color: #ef4444; background: #1e293b; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                <div style="background: rgba(239, 68, 68, 0.1); padding: 30px; border-radius: 12px; border: 2px solid #ef4444; max-width: 500px; text-align: center;">
-                    <h3 style="color: #f87171; margin: 0 0 16px 0; font-size: 24px;">❌ Fehler bei der Ausführung</h3>
-                    <p style="color: #fca5a5; margin: 0 0 24px 0; line-height: 1.6; font-size: 14px;">${error.message}</p>
-                    <button onclick="window.promptsEngine.goBackToPrompts()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-                        ← Zurück zu Prompts
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// 2️⃣ SHOWAIRESULTINPANEL - FIXED: Viel bessere Formatierung!
-showAIResultInPanel(result, provider, promptId) {
-    console.log('📊 Showing AI result in panel...');
-    
-    const codePanel = document.querySelector('.code-panel');
-    if (!codePanel) {
-        console.error('❌ Code panel not found!');
-        return;
-    }
-    
-    // ✅ BESSERE Formatierung mit Markdown
-    const formattedResult = this.formatAIResult(result);
-    
-    codePanel.style.background = '#ffffff';
-    codePanel.innerHTML = `
-        <div style="height: 100%; display: flex; flex-direction: column;">
-            <!-- Header -->
-            <div style="padding: 20px 24px; border-bottom: 2px solid #e2e8f0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); flex-shrink: 0;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-size: 28px;">${provider === 'claude' ? '🤖' : '💚'}</span>
-                        <div>
-                            <h3 style="margin: 0; color: white; font-size: 18px; font-weight: 600;">${provider === 'claude' ? 'Claude AI' : 'GPT-4'} Analyse</h3>
-                            <p style="margin: 0; color: #e0e7ff; font-size: 13px;">${new Date().toLocaleString('de-DE', { 
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                year: 'numeric', 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                            })}</p>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="window.promptsEngine.copyAIResult()" style="padding: 8px 16px; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                            📋 Kopieren
-                        </button>
-                        <button onclick="window.promptsEngine.goBackToPrompts()" style="padding: 8px 16px; background: rgba(255,255,255,0.25); color: white; border: 1px solid rgba(255,255,255,0.4); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.25)'">
-                            ← Zurück
+        if (codePanel) {
+            codePanel.innerHTML = `
+                <div style="padding: 40px; color: #ef4444; background: #1e293b; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div style="background: rgba(239, 68, 68, 0.1); padding: 30px; border-radius: 12px; border: 2px solid #ef4444; max-width: 500px; text-align: center;">
+                        <h3 style="color: #f87171; margin: 0 0 16px 0; font-size: 24px;">❌ Fehler bei der Ausführung</h3>
+                        <p style="color: #fca5a5; margin: 0 0 24px 0; line-height: 1.6; font-size: 14px;">${error.message}</p>
+                        <button onclick="window.promptsEngine.goBackToPrompts()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                            ← Zurück zu Prompts
                         </button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- AI Result Content -->
-            <div id="ai-result-content" style="flex: 1; overflow-y: auto; padding: 32px; background: #f8fafc;">
-                <div style="max-width: 900px; margin: 0 auto; line-height: 1.8; color: #1e293b; font-size: 15px; background: white; padding: 32px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                    ${formattedResult}
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Store result for copy function
-    this.lastAIResult = result;
-    
-    console.log('✅ AI result displayed successfully!');
-}
-
-// 3️⃣ FORMATAIRESULT - KOMPLETT NEU: Viel bessere Formatierung!
-formatAIResult(text) {
-    // Escape HTML erst
-    text = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    
-    // Headers
-    text = text.replace(/^### (.+)$/gm, '<h3 style="margin: 28px 0 16px 0; font-size: 20px; font-weight: 700; color: #1e293b; border-bottom: 3px solid #3b82f6; padding-bottom: 8px;">$1</h3>');
-    text = text.replace(/^## (.+)$/gm, '<h2 style="margin: 32px 0 20px 0; font-size: 24px; font-weight: 700; color: #0f172a; border-bottom: 3px solid #3b82f6; padding-bottom: 10px;">$1</h2>');
-    text = text.replace(/^# (.+)$/gm, '<h1 style="margin: 32px 0 24px 0; font-size: 28px; font-weight: 800; color: #0f172a;">$1</h1>');
-    
-    // Bold & Italic
-    text = text.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600; color: #1e293b;">$1</strong>');
-    text = text.replace(/\*(.+?)\*/g, '<em style="font-style: italic; color: #475569;">$1</em>');
-    
-    // Numbered lists (preserve structure)
-    text = text.replace(/^(\d+)\.\s+(.+)$/gm, '<li style="margin-bottom: 12px; line-height: 1.7; color: #334155;"><strong style="color: #3b82f6; margin-right: 8px;">$1.</strong>$2</li>');
-    
-    // Bullet points
-    text = text.replace(/^[•\-]\s+(.+)$/gm, '<li style="margin-bottom: 10px; line-height: 1.7; color: #334155; list-style-type: disc; margin-left: 20px;">$1</li>');
-    
-    // Wrap consecutive list items in ul
-    text = text.replace(/(<li[^>]*>.*?<\/li>)+/gs, (match) => {
-        return '<ul style="margin: 16px 0; padding-left: 24px; list-style-position: outside;">' + match + '</ul>';
-    });
-    
-    // Tables (basic)
-    text = text.replace(/\|(.+)\|/g, (match) => {
-        const cells = match.split('|').filter(cell => cell.trim());
-        return '<tr>' + cells.map(cell => `<td style="padding: 8px; border: 1px solid #e2e8f0;">${cell.trim()}</td>`).join('') + '</tr>';
-    });
-    
-    // Code blocks
-    text = text.replace(/```(.+?)```/gs, '<pre style="background: #f1f5f9; padding: 16px; border-radius: 8px; overflow-x: auto; border-left: 4px solid #3b82f6; margin: 16px 0;"><code style="font-family: monospace; font-size: 13px; color: #1e293b;">$1</code></pre>');
-    
-    // Inline code
-    text = text.replace(/`(.+?)`/g, '<code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #dc2626;">$1</code>');
-    
-    // Line breaks → paragraphs
-    const paragraphs = text.split(/\n\n+/);
-    text = paragraphs
-        .map(p => {
-            // Don't wrap headers, lists, code blocks
-            if (p.trim().startsWith('<h') || p.trim().startsWith('<ul') || p.trim().startsWith('<pre') || p.trim().startsWith('<li')) {
-                return p;
-            }
-            return `<p style="margin: 16px 0; line-height: 1.8; color: #334155;">${p.trim()}</p>`;
-        })
-        .join('');
-    
-    // Single line breaks
-    text = text.replace(/\n/g, '<br>');
-    
-    // Highlight important emojis
-    text = text.replace(/([🎯⚠️✅❌💡📊📈🔍💰⏱️])/g, '<span style="font-size: 1.2em; margin: 0 4px;">$1</span>');
-    
-    return text;
-}
-
-// 4️⃣ COPYAIRESULT - Bleibt gleich
-copyAIResult() {
-    if (!this.lastAIResult) {
-        alert('⚠️ Kein Ergebnis zum Kopieren vorhanden');
-        return;
+            `;
+        }
     }
-    
-    navigator.clipboard.writeText(this.lastAIResult).then(() => {
-        // Success notification with temporary button change
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '✅ Kopiert!';
-        btn.style.background = 'rgba(16, 185, 129, 0.3)';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.background = 'rgba(255,255,255,0.25)';
-        }, 2000);
-    }).catch(err => {
-        console.error('Copy failed:', err);
-        alert('❌ Kopieren fehlgeschlagen');
-    });
 }
 
     /* ========================================== */
