@@ -1138,7 +1138,7 @@ async executeWithAI(promptId, provider) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'claude-3-5-sonnet-20241022',  // ✅ RICHTIGES MODELL
+                    model: 'claude-3-5-sonnet-latest',
                     max_tokens: 4000,
                     messages: [{
                         role: 'user',
