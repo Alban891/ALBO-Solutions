@@ -8,6 +8,7 @@
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/albo-rag-manager.js"></script>
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
@@ -308,8 +309,8 @@
                             <select id="projekt-filter-division" onchange="filterProjekte()" aria-label="Division Filter">
                                 <option value="alle">Alle Divisionen</option>
                                 <option value="Entwicklung">Entwicklung</option>
-                                <option value="automation">Automation</option>
-                                <option value="digitalization">Digitalization</option>
+                                <option value="Automation">Automation</option>
+                                <option value="Digitalization">Digitalization</option>
                                 <option value="Produktion">Produktion</option>
                                 <option value="Vertrieb">Vertrieb</option>
                                 <option value="Service">Service</option>
@@ -406,9 +407,6 @@
 
                     <!-- TAB-NAVIGATION INNERHALB PROJEKT -->
                     <div class="detail-tabs">
-                        <button class="detail-tab" onclick="switchProjektTab('uebersicht')">
-                            Übersicht
-                        </button>
                          <button class="detail-tab" onclick="switchProjektTab('geschaeftsmodell')">
                             Geschäftsmodell
                         </button>
@@ -426,6 +424,9 @@
                         </button>
                         <button class="detail-tab" onclick="switchProjektTab('dashboard')">
                             Dashboard
+                        </button>
+                        <button class="detail-tab" onclick="switchProjektTab('uebersicht')">
+                            Übersicht
                         </button>
                     </div>
 
