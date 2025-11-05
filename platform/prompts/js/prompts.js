@@ -1007,92 +1007,156 @@ renderPreview(prompt, fullPromptText) {
 }
 
 showExecuteModal(promptId) {
-    console.log('showExecuteModal called with:', promptId);
+    console.log('🎯 showExecuteModal called with:', promptId);
     
-    // Erstelle das Modal direkt mit allen Styles inline
-    const modalHTML = `
-        <div id="execute-modal-${promptId}" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 999999;
+    // Remove any existing modals first
+    const existingModals = document.querySelectorAll('.execution-modal');
+    existingModals.forEach(m => m.remove());
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'execution-modal';
+    modal.id = `execute-modal-${promptId}`;
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 999999;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         ">
-            <div style="
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                max-width: 600px;
-                width: 90%;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            ">
-                <h2 style="margin-top: 0;">⚡ Prompt ausführen</h2>
-                <p style="color: #666;">Wähle deine Ausführungsmethode:</p>
-                
-                <div style="margin: 20px 0;">
-                    <div style="
-                        padding: 15px;
-                        margin: 10px 0;
-                        border: 2px solid #e0e0e0;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        transition: all 0.3s;
-                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
-                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
-                       onclick="window.promptsEngine.executeWithAI('${promptId}', 'claude')">
-                        <strong>🤖 Claude AI (Opus)</strong><br>
-                        <small>Beste Qualität für komplexe Finance-Analysen (~0.15€)</small>
-                    </div>
-                    
-                    <div style="
-                        padding: 15px;
-                        margin: 10px 0;
-                        border: 2px solid #e0e0e0;
-                        border-radius: 8px;
-                        cursor: pointer;
-                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
-                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
-                       onclick="window.promptsEngine.executeWithAI('${promptId}', 'gpt4')">
-                        <strong>💚 GPT-4 Turbo</strong><br>
-                        <small>Schnell und kosteneffizient (~0.08€)</small>
-                    </div>
-                    
-                    <div style="
-                        padding: 15px;
-                        margin: 10px 0;
-                        border: 2px solid #e0e0e0;
-                        border-radius: 8px;
-                        cursor: pointer;
-                    " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
-                       onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';"
-                       onclick="window.promptsEngine.copyToClipboardAndClose('${promptId}')">
-                        <strong>📋 Kopieren & selbst ausführen</strong><br>
-                        <small>In ChatGPT/Claude.ai einfügen (kostenlos)</small>
+            <h2 style="margin-top: 0; font-size: 24px; font-weight: 700;">⚡ Prompt ausführen</h2>
+            <p style="color: #666; margin-bottom: 24px;">Wähle deine Ausführungsmethode:</p>
+            
+            <div style="margin: 20px 0;">
+                <div class="execute-option" data-provider="claude" style="
+                    padding: 16px;
+                    margin: 12px 0;
+                    border: 2px solid #e0e0e0;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                   onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 28px; margin-right: 12px;">🤖</span>
+                        <div style="flex: 1;">
+                            <strong style="display: block; font-size: 16px; margin-bottom: 4px;">Claude AI (Opus)</strong>
+                            <small style="color: #666;">Beste Qualität für komplexe Finance-Analysen (~0.15€)</small>
+                        </div>
                     </div>
                 </div>
                 
-                <button style="
-                    padding: 10px 20px;
-                    background: #f3f4f6;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
+                <div class="execute-option" data-provider="gpt4" style="
+                    padding: 16px;
+                    margin: 12px 0;
+                    border: 2px solid #e0e0e0;
+                    border-radius: 8px;
                     cursor: pointer;
-                    width: 100%;
-                " onclick="document.getElementById('execute-modal-${promptId}').remove()">
-                    Abbrechen
-                </button>
+                    transition: all 0.2s;
+                " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                   onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 28px; margin-right: 12px;">💚</span>
+                        <div style="flex: 1;">
+                            <strong style="display: block; font-size: 16px; margin-bottom: 4px;">GPT-4 Turbo</strong>
+                            <small style="color: #666;">Schnell und kosteneffizient (~0.08€)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="execute-option" data-provider="copy" style="
+                    padding: 16px;
+                    margin: 12px 0;
+                    border: 2px solid #e0e0e0;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                " onmouseover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#f0f9ff';" 
+                   onmouseout="this.style.borderColor='#e0e0e0'; this.style.backgroundColor='white';">
+                    <div style="display: flex; align-items: center;">
+                        <span style="font-size: 28px; margin-right: 12px;">📋</span>
+                        <div style="flex: 1;">
+                            <strong style="display: block; font-size: 16px; margin-bottom: 4px;">Kopieren & selbst ausführen</strong>
+                            <small style="color: #666;">In ChatGPT/Claude.ai einfügen (kostenlos)</small>
+                        </div>
+                    </div>
+                </div>
             </div>
+            
+            <button id="cancel-btn-${promptId}" style="
+                padding: 10px 20px;
+                background: #f3f4f6;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                cursor: pointer;
+                width: 100%;
+                font-size: 14px;
+            ">
+                Abbrechen
+            </button>
         </div>
     `;
     
-    // Füge das Modal zum Body hinzu
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    console.log('Modal inserted into DOM');
+    document.body.appendChild(modal);
+    console.log('✅ Modal appended to DOM');
+    
+    // ✅ Add event listeners AFTER modal is in DOM
+    setTimeout(() => {
+        // Click handlers for execution options
+        const options = modal.querySelectorAll('.execute-option');
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const provider = option.getAttribute('data-provider');
+                console.log('🎯 Execute option clicked:', provider);
+                
+                if (provider === 'copy') {
+                    this.copyToClipboardAndClose(promptId);
+                } else {
+                    // ✅ Close modal FIRST, then execute
+                    modal.remove();
+                    console.log('🗑️ Modal removed');
+                    
+                    // Wait a moment, then execute
+                    setTimeout(() => {
+                        this.executeWithAI(promptId, provider);
+                    }, 100);
+                }
+            });
+        });
+        
+        // Cancel button
+        const cancelBtn = document.getElementById(`cancel-btn-${promptId}`);
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                console.log('❌ Cancel clicked');
+                modal.remove();
+            });
+        }
+        
+        // Background click to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                console.log('🖱️ Background clicked');
+                modal.remove();
+            }
+        });
+    }, 50);
 }
 
 // Neue Hilfsmethode zum Kopieren und Schließen
@@ -1119,17 +1183,6 @@ async executeWithAI(promptId, provider) {
     
     const promptText = previewContent.textContent;
     console.log('📝 Prompt text length:', promptText.length);
-    
-    // ✅ WICHTIG: Modal sofort schließen UND aus DOM entfernen!
-    const modals = document.querySelectorAll('.execution-modal');
-    modals.forEach(modal => {
-        console.log('🗑️ Removing modal...');
-        modal.style.display = 'none';
-        modal.remove();
-    });
-    
-    // ✅ Warte kurz, damit Modal sicher weg ist
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     // ✅ Replace right panel with loading state
     const codePanel = document.querySelector('.code-panel');
