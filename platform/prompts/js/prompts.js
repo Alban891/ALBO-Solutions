@@ -1138,8 +1138,9 @@ async executeWithAI(promptId, provider) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'claude-3-opus-20240229',
+                    model: 'claude-3-5-sonnet-20241022',  // ✅ NEUES MODELL (wie in deinem anderen Code)
                     max_tokens: 4000,
+                    temperature: 0.7,
                     messages: [{
                         role: 'user',
                         content: promptText
