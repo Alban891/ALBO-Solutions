@@ -688,18 +688,12 @@ class PromptsEngine {
             </div>
         `;
 
-        // 🆕 TAB NAVIGATION (including Prompt tab)
+      // 🆕 TAB NAVIGATION (simplified for Phase 1)
         if (mode === 'modules') {
             workspaceHTML += `
                 <div class="workspace-tabs" style="background: white; border-bottom: 2px solid #e2e8f0; display: flex; gap: 4px; padding: 0 24px;">
-                    <button class="workspace-tab active" data-tab="validation" onclick="window.promptsEngine.switchWorkspaceTab('${promptId}', 'validation')" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid #3b82f6; cursor: pointer; font-size: 14px; font-weight: 600; color: #3b82f6;">
-                        📊 Validierung
-                    </button>
-                    <button class="workspace-tab" data-tab="scorecard" onclick="window.promptsEngine.switchWorkspaceTab('${promptId}', 'scorecard')" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #64748b;">
-                        💰 Scorecard
-                    </button>
-                    <button class="workspace-tab" data-tab="capital" onclick="window.promptsEngine.switchWorkspaceTab('${promptId}', 'capital')" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #64748b;">
-                        📈 Kapital
+                    <button class="workspace-tab active" data-tab="modules" onclick="window.promptsEngine.switchWorkspaceTab('${promptId}', 'modules')" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid #3b82f6; cursor: pointer; font-size: 14px; font-weight: 600; color: #3b82f6;">
+                        📊 Alle Module
                     </button>
                     <button class="workspace-tab" data-tab="prompt" onclick="window.promptsEngine.switchWorkspaceTab('${promptId}', 'prompt')" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #64748b;">
                         💬 Prompt
