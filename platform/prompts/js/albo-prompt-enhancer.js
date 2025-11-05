@@ -87,127 +87,243 @@ class ALBOPromptEnhancer {
         return this.promptModuleMapping.default;
     }
 
-    /**
-     * Baue JSON-Struktur Template
-     */
-    buildJsonStructure(modules) {
-        const structure = {
-            modules: {}
-        };
+   /**
+ * Baue JSON-Struktur Template mit KONKRETEN Beispielen
+ */
+buildJsonStructure(modules) {
+    const structure = {
+        modules: {}
+    };
 
-        modules.forEach(moduleId => {
-            const moduleDef = this.moduleDefinitions[moduleId];
-            if (!moduleDef) return;
+    modules.forEach(moduleId => {
+        const moduleDef = this.moduleDefinitions[moduleId];
+        if (!moduleDef) return;
 
-            if (moduleId === 'validation_table') {
-                structure.modules.validation_table = {
-                    type: 'datagrid',
-                    title: 'Validierungsstatus-Tabelle (4 Stufen)',
-                    overall_score: 0,
-                    overall_status: 'green | yellow | red',
-                    recommendation: 'CFO-Empfehlung hier',
-                    data: [
-                        {
-                            stufe: 1,
-                            stage_name: 'Problem Validation',
-                            zielfrage: 'Frage hier',
-                            hypothese_test: 'Wie wurde validiert',
-                            validiert: 'validated | warning | critical',
-                            status_percent: 95,
-                            cfo_risiko: 'NIEDRIG | MITTEL | HOCH',
-                            kapitalbedarf: '15000',
-                            details: 'Details hier',
-                            next_steps: ['Schritt 1', 'Schritt 2']
-                        }
-                    ]
-                };
-            }
-
-            if (moduleId === 'scorecard') {
-                structure.modules.scorecard = {
-                    type: 'scorecard',
-                    title: 'CFO-Bewertung & Entscheidung',
-                    overall_status: 'green | yellow | red',
-                    validated_stages: 3,
-                    cfo_recommendation: 'Empfehlung hier',
-                    recommendation_amount: 350000,
-                    risk_assessment: 'Risikobewertung',
-                    key_concerns: ['Concern 1', 'Concern 2'],
-                    key_findings: ['Finding 1', 'Finding 2'],
-                    next_milestones: [
-                        {
-                            title: 'Meilenstein',
-                            due: '2 Wochen',
-                            owner: 'Verantwortlicher'
-                        }
-                    ]
-                };
-            }
-
-            if (moduleId === 'capital_structure') {
-                structure.modules.capital_structure = {
-                    type: 'capital_optimizer',
-                    title: 'Kapitalstruktur & Stufenbudget',
-                    stages: [
-                        {
-                            stage: 1,
-                            stage_name: 'Stage Name',
-                            budget: 15000,
-                            status: 'spent | allocated | pending | not_approved',
-                            roi_expectation: 'ROI Erwartung'
-                        }
-                    ],
-                    total_committed: 50000,
-                    total_required: 1400000,
-                    funding_recommendation: {
-                        immediate: 350000,
-                        contingent: 1000000,
-                        equity_ratio: 60,
-                        debt_ratio: 40,
-                        wacc: 4.2,
-                        savings_vs_baseline: 45000,
-                        structure_rationale: 'Begründung'
+        if (moduleId === 'validation_table') {
+            structure.modules.validation_table = {
+                type: 'datagrid',
+                title: 'Validierungsstatus-Tabelle (4 Stufen)',
+                overall_score: 68,
+                recommendation: '💡 Pilotfreigabe mit verstärktem Fokus auf Business Model Validierung. Problem & Solution sind validiert, Product-Entwicklung kann starten, aber Business Model benötigt deutlich mehr Validierung bevor größere Investments freigegeben werden.',
+                data: [
+                    {
+                        stufe: 1,
+                        stage_name: 'Problem',
+                        zielfrage: 'Gibt es ein echtes Kundenproblem beim Schaltschrankbau?',
+                        hypothese_test: 'Interviews mit 45 Unternehmen durchgeführt. Umfrage bei 180 Betrieben im DACH-Raum. Arbeitsmarktanalysen ausgewertet: Fachkräftemangel nachweislich vorhanden, 73% der Betriebe berichten von Lieferverzug durch Personalmangel.',
+                        validiert: 'validated',
+                        status_percent: 95,
+                        cfo_risiko: 'NIEDRIG',
+                        kapitalbedarf: 15000,
+                        details: 'Sehr klare Problem-Validierung durch umfangreiche Marktforschung. Fachkräftemangel ist nachweislich vorhanden und wird sich laut Prognosen weiter verschärfen.',
+                        next_steps: ['Monatliches Update zu Marktentwicklung etablieren', 'Wettbewerberanalyse vertiefen', 'Regulatorische Änderungen monitoren']
+                    },
+                    {
+                        stufe: 2,
+                        stage_name: 'Solution',
+                        zielfrage: 'Wird unser Roboter-Lösungsansatz als sinnvoll und praktikabel erlebt?',
+                        hypothese_test: 'Mockups und Wireframes bei 30 potenziellen Kunden getestet. Landing Page mit Erklärungsvideo generierte 2.000 Interessenten-Leads. Design Thinking Workshop mit 12 Anwendern durchgeführt.',
+                        validiert: 'warning',
+                        status_percent: 75,
+                        cfo_risiko: 'NIEDRIG',
+                        kapitalbedarf: 25000,
+                        details: 'Positive Resonanz auf den Lösungsansatz, aber konkrete Preisbereitschaft noch unklar. Einige Kunden zeigen Bedenken bzgl. Integration in bestehende Systeme.',
+                        next_steps: ['A/B-Test verschiedener Pricing-Modelle', 'Beta-Programm mit 10 Pilotkunden aufsetzen', 'Integrations-Dokumentation erstellen']
+                    },
+                    {
+                        stufe: 3,
+                        stage_name: 'Product',
+                        zielfrage: 'Können wir ein funktionierendes, zuverlässiges Roboter-System liefern?',
+                        hypothese_test: 'MVP ist in Entwicklung (60% fertig). Beta-Tests mit 5 Partnern für Q2 geplant. Technische Machbarkeitsstudien durchgeführt, Prototyp funktioniert im Labor.',
+                        validiert: 'warning',
+                        status_percent: 45,
+                        cfo_risiko: 'MITTEL',
+                        kapitalbedarf: 350000,
+                        details: 'Technische Machbarkeit grundsätzlich gegeben, aber Skalierbarkeit und industrielle Zuverlässigkeit (99,5% Uptime) müssen noch bewiesen werden. Hardware-Sourcing noch nicht final geklärt.',
+                        next_steps: ['MVP bis Q2 2025 fertigstellen', 'Beta-Test mit 5-10 Industriekunden starten', 'Technische Dokumentation und Wartungskonzept ausarbeiten', 'Supply Chain für Hardware aufbauen']
+                    },
+                    {
+                        stufe: 4,
+                        stage_name: 'Business',
+                        zielfrage: 'Lässt sich daraus ein profitables, skalierbares Geschäft aufbauen?',
+                        hypothese_test: 'Zahlungsbereitschaft muss noch durch echte Verträge validiert werden. CAC/LTV Ratio ist theoretisch berechnet, aber nicht durch Markterfahrung bestätigt. Skalierungsmodell (SaaS vs. Hardware-Verkauf vs. Hybrid) noch nicht final entschieden.',
+                        validiert: 'critical',
+                        status_percent: 20,
+                        cfo_risiko: 'HOCH',
+                        kapitalbedarf: 200000,
+                        details: 'Geschäftsmodell noch nicht ausreichend validiert. Kritische offene Fragen: Pricing-Struktur (Lizenz vs. Miete?), Kundenakquisitionskosten in der Praxis, Churn-Rate, Support-Aufwand. Break-Even unklar.',
+                        next_steps: ['Detaillierte Finanzmodellierung mit Sensitivitätsanalyse', 'Mindestens 3 Pilotverträge mit echten Zahlungen abschließen', 'Break-Even-Analyse erstellen', 'Skalierungsstrategie definieren']
                     }
-                };
-            }
+                ]
+            };
+        }
 
-            if (moduleId === 'timeline') {
-                structure.modules.timeline = {
-                    type: 'timeline',
-                    title: 'Validierungs-Timeline',
-                    milestones: [
-                        {
-                            stage: 1,
-                            title: 'Meilenstein',
-                            date: '2024-01-15',
-                            status: 'completed | in_progress | planned',
-                            duration_weeks: 4
-                        }
-                    ],
-                    critical_path: 'Kritischer Pfad Beschreibung'
-                };
-            }
+        if (moduleId === 'scorecard') {
+            structure.modules.scorecard = {
+                type: 'scorecard',
+                title: 'CFO Scorecard & Gesamtbewertung',
+                overall_status: 'yellow',
+                validated_stages: 2,
+                cfo_recommendation: '💡 Pilotfreigabe mit Auflagen: Budget für MVP-Entwicklung (Stufe 3) freigeben mit 350.000 €, aber größere Investments in Skalierung (Stufe 4) erst nach erfolgreicher Product-Validierung und ersten zahlenden Pilotkunden. Go/No-Go-Entscheidung nach Q3 2025.',
+                recommendation_amount: 350000,
+                risk_assessment: 'MITTEL - Problem & Solution sind validiert (starke Basis), aber erhebliche Business Model Unsicherheit bleibt. Technische Delivery ist möglich, aber Wirtschaftlichkeit noch nicht bewiesen.',
+                key_findings: [
+                    '✅ Klare Problemvalidierung mit 95% Confidence - Markt ist real',
+                    '✅ Hohe Marktnachfrage durch 180 Betriebe nachgewiesen',
+                    '✅ Solution-Fit durch Mockups und Workshops bestätigt - Ansatz wird verstanden',
+                    '✅ Technische Machbarkeit durch Prototyp demonstriert'
+                ],
+                key_concerns: [
+                    '❌ Business Model noch nicht validiert (nur 20% Confidence)',
+                    '⚠️ Zahlungsbereitschaft in der Theorie, aber noch keine realen Verträge',
+                    '⚠️ CAC/LTV Ratio nicht durch Markterfahrung bestätigt',
+                    '⚠️ Skalierbarkeit der technischen Lösung für Industrieeinsatz ungetestet',
+                    '⚠️ Wettbewerb (3 identifizierte Player) könnte schneller sein'
+                ],
+                next_milestones: [
+                    {
+                        title: 'MVP Beta-Launch mit 5 Pilotkunden',
+                        due: 'Q2 2025 (Ende Juni)',
+                        owner: 'Product Team (Lead: CTO)'
+                    },
+                    {
+                        title: 'Erste 3 zahlende Verträge abschließen',
+                        due: 'Q3 2025 (bis September)',
+                        owner: 'Sales Team (Lead: VP Sales)'
+                    },
+                    {
+                        title: 'Business Model Validierung & Break-Even-Analyse',
+                        due: 'Q4 2025 (bis Dezember)',
+                        owner: 'CFO Team + Finance Controlling'
+                    },
+                    {
+                        title: 'Go/No-Go Entscheidung für Skalierung',
+                        due: 'Q4 2025 (Dezember Board Meeting)',
+                        owner: 'CFO + CEO + Board'
+                    }
+                ]
+            };
+        }
 
-            if (moduleId === 'documentation') {
-                structure.modules.documentation = {
-                    type: 'documentation',
-                    title: 'Dokumentation & Quellen',
-                    sources: [
-                        {
-                            type: 'interview | study | report',
-                            title: 'Quelltitel',
-                            details: 'Details'
-                        }
-                    ],
-                    assumptions: ['Annahme 1', 'Annahme 2'],
-                    methodology: 'Methodenbeschreibung'
-                };
-            }
-        });
+        if (moduleId === 'capital_structure') {
+            structure.modules.capital_structure = {
+                type: 'capital_optimizer',
+                title: 'Kapitalstruktur & Stufenbudget',
+                total_committed: 40000,
+                total_required: 590000,
+                funding_recommendation: {
+                    immediate: 350000,
+                    contingent: 200000,
+                    equity_ratio: 60,
+                    debt_ratio: 40,
+                    wacc: 8.5,
+                    savings_vs_baseline: 15000,
+                    structure_rationale: '60/40 Equity/Debt Mix optimiert Kapitalkosten bei vertretbarem Risiko. Eigenkapitalquote hoch genug für Flexibilität, Fremdkapitalanteil senkt WACC. Bei erfolgreicher Product-Validierung kann Fremdkapitalanteil erhöht werden.'
+                },
+                stages: [
+                    {
+                        stage: 1,
+                        stage_name: 'Problem',
+                        budget: 15000,
+                        status: 'spent',
+                        roi_expectation: '✅ Validierung abgeschlossen - Investition hat sich gelohnt'
+                    },
+                    {
+                        stage: 2,
+                        stage_name: 'Solution',
+                        budget: 25000,
+                        status: 'allocated',
+                        roi_expectation: '⏳ Tests laufen - erste Ergebnisse vielversprechend'
+                    },
+                    {
+                        stage: 3,
+                        stage_name: 'Product',
+                        budget: 350000,
+                        status: 'pending',
+                        roi_expectation: '📋 Freigabe empfohlen: MVP + Beta-Test bis Q3 2025. Break-Even nach 18 Monaten erwartet.'
+                    },
+                    {
+                        stage: 4,
+                        stage_name: 'Business',
+                        budget: 200000,
+                        status: 'not_approved',
+                        roi_expectation: '⏸️ Abhängig von Stufe 3 Ergebnis. Investment nur bei erfolgreicher Validierung von Product & ersten Kunden.'
+                    }
+                ]
+            };
+        }
 
-        return structure;
-    }
+        if (moduleId === 'timeline') {
+            structure.modules.timeline = {
+                type: 'gantt',
+                title: 'Validierungsprozess-Timeline',
+                milestones: [
+                    {
+                        title: 'Problem Validation abgeschlossen',
+                        start: '2024-09',
+                        end: '2024-12',
+                        status: 'completed',
+                        owner: 'Market Research Team',
+                        progress: 100
+                    },
+                    {
+                        title: 'Solution Testing & Mockups',
+                        start: '2024-11',
+                        end: '2025-01',
+                        status: 'completed',
+                        owner: 'UX Team',
+                        progress: 100
+                    },
+                    {
+                        title: 'MVP Entwicklung',
+                        start: '2025-01',
+                        end: '2025-06',
+                        status: 'in-progress',
+                        owner: 'Engineering Team',
+                        progress: 60
+                    },
+                    {
+                        title: 'Beta-Test mit Pilotkunden',
+                        start: '2025-06',
+                        end: '2025-09',
+                        status: 'planned',
+                        owner: 'Product Team + Sales',
+                        progress: 0
+                    },
+                    {
+                        title: 'Business Model Validierung',
+                        start: '2025-09',
+                        end: '2025-12',
+                        status: 'planned',
+                        owner: 'CFO Team',
+                        progress: 0
+                    }
+                ],
+                delays: [
+                    '⚠️ MVP-Entwicklung könnte sich um 4 Wochen verzögern wenn Hardware-Lieferanten nicht liefern',
+                    '⚠️ Beta-Test-Phase benötigt mindestens 3 Monate für valide Daten'
+                ]
+            };
+        }
 
+        if (moduleId === 'documentation') {
+            structure.modules.documentation = {
+                type: 'document',
+                title: 'CFO-Freigabe Vorlage',
+                content: {
+                    executive_summary: 'Zusammenfassung hier...',
+                    recommendation: 'CFO empfiehlt...',
+                    conditions: ['Bedingung 1', 'Bedingung 2'],
+                    capital_structure: 'Kapitalstruktur Details...',
+                    risk_assessment: 'Risikobewertung Details...',
+                    approval_required_from: ['CFO', 'CEO', 'Board']
+                }
+            };
+        }
+    });
+
+    return structure;
+}
     /**
      * 🆕 VERSTÄRKTE VERSION - Baue Enhanced Prompt mit JSON-Anforderungen
      */
