@@ -185,45 +185,53 @@ class ALBOModuleRenderer {
         }
     }
 
-    /**
-     * MODUL 1: DATAGRID (Excel-like)
-     */
-    renderDataGrid(data) {
-        return `
-            <div class="albo-datagrid-container">
-                <div class="albo-datagrid-header">
-                    <div class="albo-datagrid-title">
-                        <span>📊</span>
-                        <span>${data.title || 'Validierungsstatus-Tabelle'}</span>
-                    </div>
+  /**
+ * MODUL 1: DATAGRID (Excel-like) - 🆕 EDITABLE VERSION
+ */
+renderDataGrid(data) {
+    const moduleId = 'datagrid-' + Date.now();
+    
+    return `
+        <div class="albo-datagrid-container" id="${moduleId}">
+            <div class="albo-datagrid-header">
+                <div class="albo-datagrid-title">
+                    <span>📊</span>
+                    <span>${data.title || 'Validierungsstatus-Tabelle'}</span>
                 </div>
-
-                <!-- Overall Score -->
-                ${this.renderOverallScore(data)}
-
-                <!-- Table -->
-                <table class="albo-excel-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 80px;">Stufe</th>
-                            <th style="width: 200px;">Zielfrage</th>
-                            <th style="width: 250px;">Hypothese / Test</th>
-                            <th style="width: 140px;">Status</th>
-                            <th style="width: 120px;">CFO-Risiko</th>
-                            <th style="width: 120px;">Kapitalbedarf</th>
-                            <th style="width: 120px;">Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.data.map(row => this.renderDataGridRow(row)).join('')}
-                    </tbody>
-                </table>
-
-                <!-- Learning Panel -->
-                ${this.renderLearningPanel()}
+                <div class="albo-datagrid-actions">
+                    <button class="albo-btn-toolbar" onclick="window.alboRenderer.addRow('${moduleId}')">
+                        ➕ Neue Stufe
+                    </button>
+                </div>
             </div>
-        `;
-    }
+
+            <!-- Overall Score -->
+            ${this.renderOverallScore(data)}
+
+            <!-- Table -->
+            <table class="albo-excel-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">📌</th>
+                        <th style="width: 80px;">Stufe</th>
+                        <th style="width: 200px;">Zielfrage</th>
+                        <th style="width: 250px;">Hypothese / Test</th>
+                        <th style="width: 140px;">Status</th>
+                        <th style="width: 120px;">CFO-Risiko</th>
+                        <th style="width: 120px;">Kapitalbedarf</th>
+                        <th style="width: 120px;">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.data.map((row, index) => this.renderEditableDataGridRow(row, index, moduleId)).join('')}
+                </tbody>
+            </table>
+
+            <!-- Learning Panel -->
+            ${this.renderLearningPanel()}
+        </div>
+    `;
+}
 
     renderOverallScore(data) {
         return `
@@ -241,37 +249,161 @@ class ALBOModuleRenderer {
         `;
     }
 
-    renderDataGridRow(row) {
-        const statusClass = row.validiert === 'validated' ? 'validated' : 
-                           row.validiert === 'warning' ? 'warning' : 'critical';
-        const riskClass = row.cfo_risiko === 'NIEDRIG' ? 'low' : 
-                         row.cfo_risiko === 'MITTEL' ? 'medium' : 'high';
-        
-        return `
-            <tr>
-                <td><div class="albo-stage-number">${row.stufe}</div></td>
-                <td>
-                    <strong>${row.stage_name || `Stage ${row.stufe}`}</strong><br>
-                    <small style="color: #64748b;">${row.zielfrage}</small>
-                </td>
-                <td>${row.hypothese_test}</td>
-                <td>
-                    <span class="albo-status-badge albo-status-${statusClass}">
+   // 🆕 NEW METHOD: Editable Data Grid Row
+renderEditableDataGridRow(row, index, moduleId) {
+    const rowId = `${moduleId}-row-${index}`;
+    const statusClass = row.validiert === 'validated' ? 'validated' : 
+                       row.validiert === 'warning' ? 'warning' : 'critical';
+    const riskClass = row.cfo_risiko === 'NIEDRIG' ? 'low' : 
+                     row.cfo_risiko === 'MITTEL' ? 'medium' : 'high';
+    
+    return `
+        <tr id="${rowId}" onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background='white'">
+            <!-- Expand Button -->
+            <td style="text-align: center;">
+                <button class="albo-btn-row-action" onclick="window.alboRenderer.toggleRowDetails('${rowId}')" style="font-size: 14px;">
+                    <span id="${rowId}-icon">▼</span>
+                </button>
+            </td>
+            
+            <!-- Stage Number -->
+            <td>
+                <div class="albo-stage-number">${row.stufe}</div>
+            </td>
+            
+            <!-- Stage Name + Question (Editable) -->
+            <td>
+                <div contenteditable="true" 
+                     class="albo-editable-field"
+                     data-row="${index}" 
+                     data-field="stage_name"
+                     style="font-weight: 600; padding: 4px; border-radius: 4px; outline: none;"
+                     onfocus="this.style.background='#f0f9ff'; this.style.border='1px solid #3b82f6';"
+                     onblur="this.style.background='transparent'; this.style.border='1px solid transparent'; window.alboRenderer.saveEdit('${moduleId}', ${index}, 'stage_name', this.textContent);">
+                    ${row.stage_name || `Stage ${row.stufe}`}
+                </div>
+                <div contenteditable="true" 
+                     class="albo-editable-field"
+                     data-row="${index}" 
+                     data-field="zielfrage"
+                     style="font-size: 13px; color: #64748b; padding: 4px; border-radius: 4px; outline: none;"
+                     onfocus="this.style.background='#f0f9ff'; this.style.border='1px solid #3b82f6';"
+                     onblur="this.style.background='transparent'; this.style.border='1px solid transparent'; window.alboRenderer.saveEdit('${moduleId}', ${index}, 'zielfrage', this.textContent);">
+                    ${row.zielfrage}
+                </div>
+            </td>
+            
+            <!-- Hypothesis (Editable) -->
+            <td>
+                <div contenteditable="true" 
+                     class="albo-editable-field"
+                     data-row="${index}" 
+                     data-field="hypothese_test"
+                     style="font-size: 13px; padding: 4px; border-radius: 4px; outline: none;"
+                     onfocus="this.style.background='#f0f9ff'; this.style.border='1px solid #3b82f6';"
+                     onblur="this.style.background='transparent'; this.style.border='1px solid transparent'; window.alboRenderer.saveEdit('${moduleId}', ${index}, 'hypothese_test', this.textContent);">
+                    ${row.hypothese_test}
+                </div>
+            </td>
+            
+            <!-- Status (Clickable Dropdown) -->
+            <td>
+                <div style="position: relative;">
+                    <span class="albo-status-badge albo-status-${statusClass}" 
+                          onclick="window.alboRenderer.toggleStatusDropdown('${moduleId}', ${index})"
+                          style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
                         ${row.validiert === 'validated' ? '✅' : row.validiert === 'warning' ? '⚠️' : '❌'}
                         ${row.status_percent}%
+                        <span style="font-size: 10px;">▼</span>
                     </span>
-                </td>
-                <td><span class="albo-risk-badge albo-risk-${riskClass}">${row.cfo_risiko}</span></td>
-                <td><strong>${this.formatCurrency(row.kapitalbedarf)}</strong></td>
-                <td>
-                    <div class="albo-row-actions">
-                        <button class="albo-btn-row-action" onclick="window.alboRenderer.showDetails(${row.stufe})">📋</button>
-                        <button class="albo-btn-row-action" onclick="window.alboRenderer.askAboutStage(${row.stufe})">💬</button>
+                    <div id="status-dropdown-${moduleId}-${index}" class="albo-status-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 4px; z-index: 100; min-width: 150px;">
+                        <div onclick="window.alboRenderer.changeStatus('${moduleId}', ${index}, 'validated', 95)" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #e2e8f0;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            ✅ Validated (95%)
+                        </div>
+                        <div onclick="window.alboRenderer.changeStatus('${moduleId}', ${index}, 'warning', 60)" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #e2e8f0;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            ⚠️ Warning (60%)
+                        </div>
+                        <div onclick="window.alboRenderer.changeStatus('${moduleId}', ${index}, 'critical', 20)" style="padding: 10px; cursor: pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            ❌ Critical (20%)
+                        </div>
                     </div>
-                </td>
-            </tr>
-        `;
-    }
+                </div>
+            </td>
+            
+            <!-- Risk (Clickable Dropdown) -->
+            <td>
+                <div style="position: relative;">
+                    <span class="albo-risk-badge albo-risk-${riskClass}" 
+                          onclick="window.alboRenderer.toggleRiskDropdown('${moduleId}', ${index})"
+                          style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                        ${row.cfo_risiko}
+                        <span style="font-size: 10px;">▼</span>
+                    </span>
+                    <div id="risk-dropdown-${moduleId}-${index}" class="albo-risk-dropdown" style="display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: white; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-top: 4px; z-index: 100; min-width: 120px;">
+                        <div onclick="window.alboRenderer.changeRisk('${moduleId}', ${index}, 'NIEDRIG')" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #e2e8f0;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            NIEDRIG
+                        </div>
+                        <div onclick="window.alboRenderer.changeRisk('${moduleId}', ${index}, 'MITTEL')" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #e2e8f0;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            MITTEL
+                        </div>
+                        <div onclick="window.alboRenderer.changeRisk('${moduleId}', ${index}, 'HOCH')" style="padding: 10px; cursor: pointer;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                            HOCH
+                        </div>
+                    </div>
+                </div>
+            </td>
+            
+            <!-- Budget (Editable) -->
+            <td>
+                <strong contenteditable="true" 
+                        class="albo-editable-field"
+                        data-row="${index}" 
+                        data-field="kapitalbedarf"
+                        style="padding: 4px; border-radius: 4px; outline: none;"
+                        onfocus="this.style.background='#f0f9ff'; this.style.border='1px solid #3b82f6';"
+                        onblur="this.style.background='transparent'; this.style.border='1px solid transparent'; window.alboRenderer.saveEdit('${moduleId}', ${index}, 'kapitalbedarf', this.textContent);">
+                    ${this.formatCurrency(row.kapitalbedarf)}
+                </strong>
+            </td>
+            
+            <!-- Actions -->
+            <td>
+                <div class="albo-row-actions">
+                    <button class="albo-btn-row-action" onclick="window.alboRenderer.askAboutStage(${row.stufe})">💬</button>
+                    <button class="albo-btn-row-action" onclick="window.alboRenderer.deleteRow('${moduleId}', ${index})" style="color: #ef4444;">🗑️</button>
+                </div>
+            </td>
+        </tr>
+        
+        <!-- Details Row (Hidden by default) -->
+        <tr id="${rowId}-details" style="display: none; background: #f8fafc;">
+            <td colspan="8" style="padding: 20px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #64748b;">📝 Details & Erkenntnisse</div>
+                        <textarea 
+                            class="albo-detail-textarea"
+                            data-row="${index}" 
+                            data-field="details"
+                            style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: inherit;"
+                            onblur="window.alboRenderer.saveEdit('${moduleId}', ${index}, 'details', this.value);"
+                        >${row.details || ''}</textarea>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #64748b;">✅ Next Steps</div>
+                        <textarea 
+                            class="albo-detail-textarea"
+                            data-row="${index}" 
+                            data-field="next_steps"
+                            style="width: 100%; min-height: 100px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: inherit;"
+                            onblur="window.alboRenderer.saveEdit('${moduleId}', ${index}, 'next_steps', this.value);"
+                        >${Array.isArray(row.next_steps) ? row.next_steps.join('\n') : (row.next_steps || '')}</textarea>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    `;
+}
 
     renderLearningPanel() {
         return `
@@ -652,6 +784,152 @@ class ALBOModuleRenderer {
         // Add any global event listeners here
         console.log('✅ Event listeners setup');
     }
+
+    /* ========================================== */
+/* 🆕 INTERACTIVE METHODS - PHASE 1 */
+/* ========================================== */
+
+toggleRowDetails(rowId) {
+    const detailsRow = document.getElementById(rowId + '-details');
+    const icon = document.getElementById(rowId + '-icon');
+    
+    if (detailsRow) {
+        if (detailsRow.style.display === 'none') {
+            detailsRow.style.display = 'table-row';
+            if (icon) icon.textContent = '▲';
+        } else {
+            detailsRow.style.display = 'none';
+            if (icon) icon.textContent = '▼';
+        }
+    }
+}
+
+saveEdit(moduleId, rowIndex, field, value) {
+    console.log(`💾 Saving: Row ${rowIndex}, Field ${field}, Value:`, value);
+    
+    // Store in memory
+    if (!this.editedData) this.editedData = {};
+    if (!this.editedData[moduleId]) this.editedData[moduleId] = {};
+    if (!this.editedData[moduleId][rowIndex]) this.editedData[moduleId][rowIndex] = {};
+    
+    this.editedData[moduleId][rowIndex][field] = value;
+    
+    // Visual feedback - green flash
+    console.log('✅ Saved successfully');
+}
+
+toggleStatusDropdown(moduleId, rowIndex) {
+    const dropdown = document.getElementById(`status-dropdown-${moduleId}-${rowIndex}`);
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    // Close other dropdowns
+    document.querySelectorAll('.albo-status-dropdown').forEach(dd => {
+        if (dd.id !== `status-dropdown-${moduleId}-${rowIndex}`) {
+            dd.style.display = 'none';
+        }
+    });
+    document.querySelectorAll('.albo-risk-dropdown').forEach(dd => {
+        dd.style.display = 'none';
+    });
+}
+
+changeStatus(moduleId, rowIndex, newStatus, newPercent) {
+    console.log(`🔄 Changing status: Row ${rowIndex} to ${newStatus} (${newPercent}%)`);
+    
+    // Save
+    this.saveEdit(moduleId, rowIndex, 'validiert', newStatus);
+    this.saveEdit(moduleId, rowIndex, 'status_percent', newPercent);
+    
+    // Update UI
+    const rowId = `${moduleId}-row-${rowIndex}`;
+    const row = document.getElementById(rowId);
+    if (row) {
+        const statusConfig = {
+            'validated': { class: 'validated', icon: '✅' },
+            'warning': { class: 'warning', icon: '⚠️' },
+            'critical': { class: 'critical', icon: '❌' }
+        };
+        const config = statusConfig[newStatus];
+        const badge = row.querySelector('.albo-status-badge');
+        if (badge) {
+            badge.className = `albo-status-badge albo-status-${config.class}`;
+            badge.innerHTML = `${config.icon} ${newPercent}% <span style="font-size: 10px;">▼</span>`;
+        }
+    }
+    
+    // Close dropdown
+    this.toggleStatusDropdown(moduleId, rowIndex);
+}
+
+toggleRiskDropdown(moduleId, rowIndex) {
+    const dropdown = document.getElementById(`risk-dropdown-${moduleId}-${rowIndex}`);
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    // Close other dropdowns
+    document.querySelectorAll('.albo-risk-dropdown').forEach(dd => {
+        if (dd.id !== `risk-dropdown-${moduleId}-${rowIndex}`) {
+            dd.style.display = 'none';
+        }
+    });
+    document.querySelectorAll('.albo-status-dropdown').forEach(dd => {
+        dd.style.display = 'none';
+    });
+}
+
+changeRisk(moduleId, rowIndex, newRisk) {
+    console.log(`🔄 Changing risk: Row ${rowIndex} to ${newRisk}`);
+    
+    // Save
+    this.saveEdit(moduleId, rowIndex, 'cfo_risiko', newRisk);
+    
+    // Update UI
+    const rowId = `${moduleId}-row-${rowIndex}`;
+    const row = document.getElementById(rowId);
+    if (row) {
+        const riskConfig = {
+            'NIEDRIG': 'low',
+            'MITTEL': 'medium',
+            'HOCH': 'high'
+        };
+        const badge = row.querySelector('.albo-risk-badge');
+        if (badge) {
+            badge.className = `albo-risk-badge albo-risk-${riskConfig[newRisk]}`;
+            badge.innerHTML = `${newRisk} <span style="font-size: 10px;">▼</span>`;
+        }
+    }
+    
+    // Close dropdown
+    this.toggleRiskDropdown(moduleId, rowIndex);
+}
+
+addRow(moduleId) {
+    console.log('➕ Adding new row to:', moduleId);
+    alert('➕ Neue Stufe hinzufügen - wird in Phase 1.5 implementiert!');
+}
+
+deleteRow(moduleId, rowIndex) {
+    if (!confirm(`🗑️ Stufe ${rowIndex + 1} wirklich löschen?`)) return;
+    
+    console.log(`🗑️ Deleting row ${rowIndex} from ${moduleId}`);
+    
+    const rowId = `${moduleId}-row-${rowIndex}`;
+    const row = document.getElementById(rowId);
+    const detailsRow = document.getElementById(rowId + '-details');
+    
+    if (row) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        row.style.transition = 'all 0.3s';
+        setTimeout(() => {
+            row.remove();
+            if (detailsRow) detailsRow.remove();
+        }, 300);
+    }
+}
 
     // Placeholder methods for toolbar actions
     saveModule() { console.log('💾 Save module'); }
